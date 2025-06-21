@@ -119,356 +119,315 @@ interface NavigationStateProviderProps {
 
 export const NavigationStateContext = createContext<NavigationStateContextType | null>(null);
 
-export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = React.memo(
-  ({ children }) => {
-    console.log('[@context:NavigationStateProvider] Initializing navigation state context');
+export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = ({ children }) => {
+  console.log('[@context:NavigationStateProvider] Initializing navigation state context');
 
-    // ========================================
-    // ROUTE PARAMS
-    // ========================================
+  // ========================================
+  // ROUTE PARAMS
+  // ========================================
 
-    const { treeId, treeName, interfaceId } = useParams<{
-      treeId?: string;
-      treeName: string;
-      interfaceId?: string;
-    }>();
+  const { treeId, treeName, interfaceId } = useParams<{
+    treeId?: string;
+    treeName: string;
+    interfaceId?: string;
+  }>();
 
-    // ========================================
-    // STATE
-    // ========================================
+  // ========================================
+  // STATE
+  // ========================================
 
-    // Navigation state for breadcrumbs and nested trees
-    const [currentTreeId, setCurrentTreeId] = useState<string>(treeName || treeId || 'home');
-    const [currentTreeName, setCurrentTreeName] = useState<string>(treeName || 'home');
-    const [navigationPath, setNavigationPath] = useState<string[]>([treeName || treeId || 'home']);
-    const [navigationNamePath, setNavigationNamePath] = useState<string[]>([treeName || 'home']);
+  // Navigation state for breadcrumbs and nested trees
+  const [currentTreeId, setCurrentTreeId] = useState<string>(treeName || treeId || 'home');
+  const [currentTreeName, setCurrentTreeName] = useState<string>(treeName || 'home');
+  const [navigationPath, setNavigationPath] = useState<string[]>([treeName || treeId || 'home']);
+  const [navigationNamePath, setNavigationNamePath] = useState<string[]>([treeName || 'home']);
 
-    // Save operation state
-    const [isSaving, setIsSaving] = useState(false);
-    const [saveError, setSaveError] = useState<string | null>(null);
-    const [saveSuccess, setSaveSuccess] = useState(false);
-    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-    const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
+  // Save operation state
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
 
-    // Interface state
-    const [userInterface, setUserInterface] = useState<any>(null);
-    const [rootTree, setRootTree] = useState<any>(null);
-    const [isLoadingInterface, setIsLoadingInterface] = useState<boolean>(!!interfaceId);
+  // Interface state
+  const [userInterface, setUserInterface] = useState<any>(null);
+  const [rootTree, setRootTree] = useState<any>(null);
+  const [isLoadingInterface, setIsLoadingInterface] = useState<boolean>(!!interfaceId);
 
-    // React Flow state
-    const [nodes, setNodes, onNodesChange] = useNodesState([]);
-    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  // React Flow state
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-    // Memoize React Flow arrays to prevent unnecessary context recreation
-    // React Flow hooks create new array references even when content is the same
-    const stableNodes = useMemo(() => nodes, [nodes]);
+  // Memoize React Flow arrays to prevent unnecessary context recreation
+  // React Flow hooks create new array references even when content is the same
+  const stableNodes = useMemo(() => nodes, [nodes]);
 
-    const stableEdges = useMemo(() => edges, [edges]);
+  const stableEdges = useMemo(() => edges, [edges]);
 
-    // History state
-    const [initialState, setInitialState] = useState<{
-      nodes: UINavigationNode[];
-      edges: UINavigationEdge[];
-    } | null>(null);
+  // History state
+  const [initialState, setInitialState] = useState<{
+    nodes: UINavigationNode[];
+    edges: UINavigationEdge[];
+  } | null>(null);
 
-    // View state
-    const [currentViewRootId, setCurrentViewRootId] = useState<string | null>(null);
-    const [viewPath, setViewPath] = useState<{ id: string; name: string }[]>([]);
+  // View state
+  const [currentViewRootId, setCurrentViewRootId] = useState<string | null>(null);
+  const [viewPath, setViewPath] = useState<{ id: string; name: string }[]>([]);
 
-    // UI state
-    const [selectedNode, setSelectedNode] = useState<UINavigationNode | null>(null);
-    const [selectedEdge, setSelectedEdge] = useState<UINavigationEdge | null>(null);
-    const [isNodeDialogOpen, setIsNodeDialogOpen] = useState(false);
-    const [isEdgeDialogOpen, setIsEdgeDialogOpen] = useState(false);
-    const [isNewNode, setIsNewNode] = useState(false);
-    const [nodeForm, setNodeForm] = useState<NodeForm>({
+  // UI state
+  const [selectedNode, setSelectedNode] = useState<UINavigationNode | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<UINavigationEdge | null>(null);
+  const [isNodeDialogOpen, setIsNodeDialogOpen] = useState(false);
+  const [isEdgeDialogOpen, setIsEdgeDialogOpen] = useState(false);
+  const [isNewNode, setIsNewNode] = useState(false);
+  const [nodeForm, setNodeForm] = useState<NodeForm>({
+    label: '',
+    type: 'screen',
+    description: '',
+    verifications: [],
+  });
+  const [edgeForm, setEdgeForm] = useState<EdgeForm>({
+    actions: [],
+    retryActions: [],
+    finalWaitTime: 2000,
+    description: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Tree filtering state
+  const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
+  const [maxDisplayDepth, setMaxDisplayDepth] = useState<number>(5);
+  const [availableFocusNodes, setAvailableFocusNodes] = useState<
+    { id: string; label: string; depth: number }[]
+  >([]);
+
+  // React Flow refs
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+
+  // ========================================
+  // CALLBACK FUNCTIONS
+  // ========================================
+
+  const resetToInitialState = useCallback(() => {
+    console.log('[@context:NavigationStateProvider] Resetting to initial state');
+    if (initialState) {
+      setNodes(initialState.nodes);
+      setEdges(initialState.edges);
+      setHasUnsavedChanges(false);
+    }
+  }, [initialState, setNodes, setEdges]);
+
+  const validateNavigationPath = useCallback((path: string[]): boolean => {
+    console.log('[@context:NavigationStateProvider] Validating navigation path:', path);
+    // Basic validation - path should not be empty and contain valid tree IDs
+    return path.length > 0 && path.every((id) => typeof id === 'string' && id.length > 0);
+  }, []);
+
+  const updateNavigationPath = useCallback(
+    (newPath: string[], newNamePath: string[]) => {
+      console.log('[@context:NavigationStateProvider] Updating navigation path:', {
+        newPath,
+        newNamePath,
+      });
+      if (validateNavigationPath(newPath)) {
+        setNavigationPath(newPath);
+        setNavigationNamePath(newNamePath);
+        // Update current tree info if path is not empty
+        if (newPath.length > 0) {
+          const currentId = newPath[newPath.length - 1];
+          const currentName = newNamePath[newNamePath.length - 1] || currentId;
+          setCurrentTreeId(currentId);
+          setCurrentTreeName(currentName);
+        }
+      }
+    },
+    [validateNavigationPath],
+  );
+
+  const resetSelection = useCallback(() => {
+    console.log('[@context:NavigationStateProvider] Resetting selection');
+    setSelectedNode(null);
+    setSelectedEdge(null);
+    setIsNodeDialogOpen(false);
+    setIsEdgeDialogOpen(false);
+    setIsNewNode(false);
+    // Reset forms to default values
+    setNodeForm({
       label: '',
       type: 'screen',
       description: '',
       verifications: [],
     });
-    const [edgeForm, setEdgeForm] = useState<EdgeForm>({
+    setEdgeForm({
       actions: [],
       retryActions: [],
       finalWaitTime: 2000,
       description: '',
     });
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [success, setSuccess] = useState<string | null>(null);
+  }, []);
 
-    // Tree filtering state
-    const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
-    const [maxDisplayDepth, setMaxDisplayDepth] = useState<number>(5);
-    const [availableFocusNodes, setAvailableFocusNodes] = useState<
-      { id: string; label: string; depth: number }[]
-    >([]);
+  // ========================================
+  // CONTEXT VALUE
+  // ========================================
 
-    // React Flow refs
-    const reactFlowWrapper = useRef<HTMLDivElement>(null);
-    const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  // Memoize complex objects separately to prevent unnecessary context recreation
+  const stableNodeForm = useMemo(() => nodeForm, [nodeForm]);
 
-    // ========================================
-    // CALLBACK FUNCTIONS
-    // ========================================
+  const stableEdgeForm = useMemo(() => edgeForm, [edgeForm]);
 
-    const resetToInitialState = useCallback(() => {
-      console.log('[@context:NavigationStateProvider] Resetting to initial state');
-      if (initialState) {
-        setNodes(initialState.nodes);
-        setEdges(initialState.edges);
-        setHasUnsavedChanges(false);
-      }
-    }, [initialState, setNodes, setEdges]);
+  const stableNavigationPath = useMemo(() => navigationPath, [navigationPath]);
+  const stableNavigationNamePath = useMemo(() => navigationNamePath, [navigationNamePath]);
+  const stableViewPath = useMemo(() => viewPath, [viewPath]);
+  const stableAvailableFocusNodes = useMemo(() => availableFocusNodes, [availableFocusNodes]);
 
-    const validateNavigationPath = useCallback((path: string[]): boolean => {
-      console.log('[@context:NavigationStateProvider] Validating navigation path:', path);
-      // Basic validation - path should not be empty and contain valid tree IDs
-      return path.length > 0 && path.every((id) => typeof id === 'string' && id.length > 0);
-    }, []);
-
-    const updateNavigationPath = useCallback(
-      (newPath: string[], newNamePath: string[]) => {
-        console.log('[@context:NavigationStateProvider] Updating navigation path:', {
-          newPath,
-          newNamePath,
-        });
-        if (validateNavigationPath(newPath)) {
-          setNavigationPath(newPath);
-          setNavigationNamePath(newNamePath);
-          // Update current tree info if path is not empty
-          if (newPath.length > 0) {
-            const currentId = newPath[newPath.length - 1];
-            const currentName = newNamePath[newNamePath.length - 1] || currentId;
-            setCurrentTreeId(currentId);
-            setCurrentTreeName(currentName);
-          }
-        }
-      },
-      [validateNavigationPath],
-    );
-
-    const resetSelection = useCallback(() => {
-      console.log('[@context:NavigationStateProvider] Resetting selection');
-      setSelectedNode(null);
-      setSelectedEdge(null);
-      setIsNodeDialogOpen(false);
-      setIsEdgeDialogOpen(false);
-      setIsNewNode(false);
-      // Reset forms to default values
-      setNodeForm({
-        label: '',
-        type: 'screen',
-        description: '',
-        verifications: [],
-      });
-      setEdgeForm({
-        actions: [],
-        retryActions: [],
-        finalWaitTime: 2000,
-        description: '',
-      });
-    }, []);
-
-    // ========================================
-    // CONTEXT VALUE
-    // ========================================
-
-    // Memoize complex objects separately to prevent unnecessary context recreation
-    const stableNodeForm = useMemo(() => nodeForm, [nodeForm]);
-
-    const stableEdgeForm = useMemo(() => edgeForm, [edgeForm]);
-
-    const stableNavigationPath = useMemo(() => navigationPath, [navigationPath]);
-    const stableNavigationNamePath = useMemo(() => navigationNamePath, [navigationNamePath]);
-    const stableViewPath = useMemo(() => viewPath, [viewPath]);
-    const stableAvailableFocusNodes = useMemo(() => availableFocusNodes, [availableFocusNodes]);
-
-    const contextValue: NavigationStateContextType = useMemo(() => {
-      console.log(`[@context:NavigationStateProvider] Creating new context value`);
-      return {
-        // Route params
-        treeId,
-        treeName,
-        interfaceId,
-
-        // Navigation state
-        currentTreeId,
-        setCurrentTreeId,
-        currentTreeName,
-        setCurrentTreeName,
-        navigationPath: stableNavigationPath,
-        setNavigationPath,
-        navigationNamePath: stableNavigationNamePath,
-        setNavigationNamePath,
-
-        // Save state
-        isSaving,
-        setIsSaving,
-        saveError,
-        setSaveError,
-        saveSuccess,
-        setSaveSuccess,
-        hasUnsavedChanges,
-        setHasUnsavedChanges,
-        isDiscardDialogOpen,
-        setIsDiscardDialogOpen,
-
-        // Interface state
-        userInterface,
-        setUserInterface,
-        rootTree,
-        setRootTree,
-        isLoadingInterface,
-        setIsLoadingInterface,
-
-        // React Flow state
-        nodes: stableNodes,
-        setNodes,
-        onNodesChange,
-        edges: stableEdges,
-        setEdges,
-        onEdgesChange,
-        reactFlowInstance,
-        setReactFlowInstance,
-        reactFlowWrapper,
-
-        // Tree state
-        initialState,
-        setInitialState,
-        isLoading,
-        setIsLoading,
-        error,
-        setError,
-        success,
-        setSuccess,
-
-        // View navigation
-        currentViewRootId,
-        setCurrentViewRootId,
-        viewPath: stableViewPath,
-        setViewPath,
-
-        // Node/Edge selection and editing
-        selectedNode,
-        setSelectedNode,
-        selectedEdge,
-        setSelectedEdge,
-        isNodeDialogOpen,
-        setIsNodeDialogOpen,
-        isEdgeDialogOpen,
-        setIsEdgeDialogOpen,
-        isNewNode,
-        setIsNewNode,
-        nodeForm: stableNodeForm,
-        setNodeForm,
-        edgeForm: stableEdgeForm,
-        setEdgeForm,
-
-        // Focus management
-        availableFocusNodes: stableAvailableFocusNodes,
-        setAvailableFocusNodes,
-        focusNodeId,
-        setFocusNodeId,
-        maxDisplayDepth,
-        setMaxDisplayDepth,
-
-        // Callbacks
-        resetToInitialState,
-        validateNavigationPath,
-        updateNavigationPath,
-        resetSelection,
-      };
-    }, [
-      // Route params - only include if they actually change
+  const contextValue: NavigationStateContextType = useMemo(() => {
+    console.log(`[@context:NavigationStateProvider] Creating new context value`);
+    return {
+      // Route params
       treeId,
       treeName,
       interfaceId,
 
       // Navigation state
       currentTreeId,
+      setCurrentTreeId,
       currentTreeName,
-      stableNavigationPath,
-      stableNavigationNamePath,
+      setCurrentTreeName,
+      navigationPath: stableNavigationPath,
+      setNavigationPath,
+      navigationNamePath: stableNavigationNamePath,
+      setNavigationNamePath,
 
       // Save state
       isSaving,
+      setIsSaving,
       saveError,
+      setSaveError,
       saveSuccess,
+      setSaveSuccess,
       hasUnsavedChanges,
+      setHasUnsavedChanges,
       isDiscardDialogOpen,
+      setIsDiscardDialogOpen,
 
       // Interface state
       userInterface,
+      setUserInterface,
       rootTree,
+      setRootTree,
       isLoadingInterface,
+      setIsLoadingInterface,
 
-      // React Flow state - use stable versions to prevent unnecessary updates
-      stableNodes,
-      stableEdges,
+      // React Flow state
+      nodes: stableNodes,
+      setNodes,
+      onNodesChange,
+      edges: stableEdges,
+      setEdges,
+      onEdgesChange,
       reactFlowInstance,
-      // Remove function dependencies that are stable
-      // onNodesChange,
-      // onEdgesChange,
-      // setNodes,
-      // setEdges,
+      setReactFlowInstance,
+      reactFlowWrapper,
 
       // Tree state
       initialState,
+      setInitialState,
       isLoading,
+      setIsLoading,
       error,
+      setError,
       success,
+      setSuccess,
 
       // View navigation
       currentViewRootId,
-      stableViewPath,
+      setCurrentViewRootId,
+      viewPath: stableViewPath,
+      setViewPath,
 
       // Node/Edge selection and editing
       selectedNode,
+      setSelectedNode,
       selectedEdge,
+      setSelectedEdge,
       isNodeDialogOpen,
+      setIsNodeDialogOpen,
       isEdgeDialogOpen,
+      setIsEdgeDialogOpen,
       isNewNode,
-      stableNodeForm,
-      stableEdgeForm,
+      setIsNewNode,
+      nodeForm: stableNodeForm,
+      setNodeForm,
+      edgeForm: stableEdgeForm,
+      setEdgeForm,
 
       // Focus management
-      stableAvailableFocusNodes,
+      availableFocusNodes: stableAvailableFocusNodes,
+      setAvailableFocusNodes,
       focusNodeId,
+      setFocusNodeId,
       maxDisplayDepth,
+      setMaxDisplayDepth,
 
-      // Remove stable callbacks from dependencies to prevent unnecessary re-renders
-      // resetToInitialState,
-      // validateNavigationPath,
-      // updateNavigationPath,
-      // resetSelection,
+      // Callbacks
+      resetToInitialState,
+      validateNavigationPath,
+      updateNavigationPath,
+      resetSelection,
+    };
+  }, [
+    // Core navigation state - only recreate when these essential values change
+    treeId,
+    treeName,
+    interfaceId,
+    currentTreeId,
+    currentTreeName,
+    stableNavigationPath,
+    stableNavigationNamePath,
 
-      // Remove stable setters from dependencies
-      // setNodes,
-      // setEdges,
-      // onNodesChange,
-      // onEdgesChange,
+    // Data state - recreate when core data changes
+    stableNodes,
+    stableEdges,
+    userInterface,
+    rootTree,
+    initialState,
 
-      // reactFlowWrapper is a ref and doesn't need to be in dependencies
-    ]);
+    // UI state that affects multiple components
+    hasUnsavedChanges,
+    isLoading,
+    error,
+    success,
 
-    return (
-      <NavigationStateContext.Provider value={contextValue}>
-        {children}
-      </NavigationStateContext.Provider>
-    );
-  },
-  // Custom comparison function - children should be stable
-  (prevProps, nextProps) => {
-    const areEqual = prevProps.children === nextProps.children;
+    // Selection state - this is what causes re-renders when clicking nodes
+    // We need to include these, but we can optimize by memoizing components that don't need them
+    selectedNode,
+    selectedEdge,
+    isNodeDialogOpen,
+    isEdgeDialogOpen,
+    isNewNode,
+    stableNodeForm,
+    stableEdgeForm,
 
-    if (!areEqual) {
-      console.log('[@context:NavigationStateProvider] Children changed, re-rendering required');
-    }
+    // View state
+    currentViewRootId,
+    stableViewPath,
+    stableAvailableFocusNodes,
+    focusNodeId,
+    maxDisplayDepth,
 
-    return areEqual;
-  },
-);
+    // Only include state that actually affects context value
+    // Remove setter functions and callbacks as they are stable
+  ]);
+
+  return (
+    <NavigationStateContext.Provider value={contextValue}>
+      {children}
+    </NavigationStateContext.Provider>
+  );
+};
 
 NavigationStateProvider.displayName = 'NavigationStateProvider';
 
