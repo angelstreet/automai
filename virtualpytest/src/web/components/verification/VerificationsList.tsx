@@ -38,8 +38,6 @@ export interface VerificationsListProps {
   referencesLoading?: boolean;
   showCollapsible?: boolean; // Optional: show collapsible header
   title?: string; // Optional: custom title
-  onAdbTest?: (command: string, selectedHost: Host) => Promise<any>;
-  onAdbSave?: (verification: Verification, selectedHost: Host) => Promise<any>;
 }
 
 export const VerificationsList: React.FC<VerificationsListProps> = ({
@@ -58,8 +56,6 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
   referencesLoading: passedReferencesLoading,
   showCollapsible = false,
   title = 'Verifications',
-  onAdbTest,
-  onAdbSave,
 }) => {
   const [passCondition, setPassCondition] = useState<'all' | 'any'>('all');
   const [collapsed, setCollapsed] = useState<boolean>(false);
@@ -106,7 +102,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
     const newVerification: Verification = {
       command: '',
       params: {} as any,
-      verification_type: 'adb', // Default to ADB for new verifications
+      verification_type: 'text',
     };
     onVerificationsChange([...verifications, newVerification]);
   };
@@ -280,60 +276,6 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
     });
   };
 
-  const handleAdbTest = async (index: number, command: string) => {
-    if (!onAdbTest || !selectedHost) {
-      console.warn('[@component:VerificationsList] ADB test not available or no host selected');
-      return;
-    }
-
-    try {
-      console.log('[@component:VerificationsList] Testing ADB command:', { index, command });
-      const result = await onAdbTest(command, selectedHost);
-      console.log('[@component:VerificationsList] ADB test result:', result);
-
-      // Update the verification with test result
-      updateVerification(index, {
-        success: result.success,
-        resultType: result.success ? 'PASS' : 'FAIL',
-        message:
-          result.message ||
-          (result.success ? 'ADB command executed successfully' : 'ADB command failed'),
-      });
-    } catch (error) {
-      console.error('[@component:VerificationsList] ADB test error:', error);
-      updateVerification(index, {
-        success: false,
-        resultType: 'ERROR',
-        message: `ADB test error: ${error}`,
-      });
-    }
-  };
-
-  const handleAdbSave = async (index: number, verification: Verification) => {
-    if (!onAdbSave || !selectedHost) {
-      console.warn('[@component:VerificationsList] ADB save not available or no host selected');
-      return;
-    }
-
-    try {
-      console.log('[@component:VerificationsList] Saving ADB verification:', {
-        index,
-        verification,
-      });
-      const result = await onAdbSave(verification, selectedHost);
-      console.log('[@component:VerificationsList] ADB save result:', result);
-
-      if (result.success) {
-        // Trigger references reload
-        if (onReferenceSelected) {
-          onReferenceSelected(result.verification_name || verification.command, result);
-        }
-      }
-    } catch (error) {
-      console.error('[@component:VerificationsList] ADB save error:', error);
-    }
-  };
-
   // Check if all verifications have required inputs
   const areVerificationsValid = () => {
     if (verifications.length === 0) return false;
@@ -417,8 +359,6 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
             onSourceImageClick={handleSourceImageClick}
             onMoveUp={moveVerificationUp}
             onMoveDown={moveVerificationDown}
-            onAdbTest={handleAdbTest}
-            onAdbSave={handleAdbSave}
             canMoveUp={index > 0}
             canMoveDown={index < verifications.length - 1}
           />

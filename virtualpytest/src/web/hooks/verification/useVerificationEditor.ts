@@ -437,122 +437,30 @@ export const useVerificationEditor = ({
 
       const result = await response.json();
 
-      if (result.success && result.detected_text) {
+      if (result.success) {
         console.log('[@hook:useVerificationEditor] Text auto-detection successful:', result);
 
         setDetectedTextData({
-          text: result.detected_text,
+          text: result.detected_text || '',
           fontSize: result.font_size || 0,
           confidence: result.confidence || 0,
-          detectedLanguage: result.detected_language || '',
-          detectedLanguageName: result.detected_language_name || '',
-          languageConfidence: result.language_confidence || 0,
+          detectedLanguage: result.detected_language,
+          detectedLanguageName: result.detected_language_name,
+          languageConfidence: result.language_confidence,
         });
 
-        // Auto-fill the reference text field
-        setReferenceText(result.detected_text);
-        verification.setSuccessMessage(
-          `Text detected: "${result.detected_text}" (confidence: ${Math.round((result.confidence || 0) * 100)}%)`,
-        );
+        // Pre-fill the text input with detected text
+        setReferenceText(result.detected_text || '');
+
+        // Mark as captured
+        setHasCaptured(true);
       } else {
-        console.log('[@hook:useVerificationEditor] Text auto-detection failed:', result.error);
-        console.error(
-          '[@hook:useVerificationEditor] Failed to detect text in the selected area:',
-          result.error,
-        );
+        console.error('[@hook:useVerificationEditor] Text auto-detection failed:', result.error);
       }
-    } catch (err: any) {
-      console.error('[@hook:useVerificationEditor] Error in text auto-detection:', err);
+    } catch (error) {
+      console.error('[@hook:useVerificationEditor] Error during text auto-detection:', error);
     }
-  }, [selectedArea, selectedHost, captureSourcePath, textImageFilter, verification]);
-
-  // Handle ADB test
-  const handleAdbTest = useCallback(
-    async (command: string, host: Host) => {
-      try {
-        console.log('[@hook:useVerificationEditor] Testing ADB command:', { command, host });
-
-        const response = await fetch('/server/verification/adb/test', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            host: host,
-            command: command,
-          }),
-        });
-
-        const result = await response.json();
-        console.log('[@hook:useVerificationEditor] ADB test result:', result);
-
-        if (result.success) {
-          verification.setSuccessMessage(
-            `ADB command executed successfully: ${result.message || 'Command completed'}`,
-          );
-        } else {
-          console.error(
-            '[@hook:useVerificationEditor] ADB command failed:',
-            result.error || 'Unknown error',
-          );
-        }
-
-        return result;
-      } catch (error: any) {
-        console.error('[@hook:useVerificationEditor] ADB test error:', error);
-        return { success: false, error: error.message };
-      }
-    },
-    [verification],
-  );
-
-  // Handle ADB save
-  const handleAdbSave = useCallback(
-    async (verificationData: any, host: Host) => {
-      try {
-        console.log('[@hook:useVerificationEditor] Saving ADB verification:', {
-          verificationData,
-          host,
-        });
-
-        const response = await fetch('/server/verifications/save', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: verificationData.command || `adb_${Date.now()}`,
-            device_model: host.device_model,
-            type: 'adb',
-            command: verificationData.command,
-            parameters: verificationData.params || {},
-            timeout: verificationData.params?.timeout || 5,
-          }),
-        });
-
-        const result = await response.json();
-        console.log('[@hook:useVerificationEditor] ADB save result:', result);
-
-        if (result.success) {
-          verification.setSuccessMessage(
-            `ADB verification saved successfully: ${result.verification_id}`,
-          );
-          setReferenceSaveCounter((prev) => prev + 1); // Trigger references reload
-        } else {
-          console.error(
-            '[@hook:useVerificationEditor] Failed to save ADB verification:',
-            result.error || 'Unknown error',
-          );
-        }
-
-        return result;
-      } catch (error: any) {
-        console.error('[@hook:useVerificationEditor] ADB save error:', error);
-        return { success: false, error: error.message };
-      }
-    },
-    [verification, setReferenceSaveCounter],
-  );
+  }, [selectedArea, selectedHost, captureSourcePath, textImageFilter]);
 
   // Validate regex
   const validateRegex = useCallback((text: string): boolean => {
@@ -666,8 +574,6 @@ export const useVerificationEditor = ({
     handleConfirmOverwrite,
     handleCancelOverwrite,
     handleReferenceTypeChange,
-    handleAdbTest,
-    handleAdbSave,
   };
 };
 

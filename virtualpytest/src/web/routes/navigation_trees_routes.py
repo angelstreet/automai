@@ -8,7 +8,7 @@ from src.lib.supabase.navigation_trees_db import (
     get_tree_history, restore_tree_version, delete_navigation_tree
 )
 from src.lib.supabase.userinterface_db import get_all_userinterfaces
-from src.utils.app_utils import DEFAULT_TEAM_ID
+from src.utils.app_utils import DEFAULT_TEAM_ID, DEFAULT_USER_ID
 
 navigation_trees_bp = Blueprint('navigation_trees', __name__, url_prefix='/server')
 
@@ -156,7 +156,7 @@ def save_tree():
         # Optional fields
         team_id = data.get('team_id', DEFAULT_TEAM_ID)
         description = data.get('description')
-        creator_id = data.get('creator_id')
+        creator_id = DEFAULT_USER_ID  # Always use hardcoded default user ID
         modification_type = data.get('modification_type', 'update')
         changes_summary = data.get('changes_summary')
         

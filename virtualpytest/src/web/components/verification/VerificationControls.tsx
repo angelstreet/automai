@@ -43,6 +43,32 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
         />
       )}
 
+      {verification.command && verification.verification_type === 'adb' && (
+        <TextField
+          size="small"
+          label="Element Criteria"
+          placeholder="text=Button"
+          value={
+            typeof verification.params?.search_term === 'string'
+              ? verification.params.search_term
+              : ''
+          }
+          autoComplete="off"
+          onChange={(e) =>
+            onUpdateVerification(index, {
+              params: { ...verification.params, search_term: e.target.value },
+            })
+          }
+          sx={{
+            flex: 1,
+            '& .MuiInputBase-input': {
+              padding: '4px 8px',
+              fontSize: '0.8rem',
+            },
+          }}
+        />
+      )}
+
       {verification.command &&
         (verification.verification_type === 'image' ||
           verification.verification_type === 'text') && (

@@ -11,8 +11,6 @@ import {
   MenuItem,
   Typography,
   IconButton,
-  TextField,
-  Button,
 } from '@mui/material';
 import React from 'react';
 
@@ -49,8 +47,6 @@ interface VerificationItemProps {
     imageFilter?: 'none' | 'greyscale' | 'binary',
   ) => void;
   onSourceImageClick: (sourceUrl: string, resultType: 'PASS' | 'FAIL' | 'ERROR') => void;
-  onAdbTest?: (index: number, command: string) => void;
-  onAdbSave?: (index: number, verification: Verification) => void;
   canMoveUp: boolean;
   canMoveDown: boolean;
 }
@@ -72,8 +68,6 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
   onMoveDown,
   onImageClick,
   onSourceImageClick,
-  onAdbTest,
-  onAdbSave,
   canMoveUp,
   canMoveDown,
 }) => {
@@ -81,20 +75,28 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
     <Box
       sx={{ mb: 1, px: 0.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
     >
-      {/* Line 1: Verification Type and Command dropdowns */}
+      {/* Line 1: Verification dropdown */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-        {/* Verification Type Dropdown */}
-        <FormControl size="small" sx={{ minWidth: 120 }}>
+        <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
           <Select
-            value={verification.verification_type || 'adb'}
-            onChange={(e) =>
-              onUpdateVerification(index, {
-                verification_type: e.target.value as 'adb' | 'image' | 'text' | 'appium',
-                command: '', // Reset command when type changes
-                params: {} as any, // Reset params when type changes
-              })
-            }
+            value={typeof verification.command === 'string' ? verification.command : ''}
+            onChange={(e) => onVerificationSelect(index, e.target.value)}
+            displayEmpty
             size="small"
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  maxHeight: 200,
+                  '& .MuiMenuItem-root': {
+                    fontSize: '0.8rem',
+                    minHeight: '28px',
+                    paddingTop: '2px',
+                    paddingBottom: '2px',
+                    lineHeight: 0.8,
+                  },
+                },
+              },
+            }}
             sx={{
               '& .MuiSelect-select': {
                 fontSize: '0.8rem',
@@ -102,124 +104,60 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                 paddingBottom: '2px',
               },
             }}
+            renderValue={(selected) => {
+              if (!selected) {
+                return <em style={{ fontSize: '0.8rem' }}>Select verification...</em>;
+              }
+              // Find the selected verification to display its command as label
+              let selectedLabel = '';
+              Object.values(availableVerifications).forEach((verifications) => {
+                if (Array.isArray(verifications)) {
+                  const verification = verifications.find((v) => v.command === selected);
+                  if (verification) {
+                    selectedLabel = verification.command
+                      .replace(/_/g, ' ')
+                      .replace(/([A-Z])/g, ' $1')
+                      .trim();
+                  }
+                }
+              });
+              return selectedLabel || selected;
+            }}
           >
-            <MenuItem value="adb" sx={{ fontSize: '0.8rem' }}>
-              ADB
-            </MenuItem>
-            <MenuItem value="image" sx={{ fontSize: '0.8rem' }}>
-              Image
-            </MenuItem>
-            <MenuItem value="text" sx={{ fontSize: '0.8rem' }}>
-              Text
-            </MenuItem>
-            <MenuItem value="appium" sx={{ fontSize: '0.8rem' }}>
-              Appium
-            </MenuItem>
+            {Object.entries(availableVerifications).map(([category, verifications]) => {
+              // Ensure verifications is an array
+              if (!Array.isArray(verifications)) {
+                console.warn(
+                  `[@component:VerificationItem] Invalid verifications for category ${category}:`,
+                  verifications,
+                );
+                return null;
+              }
+
+              return [
+                <MenuItem
+                  key={`header-${category}`}
+                  disabled
+                  sx={{ fontWeight: 'bold', fontSize: '0.65rem', minHeight: '24px' }}
+                >
+                  {category.replace(/_/g, ' ').toUpperCase()}
+                </MenuItem>,
+                ...verifications.map((verification) => (
+                  <MenuItem
+                    key={verification.command}
+                    value={verification.command}
+                    sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
+                  >
+                    {verification.command
+                      .replace(/_/g, ' ')
+                      .replace(/([A-Z])/g, ' $1')
+                      .trim()}
+                  </MenuItem>
+                )),
+              ];
+            })}
           </Select>
         </FormControl>
-
-        {/* ADB Command Input Field */}
-        {verification.verification_type === 'adb' && (
-          <TextField
-            size="small"
-            label="ADB Command"
-            placeholder="input tap 100 200"
-            value={verification.command || ''}
-            onChange={(e) => onUpdateVerification(index, { command: e.target.value })}
-            sx={{
-              flex: 1,
-              '& .MuiInputBase-input': {
-                padding: '4px 8px',
-                fontSize: '0.8rem',
-              },
-            }}
-          />
-        )}
-
-        {/* Verification Command Dropdown (only for non-ADB types) */}
-        {verification.verification_type !== 'adb' && (
-          <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
-            <Select
-              value={typeof verification.command === 'string' ? verification.command : ''}
-              onChange={(e) => onVerificationSelect(index, e.target.value)}
-              displayEmpty
-              size="small"
-              MenuProps={{
-                PaperProps: {
-                  sx: {
-                    maxHeight: 200,
-                    '& .MuiMenuItem-root': {
-                      fontSize: '0.8rem',
-                      minHeight: '28px',
-                      paddingTop: '2px',
-                      paddingBottom: '2px',
-                      lineHeight: 0.8,
-                    },
-                  },
-                },
-              }}
-              sx={{
-                '& .MuiSelect-select': {
-                  fontSize: '0.8rem',
-                  paddingTop: '4px',
-                  paddingBottom: '2px',
-                },
-              }}
-              renderValue={(selected) => {
-                if (!selected) {
-                  return <em style={{ fontSize: '0.8rem' }}>Select verification...</em>;
-                }
-                // Find the selected verification to display its command as label
-                let selectedLabel = '';
-                Object.values(availableVerifications).forEach((verifications) => {
-                  if (Array.isArray(verifications)) {
-                    const verification = verifications.find((v) => v.command === selected);
-                    if (verification) {
-                      selectedLabel = verification.command
-                        .replace(/_/g, ' ')
-                        .replace(/([A-Z])/g, ' $1')
-                        .trim();
-                    }
-                  }
-                });
-                return selectedLabel || selected;
-              }}
-            >
-              {Object.entries(availableVerifications).map(([category, verifications]) => {
-                // Ensure verifications is an array
-                if (!Array.isArray(verifications)) {
-                  console.warn(
-                    `[@component:VerificationItem] Invalid verifications for category ${category}:`,
-                    verifications,
-                  );
-                  return null;
-                }
-
-                return [
-                  <MenuItem
-                    key={`header-${category}`}
-                    disabled
-                    sx={{ fontWeight: 'bold', fontSize: '0.65rem', minHeight: '24px' }}
-                  >
-                    {category.replace(/_/g, ' ').toUpperCase()}
-                  </MenuItem>,
-                  ...verifications.map((verification) => (
-                    <MenuItem
-                      key={verification.command}
-                      value={verification.command}
-                      sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
-                    >
-                      {verification.command
-                        .replace(/_/g, ' ')
-                        .replace(/([A-Z])/g, ' $1')
-                        .trim()}
-                    </MenuItem>
-                  )),
-                ];
-              })}
-            </Select>
-          </FormControl>
-        )}
 
         <IconButton
           size="small"
@@ -251,43 +189,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
         onUpdateVerification={onUpdateVerification}
       />
 
-      {/* Line 3: Reference selector for text/image, Test/Save buttons for ADB */}
-      {verification.verification_type === 'adb' && verification.command && (
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mt: 1 }}>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => {
-              if (onAdbTest) {
-                onAdbTest(index, verification.command);
-              } else {
-                console.log(
-                  '[@component:VerificationItem] Testing ADB command:',
-                  verification.command,
-                );
-              }
-            }}
-            sx={{ fontSize: '0.7rem' }}
-          >
-            Test
-          </Button>
-          <Button
-            size="small"
-            variant="contained"
-            onClick={() => {
-              if (onAdbSave) {
-                onAdbSave(index, verification);
-              } else {
-                console.log('[@component:VerificationItem] Saving ADB verification:', verification);
-              }
-            }}
-            sx={{ fontSize: '0.7rem' }}
-          >
-            Save
-          </Button>
-        </Box>
-      )}
-
+      {/* Line 3: Reference selector for text/image, nothing for ADB */}
       {verification.command && verification.verification_type === 'text' && (
         <FormControl size="small" sx={{ width: 250 }}>
           <InputLabel>Text Reference</InputLabel>
