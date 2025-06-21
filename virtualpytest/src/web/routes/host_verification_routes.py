@@ -18,9 +18,6 @@ verification_host_bp = Blueprint('verification_host', __name__, url_prefix='/hos
 # HOST-SIDE VERIFICATION ENDPOINTS
 # =====================================================
 
-# REMOVED: getAllReferences route - not needed on host side
-# Host doesn't need to list references, it receives them for processing
-
 @verification_host_bp.route('/getStatus', methods=['GET'])
 def verification_status():
     """Get verification system status."""

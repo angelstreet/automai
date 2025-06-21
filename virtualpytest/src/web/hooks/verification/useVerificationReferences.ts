@@ -60,12 +60,21 @@ export const useVerificationReferences = (
           if (result.images && Array.isArray(result.images)) {
             result.images.forEach((ref: any) => {
               const filename = ref.name || ref.filename || 'unknown.png';
+              const refType = ref.type === 'reference_text' ? 'text' : 'image';
+
               modelRefs[filename] = {
-                type: 'image',
+                type: refType,
                 url: ref.r2_url || ref.url,
                 area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
                 created_at: ref.created_at,
                 updated_at: ref.updated_at,
+                // Add text-specific fields for text references
+                ...(refType === 'text' &&
+                  ref.area && {
+                    text: ref.area.text,
+                    font_size: ref.area.font_size,
+                    confidence: ref.area.confidence,
+                  }),
               };
             });
           }
