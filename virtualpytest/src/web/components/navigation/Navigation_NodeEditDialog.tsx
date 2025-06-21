@@ -71,6 +71,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
   const [isRunningGoto, setIsRunningGoto] = useState(false);
   const [gotoResult, setGotoResult] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Initialize verifications from nodeForm when dialog opens
   useEffect(() => {
@@ -145,8 +146,15 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setGotoResult(null);
+      setSaveSuccess(false);
     }
   }, [isOpen]);
+
+  const handleSave = () => {
+    onSubmit();
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 2000);
+  };
 
   const isFormValid = () => {
     const basicFormValid = nodeForm?.label?.trim();
@@ -631,8 +639,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             Reset Node
           </Button>
         )}
-        <Button onClick={onSubmit} variant="contained" disabled={!isFormValid()}>
-          Save
+        <Button onClick={handleSave} variant="contained" disabled={!isFormValid()}>
+          {saveSuccess ? '✓' : 'Save'}
         </Button>
         <Button
           onClick={verification.handleTest}

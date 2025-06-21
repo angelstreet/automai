@@ -194,23 +194,10 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           setHasUnsavedChanges(true);
         }
 
-        // Clean up state
-        setSelectedNode(null);
-        setNodeForm(null);
-        setIsNodeDialogOpen(false);
-        setIsNewNode(false);
+        // Don't close dialog or clear selection - just mark as saved
+        // This prevents the interface reload feeling
       },
-      [
-        isNewNode,
-        selectedNode,
-        nodes,
-        setNodes,
-        setSelectedNode,
-        setNodeForm,
-        setIsNodeDialogOpen,
-        setIsNewNode,
-        setHasUnsavedChanges,
-      ],
+      [isNewNode, selectedNode, nodes, setNodes, setHasUnsavedChanges],
     );
 
     // Save edge changes
