@@ -429,7 +429,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
             onUpdateVerification={updateVerification}
             onRemoveVerification={removeVerification}
             onImageClick={handleImageClick}
-            onSourceImageClick={handleSourceImageClick}
+            onSourceImageClick={handleTextSourceImageClick}
             onMoveUp={moveVerificationUp}
             onMoveDown={moveVerificationDown}
             canMoveUp={index > 0}
@@ -555,6 +555,19 @@ export const VerificationsList: React.FC<VerificationsListProps> = ({
         resultType={imageComparisonDialog.resultType}
         imageFilter={imageComparisonDialog.imageFilter}
         onClose={() => setImageComparisonDialog((prev) => ({ ...prev, open: false }))}
+      />
+
+      {/* Text Comparison Dialog */}
+      <VerificationTextComparisonDialog
+        open={textComparisonDialog.open}
+        searchedText={textComparisonDialog.searchedText}
+        extractedText={textComparisonDialog.extractedText}
+        sourceUrl={textComparisonDialog.sourceUrl}
+        resultType={textComparisonDialog.resultType}
+        detectedLanguage={textComparisonDialog.detectedLanguage}
+        languageConfidence={textComparisonDialog.languageConfidence}
+        imageFilter={textComparisonDialog.imageFilter}
+        onClose={() => setTextComparisonDialog((prev) => ({ ...prev, open: false }))}
       />
     </>
   );

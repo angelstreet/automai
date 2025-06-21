@@ -85,36 +85,114 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
   // CRUD OPERATIONS
   // ========================================
 
-  // Save node changes
+  // Save node changes with database persistence
   const saveNodeChanges = useCallback(
-    (formData: any) => {
+    async (formData: any) => {
       console.log('[@context:NodeEdgeManagementProvider] Saving node changes:', formData);
 
-      if (isNewNode) {
-        // Create new node
-        const newNode: UINavigationNode = {
-          ...formData,
-          id: formData.id || `node-${Date.now()}`,
-          position: formData.position || { x: 100, y: 100 },
-        };
+      try {
+        // Step 1: Save verifications to database using existing route
+        if (formData.verifications && formData.verifications.length > 0) {
+          console.log(
+            `[@context:NodeEdgeManagementProvider] Saving ${formData.verifications.length} verifications to database`,
+          );
 
-        // Add node to nodes array (single source of truth)
-        setNodes((nds: UINavigationNode[]) => [...nds, newNode]);
+          for (const verification of formData.verifications) {
+            try {
+              const response = await fetch('/server/verifications/save', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  name: `${formData.label || 'node'}_${verification.verification_type}_${Date.now()}`,
+                  device_model: verification.device_model || 'android_mobile',
+                  type: verification.verification_type || 'image',
+                  command: verification.command || '',
+                  parameters: verification.params || {},
+                  timeout: verification.timeout,
+                  r2_path: verification.params?.image_path || '',
+                  r2_url: verification.params?.image_url || '',
+                  area: verification.params?.area || null,
+                }),
+              });
 
-        console.log('[@context:NodeEdgeManagementProvider] Created new node:', newNode);
-      } else if (selectedNode) {
-        // Update existing node
-        const updatedNodes = nodes.map((node) => {
-          if (node.id === selectedNode.id) {
-            return { ...node, ...formData };
+              const result = await response.json();
+              if (result.success) {
+                console.log(
+                  `[@context:NodeEdgeManagementProvider] Saved verification to database: ${result.verification_id}`,
+                );
+              } else {
+                console.error(
+                  `[@context:NodeEdgeManagementProvider] Failed to save verification: ${result.error}`,
+                );
+              }
+            } catch (error) {
+              console.error(
+                `[@context:NodeEdgeManagementProvider] Error saving verification:`,
+                error,
+              );
+            }
           }
-          return node;
-        });
+        }
 
-        // Update nodes (single source of truth)
-        setNodes(updatedNodes);
+        // Step 2: Update node in memory (verifications are stored in the node for tree persistence)
 
-        console.log('[@context:NodeEdgeManagementProvider] Updated node:', selectedNode.id);
+        if (isNewNode) {
+          // Create new node
+          const newNode: UINavigationNode = {
+            ...formData,
+            id: formData.id || `node-${Date.now()}`,
+            position: formData.position || { x: 100, y: 100 },
+          };
+
+          // Add node to nodes array (single source of truth)
+          setNodes((nds: UINavigationNode[]) => [...nds, newNode]);
+
+          console.log('[@context:NodeEdgeManagementProvider] Created new node:', newNode);
+        } else if (selectedNode) {
+          // Update existing node
+          const updatedNodes = nodes.map((node) => {
+            if (node.id === selectedNode.id) {
+              return { ...node, ...formData };
+            }
+            return node;
+          });
+
+          // Update nodes (single source of truth)
+          setNodes(updatedNodes);
+
+          console.log('[@context:NodeEdgeManagementProvider] Updated node:', selectedNode.id);
+        }
+
+        // Step 3: Trigger tree save to persist changes to database
+        // We need to import the navigation config context to trigger save
+        // For now, just mark as having unsaved changes - the user will need to save the tree
+        setHasUnsavedChanges(true);
+
+        console.log(
+          '[@context:NodeEdgeManagementProvider] Node saved successfully with verifications',
+        );
+      } catch (error) {
+        console.error('[@context:NodeEdgeManagementProvider] Error saving node:', error);
+        // Still update the node in memory even if database save fails
+        if (isNewNode) {
+          const newNode: UINavigationNode = {
+            ...formData,
+            id: formData.id || `node-${Date.now()}`,
+            position: formData.position || { x: 100, y: 100 },
+          };
+          setNodes((nds: UINavigationNode[]) => [...nds, newNode]);
+        } else if (selectedNode) {
+          const updatedNodes = nodes.map((node) => {
+            if (node.id === selectedNode.id) {
+              return { ...node, ...formData };
+            }
+            return node;
+          });
+          setNodes(updatedNodes);
+        }
+        setHasUnsavedChanges(true);
       }
 
       // Clean up state
@@ -122,7 +200,6 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
       setNodeForm(null);
       setIsNodeDialogOpen(false);
       setIsNewNode(false);
-      setHasUnsavedChanges(true);
     },
     [
       isNewNode,

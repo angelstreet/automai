@@ -17,7 +17,15 @@ interface VerificationTestResultsProps {
     resultType?: 'PASS' | 'FAIL' | 'ERROR',
     imageFilter?: 'none' | 'greyscale' | 'binary',
   ) => void;
-  onSourceImageClick: (sourceUrl: string, resultType: 'PASS' | 'FAIL' | 'ERROR') => void;
+  onSourceImageClick: (
+    searchedText: string,
+    extractedText: string,
+    sourceUrl?: string,
+    resultType?: 'PASS' | 'FAIL' | 'ERROR',
+    detectedLanguage?: string,
+    languageConfidence?: number,
+    imageFilter?: 'none' | 'greyscale' | 'binary',
+  ) => void;
 }
 
 export const VerificationTestResults: React.FC<VerificationTestResultsProps> = ({

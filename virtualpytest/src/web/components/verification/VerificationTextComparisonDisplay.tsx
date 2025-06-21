@@ -10,7 +10,15 @@ interface VerificationTextComparisonDisplayProps {
   resultType: 'PASS' | 'FAIL' | 'ERROR';
   detectedLanguage?: string;
   languageConfidence?: number;
-  onSourceImageClick: (sourceUrl: string, resultType: 'PASS' | 'FAIL' | 'ERROR') => void;
+  onSourceImageClick: (
+    searchedText: string,
+    extractedText: string,
+    sourceUrl?: string,
+    resultType?: 'PASS' | 'FAIL' | 'ERROR',
+    detectedLanguage?: string,
+    languageConfidence?: number,
+    imageFilter?: 'none' | 'greyscale' | 'binary',
+  ) => void;
 }
 
 export const VerificationTextComparisonDisplay: React.FC<
@@ -35,9 +43,15 @@ export const VerificationTextComparisonDisplay: React.FC<
   };
 
   const handleSourceImageClick = () => {
-    if (sourceUrl) {
-      onSourceImageClick(buildImageUrl(sourceUrl), resultType);
-    }
+    onSourceImageClick(
+      searchedText,
+      extractedText,
+      sourceUrl ? buildImageUrl(sourceUrl) : undefined,
+      resultType,
+      detectedLanguage,
+      languageConfidence,
+      'none', // Default image filter for text verifications
+    );
   };
 
   // Map language codes to readable names

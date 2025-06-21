@@ -367,7 +367,12 @@ const NavigationEditorContent: React.FC = () => {
   // Wrapper for node form submission to handle the form data
   const handleNodeFormSubmitWrapper = useCallback(() => {
     if (nodeForm) {
+      console.log(
+        '[@component:NavigationEditor] Submitting node form with verifications:',
+        nodeForm.verifications?.length || 0,
+      );
       handleNodeFormSubmit(nodeForm);
+      console.log('[@component:NavigationEditor] Node form submitted successfully');
     }
   }, [nodeForm, handleNodeFormSubmit]);
 
