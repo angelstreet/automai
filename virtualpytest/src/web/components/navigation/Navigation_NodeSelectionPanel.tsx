@@ -18,7 +18,6 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
-import { useVerification } from '../../hooks/verification/useVerification';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
 
@@ -79,18 +78,10 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     // Add states for verification execution
     const [isRunningVerifications, setIsRunningVerifications] = useState(false);
     const [verificationResult, setVerificationResult] = useState<string | null>(null);
-    const [captureSourcePath, setCaptureSourcePath] = useState<string | null>(null);
-
-    // Use the verification hook for simple verification (no area selection needed)
-    const verification = useVerification({
-      selectedHost: selectedHost!,
-      captureSourcePath: captureSourcePath || undefined,
-    });
 
     // Clear verification results when node selection changes
     useEffect(() => {
       setVerificationResult(null);
-      setCaptureSourcePath(null);
     }, [selectedNode.id, selectedNode.data.verifications]);
 
     const handleEdit = () => {
@@ -180,7 +171,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
 
     // ❌ REMOVED: updateVerificationResults - confidence tracking moved to database
 
-    // Execute all node verifications using temporary capture approach
+    // Execute all node verifications with direct API call
     const handleRunVerifications = async () => {
       if (!selectedNode.data.verifications || selectedNode.data.verifications.length === 0) {
         return;
@@ -195,66 +186,65 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       setVerificationResult(null);
 
       try {
-        // Step 1: Take temporary screenshot (like VerificationEditor does)
-        console.log(
-          '[@component:NodeSelectionPanel] Taking temporary screenshot for verification...',
-        );
+        // Step 1: Take screenshot
+        console.log('[@component:NodeSelectionPanel] Taking screenshot for verification...');
 
-        // Use the same API call as VerificationEditor
-        const response = await fetch('/server/av/take-screenshot', {
+        const screenshotResponse = await fetch('/server/av/take-screenshot', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ host: selectedHost }),
         });
 
-        const result = await response.json();
+        const screenshotResult = await screenshotResponse.json();
 
-        if (!result.success || !result.screenshot_url) {
+        if (!screenshotResult.success || !screenshotResult.screenshot_url) {
           setVerificationResult('❌ Failed to capture screenshot for verification');
           return;
         }
 
-        const screenshotUrl = result.screenshot_url;
-        console.log('[@component:NodeSelectionPanel] Temporary screenshot taken:', screenshotUrl);
+        // Extract filename from screenshot URL
+        const screenshotUrl = screenshotResult.screenshot_url;
+        const filename = screenshotUrl.split('/').pop()?.split('?')[0];
+        console.log('[@component:NodeSelectionPanel] Screenshot taken:', filename);
 
-        // Set the capture source path for the verification hook
-        setCaptureSourcePath(screenshotUrl);
-
-        // Step 2: Set verifications in the hook and run them
+        // Step 2: Prepare verifications
         const verifications = selectedNode.data.verifications.map((verification) => ({
           ...verification,
           verification_type: verification.verification_type || 'text',
         }));
 
-        verification.handleVerificationsChange(verifications);
+        // Step 3: Execute verifications directly
+        const verificationResponse = await fetch('/server/verification/batch/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            host: selectedHost,
+            verifications: verifications,
+            source_filename: filename,
+          }),
+        });
 
-        // Wait a moment for state to update, then run the test
-        setTimeout(async () => {
-          await verification.handleTest();
+        const verificationResult = await verificationResponse.json();
 
-          // Get results from the verification hook
-          if (verification.testResults && verification.testResults.length > 0) {
-            const results = verification.testResults.map((result, index) => {
-              if (result.success) {
-                return `✅ Verification ${index + 1}: ${result.message || 'Success'}`;
-              } else {
-                return `❌ Verification ${index + 1}: ${result.error || 'Failed'}`;
-              }
-            });
-            setVerificationResult(results.join('\n'));
-          } else if (verification.error) {
-            setVerificationResult(`❌ ${verification.error}`);
-          } else {
-            setVerificationResult('✅ Verification completed');
-          }
-
-          setIsRunningVerifications(false);
-        }, 100);
+        // Step 4: Process results
+        if (verificationResult.results && verificationResult.results.length > 0) {
+          const results = verificationResult.results.map((result: any, index: number) => {
+            if (result.success) {
+              return `✅ Verification ${index + 1}: ${result.message || 'Success'}`;
+            } else {
+              return `❌ Verification ${index + 1}: ${result.error || 'Failed'}`;
+            }
+          });
+          setVerificationResult(results.join('\n'));
+        } else if (verificationResult.error) {
+          setVerificationResult(`❌ ${verificationResult.error}`);
+        } else {
+          setVerificationResult('✅ Verification completed');
+        }
       } catch (err: any) {
         console.error('[@component:NodeSelectionPanel] Error executing verifications:', err);
         setVerificationResult(`❌ ${err.message}`);
+      } finally {
         setIsRunningVerifications(false);
       }
     };
