@@ -253,15 +253,7 @@ export function StreamViewer({
         setRetryCount((prev) => prev + 1);
       }, retryDelay);
     }
-  }, [
-    streamUrl,
-    retryCount,
-    cleanupStream,
-    currentStreamUrl,
-    attemptPlay,
-    retryDelay,
-    tryNativePlayback,
-  ]);
+  }, [streamUrl]);
 
   const handleStreamError = useCallback(() => {
     if (retryCount >= maxRetries) {
@@ -336,7 +328,7 @@ export function StreamViewer({
     return () => {
       cleanupStream();
     };
-  }, [streamUrl, isStreamActive, initializeStream, cleanupStream, currentStreamUrl]);
+  }, [streamUrl, isStreamActive, currentStreamUrl, initializeStream, cleanupStream]);
 
   useEffect(() => {
     const checkVideoReady = () => {

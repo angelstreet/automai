@@ -258,15 +258,12 @@ const NavigationEditorContent: React.FC = React.memo(() => {
   }, []);
 
   // Memoize the selectedHost to prevent unnecessary re-renders
-  const stableSelectedHost = useMemo(
-    () => selectedHost,
-    [selectedHost?.host_name, selectedHost?.device_model, selectedHost?.device_ip],
-  );
+  const stableSelectedHost = useMemo(() => selectedHost, [selectedHost]);
 
   // Memoize the RemotePanel props to prevent unnecessary re-renders
   const remotePanelProps = useMemo(
     () => ({
-      host: stableSelectedHost,
+      host: stableSelectedHost!,
       onReleaseControl: handleDisconnectComplete,
       streamCollapsed: isAVPanelCollapsed,
       streamMinimized: isAVPanelMinimized,
@@ -284,7 +281,7 @@ const NavigationEditorContent: React.FC = React.memo(() => {
   // Memoize the HDMIStream props to prevent unnecessary re-renders
   const hdmiStreamProps = useMemo(
     () => ({
-      host: stableSelectedHost,
+      host: stableSelectedHost!,
       onCollapsedChange: handleAVPanelCollapsedChange,
       onMinimizedChange: handleAVPanelMinimizedChange,
       onCaptureModeChange: handleCaptureModeChange,
@@ -684,21 +681,23 @@ const NavigationEditorContent: React.FC = React.memo(() => {
       {showAVPanel && selectedHost && <HDMIStream {...hdmiStreamProps} />}
 
       {/* Node Edit Dialog */}
-      <NodeEditDialog
-        isOpen={isNodeDialogOpen}
-        nodeForm={nodeForm}
-        nodes={nodes}
-        setNodeForm={setNodeForm as (form: NodeForm | null) => void}
-        onSubmit={handleNodeFormSubmitWrapper}
-        onClose={cancelNodeChanges}
-        onResetNode={() => selectedNode && resetNode(selectedNode.id)}
-        model={userInterface?.models?.[0] || 'android_mobile'}
-        isControlActive={isControlActive}
-        selectedHost={selectedHost}
-      />
+      {isNodeDialogOpen && (
+        <NodeEditDialog
+          isOpen={isNodeDialogOpen}
+          nodeForm={nodeForm}
+          nodes={nodes}
+          setNodeForm={setNodeForm as (form: NodeForm | null) => void}
+          onSubmit={handleNodeFormSubmitWrapper}
+          onClose={cancelNodeChanges}
+          onResetNode={() => selectedNode && resetNode(selectedNode.id)}
+          model={userInterface?.models?.[0] || 'android_mobile'}
+          isControlActive={isControlActive}
+          selectedHost={selectedHost}
+        />
+      )}
 
       {/* Edge Edit Dialog */}
-      {selectedHost && (
+      {isEdgeDialogOpen && selectedHost && (
         <EdgeEditDialog
           isOpen={isEdgeDialogOpen}
           edgeForm={edgeForm}
