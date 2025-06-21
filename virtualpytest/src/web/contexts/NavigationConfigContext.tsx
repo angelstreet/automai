@@ -359,7 +359,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
               edges: state.edges,
             },
             description: `Navigation tree for userInterface: ${userInterfaceId}`,
-            creator_id: userId,
             modification_type: 'update',
             changes_summary: 'Updated navigation tree from editor',
           }),
@@ -388,7 +387,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(false);
       }
     },
-    [userId],
+    [],
   );
 
   // List available user interfaces
@@ -436,7 +435,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
               edges: [],
             },
             description: `New navigation tree for userInterface: ${userInterfaceId}`,
-            creator_id: userId,
             modification_type: 'create',
             changes_summary: 'Created new empty navigation tree',
           }),
@@ -466,7 +464,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(false);
       }
     },
-    [userId],
+    [],
   );
 
   // ========================================
