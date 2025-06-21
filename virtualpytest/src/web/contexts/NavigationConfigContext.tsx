@@ -290,8 +290,115 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           const treeData = tree.metadata || {};
 
           // Update state with loaded data
-          const nodes = treeData.nodes || [];
+          let nodes = treeData.nodes || [];
           const edges = treeData.edges || [];
+
+          // Load verification definitions from database
+          try {
+            console.log(
+              `[@context:NavigationConfigProvider:loadFromConfig] Loading verification definitions for tree: ${tree.name}`,
+            );
+
+            // Get userInterface to determine device model
+            const uiResponse = await fetch(`/server/userinterfaces/${userInterfaceId}`);
+            if (uiResponse.ok) {
+              const uiData = await uiResponse.json();
+              const deviceModel = uiData.userinterface?.models?.[0] || 'android_mobile';
+
+              // Load verification definitions for this tree and device model
+              const verificationsResponse = await fetch(
+                `/server/verifications/load-for-tree?tree_name=${encodeURIComponent(tree.name)}&device_model=${deviceModel}`,
+                {
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                },
+              );
+
+              if (verificationsResponse.ok) {
+                const verificationsData = await verificationsResponse.json();
+
+                if (verificationsData.success && verificationsData.verifications.length > 0) {
+                  console.log(
+                    `[@context:NavigationConfigProvider:loadFromConfig] Found ${verificationsData.verifications.length} verification definitions in database`,
+                  );
+
+                  // Group verifications by node (based on verification name pattern)
+                  const verificationsByNode = new Map<string, any[]>();
+
+                  for (const verification of verificationsData.verifications) {
+                    // Extract node label from verification name pattern: {node_label}_{verification_type}_{timestamp}
+                    const nameParts = verification.name.split('_');
+                    if (nameParts.length >= 3) {
+                      const nodeLabel = nameParts[0];
+
+                      if (!verificationsByNode.has(nodeLabel)) {
+                        verificationsByNode.set(nodeLabel, []);
+                      }
+
+                      // Convert database verification to node verification format
+                      const nodeVerification = {
+                        verification_type: verification.verification_type,
+                        command: verification.command,
+                        params: verification.parameters || {},
+                        timeout: verification.timeout,
+                        device_model: verification.device_model,
+                        // Add database metadata
+                        _db_id: verification.id,
+                        _db_name: verification.name,
+                      };
+
+                      verificationsByNode.get(nodeLabel)?.push(nodeVerification);
+                    }
+                  }
+
+                  // Merge verification definitions with nodes
+                  nodes = nodes.map((node) => {
+                    const nodeVerifications = verificationsByNode.get(node.data?.label);
+                    if (nodeVerifications && nodeVerifications.length > 0) {
+                      console.log(
+                        `[@context:NavigationConfigProvider:loadFromConfig] Adding ${nodeVerifications.length} verifications to node: ${node.data?.label}`,
+                      );
+
+                      return {
+                        ...node,
+                        data: {
+                          ...node.data,
+                          verifications: [
+                            ...(node.data?.verifications || []),
+                            ...nodeVerifications,
+                          ],
+                        },
+                      };
+                    }
+                    return node;
+                  });
+
+                  console.log(
+                    `[@context:NavigationConfigProvider:loadFromConfig] Successfully merged verification definitions with nodes`,
+                  );
+                } else {
+                  console.log(
+                    `[@context:NavigationConfigProvider:loadFromConfig] No verification definitions found in database for tree: ${tree.name}`,
+                  );
+                }
+              } else {
+                console.warn(
+                  `[@context:NavigationConfigProvider:loadFromConfig] Failed to load verification definitions: ${verificationsResponse.status}`,
+                );
+              }
+            } else {
+              console.warn(
+                `[@context:NavigationConfigProvider:loadFromConfig] Failed to get userInterface details: ${uiResponse.status}`,
+              );
+            }
+          } catch (verificationError) {
+            console.error(
+              `[@context:NavigationConfigProvider:loadFromConfig] Error loading verification definitions:`,
+              verificationError,
+            );
+            // Continue with tree loading even if verification loading fails
+          }
 
           state.setNodes(nodes);
           state.setEdges(edges);

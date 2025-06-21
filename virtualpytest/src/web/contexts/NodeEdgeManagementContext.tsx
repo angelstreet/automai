@@ -91,7 +91,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
       console.log('[@context:NodeEdgeManagementProvider] Saving node changes:', formData);
 
       try {
-        // Step 1: Save verifications to database using existing route
+        // Step 1: Save verifications to database using the correct endpoint
         if (formData.verifications && formData.verifications.length > 0) {
           console.log(
             `[@context:NodeEdgeManagementProvider] Saving ${formData.verifications.length} verifications to database`,
@@ -99,7 +99,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
 
           for (const verification of formData.verifications) {
             try {
-              const response = await fetch('/server/verifications/save', {
+              const response = await fetch('/server/verifications/save-verification', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -107,12 +107,13 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
                 body: JSON.stringify({
                   name: `${formData.label || 'node'}_${verification.verification_type}_${Date.now()}`,
                   device_model: verification.device_model || 'android_mobile',
-                  type: verification.verification_type || 'image',
+                  verification_type: verification.verification_type || 'image',
                   command: verification.command || '',
                   parameters: verification.params || {},
                   timeout: verification.timeout,
-                  r2_path: verification.params?.image_path || '',
-                  r2_url: verification.params?.image_url || '',
+                  // Optional fields for image verifications with references
+                  r2_path: verification.params?.image_path || null,
+                  r2_url: verification.params?.image_url || null,
                   area: verification.params?.area || null,
                 }),
               });
