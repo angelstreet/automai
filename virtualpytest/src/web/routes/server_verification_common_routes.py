@@ -138,6 +138,178 @@ def execute_video_verification():
             'error': str(e)
         }), 500
 
+# =====================================================
+# BATCH VERIFICATION COORDINATION (SERVER-SIDE LOGIC)
+# =====================================================
+
+@server_verification_common_bp.route('/batch/execute', methods=['POST'])
+def execute_batch_verification():
+    """Execute batch verification by dispatching individual requests to host endpoints"""
+    try:
+        print("[@route:server_verification_common:execute_batch_verification] Starting batch verification coordination")
+        
+        # Get request data
+        data = request.get_json() or {}
+        verifications = data.get('verifications', [])
+        source_filename = data.get('source_filename')
+        host = data.get('host', {})
+        
+        # Extract model from host device (required)
+        model = data.get('model') or host.get('device_model')
+        
+        if not model:
+            return jsonify({
+                'success': False,
+                'error': 'Device model is required. Host device must have device_model specified.'
+            }), 400
+        
+        print(f"[@route:server_verification_common:execute_batch_verification] Processing {len(verifications)} verifications")
+        print(f"[@route:server_verification_common:execute_batch_verification] Source: {source_filename}, Model: {model}")
+        
+        # Validate required parameters
+        if not verifications:
+            return jsonify({
+                'success': False,
+                'error': 'verifications are required'
+            }), 400
+        
+        # Require source_filename - no fallbacks (capture-first approach)
+        if not source_filename:
+            return jsonify({
+                'success': False,
+                'error': 'source_filename is required - please capture screenshot first'
+            }), 400
+        
+        results = []
+        passed_count = 0
+        
+        for i, verification in enumerate(verifications):
+            verification_type = verification.get('verification_type', 'text')
+            
+            print(f"[@route:server_verification_common:execute_batch_verification] Processing verification {i+1}/{len(verifications)}: {verification_type}")
+            
+            # Prepare individual request data
+            individual_request = {
+                'verification': verification,
+                'source_filename': source_filename,
+                'model': model
+            }
+            
+            # Dispatch to appropriate host endpoint based on verification type
+            if verification_type == 'image':
+                result, status = proxy_to_host('/host/verification/image/execute', 'POST', individual_request, timeout=60)
+            elif verification_type == 'text':
+                result, status = proxy_to_host('/host/verification/text/execute', 'POST', individual_request, timeout=60)
+            elif verification_type == 'adb':
+                result, status = proxy_to_host('/host/verification/adb/execute', 'POST', individual_request, timeout=60)
+            elif verification_type == 'appium':
+                result, status = proxy_to_host('/host/verification/appium/execute', 'POST', individual_request, timeout=60)
+            elif verification_type == 'audio':
+                result, status = proxy_to_host('/host/verification/audio/execute', 'POST', individual_request, timeout=60)
+            elif verification_type == 'video':
+                result, status = proxy_to_host('/host/verification/video/execute', 'POST', individual_request, timeout=60)
+            else:
+                result = {
+                    'success': False,
+                    'error': f'Unknown verification type: {verification_type}. Supported types: image, text, adb, appium, audio, video',
+                    'verification_type': verification_type
+                }
+                status = 400
+            
+            # Handle proxy errors and flatten verification results
+            if status != 200 and isinstance(result, dict):
+                result['verification_type'] = verification_type
+                flattened_result = result
+            elif status != 200:
+                flattened_result = {
+                    'success': False,
+                    'error': f'Host request failed with status {status}',
+                    'verification_type': verification_type
+                }
+            else:
+                # Flatten the nested verification_result structure
+                verification_result = result.get('verification_result', {})
+                flattened_result = {
+                    'success': verification_result.get('success', False),
+                    'message': verification_result.get('message'),
+                    'error': verification_result.get('error'),
+                    'threshold': verification_result.get('threshold') or verification_result.get('confidence'),
+                    'resultType': 'PASS' if verification_result.get('success', False) else 'FAIL',
+                    'sourceImageUrl': verification_result.get('source_image_url'),
+                    'referenceImageUrl': verification_result.get('reference_image_url'),
+                    'extractedText': verification_result.get('extracted_text'),
+                    'searchedText': verification_result.get('searched_text'),
+                    'imageFilter': verification_result.get('image_filter'),
+                    'detectedLanguage': verification_result.get('detected_language'),
+                    'languageConfidence': verification_result.get('language_confidence'),
+                    # ADB-specific fields
+                    'search_term': verification_result.get('search_term'),
+                    'wait_time': verification_result.get('wait_time'),
+                    'total_matches': verification_result.get('total_matches'),
+                    'matches': verification_result.get('matches'),
+                    # Appium-specific fields
+                    'platform': verification_result.get('platform'),
+                    # Audio/Video-specific fields  
+                    'motion_threshold': verification_result.get('motion_threshold'),
+                    'duration': verification_result.get('duration'),
+                    'frequency': verification_result.get('frequency'),
+                    'audio_level': verification_result.get('audio_level'),
+                    # General fields
+                    'verification_type': verification_result.get('verification_type', verification_type),
+                    'execution_time_ms': verification_result.get('execution_time_ms'),
+                    'details': verification_result.get('details', {})
+                }
+                
+                print(f"[@route:server_verification_common:execute_batch_verification] Flattened result {i+1}: success={flattened_result['success']}, type={flattened_result['verification_type']}")
+            
+            results.append(flattened_result)
+            
+            # Count successful verifications
+            if flattened_result.get('success'):
+                passed_count += 1
+        
+        # Calculate overall batch success
+        overall_success = passed_count == len(verifications)
+        
+        print(f"[@route:server_verification_common:execute_batch_verification] Batch completed: {passed_count}/{len(verifications)} passed")
+        
+        return jsonify({
+            'success': overall_success,
+            'total_count': len(verifications),
+            'passed_count': passed_count,
+            'failed_count': len(verifications) - passed_count,
+            'results': results,
+            'message': f'Batch verification completed: {passed_count}/{len(verifications)} passed'
+        })
+        
+    except Exception as e:
+        print(f"[@route:server_verification_common:execute_batch_verification] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Batch verification coordination error: {str(e)}'
+        }), 500
+
+@server_verification_common_bp.route('/batch/status', methods=['GET'])
+def get_batch_status():
+    """Get batch verification status from host"""
+    try:
+        print("[@route:server_verification_common:get_batch_status] Proxying batch status request")
+        
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/verification/getStatus', 'GET')
+        
+        return jsonify(response_data), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# =====================================================
+# IMAGE VERIFICATION SPECIFIC ENDPOINTS
+# =====================================================
+
 @server_verification_common_bp.route('/image/process-image', methods=['POST'])
 def process_image():
     """Proxy process image request to host for reference image processing"""
