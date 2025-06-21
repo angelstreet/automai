@@ -328,7 +328,19 @@ class VerificationController:
             
             if result['success']:
                 images = result['images']
-                print(f"[@controller:VerificationController:get_all_references] Found {len(images)} references from database")
+                
+                # Count by type for better debugging
+                image_refs = [img for img in images if img.get('type') == 'reference_image']
+                text_refs = [img for img in images if img.get('type') == 'reference_text']
+                
+                print(f"[@controller:VerificationController:get_all_references] Found {len(images)} total references from database: {len(image_refs)} images, {len(text_refs)} text")
+                
+                # Debug: Log details of each reference to understand the data
+                for i, img in enumerate(images):
+                    type_info = img.get('type')
+                    area_info = img.get('area', {})
+                    text_data = area_info.get('text', 'N/A') if area_info else 'N/A'
+                    print(f"[@controller:VerificationController:get_all_references] Reference {i+1}: name='{img.get('name')}', type='{type_info}', text='{text_data[:50]}{'...' if len(str(text_data)) > 50 else ''}'")
                 
                 return {
                     'success': True,

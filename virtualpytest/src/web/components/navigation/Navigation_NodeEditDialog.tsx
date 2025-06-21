@@ -22,6 +22,7 @@ import { Verifications } from '../../types/verification/VerificationTypes';
 import { VerificationsList } from '../verification/VerificationsList';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
+import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
 // ❌ REMOVED: Direct database access - using API endpoints instead
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
@@ -48,6 +49,19 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const [verificationResult, setVerificationResult] = useState<string | null>(null);
   const [isRunningGoto, setIsRunningGoto] = useState(false);
   const [gotoResult, setGotoResult] = useState<string | null>(null);
+  const [referenceSaveCounter, setReferenceSaveCounter] = useState(0);
+
+  // Use verification references hook
+  const { getModelReferences, referencesLoading } = useVerificationReferences(
+    referenceSaveCounter,
+    selectedHost,
+  );
+
+  // Handle reference selection
+  const handleReferenceSelected = (referenceName: string, referenceData: any) => {
+    console.log('[@component:NodeEditDialog] Reference selected:', referenceName, referenceData);
+    // Reference selection is handled internally by VerificationsList
+  };
 
   // Utility function to update last run results (keeps last 10 results)
   const updateLastRunResults = (results: boolean[], newResult: boolean): boolean[] => {
@@ -730,6 +744,12 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             error={verificationError}
             model={selectedHost?.device_model || model}
             selectedHost={selectedHost}
+            onTest={handleRunVerifications}
+            testResults={[]} // Node edit dialog doesn't show individual test results
+            reloadTrigger={referenceSaveCounter}
+            onReferenceSelected={handleReferenceSelected}
+            modelReferences={getModelReferences(selectedHost?.device_model || model || '')}
+            referencesLoading={referencesLoading}
           />
 
           {gotoResult && (

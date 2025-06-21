@@ -115,10 +115,22 @@ export const useVerificationReferences = (
 
           const allReferences = { [deviceModel]: modelRefs };
 
+          // Count references by type for better debugging
+          const imageCount = Object.values(modelRefs).filter((ref) => ref.type === 'image').length;
+          const textCount = Object.values(modelRefs).filter((ref) => ref.type === 'text').length;
+
           console.log(
-            `[@hook:useVerificationReferences] Processed ${Object.keys(modelRefs).length} references for model '${deviceModel}':`,
+            `[@hook:useVerificationReferences] Processed ${Object.keys(modelRefs).length} references for model '${deviceModel}': ${imageCount} images, ${textCount} text`,
             Object.keys(modelRefs),
           );
+
+          // Debug: Log each reference with its type
+          Object.entries(modelRefs).forEach(([filename, ref]) => {
+            console.log(
+              `[@hook:useVerificationReferences] - ${filename}: ${ref.type}${ref.type === 'text' ? ` (text: "${ref.text}")` : ''}`,
+            );
+          });
+
           setAvailableReferences(allReferences);
         } else {
           console.log('[@hook:useVerificationReferences] No references found or request failed');
