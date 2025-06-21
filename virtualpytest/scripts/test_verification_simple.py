@@ -9,10 +9,13 @@ import sys
 import os
 
 # Add the src directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)
+src_path = os.path.join(project_root, 'src')
+sys.path.insert(0, src_path)
 
-from src.utils.host_utils import global_host_object
-from src.controllers.verification_controller import execute_image_verification
+from utils.host_utils import global_host_object
+from controllers.verification_controller import execute_image_verification
 
 
 def test_wait_for_image(reference_name="default_capture"):
