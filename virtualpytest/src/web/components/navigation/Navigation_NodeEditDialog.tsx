@@ -75,11 +75,34 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   // Initialize verifications from nodeForm when dialog opens
   useEffect(() => {
     if (isOpen && nodeForm?.verifications) {
-      console.log(
-        `[@component:NodeEditDialog] Initializing verifications from nodeForm:`,
-        nodeForm.verifications,
-      );
-      verification.handleVerificationsChange(nodeForm.verifications);
+      // Only initialize if verifications are actually different to avoid clearing test results
+      const currentVerifications = verification.verifications;
+      const nodeVerifications = nodeForm.verifications;
+
+      // Deep comparison to check if verifications are actually different
+      const areVerificationsDifferent =
+        currentVerifications.length !== nodeVerifications.length ||
+        currentVerifications.some((current, index) => {
+          const node = nodeVerifications[index];
+          return (
+            !node ||
+            current.command !== node.command ||
+            current.verification_type !== node.verification_type ||
+            JSON.stringify(current.params) !== JSON.stringify(node.params)
+          );
+        });
+
+      if (areVerificationsDifferent) {
+        console.log(
+          `[@component:NodeEditDialog] Initializing verifications from nodeForm:`,
+          nodeForm.verifications,
+        );
+        verification.handleVerificationsChange(nodeForm.verifications);
+      } else {
+        console.log(
+          `[@component:NodeEditDialog] Skipping verification initialization - no changes detected`,
+        );
+      }
     }
   }, [isOpen, nodeForm?.verifications]);
 

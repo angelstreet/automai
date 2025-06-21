@@ -1,13 +1,21 @@
 import { useState, useCallback } from 'react';
 
+// Singleton session data to prevent multiple instances
+let globalSessionData: { userId: string; sessionId: string } | null = null;
+
 /**
  * Shared User Session Hook - Consistent User Identification
  *
  * Provides unified user identification for device control and tree locking systems.
  */
 export const useUserSession = () => {
-  // Create a single stable session object that includes both userId and sessionId
+  // Use singleton pattern to ensure only one session is created
   const [sessionData] = useState(() => {
+    if (globalSessionData) {
+      console.log(`[@hook:useUserSession] Using existing session: ${globalSessionData.sessionId}`);
+      return globalSessionData;
+    }
+
     let userId = 'browser-user'; // Default fallback
 
     // Try to get user ID from browser storage
@@ -33,11 +41,13 @@ export const useUserSession = () => {
 
     console.log(`[@hook:useUserSession] Generated session ID: ${sessionId}`);
 
-    // Return a single stable object containing both values
-    return {
+    // Store in singleton
+    globalSessionData = {
       userId,
       sessionId,
     };
+
+    return globalSessionData;
   });
 
   // Check if a lock belongs to our user
