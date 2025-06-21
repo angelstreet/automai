@@ -240,6 +240,8 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = ({
                 [verification.getModelReferences, verification.selectedHost?.device_model],
               )}
               referencesLoading={verification.referencesLoading}
+              onAdbTest={verification.handleAdbTest}
+              onAdbSave={verification.handleAdbSave}
             />
           </Box>
         </Collapse>
