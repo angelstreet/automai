@@ -9,6 +9,7 @@ import sys
 import os
 
 # Add the src directory to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 from src.utils.host_utils import global_host_object
 from src.controllers.verification_controller import execute_image_verification
