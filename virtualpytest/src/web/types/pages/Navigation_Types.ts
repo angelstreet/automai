@@ -43,7 +43,6 @@ export interface EdgeAction {
   requiresInput?: boolean;
   inputValue?: string;
   waitTime: number;
-  // ❌ REMOVED: Confidence tracking moved to database
 }
 
 // Define the data type for navigation edges
@@ -56,18 +55,8 @@ export interface UINavigationEdgeData {
   to?: string; // Target node label
   edgeType?: 'horizontal' | 'vertical'; // For edge coloring: horizontal=siblings, vertical=parent-child
 
-  // Keep old action for compatibility during transition
-  action?:
-    | string
-    | {
-        id: string;
-        label: string;
-        command: string;
-        params: any;
-        description?: string;
-        requiresInput?: boolean;
-        inputValue?: string;
-      };
+  // Legacy action field - deprecated, use actions array instead
+  action?: string;
 }
 
 // Use ReactFlow's Edge type with our custom data
@@ -310,8 +299,6 @@ export interface NavigationEditorHeaderProps {
   onUpdateEdge?: (edgeId: string, updatedData: any) => void;
 }
 
-// ❌ DELETED: NavigationEditorDeviceControlProps - obsolete after cleanup
-
 export interface NodeEditDialogProps {
   isOpen: boolean;
   nodeForm: NodeForm | null;
@@ -320,11 +307,12 @@ export interface NodeEditDialogProps {
   onSubmit: () => void;
   onClose: () => void;
   onResetNode?: () => void;
-  // ❌ DELETED: Obsolete verification controller types after capture-first implementation
-  selectedDevice?: string | null;
   selectedHost?: any; // Host object for verification/navigation
   isControlActive?: boolean;
   model?: string;
+  // Centralized verification references props - required
+  modelReferences: import('../verification/VerificationTypes').ModelReferences;
+  referencesLoading: boolean;
 }
 
 export interface EdgeEditDialogProps {
@@ -358,7 +346,6 @@ export interface NodeSelectionPanelProps {
   // Navigation props
   treeId?: string;
   currentNodeId?: string;
-  // ❌ DELETED: Obsolete verification props after capture-first implementation
 }
 
 export interface EdgeSelectionPanelProps {
@@ -450,8 +437,8 @@ export interface VerificationsListProps {
   reloadTrigger?: number;
   onReferenceSelected?: (referenceName: string, referenceData: any) => void;
   selectedHost: import('../common/Host_Types').Host | null;
-  modelReferences?: import('../verification/VerificationTypes').ModelReferences;
-  referencesLoading?: boolean;
+  modelReferences: import('../verification/VerificationTypes').ModelReferences;
+  referencesLoading: boolean;
 }
 
 export interface NodeVerificationsListProps {
@@ -466,8 +453,8 @@ export interface NodeVerificationsListProps {
   reloadTrigger?: number;
   onReferenceSelected?: (referenceName: string, referenceData: any) => void;
   selectedHost: import('../common/Host_Types').Host | null;
-  modelReferences?: import('../verification/VerificationTypes').ModelReferences;
-  referencesLoading?: boolean;
+  modelReferences: import('../verification/VerificationTypes').ModelReferences;
+  referencesLoading: boolean;
 }
 
 // Progressive loading interfaces removed - loading all nodes at once

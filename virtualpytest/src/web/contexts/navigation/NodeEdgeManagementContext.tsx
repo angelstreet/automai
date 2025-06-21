@@ -148,18 +148,17 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           verificationIds,
         );
 
-        // Step 2: Update node in memory with verification IDs (only IDs stored in tree)
+        // Step 2: Update node in memory with verification IDs
         const nodeDataWithVerificationIds = {
           ...formData,
           data: {
             ...formData.data,
-            // ✅ Store only verification IDs in the tree (for persistence)
-            verification_ids: verificationIds,
-            // ❌ Remove full verification objects from tree data (stored separately in DB)
-            verifications: undefined,
+            // ✅ Add verification IDs to the node data
+            verifications: verificationIds,
           },
         };
 
+        // Step 3: Update nodes state
         if (isNewNode) {
           // Create new node
           const newNode: UINavigationNode = {
@@ -172,24 +171,26 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           console.log('[@context:NodeEdgeManagementProvider] Created new node:', newNode.id);
         } else if (selectedNode) {
           // Update existing node
-          const updatedNodes = nodes.map((node) => {
-            if (node.id === selectedNode.id) {
-              return { ...node, ...nodeDataWithVerificationIds };
-            }
-            return node;
-          });
-
-          setNodes(updatedNodes);
+          setNodes((nds: UINavigationNode[]) =>
+            nds.map((node) => {
+              if (node.id === selectedNode.id) {
+                return { ...node, ...nodeDataWithVerificationIds };
+              }
+              return node;
+            }),
+          );
           console.log('[@context:NodeEdgeManagementProvider] Updated node:', selectedNode.id);
         }
 
-        // Step 3: Auto-save tree to persist verification IDs to database
+        // Step 4: Auto-save tree after a brief delay to ensure React state has updated
         console.log(
           '[@context:NodeEdgeManagementProvider] Auto-saving tree with verification IDs to database',
         );
 
-        await saveToConfig(userInterfaceId);
+        // Use a small delay to ensure React state updates are processed
+        await new Promise((resolve) => setTimeout(resolve, 50));
 
+        await saveToConfig(userInterfaceId);
         console.log(
           '[@context:NodeEdgeManagementProvider] Tree auto-saved successfully with verification IDs',
         );
@@ -204,8 +205,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           ...formData,
           data: {
             ...formData.data,
-            verification_ids: [], // Empty array if verification save failed
-            verifications: undefined,
+            verifications: [], // Empty array if verification save failed
           },
         };
 

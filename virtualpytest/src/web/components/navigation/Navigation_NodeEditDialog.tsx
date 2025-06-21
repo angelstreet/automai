@@ -23,8 +23,6 @@ import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
 import { Verification } from '../../types/verification/VerificationTypes';
 import { useVerification } from '../../hooks/verification/useVerification';
-import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
-
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   isOpen,
   nodeForm,
@@ -36,6 +34,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   selectedHost,
   isControlActive = false,
   model,
+  modelReferences,
+  referencesLoading,
 }) => {
   // Early return if nodeForm is null or undefined - MUST be before any hooks
   if (!nodeForm) {
@@ -64,11 +64,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     selectedHost: selectedHost,
     captureSourcePath: undefined, // NodeEditDialog doesn't capture images
   });
-
-  const { getModelReferences, referencesLoading } = useVerificationReferences(
-    0, // No save counter needed since we don't create references
-    selectedHost,
-  );
 
   const [isRunningGoto, setIsRunningGoto] = useState(false);
   const [gotoResult, setGotoResult] = useState<string | null>(null);
@@ -580,9 +575,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             testResults={verification.testResults}
             reloadTrigger={0}
             onReferenceSelected={handleReferenceSelected}
-            modelReferences={getModelReferences(
-              verification.selectedHost?.device_model || model || '',
-            )}
+            modelReferences={modelReferences}
             referencesLoading={referencesLoading}
           />
 

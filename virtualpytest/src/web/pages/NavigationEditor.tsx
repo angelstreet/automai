@@ -37,6 +37,7 @@ import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfi
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { NodeEdgeManagementProvider } from '../contexts/navigation/NodeEdgeManagementContext';
 import { useNavigationEditorNew } from '../hooks/navigation/useNavigationEditorNew';
+import { useVerificationReferences } from '../hooks/verification/useVerificationReferences';
 import {
   UINavigationNode as UINavigationNodeType,
   UINavigationEdge as UINavigationEdgeType,
@@ -259,6 +260,17 @@ const NavigationEditorContent: React.FC = React.memo(
 
     // Memoize the selectedHost to prevent unnecessary re-renders
     const stableSelectedHost = useMemo(() => selectedHost, [selectedHost]);
+
+    // Centralized verification references management
+    const [referenceSaveCounter, setReferenceSaveCounter] = useState<number>(0);
+    const { availableReferences, referencesLoading, getModelReferences } =
+      useVerificationReferences(referenceSaveCounter, stableSelectedHost);
+
+    // Memoize model references for current device to prevent unnecessary re-renders
+    const currentModelReferences = useMemo(() => {
+      if (!stableSelectedHost?.device_model) return {};
+      return getModelReferences(stableSelectedHost.device_model);
+    }, [getModelReferences, stableSelectedHost?.device_model]);
 
     // Memoize the RemotePanel props to prevent unnecessary re-renders
     const remotePanelProps = useMemo(
@@ -649,6 +661,8 @@ const NavigationEditorContent: React.FC = React.memo(
             model={userInterface?.models?.[0] || 'android_mobile'}
             isControlActive={isControlActive}
             selectedHost={selectedHost}
+            modelReferences={currentModelReferences}
+            referencesLoading={referencesLoading}
           />
         )}
 

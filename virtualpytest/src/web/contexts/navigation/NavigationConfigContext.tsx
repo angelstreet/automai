@@ -301,7 +301,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
             // Collect all verification IDs from all nodes
             const allVerificationIds = new Set<string>();
             nodes.forEach((node) => {
-              const verificationIds = node.data?.verification_ids || [];
+              const verificationIds = node.data?.verifications || [];
               verificationIds.forEach((id: string) => allVerificationIds.add(id));
             });
 
@@ -347,7 +347,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
                   // Merge verification definitions with nodes based on their stored IDs
                   nodes = nodes.map((node) => {
-                    const verificationIds = node.data?.verification_ids || [];
+                    const verificationIds = node.data?.verifications || [];
                     if (verificationIds.length > 0) {
                       const nodeVerifications = verificationIds
                         .map((id: string) => verificationsById.get(id))
@@ -449,18 +449,9 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(true);
         state.setError(null);
 
-        // Prepare tree data for saving - remove full verification objects and keep only IDs
+        // Prepare tree data for saving - just pass through as-is with verifications
         const treeDataForSaving = {
-          nodes: state.nodes.map((node) => ({
-            ...node,
-            data: {
-              ...node.data,
-              // Remove full verification objects from tree data (they're stored separately in DB)
-              verifications: undefined,
-              // Keep only verification IDs for linking
-              verification_ids: node.data?.verification_ids || [],
-            },
-          })),
+          nodes: state.nodes,
           edges: state.edges,
         };
 

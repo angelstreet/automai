@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect, useMemo } from 'react';
 
-import { useVerificationReferences } from '../../hooks/verification/useVerificationReferences';
+// Removed useVerificationReferences import - now uses passed props only
 import { Host } from '../../types/common/Host_Types';
 import {
   Verification,
@@ -35,8 +35,8 @@ export interface VerificationsListProps {
   reloadTrigger?: number;
   onReferenceSelected?: (referenceName: string, referenceData: any) => void;
   selectedHost: Host | null;
-  modelReferences?: ModelReferences;
-  referencesLoading?: boolean;
+  modelReferences: ModelReferences; // Required - no fallback
+  referencesLoading: boolean; // Required - no fallback
   showCollapsible?: boolean; // Optional: show collapsible header
   title?: string; // Optional: custom title
 }
@@ -54,8 +54,8 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
     reloadTrigger = 0,
     onReferenceSelected,
     selectedHost,
-    modelReferences: passedModelReferences,
-    referencesLoading: passedReferencesLoading,
+    modelReferences,
+    referencesLoading,
     showCollapsible = false,
     title = 'Verifications',
   }) => {
@@ -99,32 +99,12 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       imageFilter: undefined,
     });
 
-    // Use passed references data if available, otherwise use hook as fallback
-    const { referencesLoading: hookReferencesLoading, getModelReferences: hookGetModelReferences } =
-      useVerificationReferences(reloadTrigger, selectedHost);
-
-    const referencesLoading =
-      passedReferencesLoading !== undefined ? passedReferencesLoading : hookReferencesLoading;
-
-    // Memoize model references to prevent multiple calls during render
-    const modelReferences = useMemo(() => {
-      if (passedModelReferences !== undefined) {
-        console.log(
-          `[@component:VerificationsList] Using passed model references for ${model}:`,
-          Object.keys(passedModelReferences).length,
-          'references',
-        );
-        return passedModelReferences;
-      } else {
-        const refs = hookGetModelReferences(model);
-        console.log(
-          `[@component:VerificationsList] Using hook model references for ${model}:`,
-          Object.keys(refs).length,
-          'references',
-        );
-        return refs;
-      }
-    }, [passedModelReferences, hookGetModelReferences, model]);
+    // Model references are now passed as required props - no processing needed
+    console.log(
+      `[@component:VerificationsList] Using passed model references for ${model}:`,
+      Object.keys(modelReferences).length,
+      'references',
+    );
 
     // Debug logging for testResults changes
     useEffect(() => {
