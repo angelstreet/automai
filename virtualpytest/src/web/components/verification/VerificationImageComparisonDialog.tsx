@@ -13,6 +13,7 @@ interface VerificationImageComparisonDialogProps {
   open: boolean;
   sourceUrl: string;
   referenceUrl: string;
+  overlayUrl?: string;
   userThreshold?: number;
   matchingResult?: number;
   resultType?: 'PASS' | 'FAIL' | 'ERROR';
@@ -22,7 +23,7 @@ interface VerificationImageComparisonDialogProps {
 
 export const VerificationImageComparisonDialog: React.FC<
   VerificationImageComparisonDialogProps
-> = ({ open, sourceUrl, referenceUrl, resultType, imageFilter, onClose }) => {
+> = ({ open, sourceUrl, referenceUrl, overlayUrl, resultType, imageFilter, onClose }) => {
   const getResultColor = () => {
     switch (resultType) {
       case 'PASS':
@@ -92,8 +93,10 @@ export const VerificationImageComparisonDialog: React.FC<
 
   const processedSourceUrl = processImageUrl(sourceUrl);
   const processedReferenceUrl = processImageUrl(referenceUrl);
+  const processedOverlayUrl = overlayUrl ? processImageUrl(overlayUrl) : '';
   const cacheBustedSourceUrl = getCacheBustedUrl(processedSourceUrl);
   const cacheBustedReferenceUrl = getCacheBustedUrl(processedReferenceUrl);
+  const cacheBustedOverlayUrl = overlayUrl ? getCacheBustedUrl(processedOverlayUrl) : '';
   const cssFilter = getCSSFilter(imageFilter);
 
   // Debug logging for filters
@@ -153,10 +156,10 @@ export const VerificationImageComparisonDialog: React.FC<
 
       <DialogContent sx={{ padding: 1 }}>
         <Box sx={{ display: 'flex', gap: 0.2, height: '100%', minHeight: '400px' }}>
-          {/* Source Image */}
+          {/* Source Image with Overlay */}
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" sx={{ mb: 0.5, textAlign: 'center', fontWeight: 'bold' }}>
-              Source Image
+              Source Image {overlayUrl && '(with Analysis Overlay)'}
             </Typography>
             <Box
               sx={{
@@ -170,8 +173,10 @@ export const VerificationImageComparisonDialog: React.FC<
                 border: 'none',
                 padding: 0,
                 margin: 0,
+                position: 'relative', // Enable absolute positioning for overlay
               }}
             >
+              {/* Base Source Image */}
               <img
                 src={cacheBustedSourceUrl}
                 alt="Source"
@@ -194,13 +199,44 @@ export const VerificationImageComparisonDialog: React.FC<
                   );
                 }}
               />
+
+              {/* Overlay Image on Top */}
+              {overlayUrl && (
+                <img
+                  src={cacheBustedOverlayUrl}
+                  alt="Analysis Overlay"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    width: 'auto',
+                    height: 'auto',
+                    objectFit: 'contain',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    margin: 0,
+                    opacity: 0.8, // Semi-transparent overlay
+                    pointerEvents: 'none', // Don't interfere with interactions
+                    filter: cssFilter, // Apply same filter as source
+                  }}
+                  onError={() => {
+                    console.error(
+                      '[@component:VerificationImageComparisonDialog] Failed to load overlay image:',
+                      overlayUrl,
+                    );
+                  }}
+                />
+              )}
             </Box>
           </Box>
 
-          {/* Reference Image */}
+          {/* Reference Image with Overlay */}
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" sx={{ mb: 0.5, textAlign: 'center', fontWeight: 'bold' }}>
-              Reference Image
+              Reference Image {overlayUrl && '(with Analysis Overlay)'}
             </Typography>
             <Box
               sx={{
@@ -214,8 +250,10 @@ export const VerificationImageComparisonDialog: React.FC<
                 border: 'none',
                 padding: 0,
                 margin: 0,
+                position: 'relative', // Enable absolute positioning for overlay
               }}
             >
+              {/* Base Reference Image */}
               <img
                 src={cacheBustedReferenceUrl}
                 alt="Reference"
@@ -238,6 +276,37 @@ export const VerificationImageComparisonDialog: React.FC<
                   );
                 }}
               />
+
+              {/* Overlay Image on Top */}
+              {overlayUrl && (
+                <img
+                  src={cacheBustedOverlayUrl}
+                  alt="Analysis Overlay"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    maxWidth: '100%',
+                    maxHeight: '100%',
+                    width: 'auto',
+                    height: 'auto',
+                    objectFit: 'contain',
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    padding: 0,
+                    margin: 0,
+                    opacity: 0.8, // Semi-transparent overlay
+                    pointerEvents: 'none', // Don't interfere with interactions
+                    filter: cssFilter, // Apply same filter as reference
+                  }}
+                  onError={() => {
+                    console.error(
+                      '[@component:VerificationImageComparisonDialog] Failed to load overlay image:',
+                      overlayUrl,
+                    );
+                  }}
+                />
+              )}
             </Box>
           </Box>
         </Box>

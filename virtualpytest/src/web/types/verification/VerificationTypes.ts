@@ -110,6 +110,7 @@ interface BaseVerification {
   resultType?: 'PASS' | 'FAIL' | 'ERROR';
   sourceImageUrl?: string;
   referenceImageUrl?: string;
+  resultOverlayUrl?: string; // Added: overlay image URL for visual analysis
   extractedText?: string;
   searchedText?: string;
   imageFilter?: 'none' | 'greyscale' | 'binary';

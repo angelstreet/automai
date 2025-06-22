@@ -12,6 +12,7 @@ interface VerificationTestResultsProps {
   onImageClick: (
     sourceUrl: string,
     referenceUrl: string,
+    overlayUrl?: string,
     userThreshold?: number,
     matchingResult?: number,
     resultType?: 'PASS' | 'FAIL' | 'ERROR',
@@ -106,6 +107,7 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
           <VerificationImageComparisonThumbnails
             sourceUrl={testResult.sourceImageUrl || ''}
             referenceUrl={testResult.referenceImageUrl || ''}
+            overlayUrl={testResult.resultOverlayUrl}
             resultType={testResult.resultType || (testResult.success ? 'PASS' : 'FAIL')}
             userThreshold={verification.params?.threshold}
             matchingResult={testResult.threshold}

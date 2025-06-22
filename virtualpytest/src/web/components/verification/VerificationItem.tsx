@@ -41,6 +41,7 @@ interface VerificationItemProps {
   onImageClick: (
     sourceUrl: string,
     referenceUrl: string,
+    overlayUrl?: string,
     userThreshold?: number,
     matchingResult?: number,
     resultType?: 'PASS' | 'FAIL' | 'ERROR',

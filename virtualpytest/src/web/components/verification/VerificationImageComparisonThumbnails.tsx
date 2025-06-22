@@ -4,6 +4,7 @@ import React from 'react';
 interface VerificationImageComparisonThumbnailsProps {
   sourceUrl: string;
   referenceUrl: string;
+  overlayUrl?: string;
   resultType: 'PASS' | 'FAIL' | 'ERROR';
   userThreshold?: number;
   matchingResult?: number;
@@ -11,6 +12,7 @@ interface VerificationImageComparisonThumbnailsProps {
   onImageClick: (
     sourceUrl: string,
     referenceUrl: string,
+    overlayUrl?: string,
     userThreshold?: number,
     matchingResult?: number,
     resultType?: 'PASS' | 'FAIL' | 'ERROR',
@@ -23,6 +25,7 @@ export const VerificationImageComparisonThumbnails: React.FC<
 > = ({
   sourceUrl,
   referenceUrl,
+  overlayUrl,
   resultType,
   userThreshold,
   matchingResult,
@@ -30,7 +33,15 @@ export const VerificationImageComparisonThumbnails: React.FC<
   onImageClick,
 }) => {
   const handleClick = () => {
-    onImageClick(sourceUrl, referenceUrl, userThreshold, matchingResult, resultType, imageFilter);
+    onImageClick(
+      sourceUrl,
+      referenceUrl,
+      overlayUrl,
+      userThreshold,
+      matchingResult,
+      resultType,
+      imageFilter,
+    );
   };
 
   const getResultColor = () => {

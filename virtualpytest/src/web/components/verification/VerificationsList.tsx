@@ -65,6 +65,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       open: boolean;
       sourceUrl: string;
       referenceUrl: string;
+      overlayUrl?: string;
       userThreshold?: number;
       matchingResult?: number;
       resultType?: 'PASS' | 'FAIL' | 'ERROR';
@@ -73,6 +74,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       open: false,
       sourceUrl: '',
       referenceUrl: '',
+      overlayUrl: undefined,
       userThreshold: undefined,
       matchingResult: undefined,
       resultType: undefined,
@@ -281,6 +283,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
     const handleImageClick = (
       sourceUrl: string,
       referenceUrl: string,
+      overlayUrl?: string,
       userThreshold?: number,
       matchingResult?: number,
       resultType?: 'PASS' | 'FAIL' | 'ERROR',
@@ -290,6 +293,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
         open: true,
         sourceUrl,
         referenceUrl,
+        overlayUrl,
         userThreshold,
         matchingResult,
         resultType,
@@ -531,6 +535,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
           open={imageComparisonDialog.open}
           sourceUrl={imageComparisonDialog.sourceUrl}
           referenceUrl={imageComparisonDialog.referenceUrl}
+          overlayUrl={imageComparisonDialog.overlayUrl}
           userThreshold={imageComparisonDialog.userThreshold}
           matchingResult={imageComparisonDialog.matchingResult}
           resultType={imageComparisonDialog.resultType}
