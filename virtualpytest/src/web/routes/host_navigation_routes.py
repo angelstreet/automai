@@ -95,36 +95,8 @@ def save_navigation_screenshot():
             r2_url = upload_result.get('url')
             print(f"[@route:host_navigation:save_screenshot] Successfully uploaded navigation screenshot to R2: {r2_url}")
             
-            # Save to database using the images database function
-            try:
-                from src.lib.supabase.verifications_references_db import save_image
-                from src.utils.app_utils import get_team_id
-                
-                team_id = get_team_id()
-                print(f"[@route:host_navigation:save_screenshot] Saving to database with team_id: {team_id}")
-                
-                # Extract R2 path from upload result for database storage
-                r2_path = upload_result.get('remote_path', f"navigation/{device_model}/{r2_filename}")
-                
-                db_result = save_image(
-                    name=filename,
-                    device_model=device_model,
-                    type='screenshot',
-                    r2_path=r2_path,
-                    r2_url=r2_url,
-                    team_id=team_id,
-                    area=None
-                )
-                
-                if db_result.get('success'):
-                    print(f"[@route:host_navigation:save_screenshot] Successfully saved to database")
-                else:
-                    print(f"[@route:host_navigation:save_screenshot] Database save failed: {db_result.get('error')}")
-                    # Don't fail the upload, just log the error
-                
-            except Exception as db_error:
-                print(f"[@route:host_navigation:save_screenshot] Database save error: {str(db_error)}")
-                # Don't fail the upload, just log the error
+            # Navigation screenshots are stored in the tree nodes, no database save needed
+            print(f"[@route:host_navigation:save_screenshot] Screenshot uploaded to R2 successfully, no database save required")
             
             return jsonify({
                 'success': True,
