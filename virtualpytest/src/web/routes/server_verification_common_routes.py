@@ -442,7 +442,7 @@ def save_text_reference():
         db_result = save_reference(
             name=reference_name,
             device_model=model,
-            type='reference_text',  # Use reference_text type for text references
+            reference_type='reference_text',  # Use reference_text type for text references
             r2_path=f'text-references/{model}/{reference_name}',  # Placeholder path for consistency
             r2_url='',  # No R2 URL needed for text references
             team_id=team_id,

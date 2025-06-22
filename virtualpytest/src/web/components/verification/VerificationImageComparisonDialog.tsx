@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -8,6 +7,7 @@ import {
   Box,
   Typography,
 } from '@mui/material';
+import React from 'react';
 
 interface VerificationImageComparisonDialogProps {
   open: boolean;
@@ -159,7 +159,7 @@ export const VerificationImageComparisonDialog: React.FC<
           {/* Source Image with Overlay */}
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" sx={{ mb: 0.5, textAlign: 'center', fontWeight: 'bold' }}>
-              Source Image {overlayUrl && '(with Analysis Overlay)'}
+              Source Image {overlayUrl}
             </Typography>
             <Box
               sx={{
@@ -236,7 +236,7 @@ export const VerificationImageComparisonDialog: React.FC<
           {/* Reference Image with Overlay */}
           <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="h6" sx={{ mb: 0.5, textAlign: 'center', fontWeight: 'bold' }}>
-              Reference Image {overlayUrl && '(with Analysis Overlay)'}
+              Reference Image {overlayUrl}
             </Typography>
             <Box
               sx={{
