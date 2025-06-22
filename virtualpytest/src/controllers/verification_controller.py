@@ -186,6 +186,16 @@ class VerificationController:
                     }
             
             # Execute verification using unified interface
+            # Pass device model for R2 reference resolution
+            if hasattr(verification_controller, 'waitForImageToAppear') and self.host_device:
+                # For image verification, pass device model directly to the method
+                device_model = self.host_device.get('device_model', 'default')
+                if verification_config.get('verification_type') == 'image':
+                    # Add device model to params for image verification
+                    if 'params' not in verification_config:
+                        verification_config['params'] = {}
+                    verification_config['params']['model'] = device_model
+            
             result = verification_controller.execute_verification(verification_config, source_path)
             
             execution_time_ms = int((time.time() - start_time) * 1000)

@@ -483,9 +483,10 @@ class ImageVerificationController(VerificationControllerInterface):
             timeout = params.get('timeout', 1.0)
             area = params.get('area')
             image_filter = params.get('image_filter', 'none')
+            model = params.get('model', 'default')  # Get device model for R2 download
             
             print(f"[@controller:ImageVerification] Executing {command} with image: {image_path}")
-            print(f"[@controller:ImageVerification] Parameters: threshold={threshold}, area={area}, filter={image_filter}")
+            print(f"[@controller:ImageVerification] Parameters: threshold={threshold}, area={area}, filter={image_filter}, model={model}")
             
             # Execute verification based on command
             if command == 'waitForImageToAppear':
@@ -495,7 +496,7 @@ class ImageVerificationController(VerificationControllerInterface):
                     threshold=threshold,
                     area=area,
                     image_list=[source_path],  # Use source_path as image list
-                    model=None,  # Not needed for direct execution
+                    model=model,  # Pass device model for R2 reference resolution
                     verification_index=0,
                     image_filter=image_filter
                 )
@@ -506,7 +507,7 @@ class ImageVerificationController(VerificationControllerInterface):
                     threshold=threshold,
                     area=area,
                     image_list=[source_path],  # Use source_path as image list
-                    model=None,  # Not needed for direct execution
+                    model=model,  # Pass device model for R2 reference resolution
                     verification_index=0,
                     image_filter=image_filter
                 )
@@ -628,7 +629,7 @@ class ImageVerificationController(VerificationControllerInterface):
         Wait for image to appear either in provided image list or by capturing new frames.
         
         Args:
-            image_path: Path to reference image
+            image_path: Path to reference image or reference name
             timeout: Timeout for capture if no image_list provided
             threshold: Match threshold (0.0 to 1.0)
             area: Optional area to search (x, y, width, height)
@@ -650,22 +651,23 @@ class ImageVerificationController(VerificationControllerInterface):
         if image_filter and image_filter != 'none':
             print(f"[@controller:ImageVerification] Using image filter: {image_filter}")
         
-        # Load reference image - use pre-existing filtered version if available
-        if not os.path.exists(image_path):
-            error_msg = f"Reference image not found at path: {image_path}"
+        # Resolve reference image path - download from R2 if needed
+        resolved_image_path = self._resolve_reference_image(image_path, model)
+        if not resolved_image_path:
+            error_msg = f"Reference image not found and could not be downloaded: {image_path}"
             print(f"[@controller:ImageVerification] {error_msg}")
             return False, error_msg, {}
         
         # Get filtered reference image path (only change the reference, not source)
-        filtered_reference_path = image_path
+        filtered_reference_path = resolved_image_path
         if image_filter and image_filter != 'none':
-            base_path, ext = os.path.splitext(image_path)
+            base_path, ext = os.path.splitext(resolved_image_path)
             filtered_path = f"{base_path}_{image_filter}{ext}"
             if os.path.exists(filtered_path):
                 filtered_reference_path = filtered_path
                 print(f"[@controller:ImageVerification] Using pre-existing filtered reference: {filtered_reference_path}")
             else:
-                print(f"[@controller:ImageVerification] Filtered reference not found, using original: {image_path}")
+                print(f"[@controller:ImageVerification] Filtered reference not found, using original: {resolved_image_path}")
         
         ref_img = cv2.imread(filtered_reference_path, cv2.IMREAD_COLOR)
         if ref_img is None:
@@ -895,6 +897,113 @@ class ImageVerificationController(VerificationControllerInterface):
         else:
             # Image is still present (was found)
             return False, f"Image still present: {message}", additional_data
+
+    def _resolve_reference_image(self, image_path: str, model: str = None) -> Optional[str]:
+        """
+        Resolve reference image path by systematically downloading from R2.
+        Always downloads to ensure we have the latest version.
+        
+        Args:
+            image_path: Reference image name or path
+            model: Device model for organizing images
+            
+        Returns:
+            Local path to downloaded reference image or None if failed
+        """
+        try:
+            # Extract reference name from path
+            if '/' in image_path:
+                reference_name = os.path.basename(image_path)
+            else:
+                reference_name = image_path
+            
+            # Remove extension if present to get base name
+            base_name = reference_name.split('.')[0]
+            
+            print(f"[@controller:ImageVerification] Resolving reference: {reference_name} for model: {model}")
+            
+            # Get reference data from database to find R2 URL
+            try:
+                from src.controllers.verification_controller import get_verification_controller
+                from src.utils.app_utils import DEFAULT_TEAM_ID
+                
+                # Create a temporary host device object for database lookup
+                temp_host_device = {'device_model': model or 'default'}
+                controller = get_verification_controller(temp_host_device)
+                
+                # Get all references to find the one we need
+                references_result = controller.get_all_references(DEFAULT_TEAM_ID)
+                if not references_result['success']:
+                    print(f"[@controller:ImageVerification] Failed to get references from database: {references_result.get('error')}")
+                    return None
+                
+                # Find matching reference
+                target_reference = None
+                for ref in references_result['images']:
+                    ref_name = ref['name']
+                    ref_base = ref_name.split('.')[0]
+                    if ref_base == base_name or ref_name == reference_name:
+                        target_reference = ref
+                        break
+                
+                if not target_reference:
+                    print(f"[@controller:ImageVerification] Reference not found in database: {reference_name}")
+                    return None
+                
+                r2_url = target_reference.get('r2_url')
+                if not r2_url:
+                    print(f"[@controller:ImageVerification] No R2 URL found for reference: {reference_name}")
+                    return None
+                
+                print(f"[@controller:ImageVerification] Found R2 URL: {r2_url}")
+                
+            except Exception as db_error:
+                print(f"[@controller:ImageVerification] Database lookup error: {db_error}")
+                return None
+            
+            # Set up local path for downloaded reference
+            resources_path = '/var/www/html/stream/resources'
+            device_model = model or 'default'
+            local_dir = f'{resources_path}/{device_model}'
+            os.makedirs(local_dir, exist_ok=True)
+            
+            # Use the reference name with proper extension
+            if not reference_name.endswith(('.jpg', '.jpeg', '.png')):
+                reference_name = f"{reference_name}.jpg"
+            
+            local_path = f'{local_dir}/{reference_name}'
+            
+            print(f"[@controller:ImageVerification] Downloading from R2 to: {local_path}")
+            
+            # Download from R2 using CloudflareUtils
+            try:
+                from urllib.parse import urlparse
+                from src.utils.cloudflare_utils import get_cloudflare_utils
+                
+                # Extract R2 object key from URL
+                parsed_url = urlparse(r2_url)
+                r2_object_key = parsed_url.path.lstrip('/')
+                
+                print(f"[@controller:ImageVerification] R2 object key: {r2_object_key}")
+                
+                # Download file
+                cloudflare_utils = get_cloudflare_utils()
+                download_result = cloudflare_utils.download_file(r2_object_key, local_path)
+                
+                if download_result.get('success'):
+                    print(f"[@controller:ImageVerification] Successfully downloaded reference from R2: {local_path}")
+                    return local_path
+                else:
+                    print(f"[@controller:ImageVerification] Failed to download from R2: {download_result.get('error')}")
+                    return None
+                    
+            except Exception as download_error:
+                print(f"[@controller:ImageVerification] R2 download error: {download_error}")
+                return None
+                
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Reference resolution error: {e}")
+            return None
 
     def _match_template(self, ref_img: np.ndarray, source_img: np.ndarray, area: tuple = None) -> float:
         """
