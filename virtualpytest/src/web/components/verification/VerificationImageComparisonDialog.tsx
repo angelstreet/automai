@@ -23,7 +23,17 @@ interface VerificationImageComparisonDialogProps {
 
 export const VerificationImageComparisonDialog: React.FC<
   VerificationImageComparisonDialogProps
-> = ({ open, sourceUrl, referenceUrl, overlayUrl, resultType, imageFilter, onClose }) => {
+> = ({
+  open,
+  sourceUrl,
+  referenceUrl,
+  overlayUrl,
+  resultType,
+  imageFilter,
+  matchingResult,
+  userThreshold,
+  onClose,
+}) => {
   const getResultColor = () => {
     switch (resultType) {
       case 'PASS':
@@ -123,6 +133,23 @@ export const VerificationImageComparisonDialog: React.FC<
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Image Verification Comparison</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Confidence Display */}
+            {matchingResult !== undefined && (
+              <Typography
+                variant="subtitle1"
+                sx={{
+                  color: '#2196f3',
+                  fontWeight: 'bold',
+                  padding: '4px 8px',
+                  backgroundColor: '#e3f2fd',
+                  borderRadius: 1,
+                }}
+              >
+                Confidence: {(matchingResult * 100).toFixed(1)}%
+                {userThreshold !== undefined &&
+                  ` (Threshold: ${(userThreshold * 100).toFixed(1)}%)`}
+              </Typography>
+            )}
             {resultType && (
               <Typography
                 variant="subtitle1"
@@ -154,12 +181,15 @@ export const VerificationImageComparisonDialog: React.FC<
         </Box>
       </DialogTitle>
 
-      <DialogContent sx={{ padding: 1 }}>
-        <Box sx={{ display: 'flex', gap: 0.2, height: '100%', minHeight: '400px' }}>
-          {/* Source Image with Overlay */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" sx={{ mb: 0.5, textAlign: 'center', fontWeight: 'bold' }}>
-              Source Image {overlayUrl}
+      <DialogContent sx={{ padding: 2 }}>
+        {/* 3-Image Grid Layout */}
+        <Box
+          sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2, minHeight: '400px' }}
+        >
+          {/* Source Image */}
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" sx={{ mb: 1, textAlign: 'center', fontWeight: 'bold' }}>
+              Source Image
             </Typography>
             <Box
               sx={{
@@ -169,14 +199,12 @@ export const VerificationImageComparisonDialog: React.FC<
                 justifyContent: 'center',
                 minHeight: '300px',
                 overflow: 'hidden',
-                backgroundColor: 'transparent',
-                border: 'none',
-                padding: 0,
-                margin: 0,
-                position: 'relative', // Enable absolute positioning for overlay
+                backgroundColor: '#f5f5f5',
+                border: '2px solid #ddd',
+                borderRadius: 1,
+                padding: 1,
               }}
             >
-              {/* Base Source Image */}
               <img
                 src={cacheBustedSourceUrl}
                 alt="Source"
@@ -186,11 +214,7 @@ export const VerificationImageComparisonDialog: React.FC<
                   width: 'auto',
                   height: 'auto',
                   objectFit: 'contain',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  padding: 0,
-                  margin: 0,
-                  filter: cssFilter, // Apply dynamic CSS filter
+                  filter: cssFilter,
                 }}
                 onError={() => {
                   console.error(
@@ -199,44 +223,13 @@ export const VerificationImageComparisonDialog: React.FC<
                   );
                 }}
               />
-
-              {/* Overlay Image on Top */}
-              {overlayUrl && (
-                <img
-                  src={cacheBustedOverlayUrl}
-                  alt="Analysis Overlay"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    width: 'auto',
-                    height: 'auto',
-                    objectFit: 'contain',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    margin: 0,
-                    opacity: 0.8, // Semi-transparent overlay
-                    pointerEvents: 'none', // Don't interfere with interactions
-                    filter: cssFilter, // Apply same filter as source
-                  }}
-                  onError={() => {
-                    console.error(
-                      '[@component:VerificationImageComparisonDialog] Failed to load overlay image:',
-                      overlayUrl,
-                    );
-                  }}
-                />
-              )}
             </Box>
           </Box>
 
-          {/* Reference Image with Overlay */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" sx={{ mb: 0.5, textAlign: 'center', fontWeight: 'bold' }}>
-              Reference Image {overlayUrl}
+          {/* Reference Image */}
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h6" sx={{ mb: 1, textAlign: 'center', fontWeight: 'bold' }}>
+              Reference Image
             </Typography>
             <Box
               sx={{
@@ -246,14 +239,12 @@ export const VerificationImageComparisonDialog: React.FC<
                 justifyContent: 'center',
                 minHeight: '300px',
                 overflow: 'hidden',
-                backgroundColor: 'transparent',
-                border: 'none',
-                padding: 0,
-                margin: 0,
-                position: 'relative', // Enable absolute positioning for overlay
+                backgroundColor: '#f5f5f5',
+                border: '2px solid #ddd',
+                borderRadius: 1,
+                padding: 1,
               }}
             >
-              {/* Base Reference Image */}
               <img
                 src={cacheBustedReferenceUrl}
                 alt="Reference"
@@ -263,11 +254,7 @@ export const VerificationImageComparisonDialog: React.FC<
                   width: 'auto',
                   height: 'auto',
                   objectFit: 'contain',
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  padding: 0,
-                  margin: 0,
-                  filter: cssFilter, // Apply dynamic CSS filter
+                  filter: cssFilter,
                 }}
                 onError={() => {
                   console.error(
@@ -276,28 +263,39 @@ export const VerificationImageComparisonDialog: React.FC<
                   );
                 }}
               />
+            </Box>
+          </Box>
 
-              {/* Overlay Image on Top */}
-              {overlayUrl && (
+          {/* Pixel Difference Overlay */}
+          {overlayUrl && (
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" sx={{ mb: 1, textAlign: 'center', fontWeight: 'bold' }}>
+                Pixel Difference Overlay
+              </Typography>
+              <Box
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '300px',
+                  overflow: 'hidden',
+                  backgroundColor: '#f5f5f5',
+                  border: '2px solid #ddd',
+                  borderRadius: 1,
+                  padding: 1,
+                }}
+              >
                 <img
                   src={cacheBustedOverlayUrl}
-                  alt="Analysis Overlay"
+                  alt="Pixel Difference Overlay"
                   style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
                     maxWidth: '100%',
                     maxHeight: '100%',
                     width: 'auto',
                     height: 'auto',
                     objectFit: 'contain',
-                    backgroundColor: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    margin: 0,
-                    opacity: 0.8, // Semi-transparent overlay
-                    pointerEvents: 'none', // Don't interfere with interactions
-                    filter: cssFilter, // Apply same filter as reference
+                    filter: cssFilter,
                   }}
                   onError={() => {
                     console.error(
@@ -306,9 +304,38 @@ export const VerificationImageComparisonDialog: React.FC<
                     );
                   }}
                 />
-              )}
+              </Box>
+              <Typography variant="caption" sx={{ mt: 1, textAlign: 'center', color: '#666' }}>
+                Green = Matching pixels, Red = Different pixels
+              </Typography>
             </Box>
-          </Box>
+          )}
+
+          {/* If no overlay, show message in third column */}
+          {!overlayUrl && (
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="h6" sx={{ mb: 1, textAlign: 'center', fontWeight: 'bold' }}>
+                Pixel Difference Overlay
+              </Typography>
+              <Box
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '300px',
+                  backgroundColor: '#f9f9f9',
+                  border: '2px dashed #ccc',
+                  borderRadius: 1,
+                  padding: 2,
+                }}
+              >
+                <Typography variant="body2" sx={{ color: '#666', textAlign: 'center' }}>
+                  No overlay image available
+                </Typography>
+              </Box>
+            </Box>
+          )}
         </Box>
       </DialogContent>
 
