@@ -46,6 +46,41 @@ export const VerificationImageComparisonThumbnails: React.FC<
     }
   };
 
+  // Process image URLs with HTTP to HTTPS proxy logic (same as ScreenshotCapture)
+  const processImageUrl = (url: string): string => {
+    if (!url) return '';
+
+    console.log(`[@component:VerificationImageComparisonThumbnails] Processing image URL: ${url}`);
+
+    // Handle data URLs (base64) - return as is
+    if (url.startsWith('data:')) {
+      console.log('[@component:VerificationImageComparisonThumbnails] Using data URL');
+      return url;
+    }
+
+    // Handle HTTP URLs - use proxy to convert to HTTPS
+    if (url.startsWith('http:')) {
+      console.log(
+        '[@component:VerificationImageComparisonThumbnails] HTTP URL detected, using proxy',
+      );
+      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(url)}`;
+      console.log(
+        `[@component:VerificationImageComparisonThumbnails] Generated proxy URL: ${proxyUrl}`,
+      );
+      return proxyUrl;
+    }
+
+    // Handle HTTPS URLs - return as is (no proxy needed)
+    if (url.startsWith('https:')) {
+      console.log('[@component:VerificationImageComparisonThumbnails] Using HTTPS URL directly');
+      return url;
+    }
+
+    // For relative paths or other formats, use directly
+    console.log('[@component:VerificationImageComparisonThumbnails] Using URL directly');
+    return url;
+  };
+
   // Add cache-busting parameters to force browser to reload images
   const getCacheBustedUrl = (url: string) => {
     if (!url) return url;
@@ -67,8 +102,10 @@ export const VerificationImageComparisonThumbnails: React.FC<
     }
   };
 
-  const cacheBustedSourceUrl = getCacheBustedUrl(sourceUrl);
-  const cacheBustedReferenceUrl = getCacheBustedUrl(referenceUrl);
+  const processedSourceUrl = processImageUrl(sourceUrl);
+  const processedReferenceUrl = processImageUrl(referenceUrl);
+  const cacheBustedSourceUrl = getCacheBustedUrl(processedSourceUrl);
+  const cacheBustedReferenceUrl = getCacheBustedUrl(processedReferenceUrl);
   const cssFilter = getCSSFilter(imageFilter);
 
   // Debug logging for filters

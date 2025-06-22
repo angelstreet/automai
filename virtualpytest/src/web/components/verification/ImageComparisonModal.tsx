@@ -30,6 +30,40 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
   imageFilter,
   onClose,
 }) => {
+  // Process image URLs with HTTP to HTTPS proxy logic (same as ScreenshotCapture)
+  const processImageUrl = (url: string): string => {
+    if (!url) return '';
+
+    console.log(`[@component:ImageComparisonModal] Processing image URL: ${url}`);
+
+    // Handle data URLs (base64) - return as is
+    if (url.startsWith('data:')) {
+      console.log('[@component:ImageComparisonModal] Using data URL');
+      return url;
+    }
+
+    // Handle HTTP URLs - use proxy to convert to HTTPS
+    if (url.startsWith('http:')) {
+      console.log('[@component:ImageComparisonModal] HTTP URL detected, using proxy');
+      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(url)}`;
+      console.log(`[@component:ImageComparisonModal] Generated proxy URL: ${proxyUrl}`);
+      return proxyUrl;
+    }
+
+    // Handle HTTPS URLs - return as is (no proxy needed)
+    if (url.startsWith('https:')) {
+      console.log('[@component:ImageComparisonModal] Using HTTPS URL directly');
+      return url;
+    }
+
+    // For relative paths or other formats, use directly
+    console.log('[@component:ImageComparisonModal] Using URL directly');
+    return url;
+  };
+
+  const processedSourceUrl = processImageUrl(sourceUrl);
+  const processedReferenceUrl = processImageUrl(referenceUrl);
+
   return (
     <Dialog
       open={open}
@@ -139,7 +173,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
               </Typography>
             )}
             <img
-              src={sourceUrl}
+              src={processedSourceUrl}
               alt="Source Image"
               style={{
                 width: '100%',
@@ -156,7 +190,7 @@ export const ImageComparisonModal: React.FC<ImageComparisonModalProps> = ({
                 Reference
               </Typography>
               <img
-                src={referenceUrl}
+                src={processedReferenceUrl}
                 alt="Reference Image"
                 style={{
                   width: '100%',

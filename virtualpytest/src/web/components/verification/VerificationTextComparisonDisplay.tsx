@@ -35,11 +35,44 @@ export const VerificationTextComparisonDisplay: React.FC<
   // Use registration context to get selected host
   const { selectedHost } = useRegistration();
 
+  // Process image URLs with HTTP to HTTPS proxy logic (same as ScreenshotCapture)
+  const processImageUrl = (url: string): string => {
+    if (!url) return '';
+
+    console.log(`[@component:VerificationTextComparisonDisplay] Processing image URL: ${url}`);
+
+    // Handle data URLs (base64) - return as is
+    if (url.startsWith('data:')) {
+      console.log('[@component:VerificationTextComparisonDisplay] Using data URL');
+      return url;
+    }
+
+    // Handle HTTP URLs - use proxy to convert to HTTPS
+    if (url.startsWith('http:')) {
+      console.log('[@component:VerificationTextComparisonDisplay] HTTP URL detected, using proxy');
+      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(url)}`;
+      console.log(
+        `[@component:VerificationTextComparisonDisplay] Generated proxy URL: ${proxyUrl}`,
+      );
+      return proxyUrl;
+    }
+
+    // Handle HTTPS URLs - return as is (no proxy needed)
+    if (url.startsWith('https:')) {
+      console.log('[@component:VerificationTextComparisonDisplay] Using HTTPS URL directly');
+      return url;
+    }
+
+    // For relative paths or other formats, use directly
+    console.log('[@component:VerificationTextComparisonDisplay] Using URL directly');
+    return url;
+  };
+
   // Use centralized image URL builder
   const buildImageUrl = (url: string): string => {
-    if (!selectedHost) return url;
-    // Add host information to URL if needed
-    return url;
+    if (!selectedHost) return processImageUrl(url);
+    // Process through HTTP proxy logic first, then apply any additional host-specific logic if needed
+    return processImageUrl(url);
   };
 
   const handleSourceImageClick = () => {

@@ -53,6 +53,37 @@ export const VerificationTextComparisonDialog: React.FC<VerificationTextComparis
     return `${url}${separator}t=${timestamp}`;
   };
 
+  // Process image URLs with HTTP to HTTPS proxy logic (same as ScreenshotCapture)
+  const processImageUrl = (url: string): string => {
+    if (!url) return '';
+
+    console.log(`[@component:VerificationTextComparisonDialog] Processing image URL: ${url}`);
+
+    // Handle data URLs (base64) - return as is
+    if (url.startsWith('data:')) {
+      console.log('[@component:VerificationTextComparisonDialog] Using data URL');
+      return url;
+    }
+
+    // Handle HTTP URLs - use proxy to convert to HTTPS
+    if (url.startsWith('http:')) {
+      console.log('[@component:VerificationTextComparisonDialog] HTTP URL detected, using proxy');
+      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(url)}`;
+      console.log(`[@component:VerificationTextComparisonDialog] Generated proxy URL: ${proxyUrl}`);
+      return proxyUrl;
+    }
+
+    // Handle HTTPS URLs - return as is (no proxy needed)
+    if (url.startsWith('https:')) {
+      console.log('[@component:VerificationTextComparisonDialog] Using HTTPS URL directly');
+      return url;
+    }
+
+    // For relative paths or other formats, use directly
+    console.log('[@component:VerificationTextComparisonDialog] Using URL directly');
+    return url;
+  };
+
   // Get CSS filter based on the selected filter
   const getCSSFilter = (filter?: 'none' | 'greyscale' | 'binary') => {
     switch (filter) {
@@ -83,7 +114,8 @@ export const VerificationTextComparisonDialog: React.FC<VerificationTextComparis
     return languageMap[langCode] || langCode.toUpperCase();
   };
 
-  const cacheBustedSourceUrl = sourceUrl ? getCacheBustedUrl(sourceUrl) : '';
+  const processedSourceUrl = processImageUrl(sourceUrl || '');
+  const cacheBustedSourceUrl = getCacheBustedUrl(processedSourceUrl);
   const cssFilter = getCSSFilter(imageFilter);
 
   // Debug logging for filters
