@@ -186,15 +186,17 @@ class VerificationController:
                     }
             
             # Execute verification using unified interface
-            # Pass device model for R2 reference resolution
-            if hasattr(verification_controller, 'waitForImageToAppear') and self.host_device:
-                # For image verification, pass device model directly to the method
+            # Pass device model for R2 reference resolution and image saving
+            if self.host_device:
                 device_model = self.host_device.get('device_model', 'default')
-                if verification_config.get('verification_type') == 'image':
-                    # Add device model to params for image verification
+                verification_type = verification_config.get('verification_type')
+                
+                if verification_type in ['image', 'text']:
+                    # Add device model to params for image and text verification
                     if 'params' not in verification_config:
                         verification_config['params'] = {}
                     verification_config['params']['model'] = device_model
+                    print(f"[@controller:VerificationController] Added model '{device_model}' to {verification_type} verification params")
             
             result = verification_controller.execute_verification(verification_config, source_path)
             
