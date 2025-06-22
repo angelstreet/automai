@@ -15,6 +15,8 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
+import { useDeviceControl } from '../../hooks/useDeviceControl';
+import { useToast } from '../../hooks/useToast';
 import { Host } from '../../types/common/Host_Types';
 import { ScreenshotCapture } from '../controller/av/ScreenshotCapture';
 
@@ -45,6 +47,10 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Hooks for device control and notifications
+  const { takeControl } = useDeviceControl();
+  const { showError } = useToast();
 
   // Take screenshot function - only show loading for initial load
   const handleTakeScreenshot = useCallback(async () => {
@@ -109,11 +115,48 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     }
   };
 
-  // Handle opening stream modal
-  const handleOpenStreamModal = useCallback(() => {
+  // Handle opening stream modal with automatic take control
+  const handleOpenStreamModal = useCallback(async () => {
     console.log(`[@component:RecHostPreview] Opening stream modal for host: ${host.host_name}`);
-    setIsStreamModalOpen(true);
-  }, [host.host_name]);
+
+    // Don't attempt if host or AV is offline
+    if (host.status !== 'online' || host.avStatus === 'offline') {
+      console.warn(
+        `[@component:RecHostPreview] Cannot take control - host status: ${host.status}, AV status: ${host.avStatus}`,
+      );
+      return;
+    }
+
+    try {
+      console.log(
+        `[@component:RecHostPreview] Attempting to take control of device: ${host.host_name}`,
+      );
+
+      const result = await takeControl(host.host_name, 'rec-preview-session');
+
+      if (result.success) {
+        console.log(
+          `[@component:RecHostPreview] Successfully took control, opening stream modal for: ${host.host_name}`,
+        );
+        setIsStreamModalOpen(true);
+      } else {
+        console.error(`[@component:RecHostPreview] Failed to take control:`, result);
+
+        // Handle specific error types with appropriate toast duration (same as NavigationEditor)
+        if (
+          result.errorType === 'stream_service_error' ||
+          result.errorType === 'adb_connection_error'
+        ) {
+          showError(result.error || 'Service error occurred', { duration: 6000 });
+        } else {
+          showError(result.error || 'Failed to take control of device');
+        }
+      }
+    } catch (error: any) {
+      console.error(`[@component:RecHostPreview] Exception during take control:`, error);
+      showError(`Unexpected error: ${error.message || 'Failed to communicate with server'}`);
+    }
+  }, [host, takeControl, showError]);
 
   // Handle closing stream modal
   const handleCloseStreamModal = useCallback(() => {
@@ -352,6 +395,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         isOpen={isStreamModalOpen}
         onClose={handleCloseStreamModal}
         showRemoteByDefault={false}
+        initialControlActive={true}
       />
     </Card>
   );

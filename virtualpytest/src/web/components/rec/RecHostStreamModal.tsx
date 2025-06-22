@@ -13,6 +13,7 @@ interface RecHostStreamModalProps {
   isOpen: boolean;
   onClose: () => void;
   showRemoteByDefault?: boolean;
+  initialControlActive?: boolean;
 }
 
 export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
@@ -20,13 +21,14 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
   isOpen,
   onClose,
   showRemoteByDefault = false,
+  initialControlActive = false,
 }) => {
   // Local state
   const [streamUrl, setStreamUrl] = useState<string>('');
   const [isStreamActive, setIsStreamActive] = useState<boolean>(false);
   const [showRemote, setShowRemote] = useState<boolean>(showRemoteByDefault);
   const [isControlLoading, setIsControlLoading] = useState<boolean>(false);
-  const [isControlActive, setIsControlActive] = useState<boolean>(false);
+  const [isControlActive, setIsControlActive] = useState<boolean>(initialControlActive);
 
   // Hooks
   const { takeControl, releaseControl, isDeviceLocked } = useDeviceControl();
@@ -93,7 +95,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
     try {
       if (isControlActive) {
         // Release control
-        const result = await releaseControl(host.host_name, 'rec-stream-modal-session');
+        const result = await releaseControl(host.host_name, 'rec-preview-session');
 
         if (result.success) {
           console.log(
@@ -108,7 +110,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
         }
       } else {
         // Take control
-        const result = await takeControl(host.host_name, 'rec-stream-modal-session');
+        const result = await takeControl(host.host_name, 'rec-preview-session');
 
         if (result.success) {
           console.log(
@@ -166,7 +168,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
         console.log(
           `[@component:RecHostStreamModal] Releasing control on close for: ${host.host_name}`,
         );
-        await releaseControl(host.host_name, 'rec-stream-modal-session');
+        await releaseControl(host.host_name, 'rec-preview-session');
       } catch (error) {
         console.error('[@component:RecHostStreamModal] Error releasing control on close:', error);
       }
@@ -213,7 +215,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
         console.log(
           `[@component:RecHostStreamModal] Cleanup: releasing control for: ${host.host_name}`,
         );
-        releaseControl(host.host_name, 'rec-stream-modal-session').catch((error) => {
+        releaseControl(host.host_name, 'rec-preview-session').catch((error) => {
           console.error('[@component:RecHostStreamModal] Error during cleanup:', error);
         });
       }
