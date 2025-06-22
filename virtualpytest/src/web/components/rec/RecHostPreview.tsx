@@ -1,4 +1,9 @@
 import {
+  Refresh as RefreshIcon,
+  Fullscreen as FullscreenIcon,
+  Error as ErrorIcon,
+} from '@mui/icons-material';
+import {
   Card,
   CardContent,
   Typography,
@@ -8,18 +13,17 @@ import {
   Tooltip,
   CircularProgress,
 } from '@mui/material';
-import {
-  Refresh as RefreshIcon,
-  Fullscreen as FullscreenIcon,
-  Error as ErrorIcon,
-} from '@mui/icons-material';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-import { ScreenshotCapture } from '../controller/av/ScreenshotCapture';
 import { Host } from '../../types/common/Host_Types';
+import { ScreenshotCapture } from '../controller/av/ScreenshotCapture';
+
+interface HostWithAVStatus extends Host {
+  avStatus: 'online' | 'offline' | 'checking';
+}
 
 interface RecHostPreviewProps {
-  host: Host;
+  host: HostWithAVStatus;
   takeScreenshot: (host: Host) => Promise<string | null>;
   onFullscreen?: (host: Host) => void;
   autoRefresh?: boolean;
@@ -31,20 +35,24 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   takeScreenshot,
   onFullscreen,
   autoRefresh = true,
-  refreshInterval = 1000,
+  refreshInterval = 10000,
 }) => {
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Take screenshot function
-  const handleTakeScreenshot = async () => {
-    if (isLoading) return;
+  // Take screenshot function - only show loading for initial load
+  const handleTakeScreenshot = useCallback(async () => {
+    // Don't take screenshot if AV is offline
+    if (host.avStatus === 'offline') {
+      setError('AV Controller Offline');
+      setIsInitialLoading(false);
+      return;
+    }
 
     try {
-      setIsLoading(true);
       setError(null);
 
       const url = await takeScreenshot(host);
@@ -52,16 +60,17 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       if (url) {
         setScreenshotUrl(url);
         setLastUpdate(new Date());
+        setIsInitialLoading(false);
       } else {
         setError('Failed to capture screenshot');
+        setIsInitialLoading(false);
       }
     } catch (err: any) {
       console.error(`[@component:RecHostPreview] Screenshot error for ${host.host_name}:`, err);
       setError(err.message || 'Screenshot failed');
-    } finally {
-      setIsLoading(false);
+      setIsInitialLoading(false);
     }
-  };
+  }, [takeScreenshot, host]);
 
   // Auto-refresh effect
   useEffect(() => {
@@ -80,7 +89,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         }
       };
     }
-  }, [autoRefresh, refreshInterval, host.host_name]);
+  }, [autoRefresh, refreshInterval, host.host_name, handleTakeScreenshot]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -103,6 +112,19 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         return 'success';
       case 'offline':
         return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  const getAVStatusColor = (avStatus: string) => {
+    switch (avStatus) {
+      case 'online':
+        return 'success';
+      case 'offline':
+        return 'error';
+      case 'checking':
+        return 'warning';
       default:
         return 'default';
     }
@@ -139,12 +161,20 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         <Typography variant="subtitle2" noWrap sx={{ flex: 1, mr: 1 }}>
           {host.host_name}
         </Typography>
-        <Chip
-          label={host.status}
-          size="small"
-          color={getStatusColor(host.status) as any}
-          sx={{ fontSize: '0.7rem', height: 20 }}
-        />
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Chip
+            label={host.status}
+            size="small"
+            color={getStatusColor(host.status) as any}
+            sx={{ fontSize: '0.7rem', height: 20 }}
+          />
+          <Chip
+            label={`AV: ${host.avStatus}`}
+            size="small"
+            color={getAVStatusColor(host.avStatus) as any}
+            sx={{ fontSize: '0.7rem', height: 20 }}
+          />
+        </Box>
       </Box>
 
       {/* Device info */}
@@ -163,7 +193,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
             borderRadius: 1,
             position: 'relative',
             overflow: 'hidden',
-            backgroundColor: '#f5f5f5',
+            backgroundColor: 'transparent',
           }}
         >
           {error ? (
@@ -185,7 +215,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
           ) : screenshotUrl ? (
             <ScreenshotCapture
               screenshotPath={screenshotUrl}
-              isCapturing={isLoading}
+              isCapturing={false}
               model={host.device_model}
               sx={{
                 width: '100%',
@@ -204,32 +234,13 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                 justifyContent: 'center',
               }}
             >
-              {isLoading ? (
+              {isInitialLoading ? (
                 <CircularProgress size={24} />
               ) : (
                 <Typography variant="caption" color="text.secondary">
                   No capture available
                 </Typography>
               )}
-            </Box>
-          )}
-
-          {/* Loading overlay */}
-          {isLoading && screenshotUrl && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CircularProgress size={20} sx={{ color: 'white' }} />
             </Box>
           )}
 
@@ -247,7 +258,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               <IconButton
                 size="small"
                 onClick={handleTakeScreenshot}
-                disabled={isLoading}
+                disabled={false}
                 sx={{
                   backgroundColor: 'rgba(255, 255, 255, 0.8)',
                   '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
@@ -274,7 +285,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
           </Box>
 
           {/* Click overlay for fullscreen */}
-          {onFullscreen && screenshotUrl && !isLoading && (
+          {onFullscreen && screenshotUrl && (
             <Box
               onClick={handleFullscreen}
               sx={{

@@ -1,16 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
+
 import { Host } from '../../types/common/Host_Types';
 
+interface HostWithAVStatus extends Host {
+  avStatus: 'online' | 'offline' | 'checking';
+}
+
 interface UseRecReturn {
-  hosts: Host[];
+  hosts: HostWithAVStatus[];
   isLoading: boolean;
   error: string | null;
   refreshHosts: () => Promise<void>;
   takeScreenshot: (host: Host) => Promise<string | null>;
+  checkAVStatus: (host: Host) => Promise<boolean>;
 }
 
 export const useRec = (): UseRecReturn => {
-  const [hosts, setHosts] = useState<Host[]>([]);
+  const [hosts, setHosts] = useState<HostWithAVStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -50,7 +56,21 @@ export const useRec = (): UseRecReturn => {
         `[@hook:useRec] Found ${avHosts.length} hosts with AV capabilities out of ${data.hosts.length} total hosts`,
       );
       console.log('[@hook:useRec] AV hosts:', avHosts);
-      setHosts(avHosts);
+
+      // Check AV status for each host and add status property
+      const hostsWithStatus: HostWithAVStatus[] = await Promise.all(
+        avHosts.map(async (host: Host) => {
+          const avStatus = await checkAVStatus(host);
+          return {
+            ...host,
+            avStatus: avStatus ? 'online' : 'offline',
+          };
+        }),
+      );
+
+      console.log(`[@hook:useRec] Hosts with AV status:`, hostsWithStatus);
+
+      setHosts(hostsWithStatus);
       setError(null);
     } catch (err: any) {
       console.error('[@hook:useRec] Error fetching hosts:', err);
@@ -58,6 +78,39 @@ export const useRec = (): UseRecReturn => {
       setHosts([]);
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  // Check AV status for a specific host
+  const checkAVStatus = useCallback(async (host: Host): Promise<boolean> => {
+    try {
+      console.log(`[@hook:useRec] Checking AV status for host: ${host.host_name}`);
+
+      const response = await fetch('/server/av/get-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ host }),
+      });
+
+      if (!response.ok) {
+        console.log(
+          `[@hook:useRec] AV status check failed for ${host.host_name}: ${response.status}`,
+        );
+        return false;
+      }
+
+      const data = await response.json();
+      const isAvailable = data.success && data.status === 'online';
+
+      console.log(
+        `[@hook:useRec] AV status for ${host.host_name}: ${isAvailable ? 'available' : 'unavailable'}`,
+      );
+      return isAvailable;
+    } catch (err: any) {
+      console.error(`[@hook:useRec] AV status check error for ${host.host_name}:`, err);
+      return false;
     }
   }, []);
 
@@ -111,5 +164,6 @@ export const useRec = (): UseRecReturn => {
     error,
     refreshHosts,
     takeScreenshot,
+    checkAVStatus,
   };
 };

@@ -38,12 +38,7 @@ import { NavigationEditorProvider } from '../contexts/navigation/NavigationEdito
 import { NodeEdgeManagementProvider } from '../contexts/navigation/NodeEdgeManagementContext';
 import { useNavigationEditorNew } from '../hooks/navigation/useNavigationEditorNew';
 import { useVerificationReferences } from '../hooks/verification/useVerificationReferences';
-import {
-  UINavigationNode as UINavigationNodeType,
-  UINavigationEdge as UINavigationEdgeType,
-  NodeForm,
-  EdgeForm,
-} from '../types/pages/Navigation_Types';
+import { NodeForm, EdgeForm } from '../types/pages/Navigation_Types';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
 const nodeTypes = {
@@ -818,75 +813,10 @@ const NavigationEditorWithNodeEdgeManagement: React.FC<{
   userInterfaceId: string;
 }> = ({ userInterface, userInterfaceId }) => {
   // Now we can safely call useNavigationEditorNew inside NavigationConfigProvider
-  const {
-    nodes,
-    edges,
-    selectedNode,
-    selectedEdge,
-    nodeForm,
-    edgeForm,
-    isNewNode,
-    setNodes,
-    setEdges,
-    setSelectedNode,
-    setSelectedEdge,
-    setNodeForm,
-    setEdgeForm,
-    setIsNodeDialogOpen,
-    setIsEdgeDialogOpen,
-    setIsNewNode,
-    setHasUnsavedChanges,
-    saveToConfig, // This should now be available from NavigationConfig context
-  } = useNavigationEditorNew();
+  const navigationEditor = useNavigationEditorNew();
 
-  // Create memoized state objects for providers to prevent unnecessary re-renders
-  const nodeEdgeState = useMemo(() => {
-    return {
-      nodes,
-      edges,
-      selectedNode,
-      selectedEdge,
-      nodeForm,
-      edgeForm,
-      isNewNode,
-      // Cast setters to match NodeEdgeManagementState interface
-      setNodes: setNodes as (
-        nodes: UINavigationNodeType[] | ((prev: UINavigationNodeType[]) => UINavigationNodeType[]),
-      ) => void,
-      setEdges: setEdges as (
-        edges: UINavigationEdgeType[] | ((prev: UINavigationEdgeType[]) => UINavigationEdgeType[]),
-      ) => void,
-      setSelectedNode,
-      setSelectedEdge,
-      setNodeForm: setNodeForm as (form: NodeForm | null) => void,
-      setEdgeForm: setEdgeForm as (form: EdgeForm | null) => void,
-      setIsNodeDialogOpen,
-      setIsEdgeDialogOpen,
-      setIsNewNode,
-      setHasUnsavedChanges,
-    };
-  }, [
-    nodes,
-    edges,
-    selectedNode,
-    selectedEdge,
-    nodeForm,
-    edgeForm,
-    isNewNode,
-    setNodes,
-    setEdges,
-    setSelectedNode,
-    setSelectedEdge,
-    setNodeForm,
-    setEdgeForm,
-    setIsNodeDialogOpen,
-    setIsEdgeDialogOpen,
-    setIsNewNode,
-    setHasUnsavedChanges,
-  ]);
-
-  // Verify saveToConfig is available before rendering NodeEdgeManagementProvider
-  if (!saveToConfig) {
+  // Verify we have the required contexts before rendering NodeEdgeManagementProvider
+  if (!navigationEditor.saveToConfig) {
     console.warn(
       '[@component:NavigationEditorWithNodeEdgeManagement] saveToConfig not available, rendering without NodeEdgeManagementProvider',
     );
@@ -898,11 +828,7 @@ const NavigationEditorWithNodeEdgeManagement: React.FC<{
   }
 
   return (
-    <NodeEdgeManagementProvider
-      state={nodeEdgeState}
-      saveToConfig={saveToConfig}
-      userInterfaceId={userInterfaceId}
-    >
+    <NodeEdgeManagementProvider userInterfaceId={userInterfaceId}>
       <DeviceControlProvider userInterface={userInterface}>
         <NavigationEditorContent userInterfaceId={userInterfaceId} />
       </DeviceControlProvider>

@@ -23,6 +23,10 @@ import { useRec } from '../hooks/pages/useRec';
 import { RecHostPreview } from '../components/rec/RecHostPreview';
 import { Host } from '../types/common/Host_Types';
 
+interface HostWithAVStatus extends Host {
+  avStatus: 'online' | 'offline' | 'checking';
+}
+
 type ViewMode = 'grid' | 'table';
 
 const Rec: React.FC = () => {
@@ -80,7 +84,7 @@ const Rec: React.FC = () => {
             takeScreenshot={takeScreenshot}
             onFullscreen={handleFullscreen}
             autoRefresh={autoRefresh}
-            refreshInterval={1000}
+            refreshInterval={10000}
           />
         </Grid>
       ))}

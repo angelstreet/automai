@@ -1,11 +1,9 @@
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
 
-import {
-  UINavigationNode,
-  UINavigationEdge,
-  NodeForm,
-  EdgeForm,
-} from '../../types/pages/Navigation_Types';
+import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
+import { useNavigationNodes } from './NavigationNodesContext';
+import { useNavigationUI } from './NavigationUIContext';
+import { useNavigationConfig } from './NavigationConfigContext';
 
 // ========================================
 // TYPES
@@ -21,34 +19,8 @@ interface NodeEdgeManagementContextType {
   resetNode: (nodeId: string) => void;
 }
 
-interface NodeEdgeManagementState {
-  nodes: UINavigationNode[];
-  edges: UINavigationEdge[];
-  selectedNode: UINavigationNode | null;
-  selectedEdge: UINavigationEdge | null;
-  nodeForm: NodeForm | null;
-  edgeForm: EdgeForm | null;
-  isNewNode: boolean;
-  setNodes: (
-    nodes: UINavigationNode[] | ((prev: UINavigationNode[]) => UINavigationNode[]),
-  ) => void;
-  setEdges: (
-    edges: UINavigationEdge[] | ((prev: UINavigationEdge[]) => UINavigationEdge[]),
-  ) => void;
-  setSelectedNode: (node: UINavigationNode | null) => void;
-  setSelectedEdge: (edge: UINavigationEdge | null) => void;
-  setNodeForm: (form: NodeForm | null) => void;
-  setEdgeForm: (form: EdgeForm | null) => void;
-  setIsNodeDialogOpen: (open: boolean) => void;
-  setIsEdgeDialogOpen: (open: boolean) => void;
-  setIsNewNode: (isNew: boolean) => void;
-  setHasUnsavedChanges: (hasChanges: boolean) => void;
-}
-
 interface NodeEdgeManagementProviderProps {
   children: React.ReactNode;
-  state: NodeEdgeManagementState;
-  saveToConfig: (userInterfaceId: string) => Promise<void>;
   userInterfaceId: string;
 }
 
@@ -58,36 +30,43 @@ interface NodeEdgeManagementProviderProps {
 
 const NodeEdgeManagementContext = createContext<NodeEdgeManagementContextType | null>(null);
 
+// ========================================
+// PROVIDER
+// ========================================
+
 export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProps> = ({
   children,
-  state,
-  saveToConfig,
   userInterfaceId,
 }) => {
   console.log('[@context:NodeEdgeManagementProvider] Initializing node edge management context');
+
+  // Get contexts directly - single source of truth
+  const nodesContext = useNavigationNodes();
+  const uiContext = useNavigationUI();
+  const configContext = useNavigationConfig();
 
   const {
     nodes,
     edges,
     selectedNode,
     selectedEdge,
-
-    isNewNode,
     setNodes,
     setEdges,
     setSelectedNode,
     setSelectedEdge,
+  } = nodesContext;
+
+  const {
+    nodeForm,
+    edgeForm,
+    isNewNode,
     setNodeForm,
     setEdgeForm,
     setIsNodeDialogOpen,
     setIsEdgeDialogOpen,
     setIsNewNode,
     setHasUnsavedChanges,
-  } = state;
-
-  // ========================================
-  // CRUD OPERATIONS
-  // ========================================
+  } = uiContext;
 
   // Save node changes with database persistence
   const saveNodeChanges = useCallback(
@@ -223,6 +202,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           throw new Error('No selected node for update and not creating new node');
         }
 
+        // Step 3: Update nodes in the single source of truth
         if (isNewNode) {
           // Create new node
           const newNode: UINavigationNode = {
@@ -250,12 +230,31 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           console.log('[@context:NodeEdgeManagementProvider] Updated node:', selectedNode.id);
         }
 
-        // Step 3: Auto-save tree to persist verifications to database
+        // Step 4: Auto-save tree to persist verifications to database
         console.log(
           '[@context:NodeEdgeManagementProvider] Auto-saving tree with verifications to database',
         );
 
-        await saveToConfig(userInterfaceId);
+        // Get the most up-to-date nodes after our update
+        const currentNodes = isNewNode
+          ? [...nodes, updatedNodeData]
+          : nodes.map((node) => (node.id === selectedNode.id ? updatedNodeData : node));
+
+        // Create state object for saveToConfig with updated nodes
+        const configState = {
+          nodes: currentNodes,
+          edges,
+          userInterface: null, // Will be set by the config context
+          setNodes,
+          setEdges,
+          setUserInterface: () => {}, // Placeholder
+          setInitialState: () => {}, // Will be handled by config context
+          setHasUnsavedChanges,
+          setIsLoading: () => {}, // Will be handled by config context
+          setError: () => {}, // Will be handled by config context
+        };
+
+        await configContext.saveToConfig(userInterfaceId, configState);
 
         console.log(
           '[@context:NodeEdgeManagementProvider] Tree auto-saved successfully with verifications',
@@ -334,7 +333,16 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
       // Don't close dialog or clear selection - just mark as saved
       // This prevents the interface reload feeling
     },
-    [isNewNode, selectedNode, nodes, setNodes, setHasUnsavedChanges, saveToConfig, userInterfaceId],
+    [
+      isNewNode,
+      selectedNode,
+      nodes,
+      edges,
+      setNodes,
+      setHasUnsavedChanges,
+      configContext,
+      userInterfaceId,
+    ],
   );
 
   // Save edge changes
@@ -557,6 +565,3 @@ export const useNodeEdgeManagement = (): NodeEdgeManagementContextType => {
   }
   return context;
 };
-
-// Export the type for use in other files
-export type { NodeEdgeManagementState };
