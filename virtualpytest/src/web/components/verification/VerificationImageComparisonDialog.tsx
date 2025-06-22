@@ -305,9 +305,6 @@ export const VerificationImageComparisonDialog: React.FC<
                   }}
                 />
               </Box>
-              <Typography variant="caption" sx={{ mt: 1, textAlign: 'center', color: '#666' }}>
-                Green = Matching pixels, Red = Different pixels
-              </Typography>
             </Box>
           )}
 

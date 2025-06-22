@@ -332,7 +332,10 @@ class TextVerificationController(VerificationControllerInterface):
                     if area and model is not None:
                         cropped_source_path = self._save_cropped_source_image(source_path, area, model, verification_index)
                         if cropped_source_path:
+                            # Convert local path to public URL like image verification
+                            source_url = self._build_image_url(cropped_source_path)
                             additional_data["source_image_path"] = cropped_source_path
+                            additional_data["sourceImageUrl"] = source_url
                     
                     additional_data["extracted_text"] = extracted_text.strip()
                     additional_data["detected_language"] = detected_language
@@ -346,7 +349,10 @@ class TextVerificationController(VerificationControllerInterface):
             if best_source_path and area and model is not None:
                 cropped_source_path = self._save_cropped_source_image(best_source_path, area, model, verification_index)
                 if cropped_source_path:
+                    # Convert local path to public URL like image verification
+                    source_url = self._build_image_url(cropped_source_path)
                     additional_data["source_image_path"] = cropped_source_path
+                    additional_data["sourceImageUrl"] = source_url
             elif image_list and model is not None:
                 # If no best_source_path but we have image_list, use the first available image
                 for source_path in image_list:
@@ -354,11 +360,17 @@ class TextVerificationController(VerificationControllerInterface):
                         if area:
                             cropped_source_path = self._save_cropped_source_image(source_path, area, model, verification_index)
                             if cropped_source_path:
+                                # Convert local path to public URL like image verification
+                                source_url = self._build_image_url(cropped_source_path)
                                 additional_data["source_image_path"] = cropped_source_path
+                                additional_data["sourceImageUrl"] = source_url
                         else:
                             saved_source_path = self._save_source_image_for_comparison(source_path, model, verification_index)
                             if saved_source_path:
+                                # Convert local path to public URL like image verification
+                                source_url = self._build_image_url(saved_source_path)
                                 additional_data["source_image_path"] = saved_source_path
+                                additional_data["sourceImageUrl"] = source_url
                         break
             
             additional_data["extracted_text"] = closest_text
@@ -402,7 +414,10 @@ class TextVerificationController(VerificationControllerInterface):
                     if area and model is not None:
                         cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
                         if cropped_source_path:
+                            # Convert local path to public URL like image verification
+                            source_url = self._build_image_url(cropped_source_path)
                             additional_data["source_image_path"] = cropped_source_path
+                            additional_data["sourceImageUrl"] = source_url
                     
                     additional_data["extracted_text"] = extracted_text.strip()
                     additional_data["detected_language"] = detected_language
@@ -426,7 +441,10 @@ class TextVerificationController(VerificationControllerInterface):
             if area and model is not None:
                 cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
                 if cropped_source_path:
+                    # Convert local path to public URL like image verification
+                    source_url = self._build_image_url(cropped_source_path)
                     additional_data["source_image_path"] = cropped_source_path
+                    additional_data["sourceImageUrl"] = source_url
             
             additional_data["extracted_text"] = closest_text
             additional_data["detected_language"] = "eng"
@@ -957,6 +975,36 @@ class TextVerificationController(VerificationControllerInterface):
                 'confidence': 0.0,
                 'details': {'error': str(e)}
             }
+
+    def _build_image_url(self, local_path: str) -> str:
+        """
+        Convert local image path to public URL like image verification.
+        
+        Args:
+            local_path: Local file path
+            
+        Returns:
+            Public URL for the image
+        """
+        try:
+            from src.utils.buildUrlUtils import buildVerificationResultUrl
+            from flask import current_app
+            
+            # Get host info from current app context
+            host_device = getattr(current_app, 'my_host_device', None)
+            if not host_device:
+                print(f"[@controller:TextVerification] Warning: No host device found for URL building")
+                return local_path  # Return local path as fallback
+            
+            # Build public URL exactly like image verification
+            public_url = buildVerificationResultUrl(host_device, local_path)
+            print(f"[@controller:TextVerification] Built URL: {local_path} -> {public_url}")
+            
+            return public_url
+            
+        except Exception as url_error:
+            print(f"[@controller:TextVerification] URL building error: {url_error}")
+            return local_path  # Return local path as fallback
 
     def save_text_reference(self, text: str, reference_name: str, model: str, 
                            area: dict, font_size: float = 12.0, confidence: float = 0.8) -> str:

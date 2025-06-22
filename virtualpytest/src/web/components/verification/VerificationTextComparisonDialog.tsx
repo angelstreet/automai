@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -8,6 +7,7 @@ import {
   Box,
   Typography,
 } from '@mui/material';
+import React from 'react';
 
 interface VerificationTextComparisonDialogProps {
   open: boolean;
