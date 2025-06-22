@@ -11,7 +11,7 @@ DEVICE_MODEL_VERIFICATION_MAPPING = {
     'android_mobile': ['image', 'text', 'adb'],
     'android_tv': ['image', 'text'],
     'ios_mobile': ['image', 'text', 'appium'],
-    'stb': ['image', 'text'],
+    'stb': ['image', 'audio', 'text', 'video'],
 }
 
 def create_controller_configs_from_device_info(device_model, device_ip, device_port, host_url, host_port):
@@ -114,6 +114,18 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
             'parameters': {
                 'device_address': '00:11:22:33:44:55',  # Default - should be configured per device
                 'connection_timeout': 30
+            }
+        }
+        remote_configured = True
+    elif device_model == 'stb':
+        # STB (Set-Top Box) devices typically use IR remote control
+        controller_configs['remote'] = {
+            'type': 'ir_remote',
+            'implementation': 'ir_remote',
+            'parameters': {
+                'device_path': '/dev/lirc0',
+                'protocol': 'NEC',
+                'frequency': 38000
             }
         }
         remote_configured = True

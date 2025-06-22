@@ -11,3 +11,5 @@ psutil
 GitPython
 pytesseract
 pytz
+Appium-Python-Client
+boto3
