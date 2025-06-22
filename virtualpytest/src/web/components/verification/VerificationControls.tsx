@@ -131,7 +131,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
               size="small"
               type="number"
               label="X"
-              value={parseFloat(verification.params?.area?.x || 0).toFixed(1)}
+              value={Math.round((verification.params?.area?.x || 0) * 10) / 10}
               autoComplete="off"
               onChange={(e) =>
                 onUpdateVerification(index, {
@@ -157,7 +157,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
               size="small"
               type="number"
               label="Y"
-              value={parseFloat(verification.params?.area?.y || 0).toFixed(1)}
+              value={Math.round((verification.params?.area?.y || 0) * 10) / 10}
               autoComplete="off"
               onChange={(e) =>
                 onUpdateVerification(index, {
@@ -183,7 +183,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
               size="small"
               type="number"
               label="Width"
-              value={parseFloat(verification.params?.area?.width || 100).toFixed(1)}
+              value={Math.round((verification.params?.area?.width || 100) * 10) / 10}
               autoComplete="off"
               onChange={(e) =>
                 onUpdateVerification(index, {
@@ -209,7 +209,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
               size="small"
               type="number"
               label="Height"
-              value={parseFloat(verification.params?.area?.height || 100).toFixed(1)}
+              value={Math.round((verification.params?.area?.height || 100) * 10) / 10}
               autoComplete="off"
               onChange={(e) =>
                 onUpdateVerification(index, {
