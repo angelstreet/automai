@@ -250,13 +250,57 @@ class VerificationController:
                 print(f"[@controller:VerificationController] AV controller not available")
                 return None
             
-            screenshot_path = av_controller.take_screenshot()
-            if screenshot_path:
-                print(f"[@controller:VerificationController] Screenshot taken: {screenshot_path}")
-                return screenshot_path
-            else:
+            screenshot_result = av_controller.take_screenshot()
+            if not screenshot_result:
                 print(f"[@controller:VerificationController] Screenshot capture failed")
                 return None
+            
+            print(f"[@controller:VerificationController] Screenshot result from AV controller: {screenshot_result}")
+            
+            # Check if result is a URL or a file path
+            if screenshot_result.startswith('http'):
+                # It's a URL, need to download it to a local file
+                print(f"[@controller:VerificationController] Screenshot is URL, downloading to local file...")
+                
+                import requests
+                import tempfile
+                import os
+                from urllib.parse import urlparse
+                
+                try:
+                    # Create temporary file in captures directory
+                    captures_dir = '/var/www/html/stream/captures'
+                    os.makedirs(captures_dir, exist_ok=True)
+                    
+                    # Extract filename from URL or generate one
+                    parsed_url = urlparse(screenshot_result)
+                    url_filename = os.path.basename(parsed_url.path)
+                    if url_filename and '.' in url_filename:
+                        local_filename = url_filename
+                    else:
+                        import time
+                        local_filename = f"verification_screenshot_{int(time.time())}.jpg"
+                    
+                    local_path = os.path.join(captures_dir, local_filename)
+                    
+                    # Download the image
+                    print(f"[@controller:VerificationController] Downloading {screenshot_result} to {local_path}")
+                    response = requests.get(screenshot_result, timeout=10, verify=False)
+                    response.raise_for_status()
+                    
+                    with open(local_path, 'wb') as f:
+                        f.write(response.content)
+                    
+                    print(f"[@controller:VerificationController] Downloaded screenshot: {local_path}")
+                    return local_path
+                    
+                except Exception as download_error:
+                    print(f"[@controller:VerificationController] Failed to download screenshot: {download_error}")
+                    return None
+            else:
+                # It's already a file path, use it directly
+                print(f"[@controller:VerificationController] Screenshot is file path: {screenshot_result}")
+                return screenshot_result
                 
         except Exception as e:
             print(f"[@controller:VerificationController] Screenshot error: {e}")
