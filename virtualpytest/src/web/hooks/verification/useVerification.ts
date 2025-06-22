@@ -285,8 +285,10 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
                 error: result.error,
                 threshold: result.threshold,
                 resultType: resultType,
-                sourceImageUrl: result.sourceImageUrl,
-                referenceImageUrl: result.referenceImageUrl,
+                // Extract image URLs from details object if not at top level
+                sourceImageUrl: result.sourceImageUrl || result.details?.sourceImageUrl,
+                referenceImageUrl: result.referenceImageUrl || result.details?.referenceImageUrl,
+                resultOverlayUrl: result.resultOverlayUrl || result.details?.resultOverlayUrl,
                 extractedText: result.extractedText,
                 searchedText: result.searchedText,
                 imageFilter: result.imageFilter,
@@ -297,7 +299,7 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
                 wait_time: result.wait_time,
                 total_matches: result.total_matches,
                 matches: result.matches,
-              };
+              } as Verification;
 
               console.log(`[@hook:useVerification] Processed result ${index}:`, processedResult);
               return processedResult;
@@ -315,8 +317,9 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
                 ...verification,
                 lastRunResult: result.success,
                 lastRunResults: [result.success],
-                resultImageUrl: result.sourceImageUrl,
-                referenceImageUrl: result.referenceImageUrl,
+                resultImageUrl: result.sourceImageUrl || result.details?.sourceImageUrl,
+                referenceImageUrl: result.referenceImageUrl || result.details?.referenceImageUrl,
+                resultOverlayUrl: result.resultOverlayUrl || result.details?.resultOverlayUrl,
                 lastRunDetails: result.message || 'Verification completed',
               };
             }
