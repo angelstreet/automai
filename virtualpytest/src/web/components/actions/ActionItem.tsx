@@ -122,9 +122,9 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                 >
                   {category.replace(/_/g, ' ').toUpperCase()}
                 </MenuItem>,
-                ...actions.map((actionItem) => (
+                ...actions.map((actionItem, actionIndex) => (
                   <MenuItem
-                    key={actionItem.command}
+                    key={`${category}-${actionIndex}-${actionItem.command}`}
                     value={actionItem.command}
                     sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
                   >

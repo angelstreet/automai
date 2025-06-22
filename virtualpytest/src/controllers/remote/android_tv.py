@@ -708,35 +708,14 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'inputLabel': 'Package name',
                     'inputPlaceholder': 'com.example.app'
                 },
-                # Coordinate actions
+                # Power control actions
                 {
-                    'id': 'tap_coordinates',
-                    'label': 'Tap Coordinates',
-                    'command': 'tap_coordinates',
+                    'id': 'press_key_power',
+                    'label': 'Power',
+                    'command': 'press_key',
                     'action_type': 'remote',
-                    'params': {},
-                    'description': 'Tap at specific screen coordinates',
-                    'requiresInput': True,
-                    'inputLabel': 'Coordinates (x,y)',
-                    'inputPlaceholder': '100,200'
-                },
-                # Utility actions
-                {
-                    'id': 'take_screenshot',
-                    'label': 'Take Screenshot',
-                    'command': 'take_screenshot',
-                    'action_type': 'remote',
-                    'params': {},
-                    'description': 'Capture current screen',
-                    'requiresInput': False
-                },
-                {
-                    'id': 'get_installed_apps',
-                    'label': 'Get Installed Apps',
-                    'command': 'get_installed_apps',
-                    'action_type': 'remote',
-                    'params': {},
-                    'description': 'List all installed applications',
+                    'params': {'key': 'POWER'},
+                    'description': 'Toggle power on/off',
                     'requiresInput': False
                 }
             ]
