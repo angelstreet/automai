@@ -929,29 +929,29 @@ class TextVerificationController(VerificationControllerInterface):
             print(f"[@controller:TextVerification] Executing {command} with text: '{text}'")
             print(f"[@controller:TextVerification] Parameters: timeout={timeout}, case_sensitive={case_sensitive}, area={area}, filter={image_filter}")
             
-                    # Execute verification based on command
-        if command == 'waitForTextToAppear':
-            success, message, details = self.waitForTextToAppear(
-                text=text,
-                timeout=timeout,
-                case_sensitive=case_sensitive,
-                area=area,
-                image_list=[source_path],  # Use source_path as image list
-                model=params.get('model', 'default'),  # Get device model from params for image saving
-                verification_index=0,
-                image_filter=image_filter
-            )
-                    elif command == 'waitForTextToDisappear':
-            success, message, details = self.waitForTextToDisappear(
-                text=text,
-                timeout=timeout,
-                case_sensitive=case_sensitive,
-                area=area,
-                image_list=[source_path],  # Use source_path as image list
-                model=params.get('model', 'default'),  # Get device model from params for image saving
-                verification_index=0,
-                image_filter=image_filter
-            )
+            # Execute verification based on command
+            if command == 'waitForTextToAppear':
+                success, message, details = self.waitForTextToAppear(
+                    text=text,
+                    timeout=timeout,
+                    case_sensitive=case_sensitive,
+                    area=area,
+                    image_list=[source_path],  # Use source_path as image list
+                    model=params.get('model', 'default'),  # Get device model from params for image saving
+                    verification_index=0,
+                    image_filter=image_filter
+                )
+            elif command == 'waitForTextToDisappear':
+                success, message, details = self.waitForTextToDisappear(
+                    text=text,
+                    timeout=timeout,
+                    case_sensitive=case_sensitive,
+                    area=area,
+                    image_list=[source_path],  # Use source_path as image list
+                    model=params.get('model', 'default'),  # Get device model from params for image saving
+                    verification_index=0,
+                    image_filter=image_filter
+                )
             else:
                 return {
                     'success': False,
