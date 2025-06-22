@@ -107,8 +107,8 @@ const miniMapNodeColor = (node: any) => {
   }
 };
 
-const NavigationEditorContent: React.FC = React.memo(
-  () => {
+const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.memo(
+  ({ userInterfaceId }) => {
     // DEBUG: Track re-renders
     console.log('[@component:NavigationEditorContent] Re-rendering...');
 
@@ -214,6 +214,15 @@ const NavigationEditorContent: React.FC = React.memo(
       setEdges,
       setSelectedEdge,
     } = useNavigationEditorNew();
+
+    // Use the correct userInterfaceId - prefer prop over URL param
+    const actualUserInterfaceId = userInterfaceId || interfaceId;
+
+    console.log('[@component:NavigationEditorContent] UserInterface ID resolution:', {
+      userInterfaceIdProp: userInterfaceId,
+      interfaceIdFromURL: interfaceId,
+      actualUserInterfaceId,
+    });
 
     // Get device control from context
     const {
@@ -489,7 +498,7 @@ const NavigationEditorContent: React.FC = React.memo(
           fetchHosts={fetchHosts}
           onAddNewNode={handleAddNewNodeWrapper}
           onFitView={fitView}
-          onSaveToConfig={() => saveToConfig(interfaceId)}
+          onSaveToConfig={() => actualUserInterfaceId && saveToConfig(actualUserInterfaceId)}
           onDiscardChanges={discardChanges}
           onFocusNodeChange={setFocusNode}
           onDepthChange={setDisplayDepth}
@@ -749,7 +758,7 @@ const NavigationEditorWithAllProviders: React.FC = () => {
     return (
       <NavigationConfigProvider>
         <DeviceControlProvider userInterface={stableUserInterface}>
-          <NavigationEditorContent />
+          <NavigationEditorContent userInterfaceId={userInterfaceId} />
         </DeviceControlProvider>
       </NavigationConfigProvider>
     );
@@ -845,7 +854,7 @@ const NavigationEditorWithNodeEdgeManagement: React.FC<{
     );
     return (
       <DeviceControlProvider userInterface={userInterface}>
-        <NavigationEditorContent />
+        <NavigationEditorContent userInterfaceId={userInterfaceId} />
       </DeviceControlProvider>
     );
   }
