@@ -27,8 +27,8 @@ export interface UINavigationNodeData {
   menu_type?: 'main' | 'submenu' | 'leaf'; // Type of menu node
 
   // NEW: Verification support
-  verifications?: Verification[]; // Array of verifications for this node (UI only)
-  verification_ids?: string[]; // Array of verification database IDs (persisted in tree)
+  verifications?: Verification[]; // Array of full verification objects for UI display (loaded from DB via verification_ids)
+  verification_ids?: string[]; // Array of verification database IDs for persistence (saved to tree)
 }
 
 // Define the navigation node type using ReactFlow's Node with our data type

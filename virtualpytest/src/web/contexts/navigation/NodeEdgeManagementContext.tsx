@@ -179,7 +179,8 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
             ...formData,
             data: {
               ...formData.data,
-              verifications: verificationIds, // ✅ Correct field name
+              verification_ids: verificationIds, // ✅ Store verification IDs for persistence/database
+              verifications: formData.verifications || [], // ✅ Store verification objects for UI
             },
           };
           console.log(
@@ -201,7 +202,8 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
               ...selectedNode.data, // ✅ Preserve existing data structure
               // Update only the fields from the form
               ...formData.data, // Apply form changes
-              verifications: verificationIds, // ✅ Correct field name - store verification IDs
+              verification_ids: verificationIds, // ✅ Store verification IDs for persistence/database
+              verifications: formData.verifications || [], // ✅ Store verification objects for UI
             },
           };
           console.log(
@@ -263,7 +265,8 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
             ...formData,
             data: {
               ...formData.data,
-              verifications: [], // ✅ Correct field name - empty array if verification save failed
+              verification_ids: [], // ✅ Empty array if verification save failed
+              verifications: [], // ✅ Empty array if verification save failed
             },
           };
         } else if (selectedNode) {
@@ -273,7 +276,8 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
             data: {
               ...selectedNode.data, // ✅ Preserve existing data structure
               ...formData.data, // Apply form changes
-              verifications: [], // ✅ Correct field name - empty array if verification save failed
+              verification_ids: [], // ✅ Empty array if verification save failed
+              verifications: [], // ✅ Empty array if verification save failed
             },
           };
         }

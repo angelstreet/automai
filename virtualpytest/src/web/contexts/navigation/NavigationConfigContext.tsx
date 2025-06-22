@@ -300,8 +300,8 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
             // Collect all verification IDs from all nodes
             const allVerificationIds = new Set<string>();
-            nodes.forEach((node) => {
-              const verificationIds = node.data?.verifications || [];
+            nodes.forEach((node: UINavigationNode) => {
+              const verificationIds = node.data?.verification_ids || [];
               verificationIds.forEach((id: string) => allVerificationIds.add(id));
             });
 
@@ -346,8 +346,8 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
                   }
 
                   // Merge verification definitions with nodes based on their stored IDs
-                  nodes = nodes.map((node) => {
-                    const verificationIds = node.data?.verifications || [];
+                  nodes = nodes.map((node: UINavigationNode) => {
+                    const verificationIds = node.data?.verification_ids || [];
                     if (verificationIds.length > 0) {
                       const nodeVerifications = verificationIds
                         .map((id: string) => verificationsById.get(id))
@@ -471,9 +471,18 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(true);
         state.setError(null);
 
-        // Prepare tree data for saving - just pass through as-is with verifications
+        // Prepare tree data for saving - clean up nodes to only include verification_ids in database
         const treeDataForSaving = {
-          nodes: state.nodes,
+          nodes: state.nodes.map((node: UINavigationNode) => ({
+            ...node,
+            data: {
+              ...node.data,
+              // Only include verification_ids for database persistence
+              verification_ids: node.data.verification_ids || [],
+              // Remove the full verification objects from database storage
+              verifications: undefined,
+            },
+          })),
           edges: state.edges,
         };
 
