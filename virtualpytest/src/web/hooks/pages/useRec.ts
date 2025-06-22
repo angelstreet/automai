@@ -26,16 +26,30 @@ export const useRec = (): UseRecReturn => {
 
       const data = await response.json();
 
+      console.log('[@hook:useRec] Raw response from server:', data);
+
       if (!data.success || !data.hosts) {
         throw new Error(data.error || 'Invalid response format');
       }
 
-      // Filter hosts that have AV capabilities and are online
-      const avHosts = data.hosts.filter(
-        (host: Host) => host.status === 'online' && host.capabilities?.av === true,
-      );
+      console.log('[@hook:useRec] All hosts received:', data.hosts);
+      console.log('[@hook:useRec] First host details:', data.hosts[0]);
 
-      console.log(`[@hook:useRec] Found ${avHosts.length} hosts with AV capabilities`);
+      // Filter hosts that have AV capabilities and are online
+      const avHosts = data.hosts.filter((host: Host) => {
+        console.log(`[@hook:useRec] Checking host ${host.host_name}:`, {
+          status: host.status,
+          capabilities: host.capabilities,
+          hasAV: host.capabilities && host.capabilities.includes('av'),
+        });
+
+        return host.status === 'online' && host.capabilities && host.capabilities.includes('av');
+      });
+
+      console.log(
+        `[@hook:useRec] Found ${avHosts.length} hosts with AV capabilities out of ${data.hosts.length} total hosts`,
+      );
+      console.log('[@hook:useRec] AV hosts:', avHosts);
       setHosts(avHosts);
       setError(null);
     } catch (err: any) {
