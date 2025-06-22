@@ -108,13 +108,9 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           '[@context:NodeEdgeManagementProvider] formData.verifications:',
           formData.verifications,
         );
-        console.log(
-          '[@context:NodeEdgeManagementProvider] formData.data?.verifications:',
-          formData.data?.verifications,
-        );
 
-        // Check both possible locations for verifications
-        const verificationsToSave = formData.verifications || formData.data?.verifications;
+        // NodeForm has verifications at the top level
+        const verificationsToSave = formData.verifications || [];
         console.log(
           '[@context:NodeEdgeManagementProvider] verificationsToSave:',
           verificationsToSave,
@@ -174,11 +170,19 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
         let updatedNodeData;
 
         if (isNewNode) {
-          // For new nodes, use form data as base
+          // For new nodes, convert NodeForm to UINavigationNode structure
           updatedNodeData = {
-            ...formData,
+            id: formData.id || `node-${Date.now()}`,
+            position: { x: 100, y: 100 },
+            type: 'uiScreen',
             data: {
-              ...formData.data,
+              label: formData.label,
+              type: formData.type,
+              description: formData.description,
+              screenshot: formData.screenshot,
+              depth: formData.depth,
+              parent: formData.parent,
+              menu_type: formData.menu_type,
               verification_ids: verificationIds, // ✅ Store verification IDs for persistence/database
               verifications: formData.verifications || [], // ✅ Store verification objects for UI
             },
@@ -197,11 +201,16 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           updatedNodeData = {
             ...selectedNode, // ✅ Preserve original node structure (id, position, type, etc.)
             // Only update the specific fields that can be modified
-            label: formData.label, // Update label if changed
             data: {
               ...selectedNode.data, // ✅ Preserve existing data structure
-              // Update only the fields from the form
-              ...formData.data, // Apply form changes
+              // Update fields from NodeForm
+              label: formData.label,
+              type: formData.type,
+              description: formData.description,
+              screenshot: formData.screenshot,
+              depth: formData.depth,
+              parent: formData.parent,
+              menu_type: formData.menu_type,
               verification_ids: verificationIds, // ✅ Store verification IDs for persistence/database
               verifications: formData.verifications || [], // ✅ Store verification objects for UI
             },
@@ -262,9 +271,17 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
 
         if (isNewNode) {
           fallbackNodeData = {
-            ...formData,
+            id: formData.id || `node-${Date.now()}`,
+            position: { x: 100, y: 100 },
+            type: 'uiScreen',
             data: {
-              ...formData.data,
+              label: formData.label,
+              type: formData.type,
+              description: formData.description,
+              screenshot: formData.screenshot,
+              depth: formData.depth,
+              parent: formData.parent,
+              menu_type: formData.menu_type,
               verification_ids: [], // ✅ Empty array if verification save failed
               verifications: [], // ✅ Empty array if verification save failed
             },
@@ -272,10 +289,16 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
         } else if (selectedNode) {
           fallbackNodeData = {
             ...selectedNode, // ✅ Preserve original node structure
-            label: formData.label,
             data: {
               ...selectedNode.data, // ✅ Preserve existing data structure
-              ...formData.data, // Apply form changes
+              // Update fields from NodeForm
+              label: formData.label,
+              type: formData.type,
+              description: formData.description,
+              screenshot: formData.screenshot,
+              depth: formData.depth,
+              parent: formData.parent,
+              menu_type: formData.menu_type,
               verification_ids: [], // ✅ Empty array if verification save failed
               verifications: [], // ✅ Empty array if verification save failed
             },
