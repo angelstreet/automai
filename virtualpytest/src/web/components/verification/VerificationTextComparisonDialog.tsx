@@ -162,7 +162,7 @@ export const VerificationTextComparisonDialog: React.FC<VerificationTextComparis
                 sx={{
                   color: '#666',
                   padding: '2px 6px',
-                  backgroundColor: '#f5f5f5',
+                  backgroundColor: 'transparent',
                   borderRadius: 1,
                 }}
               >
@@ -175,7 +175,7 @@ export const VerificationTextComparisonDialog: React.FC<VerificationTextComparis
                 sx={{
                   color: '#ffb74d',
                   padding: '2px 6px',
-                  backgroundColor: '#f5f5f5',
+                  backgroundColor: 'transparent',
                   borderRadius: 1,
                   fontWeight: 500,
                 }}
