@@ -478,9 +478,13 @@ def execute_image_verification():
         
         verification_controller = get_verification_controller(host_device)
         
-        # Execute using controller - it will handle screenshot capture if source_filename is None
+        # Convert source_filename to source_path if provided
+        source_path = None
+        if source_filename:
+            source_path = f'/var/www/html/stream/captures/{source_filename}'
+        
         result = verification_controller.execute_verification(verification, 
-                                                            source_filename=source_filename)
+                                                            source_path=source_path)
         
         print(f"[@route:host_verification_image:execute] Verification completed: {result.get('success')}")
         
