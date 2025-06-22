@@ -10,10 +10,10 @@ import {
   Typography,
   IconButton,
 } from '@mui/material';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import type { Actions } from '../../types/controller/ActionTypes';
+import type { Actions, EdgeAction } from '../../types/controller/ActionTypes';
 import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
 import { ActionsList } from '../actions';
 
@@ -46,19 +46,73 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [isRunningActions, setIsRunningActions] = useState(false);
   const [actionResult, setActionResult] = useState<string | null>(null);
 
+  // Local state for actions to mirror verification pattern
+  const [localActions, setLocalActions] = useState<EdgeAction[]>([]);
+  const [localRetryActions, setLocalRetryActions] = useState<EdgeAction[]>([]);
+
   // Extract controller actions from host data
   const controllerActions: Actions = useMemo(() => {
     return selectedHost?.available_action_types || {};
   }, [selectedHost?.available_action_types]);
 
   const canRunActions =
-    isControlActive && selectedHost && edgeForm?.actions?.length > 0 && !isRunningActions;
+    isControlActive && selectedHost && localActions.length > 0 && !isRunningActions;
+
+  // Initialize actions from edgeForm when dialog opens (mirrors verification pattern)
+  useEffect(() => {
+    if (isOpen && edgeForm?.actions) {
+      console.log(
+        `[@component:EdgeEditDialog] Initializing actions from edgeForm:`,
+        edgeForm.actions,
+      );
+      setLocalActions(edgeForm.actions);
+    }
+    if (isOpen && edgeForm?.retryActions) {
+      console.log(
+        `[@component:EdgeEditDialog] Initializing retry actions from edgeForm:`,
+        edgeForm.retryActions,
+      );
+      setLocalRetryActions(edgeForm.retryActions);
+    }
+  }, [isOpen, edgeForm?.actions, edgeForm?.retryActions]);
 
   useEffect(() => {
     if (!isOpen) {
       setActionResult(null);
     }
   }, [isOpen]);
+
+  // Handle action changes by creating custom handlers that update both local state AND edgeForm (mirrors verification pattern)
+  const handleActionsChange = useCallback(
+    (newActions: EdgeAction[]) => {
+      console.log(`[@component:EdgeEditDialog] Updating edgeForm with new actions:`, newActions);
+
+      // Update both local state and edgeForm
+      setLocalActions(newActions);
+      setEdgeForm({
+        ...edgeForm,
+        actions: newActions,
+      });
+    },
+    [edgeForm, setEdgeForm],
+  );
+
+  const handleRetryActionsChange = useCallback(
+    (newRetryActions: EdgeAction[]) => {
+      console.log(
+        `[@component:EdgeEditDialog] Updating edgeForm with new retry actions:`,
+        newRetryActions,
+      );
+
+      // Update both local state and edgeForm
+      setLocalRetryActions(newRetryActions);
+      setEdgeForm({
+        ...edgeForm,
+        retryActions: newRetryActions,
+      });
+    },
+    [edgeForm, setEdgeForm],
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -75,16 +129,14 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   }, [isOpen, selectedHost, controllerActions]);
 
   const isFormValid = () => {
-    return (
-      edgeForm?.actions?.every(
-        (action) =>
-          !action.id || !action.requiresInput || (action.inputValue && action.inputValue.trim()),
-      ) ?? true
+    return localActions.every(
+      (action) =>
+        !action.id || !action.requiresInput || (action.inputValue && action.inputValue.trim()),
     );
   };
 
   const handleRunActions = async () => {
-    if (!edgeForm?.actions || edgeForm.actions.length === 0) return;
+    if (!localActions || localActions.length === 0) return;
 
     if (isRunningActions) {
       console.log(
@@ -96,7 +148,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     setIsRunningActions(true);
     setActionResult(null);
     console.log(
-      `[@component:EdgeEditDialog] Starting batch execution of ${edgeForm.actions.length} actions with ${edgeForm?.retryActions?.length || 0} retry actions`,
+      `[@component:EdgeEditDialog] Starting batch execution of ${localActions.length} actions with ${localRetryActions.length} retry actions`,
     );
 
     try {
@@ -106,8 +158,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           host: selectedHost,
-          actions: edgeForm.actions,
-          retry_actions: edgeForm?.retryActions || [],
+          actions: localActions,
+          retry_actions: localRetryActions,
           final_wait_time: edgeForm?.finalWaitTime || 2000,
         }),
       });
@@ -188,15 +240,13 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           />
 
           <ActionsList
-            actions={edgeForm?.actions || []}
-            retryActions={edgeForm?.retryActions || []}
+            actions={localActions}
+            retryActions={localRetryActions}
             finalWaitTime={edgeForm?.finalWaitTime || 2000}
             availableActionTypes={controllerActions}
             selectedHost={selectedHost || null}
-            onActionsChange={(newActions) => setEdgeForm({ ...edgeForm, actions: newActions })}
-            onRetryActionsChange={(newRetryActions) =>
-              setEdgeForm({ ...edgeForm, retryActions: newRetryActions })
-            }
+            onActionsChange={handleActionsChange}
+            onRetryActionsChange={handleRetryActionsChange}
             onFinalWaitTimeChange={(finalWaitTime) => setEdgeForm({ ...edgeForm, finalWaitTime })}
           />
 

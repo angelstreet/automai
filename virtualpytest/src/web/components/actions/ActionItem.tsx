@@ -38,12 +38,6 @@ export const ActionItem: React.FC<ActionItemProps> = ({
   canMoveUp,
   canMoveDown,
 }) => {
-  // Debug logging
-  console.log(`[@component:ActionItem] Rendering action ${index}:`, {
-    id: action.id,
-    label: action.label,
-    command: action.command,
-  });
   return (
     <Box
       sx={{ mb: 1, px: 0.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
@@ -66,21 +60,6 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                     paddingTop: '2px',
                     paddingBottom: '2px',
                     lineHeight: 0.8,
-                    // Reset default Material-UI highlighting
-                    '&:hover': {
-                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                    },
-                    '&.Mui-selected': {
-                      backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                      '&:hover': {
-                        backgroundColor: 'rgba(25, 118, 210, 0.16)',
-                      },
-                    },
-                    '&.Mui-disabled': {
-                      backgroundColor: 'transparent',
-                      color: 'rgba(0, 0, 0, 0.6)',
-                      fontWeight: 'bold',
-                    },
                   },
                 },
               },
@@ -97,16 +76,12 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                 return <em style={{ fontSize: '0.8rem' }}>Select action...</em>;
               }
 
-              console.log(
-                `[@component:ActionItem] renderValue called with selected: "${selected}", action.id: "${action.id}"`,
-              );
-
               // Find the selected action to display its label
               let selectedLabel = '';
 
               // Search through all action categories to find the action (same logic as ActionsList)
               for (const [category, categoryData] of Object.entries(availableActionTypes)) {
-                let actions = [];
+                let actions: any[] = [];
 
                 if (Array.isArray(categoryData)) {
                   // Direct array (flat structure)
@@ -122,9 +97,6 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                 const actionItem = actions.find((a) => a.id === selected);
                 if (actionItem) {
                   selectedLabel = actionItem.label;
-                  console.log(
-                    `[@component:ActionItem] Found action: ${actionItem.id} -> ${actionItem.label}`,
-                  );
                   break;
                 }
               }
@@ -134,7 +106,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
           >
             {Object.entries(availableActionTypes).map(([category, categoryData]) => {
               // Handle nested structure: availableActionTypes.remote.remote = [actions...]
-              let actions = [];
+              let actions: any[] = [];
               if (Array.isArray(categoryData)) {
                 // Direct array (flat structure)
                 actions = categoryData;
