@@ -40,7 +40,8 @@ export type { EdgeAction } from '../controller/ActionTypes';
 
 // Define the data type for navigation edges
 export interface UINavigationEdgeData {
-  actions?: EdgeAction[]; // New: array of actions
+  actions?: EdgeAction[]; // New: array of actions for UI display (loaded from DB via action_ids)
+  action_ids?: string[]; // New: array of action database IDs for persistence (saved to tree)
   retryActions?: EdgeAction[]; // New: array of retry actions for failure scenarios
   finalWaitTime?: number; // New: wait time after all actions
   description?: string;

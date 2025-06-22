@@ -10,8 +10,8 @@ import { useNavigationConfig } from './NavigationConfigContext';
 // ========================================
 
 interface NodeEdgeManagementContextType {
-  saveNodeChanges: (formData: any) => void;
-  saveEdgeChanges: (formData: any) => void;
+  saveNodeChanges: (formData: any) => Promise<void>;
+  saveEdgeChanges: (formData: any) => Promise<void>;
   deleteSelected: () => void;
   addNewNode: (nodeType: string, position: { x: number; y: number }) => void;
   cancelNodeChanges: () => void;
@@ -347,38 +347,157 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
 
   // Save edge changes
   const saveEdgeChanges = useCallback(
-    (formData: any) => {
+    async (formData: any) => {
       console.log('[@context:NodeEdgeManagementProvider] Saving edge changes:', formData);
 
-      if (selectedEdge) {
-        // Update existing edge
-        const updatedEdges = edges.map((edge) => {
-          if (edge.id === selectedEdge.id) {
-            return { ...edge, ...formData };
+      try {
+        // Step 1: Save actions to database first (following verification pattern)
+        const actionsToSave = formData.actions || [];
+        const actionIds: string[] = [];
+
+        if (actionsToSave.length > 0) {
+          console.log(
+            `[@context:NodeEdgeManagementProvider] Saving ${actionsToSave.length} actions to database`,
+          );
+
+          for (const action of actionsToSave) {
+            try {
+              const response = await fetch('/server/actions/save', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  name: `${formData.label || 'edge'}_${action.label || 'action'}_${Date.now()}`,
+                  device_model: 'android_mobile', // Default device model
+                  action_type: 'ui', // Default action type for edge actions
+                  command: action.command || '',
+                  parameters: action.params || {},
+                  wait_time: action.waitTime || 500,
+                  requires_input: action.requiresInput || false,
+                }),
+              });
+
+              const result = await response.json();
+              if (result.success && result.action_id) {
+                const message = result.reused ? 'Reused existing action' : 'Saved new action';
+                console.log(
+                  `[@context:NodeEdgeManagementProvider] ${message}: ${result.action_id}`,
+                );
+                // Store the action ID for tree persistence
+                actionIds.push(result.action_id);
+              } else {
+                console.error(
+                  `[@context:NodeEdgeManagementProvider] Failed to save action: ${result.error}`,
+                );
+              }
+            } catch (error) {
+              console.error(`[@context:NodeEdgeManagementProvider] Error saving action:`, error);
+            }
           }
-          return edge;
-        });
+        }
 
-        // Update edges (single source of truth)
-        setEdges(updatedEdges);
+        console.log(
+          `[@context:NodeEdgeManagementProvider] Action IDs for tree storage:`,
+          actionIds,
+        );
 
-        console.log('[@context:NodeEdgeManagementProvider] Updated edge:', selectedEdge.id);
+        // Step 2: Update edge with both action_ids and actions (dual storage like verifications)
+        if (selectedEdge) {
+          const updatedEdges = edges.map((edge) => {
+            if (edge.id === selectedEdge.id) {
+              return {
+                ...edge,
+                ...formData,
+                data: {
+                  ...edge.data,
+                  ...formData.data,
+                  action_ids: actionIds, // ✅ Store action IDs for persistence/database
+                  actions: formData.actions || [], // ✅ Store action objects for UI
+                },
+              };
+            }
+            return edge;
+          });
+
+          // Update edges (single source of truth)
+          setEdges(updatedEdges);
+
+          console.log('[@context:NodeEdgeManagementProvider] Updated edge:', selectedEdge.id);
+
+          // Step 3: Auto-save tree to persist actions to database
+          console.log(
+            '[@context:NodeEdgeManagementProvider] Auto-saving tree with actions to database',
+          );
+
+          // Create state object for saveToConfig with updated edges
+          const configState = {
+            nodes,
+            edges: updatedEdges,
+            userInterface: null, // Will be set by the config context
+            setNodes,
+            setEdges,
+            setUserInterface: () => {}, // Placeholder
+            setInitialState: () => {}, // Will be handled by config context
+            setHasUnsavedChanges,
+            setIsLoading: () => {}, // Will be handled by config context
+            setError: () => {}, // Will be handled by config context
+          };
+
+          await configContext.saveToConfig(userInterfaceId, configState);
+
+          console.log(
+            '[@context:NodeEdgeManagementProvider] Tree auto-saved successfully with actions',
+          );
+
+          // ✅ Mark as saved (no unsaved changes) since auto-save succeeded
+          setHasUnsavedChanges(false);
+        }
+      } catch (error) {
+        console.error('[@context:NodeEdgeManagementProvider] Error saving edge or tree:', error);
+
+        // Still update the edge in memory even if database operations fail
+        if (selectedEdge) {
+          const updatedEdges = edges.map((edge) => {
+            if (edge.id === selectedEdge.id) {
+              return {
+                ...edge,
+                ...formData,
+                data: {
+                  ...edge.data,
+                  ...formData.data,
+                  action_ids: [], // ✅ Empty array if action save failed
+                  actions: [], // ✅ Empty array if action save failed
+                },
+              };
+            }
+            return edge;
+          });
+
+          setEdges(updatedEdges);
+          console.log('[@context:NodeEdgeManagementProvider] Updated edge with fallback data');
+        }
+
+        // ❌ Mark as having unsaved changes since auto-save failed
+        setHasUnsavedChanges(true);
       }
 
       // Clean up state
       setSelectedEdge(null);
       setEdgeForm(null);
       setIsEdgeDialogOpen(false);
-      setHasUnsavedChanges(true);
     },
     [
       selectedEdge,
       edges,
+      nodes,
       setEdges,
       setSelectedEdge,
       setEdgeForm,
       setIsEdgeDialogOpen,
       setHasUnsavedChanges,
+      configContext,
+      userInterfaceId,
     ],
   );
 
