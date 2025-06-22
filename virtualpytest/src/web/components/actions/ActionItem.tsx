@@ -46,7 +46,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
           <Select
-            value={typeof action.command === 'string' ? action.command : ''}
+            value={typeof action.id === 'string' ? action.id : ''}
             onChange={(e) => onActionSelect(index, e.target.value)}
             displayEmpty
             size="small"
@@ -93,7 +93,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                   }
                 }
 
-                const actionItem = actions.find((a) => a.command === selected);
+                const actionItem = actions.find((a) => a.id === selected);
                 if (actionItem) {
                   selectedLabel = actionItem.label;
                   break;
@@ -140,7 +140,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                 ...actions.map((actionItem, actionIndex) => (
                   <MenuItem
                     key={`${category}-${actionIndex}-${actionItem.command}`}
-                    value={actionItem.command}
+                    value={actionItem.id}
                     sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
                   >
                     {actionItem.label}

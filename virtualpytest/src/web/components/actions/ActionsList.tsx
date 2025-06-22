@@ -166,11 +166,11 @@ export const ActionsList: React.FC<ActionsListProps> = React.memo(
     );
 
     const handleActionSelect = useCallback(
-      (index: number, command: string, isRetry: boolean = false) => {
+      (index: number, actionId: string, isRetry: boolean = false) => {
         // Find the selected action from available actions
         let selectedAction: Action | undefined;
 
-        // Search through all action categories to find the action
+        // Search through all action categories to find the action by ID
         for (const [category, categoryData] of Object.entries(availableActionTypes)) {
           let actionList: Action[] = [];
 
@@ -185,7 +185,7 @@ export const ActionsList: React.FC<ActionsListProps> = React.memo(
             }
           }
 
-          const action = actionList.find((a) => a.command === command);
+          const action = actionList.find((a) => a.id === actionId);
           if (action) {
             selectedAction = action;
             break;
