@@ -678,6 +678,10 @@ class ImageVerificationController(VerificationControllerInterface):
             "image_filter": image_filter
         }
         
+        # Create results directory for UI comparison images
+        results_dir = '/var/www/html/stream/verification_results'
+        os.makedirs(results_dir, exist_ok=True)
+        
         if image_list:
             # Search in provided images
             print(f"[@controller:ImageVerification] Searching in {len(image_list)} provided images")
@@ -729,11 +733,9 @@ class ImageVerificationController(VerificationControllerInterface):
                 if confidence >= threshold:
                     print(f"[@controller:ImageVerification] Match found in {source_path} with confidence {confidence:.3f}")
                     
-                    # Save cropped source image for UI comparison (from ORIGINAL, not filtered)
-                    if area and model is not None:
-                        cropped_source_path = self._save_cropped_source_image(source_path, area, model, verification_index)
-                        if cropped_source_path:
-                            additional_data["source_image_path"] = cropped_source_path
+                    # Generate comparison images and URLs like the original working version
+                    image_urls = self._generate_comparison_images(source_path, resolved_image_path, area, verification_index, model, image_filter)
+                    additional_data.update(image_urls)
                     
                     # Save actual confidence for threshold display and disappear operations
                     additional_data["threshold"] = confidence
@@ -748,25 +750,10 @@ class ImageVerificationController(VerificationControllerInterface):
                 if filtered_source_path != source_path and os.path.exists(filtered_source_path):
                     os.unlink(filtered_source_path)
             
-            # If no match found, still save the best source for comparison
-            if best_source_path and area and model is not None:
-                print(f"[@controller:ImageVerification] Attempting to save cropped source for comparison:")
-                print(f"  best_source_path: {best_source_path}")
-                print(f"  area: {area}")
-                print(f"  model: {model}")
-                print(f"  verification_index: {verification_index}")
-                
-                cropped_source_path = self._save_cropped_source_image(best_source_path, area, model, verification_index)
-                if cropped_source_path:
-                    additional_data["source_image_path"] = cropped_source_path
-                    print(f"[@controller:ImageVerification] Successfully saved cropped source for UI comparison")
-                else:
-                    print(f"[@controller:ImageVerification] Failed to save cropped source for UI comparison")
-            else:
-                print(f"[@controller:ImageVerification] Skipping cropped source save - conditions not met:")
-                print(f"  best_source_path: {bool(best_source_path)}")
-                print(f"  area: {bool(area)}")
-                print(f"  model: {model}")
+            # Generate comparison images even for failed matches
+            if best_source_path and model is not None:
+                image_urls = self._generate_comparison_images(best_source_path, resolved_image_path, area, verification_index, model, image_filter)
+                additional_data.update(image_urls)
             
             # Save best confidence for threshold display and disappear operations
             additional_data["threshold"] = max_confidence
@@ -822,11 +809,9 @@ class ImageVerificationController(VerificationControllerInterface):
                 if confidence >= threshold:
                     print(f"[@controller:ImageVerification] Image found in captured frame with confidence {confidence:.3f}")
                     
-                    # Save cropped source image for UI comparison (from ORIGINAL, not filtered)
-                    if area and model is not None:
-                        cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
-                        if cropped_source_path:
-                            additional_data["source_image_path"] = cropped_source_path
+                    # Generate comparison images and URLs like the original working version
+                    image_urls = self._generate_comparison_images(capture_path, resolved_image_path, area, verification_index, model, image_filter)
+                    additional_data.update(image_urls)
                     
                     # Save actual confidence for threshold display and disappear operations
                     additional_data["threshold"] = confidence
@@ -849,11 +834,10 @@ class ImageVerificationController(VerificationControllerInterface):
                 
                 time.sleep(0.5)
             
-            # Save cropped source for comparison even if not found (from ORIGINAL, not filtered)
-            if area and model is not None:
-                cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
-                if cropped_source_path:
-                    additional_data["source_image_path"] = cropped_source_path
+            # Generate comparison images even for failed matches
+            if model is not None:
+                image_urls = self._generate_comparison_images(capture_path, resolved_image_path, area, verification_index, model, image_filter)
+                additional_data.update(image_urls)
             
             # Save last confidence for threshold display and disappear operations
             additional_data["threshold"] = last_confidence
@@ -897,6 +881,157 @@ class ImageVerificationController(VerificationControllerInterface):
         else:
             # Image is still present (was found)
             return False, f"Image still present: {message}", additional_data
+
+    def _generate_comparison_images(self, source_path: str, reference_path: str, area: dict = None, 
+                                   verification_index: int = 0, model: str = None, 
+                                   image_filter: str = 'none') -> dict:
+        """
+        Generate comparison images exactly like the original working version.
+        Creates source, reference, and overlay images with public URLs.
+        """
+        try:
+            # Create results directory - simple path, just ensure it exists
+            results_dir = '/var/www/html/stream/verification_results'
+            os.makedirs(results_dir, exist_ok=True)
+            
+            # Create result file paths in stream directory
+            source_result_path = f'{results_dir}/source_image_{verification_index}.png'
+            reference_result_path = f'{results_dir}/reference_image_{verification_index}.png'
+            overlay_result_path = f'{results_dir}/result_overlay_{verification_index}.png'
+            
+            print(f"[@controller:ImageVerification] Generating comparison images:")
+            print(f"  Source: {source_path} -> {source_result_path}")
+            print(f"  Reference: {reference_path} -> {reference_result_path}")
+            print(f"  Overlay: {overlay_result_path}")
+            
+            # === STEP 1: Handle Source Image ===
+            # Crop source image to area if specified (always crop for source)
+            if area:
+                # Use controller to crop source image
+                success = self.crop_image(source_path, source_result_path, area, create_filtered_versions=False)
+                if not success:
+                    print(f"[@controller:ImageVerification] Failed to crop source image")
+                    return {}
+            else:
+                # Copy full source image using controller
+                success = self.copy_image(source_path, source_result_path)
+                if not success:
+                    print(f"[@controller:ImageVerification] Failed to copy source image")
+                    return {}
+            
+            # Apply filter to source image if user selected one
+            if image_filter and image_filter != 'none':
+                print(f"[@controller:ImageVerification] Applying {image_filter} filter to source image")
+                if not self.apply_filter(source_result_path, image_filter):
+                    print(f"[@controller:ImageVerification] Warning: Failed to apply {image_filter} filter to source")
+            
+            # === STEP 2: Handle Reference Image ===
+            # Copy reference image and apply filter if needed
+            if image_filter and image_filter != 'none':
+                # User wants filtered comparison - check if filtered reference exists
+                base_path, ext = os.path.splitext(reference_path)
+                filtered_reference_path = f"{base_path}_{image_filter}{ext}"
+                
+                if os.path.exists(filtered_reference_path):
+                    print(f"[@controller:ImageVerification] Using existing filtered reference: {filtered_reference_path}")
+                    self.copy_image(filtered_reference_path, reference_result_path)
+                else:
+                    print(f"[@controller:ImageVerification] Filtered reference not found, creating dynamically from original: {reference_path}")
+                    # Copy original reference first using controller
+                    self.copy_image(reference_path, reference_result_path)
+                    # Apply filter dynamically to the copied reference
+                    if not self.apply_filter(reference_result_path, image_filter):
+                        print(f"[@controller:ImageVerification] Warning: Failed to apply {image_filter} filter to reference, using original")
+                        # If filter fails, copy original again to ensure clean state
+                        self.copy_image(reference_path, reference_result_path)
+                    else:
+                        print(f"[@controller:ImageVerification] Successfully applied {image_filter} filter to reference image")
+            else:
+                # User wants original comparison - use original reference
+                print(f"[@controller:ImageVerification] Using original reference: {reference_path}")
+                self.copy_image(reference_path, reference_result_path)
+            
+            # === STEP 3: Perform Verification and Create Overlay ===
+            # Load both images for comparison
+            source_img = cv2.imread(source_result_path)
+            ref_img = cv2.imread(reference_result_path)
+            
+            if source_img is None or ref_img is None:
+                print(f"[@controller:ImageVerification] Failed to load images for comparison")
+                return {}
+            
+            print(f"[@controller:ImageVerification] Source image shape: {source_img.shape}")
+            print(f"[@controller:ImageVerification] Reference image shape: {ref_img.shape}")
+            
+            # Perform template matching
+            result_match = cv2.matchTemplate(source_img, ref_img, cv2.TM_CCOEFF_NORMED)
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result_match)
+            
+            # Create result overlay image
+            overlay_img = source_img.copy()
+            if max_val >= 0.8:  # Use default threshold for overlay visualization
+                # Draw green rectangle around match
+                h, w = ref_img.shape[:2]
+                top_left = max_loc
+                bottom_right = (top_left[0] + w, top_left[1] + h)
+                cv2.rectangle(overlay_img, top_left, bottom_right, (0, 255, 0), 3)
+                cv2.putText(overlay_img, f'MATCH: {max_val:.3f}', (top_left[0], top_left[1] - 10), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            else:
+                # Draw red X or indicator for no match
+                cv2.putText(overlay_img, f'NO MATCH: {max_val:.3f}', (10, 30), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            
+            cv2.imwrite(overlay_result_path, overlay_img)
+            
+            # === STEP 4: Convert local paths to public URLs ===
+            # Get host device info for URL building
+            try:
+                from src.utils.buildUrlUtils import buildVerificationResultUrl
+                from flask import current_app
+                
+                # Get host info from current app context
+                host_device = getattr(current_app, 'my_host_device', None)
+                if not host_device:
+                    print(f"[@controller:ImageVerification] Warning: No host device found for URL building")
+                    # Return local paths as fallback
+                    return {
+                        'source_image_path': source_result_path,
+                        'reference_image_path': reference_result_path,
+                        'result_overlay_path': overlay_result_path,
+                    }
+                
+                # Build public URLs exactly like the original working version
+                source_url = buildVerificationResultUrl(host_device, source_result_path)
+                reference_url = buildVerificationResultUrl(host_device, reference_result_path)
+                overlay_url = buildVerificationResultUrl(host_device, overlay_result_path)
+                
+                print(f"[@controller:ImageVerification] Built URLs:")
+                print(f"  Source URL: {source_url}")
+                print(f"  Reference URL: {reference_url}")
+                print(f"  Overlay URL: {overlay_url}")
+                
+                return {
+                    'source_image_path': source_result_path,
+                    'reference_image_path': reference_result_path,
+                    'result_overlay_path': overlay_result_path,
+                    'sourceImageUrl': source_url,
+                    'referenceImageUrl': reference_url,
+                    'resultOverlayUrl': overlay_url,
+                }
+                
+            except Exception as url_error:
+                print(f"[@controller:ImageVerification] URL building error: {url_error}")
+                # Return local paths as fallback
+                return {
+                    'source_image_path': source_result_path,
+                    'reference_image_path': reference_result_path,
+                    'result_overlay_path': overlay_result_path,
+                }
+                
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error generating comparison images: {e}")
+            return {}
 
     def _resolve_reference_image(self, image_path: str, model: str = None) -> Optional[str]:
         """
