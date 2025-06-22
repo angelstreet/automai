@@ -51,7 +51,7 @@ def register_host():
         print(f"   Host URL: {host_info.get('host_url', 'Not provided')}")
         print(f"   Device model: {host_info.get('device_model', 'Not provided')}")
         print(f"   Verification types: {len(host_info.get('available_verification_types', {}))} controller types")
-        print(f"   Available actions: {len(host_info.get('available_actions', {}))} controller types")
+        print(f"   Available action types: {len(host_info.get('available_action_types', {}))} controller types")
         
         # Check for required fields
         required_fields = ['host_url', 'device_model', 'host_name']
@@ -138,7 +138,7 @@ def register_host():
             'controller_configs': controller_configs,
             'controller_types': controller_types,
             'available_verification_types': host_info.get('available_verification_types', {}),  # Store verification types
-            'available_actions': host_info.get('available_actions', {}),  # Store available actions
+            'available_action_types': host_info.get('available_action_types', {}),  # Store available action types
             
             # === DEVICE LOCK MANAGEMENT ===
             'isLocked': False,
@@ -371,8 +371,8 @@ def client_ping():
         if 'available_verification_types' in ping_data:
             host_to_update['available_verification_types'] = ping_data['available_verification_types']
         
-        if 'available_actions' in ping_data:
-            host_to_update['available_actions'] = ping_data['available_actions']
+        if 'available_action_types' in ping_data:
+            host_to_update['available_action_types'] = ping_data['available_action_types']
         
         # Update any other provided fields
         for field in ['host_ip', 'host_port_external']:
@@ -539,7 +539,7 @@ class Host(TypedDict):
     controller_configs: Optional[Any]
     controller_types: Optional[List[str]]
     available_verification_types: Any
-    available_actions: Any
+    available_action_types: Any
     
     # === DEVICE LOCK MANAGEMENT ===
     isLocked: bool
@@ -570,16 +570,16 @@ def get_available_actions():
             return jsonify({'success': False, 'error': f'Host {host_name} not found'}), 404
         
         # Get available actions from host data
-        available_actions = host_data.get('available_actions', {})
+        available_action_types = host_data.get('available_action_types', {})
         
-        if not available_actions:
+        if not available_action_types:
             print(f"[@route:server_system_routes:get_available_actions] No actions available for host {host_name}")
             return jsonify({'success': True, 'actions': []})
         
         # Transform actions to the expected format for the frontend
         transformed_actions = []
         
-        for category, actions_list in available_actions.items():
+        for category, actions_list in available_action_types.items():
             if isinstance(actions_list, list):
                 for action in actions_list:
                     if isinstance(action, dict):
