@@ -300,7 +300,8 @@ class TextVerificationController(VerificationControllerInterface):
         
         additional_data = {
             "searched_text": text,
-            "image_filter": image_filter
+            "image_filter": image_filter,
+            "searchedText": text  # Add this for frontend compatibility
         }
         
         if image_list:

@@ -289,11 +289,16 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
                 sourceImageUrl: result.sourceImageUrl || result.details?.sourceImageUrl,
                 referenceImageUrl: result.referenceImageUrl || result.details?.referenceImageUrl,
                 resultOverlayUrl: result.resultOverlayUrl || result.details?.resultOverlayUrl,
-                extractedText: result.extractedText,
-                searchedText: result.searchedText,
-                imageFilter: result.imageFilter,
-                detectedLanguage: result.detectedLanguage,
-                languageConfidence: result.languageConfidence,
+                // Extract text fields from details object if not at top level
+                extractedText: result.extractedText || result.details?.extracted_text,
+                searchedText:
+                  result.searchedText ||
+                  result.details?.searchedText ||
+                  result.details?.searched_text,
+                imageFilter: result.imageFilter || result.details?.image_filter,
+                detectedLanguage: result.detectedLanguage || result.details?.detected_language,
+                languageConfidence:
+                  result.languageConfidence || result.details?.language_confidence,
                 // Add ADB-specific fields
                 search_term: result.search_term,
                 wait_time: result.wait_time,
