@@ -3,6 +3,7 @@ import {
   Camera as CameraIcon,
   Route as RouteIcon,
   Verified as VerifiedIcon,
+  CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -79,9 +80,15 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     const [isRunningVerifications, setIsRunningVerifications] = useState(false);
     const [verificationResult, setVerificationResult] = useState<string | null>(null);
 
+    // Add state for screenshot save status
+    const [screenshotSaveStatus, setScreenshotSaveStatus] = useState<'idle' | 'success' | 'error'>(
+      'idle',
+    );
+
     // Clear verification results when node selection changes
     useEffect(() => {
       setVerificationResult(null);
+      setScreenshotSaveStatus('idle'); // Reset screenshot status when node changes
     }, [selectedNode.id, selectedNode.data.verifications]);
 
     const handleEdit = () => {
@@ -116,6 +123,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       }
 
       try {
+        setScreenshotSaveStatus('idle'); // Reset status before starting
+
         const response = await fetch('/server/navigation/save-screenshot', {
           method: 'POST',
           headers: {
@@ -157,14 +166,22 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
               '[@component:NodeSelectionPanel] onUpdateNode callback not provided - screenshot URL not saved to node',
             );
           }
+
+          // Set success status and auto-hide after 3 seconds
+          setScreenshotSaveStatus('success');
+          setTimeout(() => setScreenshotSaveStatus('idle'), 3000);
         } else {
           console.error(
             '[@component:NodeSelectionPanel] Screenshot failed:',
             result.error || 'Unknown error',
           );
+          setScreenshotSaveStatus('error');
+          setTimeout(() => setScreenshotSaveStatus('idle'), 3000);
         }
       } catch (error) {
         console.error('[@component:NodeSelectionPanel] Screenshot request failed:', error);
+        setScreenshotSaveStatus('error');
+        setTimeout(() => setScreenshotSaveStatus('idle'), 3000);
       }
 
       setShowScreenshotConfirm(false);
@@ -398,16 +415,28 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
 
               {/* Save Screenshot button - only shown when device is under control */}
               {showSaveScreenshotButton && (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color="primary"
-                  sx={{ fontSize: '0.75rem', px: 1 }}
-                  onClick={() => setShowScreenshotConfirm(true)}
-                  startIcon={<CameraIcon fontSize="small" />}
-                >
-                  Screenshot
-                </Button>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="primary"
+                    sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
+                    onClick={() => setShowScreenshotConfirm(true)}
+                    startIcon={<CameraIcon fontSize="small" />}
+                  >
+                    Screenshot
+                  </Button>
+                  {/* Success indicator */}
+                  {screenshotSaveStatus === 'success' && (
+                    <CheckCircleIcon
+                      fontSize="small"
+                      sx={{
+                        color: 'success.main',
+                        animation: 'fadeIn 0.3s ease-in',
+                      }}
+                    />
+                  )}
+                </Box>
               )}
 
               {/* Go To button - only shown for non-root nodes when device is under control */}
