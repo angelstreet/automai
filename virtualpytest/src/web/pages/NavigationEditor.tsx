@@ -224,6 +224,16 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       actualUserInterfaceId,
     });
 
+    // DEBUG: Log lock state information
+    console.log('[@component:NavigationEditorContent] Lock state DEBUG:', {
+      isLocked,
+      lockInfo,
+      showReadOnlyOverlay,
+      sessionId,
+      userInterfaceId: actualUserInterfaceId,
+      userInterfaceFromState: userInterfaceFromState?.id,
+    });
+
     // Get device control from context
     const {
       selectedHost,
@@ -355,45 +365,74 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       if (userInterface?.id && !isLoadingInterface) {
         // Check if we already loaded this userInterface to prevent infinite loops
         if (lastLoadedTreeId.current === userInterface.id) {
+          console.log(
+            `[@component:NavigationEditor] DEBUG: Skipping reload for userInterface: ${userInterface.id} (already loaded)`,
+          );
           return;
         }
         lastLoadedTreeId.current = userInterface.id;
 
+        console.log(
+          `[@component:NavigationEditor] DEBUG: Starting lock acquisition process for userInterface: ${userInterface.id}`,
+        );
+
         // Fix race condition: Set checking state immediately
-        setCheckingLockState(true);
+        if (setCheckingLockState) {
+          setCheckingLockState(true);
+        }
 
         // STEP 1: First acquire lock (this is the critical requirement)
-        lockNavigationTree(userInterface.id)
-          .then((lockSuccess) => {
-            if (lockSuccess) {
+        if (lockNavigationTree) {
+          lockNavigationTree(userInterface.id)
+            .then((lockSuccess) => {
               console.log(
-                `[@component:NavigationEditor] Lock acquired successfully for userInterface: ${userInterface.id}`,
+                `[@component:NavigationEditor] DEBUG: Lock acquisition result for userInterface: ${userInterface.id}, success: ${lockSuccess}`,
               );
-              // STEP 2: If lock acquired, load the tree data (nodes/edges only, not interface metadata)
-              loadFromConfig(userInterface.id);
-            } else {
-              console.warn(
-                `[@component:NavigationEditor] Failed to acquire lock for userInterface: ${userInterface.id} - entering read-only mode`,
+              if (lockSuccess) {
+                console.log(
+                  `[@component:NavigationEditor] Lock acquired successfully for userInterface: ${userInterface.id}`,
+                );
+                // STEP 2: If lock acquired, load the tree data (nodes/edges only, not interface metadata)
+                if (loadFromConfig) {
+                  loadFromConfig(userInterface.id);
+                }
+              } else {
+                console.warn(
+                  `[@component:NavigationEditor] Failed to acquire lock for userInterface: ${userInterface.id} - entering read-only mode`,
+                );
+                // STEP 3: If lock failed, still load tree but in read-only mode
+                if (loadFromConfig) {
+                  loadFromConfig(userInterface.id);
+                }
+                // Note: isLocked state will be false, which will trigger read-only UI
+              }
+            })
+            .catch((error) => {
+              console.error(
+                `[@component:NavigationEditor] Error during lock acquisition for userInterface: ${userInterface.id}`,
+                error,
               );
-              // STEP 3: If lock failed, still load tree but in read-only mode
-              loadFromConfig(userInterface.id);
-              // Note: isLocked state will be false, which will trigger read-only UI
-            }
-          })
-          .catch((error) => {
-            console.error(
-              `[@component:NavigationEditor] Error during lock acquisition for userInterface: ${userInterface.id}`,
-              error,
-            );
-            // Still try to load in read-only mode
+              // Still try to load in read-only mode
+              if (loadFromConfig) {
+                loadFromConfig(userInterface.id);
+              }
+            });
+        } else {
+          console.warn('[@component:NavigationEditor] lockNavigationTree function not available');
+          if (loadFromConfig) {
             loadFromConfig(userInterface.id);
-          });
+          }
+        }
 
         // Setup auto-unlock for this tree (cleanup function)
-        const cleanup = setupAutoUnlock(userInterface.id);
+        const cleanup = setupAutoUnlock ? setupAutoUnlock(userInterface.id) : undefined;
 
         // Return cleanup function
         return cleanup;
+      } else {
+        console.log(
+          `[@component:NavigationEditor] DEBUG: Not loading tree - userInterface.id: ${userInterface?.id}, isLoadingInterface: ${isLoadingInterface}`,
+        );
       }
     }, [
       userInterface?.id,
@@ -477,9 +516,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       >
         {/* Header with NavigationEditorHeader component */}
         <NavigationEditorHeader
-          navigationPath={navigationPath}
-          navigationNamePath={navigationNamePath}
-          viewPath={viewPath}
           hasUnsavedChanges={hasUnsavedChanges}
           focusNodeId={focusNodeId}
           availableFocusNodes={availableFocusNodes}
@@ -488,7 +524,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           visibleNodes={nodes.length}
           isLoading={isLoadingInterface}
           error={null}
-          isLocked={isLocked}
+          isLocked={isLocked ?? false}
           treeId={treeId}
           selectedHost={selectedHost}
           isControlActive={isControlActive}
@@ -498,7 +534,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           fetchHosts={fetchHosts}
           onAddNewNode={handleAddNewNodeWrapper}
           onFitView={fitView}
-          onSaveToConfig={() => actualUserInterfaceId && saveToConfig(actualUserInterfaceId)}
+          onSaveToConfig={() =>
+            actualUserInterfaceId && saveToConfig && saveToConfig(actualUserInterfaceId)
+          }
           onDiscardChanges={discardChanges}
           onFocusNodeChange={setFocusNode}
           onDepthChange={setDisplayDepth}
@@ -866,7 +904,7 @@ const NavigationEditorWithNodeEdgeManagement: React.FC<{
       userInterfaceId={userInterfaceId}
     >
       <DeviceControlProvider userInterface={userInterface}>
-        <NavigationEditorContent />
+        <NavigationEditorContent userInterfaceId={userInterfaceId} />
       </DeviceControlProvider>
     </NodeEdgeManagementProvider>
   );

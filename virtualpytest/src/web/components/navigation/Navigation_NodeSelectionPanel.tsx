@@ -114,6 +114,15 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     };
 
     const handleScreenshotConfirm = async () => {
+      console.log('[@component:NodeSelectionPanel] Screenshot button clicked - DEBUG INFO:', {
+        isControlActive,
+        selectedHost: selectedHost
+          ? { host_name: selectedHost.host_name, device_model: selectedHost.device_model }
+          : null,
+        selectedNodeLabel: selectedNode.data.label,
+        onUpdateNode: !!onUpdateNode,
+      });
+
       if (!isControlActive || !selectedHost) {
         console.warn(
           '[@component:NodeSelectionPanel] Cannot take screenshot - device control not active or host not available',
@@ -282,6 +291,14 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     // Check if screenshot button should be displayed
     const showSaveScreenshotButton = isControlActive && selectedHost;
 
+    // DEBUG: Log button visibility state
+    console.log('[@component:NodeSelectionPanel] Button visibility state:', {
+      isControlActive,
+      selectedHost: !!selectedHost,
+      showSaveScreenshotButton,
+      selectedNodeLabel: selectedNode.data.label,
+    });
+
     // Check if Go To button should be displayed
     // Show for all nodes when device is under control
     const showGoToButton = isControlActive && selectedHost && treeId;
@@ -421,7 +438,10 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                     variant="outlined"
                     color="primary"
                     sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
-                    onClick={() => setShowScreenshotConfirm(true)}
+                    onClick={() => {
+                      console.log('[@component:NodeSelectionPanel] Screenshot button clicked!');
+                      setShowScreenshotConfirm(true);
+                    }}
                     startIcon={<CameraIcon fontSize="small" />}
                   >
                     Screenshot
