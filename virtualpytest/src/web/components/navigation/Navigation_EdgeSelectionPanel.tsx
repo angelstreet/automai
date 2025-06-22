@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationEdge, EdgeAction, EdgeForm } from '../../types/pages/Navigation_Types';
-import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
 // ❌ REMOVED: Direct database access - using API endpoints instead
 // ❌ REMOVED: Confidence utils moved to database
 
@@ -110,7 +109,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
 
     // ❌ REMOVED: Action result updates moved to database
 
-    // Execute all edge actions sequentially
+    // Execute all edge actions using batch API (same as EdgeEditDialog)
     const handleRunActions = async () => {
       if (actions.length === 0) {
         console.log('[@component:EdgeSelectionPanel] No actions to run');
@@ -119,182 +118,54 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
 
       setIsRunning(true);
       setRunResult(null);
-
-      let executionOrder = 1;
-      const executionRecords: any[] = [];
+      console.log(
+        `[@component:EdgeSelectionPanel] Starting batch execution of ${actions.length} actions with ${retryActions.length} retry actions`,
+      );
 
       try {
-        const finalWaitTime = selectedEdge.data?.finalWaitTime || 2000;
-        const startTime = Date.now();
+        // Use batch execution endpoint (same as EdgeEditDialog)
+        const response = await fetch('/server/actions/batch/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            host: selectedHost,
+            actions: actions,
+            retry_actions: retryActions,
+            final_wait_time: selectedEdge.data?.finalWaitTime || 2000,
+          }),
+        });
 
-        const result = await executeEdgeActions(
-          actions,
-          selectedHost,
-          () => {}, // No longer need to update edge data - using database
-          finalWaitTime,
-          retryActions,
-          () => {}, // No longer need to update retry action data - using database
-        );
+        const result = await response.json();
+        console.log('[@component:EdgeSelectionPanel] Batch execution result:', result);
 
-        const totalExecutionTime = Date.now() - startTime;
+        // Process results (same format as EdgeEditDialog)
+        if (result.success !== undefined) {
+          const successMessages =
+            result.results?.filter((r: any) => r.success).map((r: any) => `✅ ${r.message}`) || [];
 
-        // Record each action execution to database
-        for (let i = 0; i < actions.length; i++) {
-          const action = actions[i];
-          const actionSuccess = result.results[i]?.includes('✅') || false;
-          const actionMessage = result.results[i] || 'No result';
+          const failMessages =
+            result.results
+              ?.filter((r: any) => !r.success)
+              .map((r: any) => `❌ ${r.message}${r.error ? `: ${r.error}` : ''}`) || [];
 
-          // Map action command to action type
-          const getActionType = (command: string): string => {
-            if (command.includes('click') || command.includes('tap')) return 'click_action';
-            if (command.includes('scroll') || command.includes('swipe')) return 'swipe_action';
-            if (command.includes('input') || command.includes('type')) return 'input_action';
-            if (command.includes('wait') || command.includes('delay')) return 'wait_action';
-            return 'click_action'; // default
-          };
+          const allMessages = [...successMessages, ...failMessages];
+          allMessages.push(''); // Empty line
 
-          const actionRecord = {
-            execution_category: 'action',
-            execution_type: getActionType(action.command),
-            initiator_type: 'edge',
-            initiator_id: selectedEdge.id,
-            initiator_name: `${selectedEdge.data?.from || 'Unknown'} → ${selectedEdge.data?.to || 'Unknown'}`,
-            host_name: selectedHost?.host_name || 'unknown',
-            device_model: selectedHost?.device_model,
-            command: action.command,
-            parameters: {
-              ...action.params,
-              input_value: action.inputValue,
-              wait_time: action.waitTime,
-            },
-            execution_order: executionOrder++,
-            success: actionSuccess,
-            execution_time_ms: Math.round(totalExecutionTime / actions.length), // Approximate per action
-            message: actionMessage,
-            error_details: actionSuccess ? undefined : { error: actionMessage },
-          };
-
-          executionRecords.push(actionRecord);
-        }
-
-        // Record retry actions if they were executed
-        if (result.executionStopped && retryActions.length > 0) {
-          for (let i = 0; i < retryActions.length; i++) {
-            const retryAction = retryActions[i];
-            const retrySuccess = result.results[actions.length + i]?.includes('✅') || false;
-            const retryMessage = result.results[actions.length + i] || 'No result';
-
-            const retryRecord = {
-              execution_category: 'action',
-              execution_type: 'retry_action',
-              initiator_type: 'edge',
-              initiator_id: selectedEdge.id,
-              initiator_name: `${selectedEdge.data?.from || 'Unknown'} → ${selectedEdge.data?.to || 'Unknown'} (retry)`,
-              host_name: selectedHost?.host_name || 'unknown',
-              device_model: selectedHost?.device_model,
-              command: retryAction.command,
-              parameters: {
-                ...retryAction.params,
-                input_value: retryAction.inputValue,
-                wait_time: retryAction.waitTime,
-              },
-              execution_order: executionOrder++,
-              success: retrySuccess,
-              execution_time_ms: Math.round(
-                totalExecutionTime / (actions.length + retryActions.length),
-              ),
-              message: retryMessage,
-              error_details: retrySuccess ? undefined : { error: retryMessage },
-            };
-
-            executionRecords.push(retryRecord);
+          if (result.success) {
+            allMessages.push(`✅ OVERALL RESULT: SUCCESS`);
+            allMessages.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
+          } else {
+            allMessages.push(`❌ OVERALL RESULT: FAILED`);
+            allMessages.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
           }
+
+          setRunResult(allMessages.join('\n'));
+        } else {
+          setRunResult(`❌ Batch execution failed: ${result.error || 'Unknown error'}`);
         }
-
-        // Batch insert all execution records via API
-        if (executionRecords.length > 0) {
-          console.log(
-            '[@component:EdgeSelectionPanel] Recording',
-            executionRecords.length,
-            'action executions to database',
-          );
-          try {
-            const response = await fetch('/server/execution-results/record-batch', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                executions: executionRecords,
-              }),
-            });
-
-            const dbResult = await response.json();
-            if (!dbResult.success) {
-              console.error(
-                '[@component:EdgeSelectionPanel] Failed to record executions:',
-                dbResult.error,
-              );
-            } else {
-              console.log(
-                '[@component:EdgeSelectionPanel] Successfully recorded executions to database',
-              );
-            }
-          } catch (error) {
-            console.error(
-              '[@component:EdgeSelectionPanel] Error calling execution results API:',
-              error,
-            );
-          }
-        }
-
-        setRunResult(result.results.join('\n'));
-        console.log(
-          `[@component:EdgeSelectionPanel] Action execution completed. Stopped: ${result.executionStopped}`,
-        );
       } catch (err: any) {
         console.error('[@component:EdgeSelectionPanel] Error executing actions:', err);
-        setRunResult(`❌ ${err.message}`);
-
-        // Record failed execution via API
-        const failedRecord = {
-          execution_category: 'action',
-          execution_type: 'failed_action',
-          initiator_type: 'edge',
-          initiator_id: selectedEdge.id,
-          initiator_name: `${selectedEdge.data?.from || 'Unknown'} → ${selectedEdge.data?.to || 'Unknown'}`,
-          host_name: selectedHost?.host_name || 'unknown',
-          device_model: selectedHost?.device_model,
-          command: 'Edge action execution',
-          parameters: { action_count: actions.length },
-          execution_order: 1,
-          success: false,
-          message: err.message || 'Network error',
-          error_details: { error: err.message },
-        };
-
-        try {
-          const response = await fetch('/server/execution-results/record', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(failedRecord),
-          });
-
-          const dbResult = await response.json();
-          if (!dbResult.success) {
-            console.error(
-              '[@component:EdgeSelectionPanel] Failed to record failed execution:',
-              dbResult.error,
-            );
-          }
-        } catch (error) {
-          console.error(
-            '[@component:EdgeSelectionPanel] Error calling execution results API for failed execution:',
-            error,
-          );
-        }
+        setRunResult(`❌ Network error: ${err.message}`);
       } finally {
         setIsRunning(false);
       }
