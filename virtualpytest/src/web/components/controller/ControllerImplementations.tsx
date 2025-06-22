@@ -33,12 +33,6 @@ import React, { useState } from 'react';
 
 import { ControllerItem, ControllerTypesResponse } from '../../types/controller/Remote_Types';
 
-// TODO: Fix these imports when modal components are available
-// import { RemoteModal } from '../../modals/remote/RemoteModal';
-// import { AndroidMobileModal } from '../../modals/remote/AndroidMobileModal';
-// import { HDMIStreamModal } from '../../modals/remote/HDMIStreamModal';
-// import { USBPowerPanel } from '../power/USBPowerPanel';
-
 interface ControllerImplementationsProps {
   controllerTypes: ControllerTypesResponse | null;
 }

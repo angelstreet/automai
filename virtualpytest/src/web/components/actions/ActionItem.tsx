@@ -14,7 +14,7 @@ import { ActionTestResults } from './ActionTestResults';
 interface ActionItemProps {
   action: EdgeAction;
   index: number;
-  availableActions: Actions;
+  availableActionTypes: Actions;
   testResult?: EdgeAction;
   onActionSelect: (index: number, command: string) => void;
   onUpdateAction: (index: number, updates: Partial<EdgeAction>) => void;
@@ -28,7 +28,7 @@ interface ActionItemProps {
 export const ActionItem: React.FC<ActionItemProps> = ({
   action,
   index,
-  availableActions,
+  availableActionTypes,
   testResult,
   onActionSelect,
   onUpdateAction,
@@ -77,7 +77,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
               }
               // Find the selected action to display its label
               let selectedLabel = '';
-              Object.values(availableActions).forEach((actions) => {
+              Object.values(availableActionTypes).forEach((actions) => {
                 if (Array.isArray(actions)) {
                   const actionItem = actions.find((a) => a.command === selected);
                   if (actionItem) {
@@ -88,12 +88,28 @@ export const ActionItem: React.FC<ActionItemProps> = ({
               return selectedLabel || selected;
             }}
           >
-            {Object.entries(availableActions).map(([category, actions]) => {
-              // Ensure actions is an array
-              if (!Array.isArray(actions)) {
+            {Object.entries(availableActionTypes).map(([category, categoryData]) => {
+              // Handle nested structure: availableActionTypes.remote.remote = [actions...]
+              let actions = [];
+              if (Array.isArray(categoryData)) {
+                // Direct array (flat structure)
+                actions = categoryData;
+              } else if (categoryData && typeof categoryData === 'object') {
+                // Nested structure - get the array from the nested object
+                const nestedActions = categoryData[category];
+                if (Array.isArray(nestedActions)) {
+                  actions = nestedActions;
+                } else {
+                  console.warn(
+                    `[@component:ActionItem] Invalid nested actions for category ${category}:`,
+                    categoryData,
+                  );
+                  return null;
+                }
+              } else {
                 console.warn(
                   `[@component:ActionItem] Invalid actions for category ${category}:`,
-                  actions,
+                  categoryData,
                 );
                 return null;
               }

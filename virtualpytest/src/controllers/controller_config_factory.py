@@ -45,7 +45,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
     # STEP 2: Configure remote controller based on device model (REQUIRED)
     remote_configured = False
     
-    if device_model in ['android_mobile', 'android_mobile']:
+    if device_model  == 'android_mobile':
         controller_configs['remote'] = {
             'type': 'android_mobile',
             'implementation': 'android_mobile',
@@ -74,20 +74,6 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
             'parameters': {
                 'device_ip': device_ip,  # Use IP instead of UDID for network connection
                 'device_port': device_port,  # iOS network debugging port
-                'platform_name': 'iOS',
-                'platform_version': '',  # Optional, can be configured later
-                'appium_url': 'http://localhost:4723',
-                'automation_name': 'XCUITest',
-                'connection_timeout': 10
-            }
-        }
-        remote_configured = True
-    elif device_model == 'ios_phone':
-        controller_configs['remote'] = {
-            'type': 'appium_remote',
-            'implementation': 'appium_remote',
-            'parameters': {
-                'device_udid': device_ip,  # For iOS, device_ip should contain the UDID
                 'platform_name': 'iOS',
                 'platform_version': '',  # Optional, can be configured later
                 'appium_url': 'http://localhost:4723',

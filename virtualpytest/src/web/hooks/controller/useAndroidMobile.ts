@@ -43,7 +43,7 @@ export function useAndroidMobile(host: Host) {
       capabilities: host.capabilities,
       controller_configs: host.controller_configs,
       controller_types: host.controller_types,
-      available_actions: host.available_actions,
+      available_action_types: host.available_action_types,
       available_verification_types: host.available_verification_types,
     };
   }, [

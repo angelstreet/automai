@@ -64,7 +64,7 @@ export interface Host {
 
   // === VERIFICATION AND REMOTE ACTIONS DATA ===
   available_verification_types?: import('../verification/VerificationTypes').Verifications; // Available verification types from controllers
-  available_actions?: Actions; // Available actions from all controllers
+  available_action_types?: Actions; // Available action types from controllers
 
   // === DEVICE LOCK MANAGEMENT ===
   isLocked: boolean; // Device lock status

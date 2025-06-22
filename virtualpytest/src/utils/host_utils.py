@@ -85,7 +85,7 @@ def register_host_with_server():
         # Extract verification types and actions from created controllers
         print(f"\n🔍 [HOST] Extracting verification types and actions from controllers...")
         available_verification_types = {}
-        available_actions = {}
+        available_action_types = {}
 
         for controller_type, controller_obj in created_controllers.items():
             try:
@@ -121,14 +121,15 @@ def register_host_with_server():
                 if hasattr(controller_obj, 'get_available_actions'):
                     actions = controller_obj.get_available_actions()
                     if actions:
-                        available_actions[controller_type] = actions
-                        print(f"   ✅ {controller_type}: {len(actions)} actions")
+                        available_action_types[controller_type] = actions
+                        total_actions = sum(len(category_actions) for category_actions in actions.values() if isinstance(category_actions, list)) if isinstance(actions, dict) else len(actions) if isinstance(actions, list) else 0
+                        print(f"   ✅ {controller_type}: {total_actions} actions")
                         
             except Exception as e:
                 print(f"   ⚠️ {controller_type}: Error extracting capabilities - {e}")
 
         print(f"   Total verification types: {sum(len(v) for v in available_verification_types.values())}")
-        print(f"   Total actions: {sum(len(a) for a in available_actions.values())}")
+        print(f"   Total action types: {sum(len(a) if isinstance(a, list) else sum(len(cat) for cat in a.values() if isinstance(cat, list)) if isinstance(a, dict) else 0 for a in available_action_types.values())}")
         
         # Create registration payload with complete device information AND capabilities
         host_info = {
@@ -141,7 +142,7 @@ def register_host_with_server():
             'device_port': device_port,           # Send actual device port
             'system_stats': get_host_system_stats(),
             'available_verification_types': available_verification_types,  # Include verification types
-            'available_actions': available_actions  # Include available actions
+            'available_action_types': available_action_types  # Include available action types
         }
         
         # Build server URLs using standardized host URL builder system
@@ -159,7 +160,7 @@ def register_host_with_server():
         print(f"   URL: {registration_url}")
         print(f"   Payload keys: {list(host_info.keys())}")
         print(f"   Verification types: {len(available_verification_types)} controller types")
-        print(f"   Available actions: {len(available_actions)} controller types")
+        print(f"   Available action types: {len(available_action_types)} controller types")
         
         # Send registration request
         response = requests.post(
@@ -195,10 +196,10 @@ def register_host_with_server():
                 global_host_object['local_controller_objects'] = created_controllers
                 print(f"   Added controller objects to host object")
                 
-                # Store verification types and actions in global host object for local access
+                # Store verification types and action types in global host object for local access
                 global_host_object['available_verification_types'] = available_verification_types
-                global_host_object['available_actions'] = available_actions
-                print(f"   Added verification types and actions to host object")
+                global_host_object['available_action_types'] = available_action_types
+                print(f"   Added verification types and action types to host object")
                 
                 # Start periodic ping thread
                 start_ping_thread()
@@ -254,7 +255,7 @@ def send_ping_to_server():
             'system_stats': get_host_system_stats(),
             'status': 'online',
             'available_verification_types': global_host_object.get('available_verification_types', {}),  # Include verification types
-            'available_actions': global_host_object.get('available_actions', {})  # Include available actions
+            'available_action_types': global_host_object.get('available_action_types', {})  # Include available action types
         }
         
         response = requests.post(

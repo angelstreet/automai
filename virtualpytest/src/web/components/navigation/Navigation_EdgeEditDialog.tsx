@@ -50,8 +50,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
 
   // Extract controller actions from host data
   const controllerActions: Actions = useMemo(() => {
-    return selectedHost?.available_actions || {};
-  }, [selectedHost?.available_actions]);
+    return selectedHost?.available_action_types || {};
+  }, [selectedHost?.available_action_types]);
 
   const canRunActions =
     isControlActive && selectedHost && edgeForm?.actions?.length > 0 && !isRunningActions;
@@ -170,7 +170,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             actions={edgeForm?.actions || []}
             retryActions={edgeForm?.retryActions || []}
             finalWaitTime={edgeForm?.finalWaitTime || 2000}
-            availableActions={controllerActions}
+            availableActionTypes={controllerActions}
             selectedHost={selectedHost || null}
             onActionsChange={(newActions) => setEdgeForm({ ...edgeForm, actions: newActions })}
             onRetryActionsChange={(newRetryActions) =>

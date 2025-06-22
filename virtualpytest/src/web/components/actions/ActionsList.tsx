@@ -12,7 +12,7 @@ import {
 import React, { useState, useCallback } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import type { Actions, EdgeAction } from '../../types/controller/ActionTypes';
+import type { Actions, Action, EdgeAction } from '../../types/controller/ActionTypes';
 
 import { ActionItem } from './ActionItem';
 
@@ -20,7 +20,7 @@ export interface ActionsListProps {
   actions: EdgeAction[];
   retryActions: EdgeAction[];
   finalWaitTime: number;
-  availableActions: Actions;
+  availableActionTypes: Actions;
   onActionsChange: (actions: EdgeAction[]) => void;
   onRetryActionsChange: (retryActions: EdgeAction[]) => void;
   onFinalWaitTimeChange: (waitTime: number) => void;
@@ -37,7 +37,7 @@ export const ActionsList: React.FC<ActionsListProps> = React.memo(
   ({
     actions,
     retryActions,
-    availableActions = {},
+    availableActionTypes = {},
     onActionsChange,
     onRetryActionsChange,
     loading = false,
@@ -53,7 +53,7 @@ export const ActionsList: React.FC<ActionsListProps> = React.memo(
 
     console.log(
       `[@component:ActionsList] Using available actions for ${selectedHost?.device_model}:`,
-      Object.keys(availableActions).length,
+      Object.keys(availableActionTypes).length,
       'action categories',
     );
 
@@ -171,8 +171,19 @@ export const ActionsList: React.FC<ActionsListProps> = React.memo(
         let selectedAction: Action | undefined;
 
         // Search through all action categories to find the action
-        for (const actionList of Object.values(availableActions)) {
-          if (!Array.isArray(actionList)) continue;
+        for (const [category, categoryData] of Object.entries(availableActionTypes)) {
+          let actionList: Action[] = [];
+
+          if (Array.isArray(categoryData)) {
+            // Direct array (flat structure)
+            actionList = categoryData;
+          } else if (categoryData && typeof categoryData === 'object') {
+            // Nested structure - get the array from the nested object
+            const nestedActions = categoryData[category];
+            if (Array.isArray(nestedActions)) {
+              actionList = nestedActions;
+            }
+          }
 
           const action = actionList.find((a) => a.command === command);
           if (action) {
@@ -198,7 +209,7 @@ export const ActionsList: React.FC<ActionsListProps> = React.memo(
           }
         }
       },
-      [availableActions, updateAction, updateRetryAction],
+      [availableActionTypes, updateAction, updateRetryAction],
     );
 
     // Check if all actions have required inputs
@@ -275,7 +286,7 @@ export const ActionsList: React.FC<ActionsListProps> = React.memo(
               key={index}
               action={action}
               index={index}
-              availableActions={availableActions}
+              availableActionTypes={availableActionTypes}
               testResult={testResults[isRetry ? actions.length + index : index]}
               onActionSelect={(idx, command) => handleActionSelect(idx, command, isRetry)}
               onUpdateAction={onUpdate}
@@ -491,8 +502,9 @@ export const ActionsList: React.FC<ActionsListProps> = React.memo(
     const actionsChanged = JSON.stringify(prevProps.actions) !== JSON.stringify(nextProps.actions);
     const retryActionsChanged =
       JSON.stringify(prevProps.retryActions) !== JSON.stringify(nextProps.retryActions);
-    const availableActionsChanged =
-      JSON.stringify(prevProps.availableActions) !== JSON.stringify(nextProps.availableActions);
+    const availableActionTypesChanged =
+      JSON.stringify(prevProps.availableActionTypes) !==
+      JSON.stringify(nextProps.availableActionTypes);
     const loadingChanged = prevProps.loading !== nextProps.loading;
     const errorChanged = prevProps.error !== nextProps.error;
     const selectedHostChanged =
@@ -514,7 +526,7 @@ export const ActionsList: React.FC<ActionsListProps> = React.memo(
     const shouldRerender =
       actionsChanged ||
       retryActionsChanged ||
-      availableActionsChanged ||
+      availableActionTypesChanged ||
       loadingChanged ||
       errorChanged ||
       selectedHostChanged ||
@@ -530,7 +542,7 @@ export const ActionsList: React.FC<ActionsListProps> = React.memo(
       console.log('[@component:ActionsList] Props changed, re-rendering:', {
         actionsChanged,
         retryActionsChanged,
-        availableActionsChanged,
+        availableActionTypesChanged,
         loadingChanged,
         errorChanged,
         selectedHostChanged,
