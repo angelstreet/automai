@@ -136,8 +136,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           allMessages.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
         }
 
-        allMessages.push(`📊 Execution results recorded to database`);
-
         setActionResult(allMessages.join('\n'));
       } else {
         setActionResult(`❌ Batch execution failed: ${result.error || 'Unknown error'}`);

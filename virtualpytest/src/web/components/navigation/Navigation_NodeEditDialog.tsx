@@ -17,12 +17,10 @@ import {
 import React, { useState, useEffect, useCallback } from 'react';
 
 // Import proper types from navigationTypes
-import { NodeEditDialogProps } from '../../types/pages/Navigation_Types';
-import { VerificationsList } from '../verification/VerificationsList';
-import { Host } from '../../types/common/Host_Types';
-import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
-import { Verification } from '../../types/verification/VerificationTypes';
 import { useVerification } from '../../hooks/verification/useVerification';
+import { NodeEditDialogProps } from '../../types/pages/Navigation_Types';
+import { Verification } from '../../types/verification/VerificationTypes';
+import { VerificationsList } from '../verification/VerificationsList';
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   isOpen,
   nodeForm,
@@ -587,7 +585,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             gotoResults.push(`⚠️ Database recording failed: ${dbResult.error}`);
           } else {
             console.log('[@component:NodeEditDialog] Successfully recorded executions to database');
-            gotoResults.push(`📊 Execution results recorded to database`);
           }
         } catch (error) {
           console.error('[@component:NodeEditDialog] Error calling execution results API:', error);
