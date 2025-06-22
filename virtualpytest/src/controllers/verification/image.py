@@ -974,6 +974,22 @@ class ImageVerificationController(VerificationControllerInterface):
                 return {}
             
             # === STEP 4: Convert local paths to public URLs ===
+            # Check if we have the original R2 URL for the source image
+            source_url = None
+            try:
+                # Check if verification controller has the original screenshot URL
+                from flask import current_app
+                host_device = getattr(current_app, 'my_host_device', None)
+                if host_device:
+                    # Get the verification controller to check for original URL
+                    controller_objects = host_device.get('controller_objects', {})
+                    verification_controller = controller_objects.get('verification')
+                    if verification_controller and hasattr(verification_controller, '_last_screenshot_url'):
+                        source_url = verification_controller._last_screenshot_url
+                        print(f"[@controller:ImageVerification] Using original R2 URL for source: {source_url}")
+            except Exception as e:
+                print(f"[@controller:ImageVerification] Could not get original R2 URL: {e}")
+            
             # Get host device info for URL building
             try:
                 from src.utils.buildUrlUtils import buildVerificationResultUrl
@@ -988,15 +1004,17 @@ class ImageVerificationController(VerificationControllerInterface):
                         'source_image_path': source_result_path,
                         'reference_image_path': reference_result_path,
                         'result_overlay_path': overlay_result_path,
+                        'sourceImageUrl': source_url,  # Use R2 URL if available
                     }
                 
-                # Build public URLs exactly like the original working version
-                source_url = buildVerificationResultUrl(host_device, source_result_path)
+                # Build public URLs - use R2 URL for source if available, build URLs for reference and overlay
+                if not source_url:
+                    source_url = buildVerificationResultUrl(host_device, source_result_path)
                 reference_url = buildVerificationResultUrl(host_device, reference_result_path)
                 overlay_url = buildVerificationResultUrl(host_device, overlay_result_path)
                 
                 print(f"[@controller:ImageVerification] Built URLs:")
-                print(f"  Source URL: {source_url}")
+                print(f"  Source URL: {source_url} {'(R2 original)' if hasattr(verification_controller, '_last_screenshot_url') and verification_controller._last_screenshot_url else '(built)'}")
                 print(f"  Reference URL: {reference_url}")
                 print(f"  Overlay URL: {overlay_url}")
                 
@@ -1016,6 +1034,7 @@ class ImageVerificationController(VerificationControllerInterface):
                     'source_image_path': source_result_path,
                     'reference_image_path': reference_result_path,
                     'result_overlay_path': overlay_result_path,
+                    'sourceImageUrl': source_url,  # Use R2 URL if available
                 }
                 
         except Exception as e:

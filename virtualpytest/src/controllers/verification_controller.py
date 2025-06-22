@@ -268,9 +268,9 @@ class VerificationController:
                 from urllib.parse import urlparse
                 
                 try:
-                    # Create temporary file in captures directory
-                    captures_dir = '/var/www/html/stream/captures'
-                    os.makedirs(captures_dir, exist_ok=True)
+                    # Create temporary file in tmp/verification_results directory
+                    tmp_dir = '/tmp/verification_results'
+                    os.makedirs(tmp_dir, exist_ok=True)
                     
                     # Extract filename from URL or generate one
                     parsed_url = urlparse(screenshot_result)
@@ -281,7 +281,7 @@ class VerificationController:
                         import time
                         local_filename = f"verification_screenshot_{int(time.time())}.jpg"
                     
-                    local_path = os.path.join(captures_dir, local_filename)
+                    local_path = os.path.join(tmp_dir, local_filename)
                     
                     # Download the image
                     print(f"[@controller:VerificationController] Downloading {screenshot_result} to {local_path}")
