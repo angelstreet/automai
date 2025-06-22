@@ -41,7 +41,9 @@ export const useRec = (): UseRecReturn => {
       }
 
       const data = await response.json();
-      const isAvailable = data.success && data.status === 'online';
+
+      // Trust the server route response - if it says success, it's available
+      const isAvailable = data.success;
 
       console.log(
         `[@hook:useRec] AV status for ${host.host_name}: ${isAvailable ? 'available' : 'unavailable'}`,
