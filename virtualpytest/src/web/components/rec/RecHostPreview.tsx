@@ -18,6 +18,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Host } from '../../types/common/Host_Types';
 import { ScreenshotCapture } from '../controller/av/ScreenshotCapture';
 
+import { RecHostStreamModal } from './RecHostStreamModal';
+
 interface HostWithAVStatus extends Host {
   avStatus: 'online' | 'offline' | 'checking';
 }
@@ -41,6 +43,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Take screenshot function - only show loading for initial load
@@ -105,6 +108,18 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       onFullscreen(host);
     }
   };
+
+  // Handle opening stream modal
+  const handleOpenStreamModal = useCallback(() => {
+    console.log(`[@component:RecHostPreview] Opening stream modal for host: ${host.host_name}`);
+    setIsStreamModalOpen(true);
+  }, [host.host_name]);
+
+  // Handle closing stream modal
+  const handleCloseStreamModal = useCallback(() => {
+    console.log(`[@component:RecHostPreview] Closing stream modal for host: ${host.host_name}`);
+    setIsStreamModalOpen(false);
+  }, [host.host_name]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -302,6 +317,25 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               }}
             />
           )}
+
+          {/* Click overlay for stream modal - when no onFullscreen prop */}
+          {!onFullscreen && screenshotUrl && (
+            <Box
+              onClick={handleOpenStreamModal}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                cursor: 'pointer',
+                backgroundColor: 'transparent',
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                },
+              }}
+            />
+          )}
         </Box>
       </CardContent>
 
@@ -311,6 +345,14 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
           Last update: {formatLastUpdate(lastUpdate)}
         </Typography>
       </Box>
+
+      {/* Stream Modal */}
+      <RecHostStreamModal
+        host={host}
+        isOpen={isStreamModalOpen}
+        onClose={handleCloseStreamModal}
+        showRemoteByDefault={false}
+      />
     </Card>
   );
 };

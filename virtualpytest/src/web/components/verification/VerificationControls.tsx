@@ -131,7 +131,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
               size="small"
               type="number"
               label="X"
-              value={verification.params?.area?.x || 0}
+              value={parseFloat(verification.params?.area?.x || 0).toFixed(1)}
               autoComplete="off"
               onChange={(e) =>
                 onUpdateVerification(index, {
@@ -139,7 +139,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
                     ...verification.params,
                     area: {
                       ...(verification.params?.area || { x: 0, y: 0, width: 100, height: 100 }),
-                      x: parseInt(e.target.value) || 0,
+                      x: parseFloat(e.target.value) || 0,
                     },
                   },
                 })
@@ -151,13 +151,13 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
                   fontSize: '0.8rem',
                 },
               }}
-              inputProps={{ min: 0 }}
+              inputProps={{ min: 0, step: 0.1 }}
             />
             <TextField
               size="small"
               type="number"
               label="Y"
-              value={verification.params?.area?.y || 0}
+              value={parseFloat(verification.params?.area?.y || 0).toFixed(1)}
               autoComplete="off"
               onChange={(e) =>
                 onUpdateVerification(index, {
@@ -165,7 +165,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
                     ...verification.params,
                     area: {
                       ...(verification.params?.area || { x: 0, y: 0, width: 100, height: 100 }),
-                      y: parseInt(e.target.value) || 0,
+                      y: parseFloat(e.target.value) || 0,
                     },
                   },
                 })
@@ -177,13 +177,13 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
                   fontSize: '0.8rem',
                 },
               }}
-              inputProps={{ min: 0 }}
+              inputProps={{ min: 0, step: 0.1 }}
             />
             <TextField
               size="small"
               type="number"
               label="Width"
-              value={verification.params?.area?.width || 100}
+              value={parseFloat(verification.params?.area?.width || 100).toFixed(1)}
               autoComplete="off"
               onChange={(e) =>
                 onUpdateVerification(index, {
@@ -191,7 +191,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
                     ...verification.params,
                     area: {
                       ...(verification.params?.area || { x: 0, y: 0, width: 100, height: 100 }),
-                      width: parseInt(e.target.value) || 100,
+                      width: parseFloat(e.target.value) || 100,
                     },
                   },
                 })
@@ -203,13 +203,13 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
                   fontSize: '0.8rem',
                 },
               }}
-              inputProps={{ min: 1 }}
+              inputProps={{ min: 1, step: 0.1 }}
             />
             <TextField
               size="small"
               type="number"
               label="Height"
-              value={verification.params?.area?.height || 100}
+              value={parseFloat(verification.params?.area?.height || 100).toFixed(1)}
               autoComplete="off"
               onChange={(e) =>
                 onUpdateVerification(index, {
@@ -217,7 +217,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
                     ...verification.params,
                     area: {
                       ...(verification.params?.area || { x: 0, y: 0, width: 100, height: 100 }),
-                      height: parseInt(e.target.value) || 100,
+                      height: parseFloat(e.target.value) || 100,
                     },
                   },
                 })
@@ -229,7 +229,7 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
                   fontSize: '0.8rem',
                 },
               }}
-              inputProps={{ min: 1 }}
+              inputProps={{ min: 1, step: 0.1 }}
             />
           </>
         )}

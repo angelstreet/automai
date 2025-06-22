@@ -33,7 +33,6 @@ const Rec: React.FC = () => {
   const { hosts, isLoading, error, refreshHosts, takeScreenshot } = useRec();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [autoRefresh, setAutoRefresh] = useState(true);
-  const [fullscreenHost, setFullscreenHost] = useState<Host | null>(null);
 
   // Auto-refresh hosts every 30 seconds
   useEffect(() => {
@@ -61,19 +60,6 @@ const Rec: React.FC = () => {
     await refreshHosts();
   }, [refreshHosts]);
 
-  // Handle fullscreen view
-  const handleFullscreen = (host: Host) => {
-    console.log(`[@page:Rec] Opening fullscreen view for host: ${host.host_name}`);
-    setFullscreenHost(host);
-    // TODO: Implement fullscreen modal or navigation to dedicated viewer
-  };
-
-  // Handle auto-refresh toggle
-  const handleAutoRefreshToggle = () => {
-    setAutoRefresh(!autoRefresh);
-    console.log(`[@page:Rec] Auto-refresh ${!autoRefresh ? 'enabled' : 'disabled'}`);
-  };
-
   // Render grid view
   const renderGridView = () => (
     <Grid container spacing={2}>
@@ -82,7 +68,6 @@ const Rec: React.FC = () => {
           <RecHostPreview
             host={host}
             takeScreenshot={takeScreenshot}
-            onFullscreen={handleFullscreen}
             autoRefresh={autoRefresh}
             refreshInterval={10000}
           />
@@ -148,7 +133,7 @@ const Rec: React.FC = () => {
             <Chip
               label={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
               color={autoRefresh ? 'success' : 'default'}
-              onClick={handleAutoRefreshToggle}
+              onClick={() => setAutoRefresh(!autoRefresh)}
               sx={{ cursor: 'pointer' }}
             />
 
@@ -219,16 +204,6 @@ const Rec: React.FC = () => {
 
       {/* Content */}
       {hosts.length > 0 && <Box>{viewMode === 'grid' ? renderGridView() : renderTableView()}</Box>}
-
-      {/* Fullscreen Modal - TODO: Implement */}
-      {fullscreenHost && (
-        <Box>
-          {/* TODO: Implement fullscreen modal or navigation */}
-          <Typography variant="body2">
-            Fullscreen view for {fullscreenHost.host_name} - Coming soon
-          </Typography>
-        </Box>
-      )}
     </Box>
   );
 };
