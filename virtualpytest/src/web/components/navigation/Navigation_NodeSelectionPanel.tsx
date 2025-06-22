@@ -124,6 +124,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
           body: JSON.stringify({
             host: selectedHost,
             filename: selectedNode.data.label, // Use node name as filename
+            device_model: selectedHost.device_model || 'android_mobile', // Add device model
           }),
         });
 

@@ -511,99 +511,20 @@ def get_userinterface_with_root(interface_id):
 
 @navigation_bp.route('/save-screenshot', methods=['POST'])
 def save_navigation_screenshot():
-    """Take screenshot and upload to R2 for navigation documentation"""
+    """Proxy save navigation screenshot request to host (host handles R2 upload and database save)"""
     try:
-        # Get request data for required filename parameter
+        print("[@route:server_navigation:save_screenshot] Proxying save navigation screenshot request to host")
+        
+        # Get request data
         request_data = request.get_json() or {}
-        filename = request_data.get('filename')
         
-        if not filename:
-            return jsonify({
-                'success': False,
-                'error': 'Filename is required for saving screenshot'
-            }), 400
+        # Proxy to host navigation save-screenshot endpoint
+        response_data, status_code = proxy_to_host('/host/navigation/save-screenshot', 'POST', request_data)
         
-        print(f"[@route:navigation:save_screenshot] Saving navigation screenshot with filename: {filename}")
+        return jsonify(response_data), status_code
         
-        # Proxy to host navigation save-screenshot to get the image
-        response_data, status_code = proxy_to_host('/host/navigation/save-screenshot', 'POST', {'filename': filename})
-        
-        if status_code != 200 or not response_data.get('success'):
-            return jsonify({
-                'success': False,
-                'error': f'Failed to save screenshot: {response_data.get("error", "Unknown error")}'
-            }), status_code
-        
-        # Get the local screenshot path from the response
-        local_screenshot_path = response_data.get('screenshot_path')
-        if not local_screenshot_path:
-            return jsonify({
-                'success': False,
-                'error': 'No screenshot path returned from host'
-            }), 500
-        
-        print(f"[@route:navigation:save_screenshot] Screenshot saved at: {local_screenshot_path}")
-        
-        # Get device model from request or use default
-        device_model = request_data.get('device_model', 'android_mobile')
-        print(f"[@route:navigation:save_screenshot] Using device model: {device_model}")
-        
-        # Build R2 path: navigation/{device_model}/{filename}.jpg
-        r2_path = f"navigation/{device_model}/{filename}.jpg"
-        print(f"[@route:navigation:save_screenshot] Target R2 path: {r2_path}")
-        
-        # Upload to R2 using CloudflareUtils
-        from src.utils.cloudflare_utils import CloudflareUtils
-        
-        uploader = CloudflareUtils()
-        upload_result = uploader.upload_file(local_screenshot_path, r2_path)
-        
-        if upload_result.get('success'):
-            print(f"[@route:navigation:save_screenshot] Successfully uploaded to R2: {r2_path}")
-            # Extract complete Cloudflare R2 URL
-            complete_url = upload_result.get('url')
-            print(f"[@route:navigation:save_screenshot] Extracted complete R2 URL: {complete_url}")
-            
-            # Save to database
-            try:
-                from src.lib.supabase.verifications_references_db import save_image
-                from src.utils.app_utils import get_team_id
-                
-                team_id = get_team_id()
-                print(f"[@route:navigation:save_screenshot] Using team ID: {team_id}")
-                
-                db_result = save_image(
-                    name=filename,
-                    device_model=device_model,
-                    type='screenshot',
-                    r2_path=r2_path,
-                    r2_url=complete_url,
-                    team_id=team_id,
-                    area=None
-                )
-                    
-                if db_result.get('success'):
-                    print(f"[@route:navigation:save_screenshot] Successfully saved to database")
-                else:
-                    print(f"[@route:navigation:save_screenshot] Database save failed: {db_result.get('error')}")
-            except Exception as db_error:
-                print(f"[@route:navigation:save_screenshot] Database save error: {db_error}")
-                # Don't fail the upload, just log the error
-            
-            return jsonify({
-                'success': True,
-                'screenshot_url': complete_url  # R2 URL for permanent storage
-            })
-        else:
-            error_msg = upload_result.get('error', 'Unknown upload error')
-            print(f"[@route:navigation:save_screenshot] R2 upload failed: {error_msg}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to upload screenshot to R2: {error_msg}'
-            }), 500
-            
     except Exception as e:
-        print(f"[@route:navigation:save_screenshot] Error: {str(e)}")
+        print(f"[@route:server_navigation:save_screenshot] ERROR: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
