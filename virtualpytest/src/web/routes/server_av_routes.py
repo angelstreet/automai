@@ -156,14 +156,17 @@ def proxy_image_options():
         }
     )
 
-@av_bp.route('/get-status', methods=['GET'])
+@av_bp.route('/get-status', methods=['GET', 'POST'])
 def get_status():
     """Proxy get status request to selected host"""
     try:
         print("[@route:server_av:status] Proxying get status request")
         
+        # Get request data if POST
+        request_data = request.get_json() if request.method == 'POST' else {}
+        
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/status', 'GET')
+        response_data, status_code = proxy_to_host('/host/av/status', 'GET', request_data)
         
         return jsonify(response_data), status_code
         
