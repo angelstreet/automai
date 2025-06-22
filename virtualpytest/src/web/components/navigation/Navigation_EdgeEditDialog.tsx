@@ -13,10 +13,8 @@ import {
 import React, { useState, useEffect, useMemo } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
-import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
 import type { Actions } from '../../types/controller/ActionTypes';
-
+import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
 import { ActionsList } from '../actions';
 
 interface EdgeEditDialogProps {
@@ -98,30 +96,55 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     setIsRunningActions(true);
     setActionResult(null);
     console.log(
-      `[@component:EdgeEditDialog] Starting execution of ${edgeForm.actions.length} actions with ${edgeForm?.retryActions?.length || 0} retry actions`,
+      `[@component:EdgeEditDialog] Starting batch execution of ${edgeForm.actions.length} actions with ${edgeForm?.retryActions?.length || 0} retry actions`,
     );
 
     try {
-      const result = await executeEdgeActions(
-        edgeForm.actions,
-        selectedHost,
-        undefined,
-        edgeForm?.finalWaitTime,
-        edgeForm?.retryActions,
-        undefined,
-      );
+      // Use batch execution endpoint (same as verification)
+      const response = await fetch('/server/actions/batch/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: selectedHost,
+          actions: edgeForm.actions,
+          retry_actions: edgeForm?.retryActions || [],
+          final_wait_time: edgeForm?.finalWaitTime || 2000,
+        }),
+      });
 
-      // Update the edge form with the updated actions
-      setEdgeForm((prev) => ({
-        ...prev,
-        actions: result.updatedActions,
-        retryActions: result.updatedRetryActions || prev?.retryActions || [],
-      }));
+      const result = await response.json();
+      console.log('[@component:EdgeEditDialog] Batch execution result:', result);
 
-      setActionResult(result.results.join('\n'));
+      // Process results (same format as verification)
+      if (result.success !== undefined) {
+        const successMessages =
+          result.results?.filter((r: any) => r.success).map((r: any) => `✅ ${r.message}`) || [];
+
+        const failMessages =
+          result.results
+            ?.filter((r: any) => !r.success)
+            .map((r: any) => `❌ ${r.message}${r.error ? `: ${r.error}` : ''}`) || [];
+
+        const allMessages = [...successMessages, ...failMessages];
+        allMessages.push(''); // Empty line
+
+        if (result.success) {
+          allMessages.push(`✅ OVERALL RESULT: SUCCESS`);
+          allMessages.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
+        } else {
+          allMessages.push(`❌ OVERALL RESULT: FAILED`);
+          allMessages.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
+        }
+
+        allMessages.push(`📊 Execution results recorded to database`);
+
+        setActionResult(allMessages.join('\n'));
+      } else {
+        setActionResult(`❌ Batch execution failed: ${result.error || 'Unknown error'}`);
+      }
     } catch (err: any) {
       console.error('[@component:EdgeEditDialog] Error executing actions:', err);
-      setActionResult(`❌ ${err.message}`);
+      setActionResult(`❌ Network error: ${err.message}`);
     } finally {
       setIsRunningActions(false);
     }
