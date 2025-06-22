@@ -319,6 +319,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           };
 
           let individualVerificationSuccess = false;
+          let capture_filename = null; // Declare in proper scope
+          const startTime = Date.now(); // Declare in proper scope
 
           try {
             if (!selectedHost) {
@@ -326,59 +328,195 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               verificationSuccess = false;
               individualVerificationSuccess = false;
             } else {
-              const startTime = Date.now();
+              // Step 1: Take screenshot first (same as NodeSelectionPanel and editor pattern)
+              console.log('[@component:NodeEditDialog] Taking screenshot for verification...');
 
-              // Use server route for node verification (this is correct for node context)
+              const screenshotResponse = await fetch('/server/av/take-screenshot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ host: selectedHost }),
+              });
+
+              const screenshotResult = await screenshotResponse.json();
+
+              if (!screenshotResult.success || !screenshotResult.screenshot_url) {
+                gotoResults.push(`❌ Verification ${i + 1}: Failed to capture screenshot`);
+                verificationSuccess = false;
+                individualVerificationSuccess = false;
+                continue;
+              }
+
+              // Extract filename from screenshot URL exactly like the editor does
+              const screenshotUrl = screenshotResult.screenshot_url;
+
+              try {
+                // Extract filename from URL like "http://localhost:5009/images/screenshot/android_mobile.jpg?t=1749217510777"
+                // or "https://host/captures/tmp/screenshot.jpg"
+                const url = new URL(screenshotUrl);
+                const pathname = url.pathname;
+                const filename = pathname.split('/').pop()?.split('?')[0]; // Get filename without query params
+                capture_filename = filename;
+
+                console.log('[@component:NodeEditDialog] Extracted filename from URL:', {
+                  screenshotUrl,
+                  pathname,
+                  capture_filename,
+                });
+              } catch (urlError) {
+                // Fallback: extract filename directly from URL string
+                capture_filename = screenshotUrl.split('/').pop()?.split('?')[0];
+                console.log(
+                  '[@component:NodeEditDialog] Fallback filename extraction:',
+                  capture_filename,
+                );
+              }
+
+              if (!capture_filename) {
+                gotoResults.push(
+                  `❌ Verification ${i + 1}: Failed to extract filename from screenshot URL`,
+                );
+                verificationSuccess = false;
+                individualVerificationSuccess = false;
+                continue;
+              }
+
+              console.log('[@component:NodeEditDialog] Using capture filename:', capture_filename);
+
+              // Step 2: Execute verification using the same pattern as the editor
               const response = await fetch(`/server/verification/batch/execute`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  host: selectedHost, // Use full host object (like VerificationEditor)
-                  verifications: [verificationToExecute],
-                  source_filename: 'verification_screenshot.jpg', // TODO: This should also use capture-first but it's in goto flow
+                  host: selectedHost, // Use full host object (same as editor)
+                  verifications: [verificationToExecute], // Send verifications directly (same as editor)
+                  source_filename: capture_filename, // Use extracted filename (same as editor)
                 }),
               });
 
               const result = await response.json();
               const verificationTime = Date.now() - startTime;
 
-              // Record verification execution to database
-              const verificationRecord = {
-                execution_category: 'verification',
-                execution_type:
-                  verificationItem.verification_type === 'adb'
-                    ? 'adb_verification'
-                    : `${verificationItem.verification_type || 'image'}_verification`,
-                initiator_type: 'node',
-                initiator_id: nodeForm?.id || 'unknown',
-                initiator_name: nodeForm?.label || 'Unknown Node',
-                host_name: selectedHost.host_name,
-                device_model: selectedHost.device_model,
-                command: verificationItem.command,
-                parameters: verificationItem.params || {},
-                source_filename: 'verification_screenshot.jpg',
-                execution_order: executionOrder++,
-                success: result.success,
-                execution_time_ms: verificationTime,
-                message: result.message || result.error,
-                error_details: result.success ? undefined : { error: result.error },
-                confidence_score: result.confidence_score,
-              };
+              console.log('[@component:NodeEditDialog] Verification batch result:', result);
+              console.log(
+                '[@component:NodeEditDialog] Verification result keys:',
+                Object.keys(result),
+              );
+              console.log('[@component:NodeEditDialog] Verification results:', result.results);
 
-              executionRecords.push(verificationRecord);
+              // Process results exactly like the editor does
+              if (result.results && result.results.length > 0) {
+                const verificationResult = result.results[0]; // We sent only one verification
 
-              if (result.success) {
-                gotoResults.push(`✅ Verification ${i + 1}: ${result.message || 'Success'}`);
-                individualVerificationSuccess = true;
-              } else {
-                gotoResults.push(`❌ Verification ${i + 1}: ${result.error || 'Failed'}`);
+                // Record verification execution to database
+                const verificationRecord = {
+                  execution_category: 'verification',
+                  execution_type:
+                    verificationItem.verification_type === 'adb'
+                      ? 'adb_verification'
+                      : `${verificationItem.verification_type || 'image'}_verification`,
+                  initiator_type: 'node',
+                  initiator_id: nodeForm?.id || 'unknown',
+                  initiator_name: nodeForm?.label || 'Unknown Node',
+                  host_name: selectedHost.host_name,
+                  device_model: selectedHost.device_model,
+                  command: verificationItem.command,
+                  parameters: verificationItem.params || {},
+                  source_filename: capture_filename,
+                  execution_order: executionOrder++,
+                  success: verificationResult.success,
+                  execution_time_ms: verificationTime,
+                  message: verificationResult.message || verificationResult.error,
+                  error_details: verificationResult.success
+                    ? undefined
+                    : { error: verificationResult.error },
+                  confidence_score:
+                    verificationResult.confidence_score || verificationResult.threshold,
+                };
+
+                executionRecords.push(verificationRecord);
+
+                if (verificationResult.success) {
+                  gotoResults.push(
+                    `✅ Verification ${i + 1}: ${verificationResult.message || 'Success'}`,
+                  );
+                  individualVerificationSuccess = true;
+                } else {
+                  gotoResults.push(
+                    `❌ Verification ${i + 1}: ${verificationResult.error || verificationResult.message || 'Failed'}`,
+                  );
+                  verificationSuccess = false;
+                  individualVerificationSuccess = false;
+                }
+              } else if (result.success === false && result.error) {
+                // Only treat as error if there's an actual error and no results (same as editor)
+                const errorMessage = result.message || result.error || 'Unknown error occurred';
+                console.log(
+                  '[@component:NodeEditDialog] Batch execution failed with error:',
+                  errorMessage,
+                );
+                gotoResults.push(`❌ Verification ${i + 1}: ${errorMessage}`);
                 verificationSuccess = false;
                 individualVerificationSuccess = false;
+
+                // Record failed verification
+                const failedVerificationRecord = {
+                  execution_category: 'verification',
+                  execution_type:
+                    verificationItem.verification_type === 'adb'
+                      ? 'adb_verification'
+                      : `${verificationItem.verification_type || 'image'}_verification`,
+                  initiator_type: 'node',
+                  initiator_id: nodeForm?.id || 'unknown',
+                  initiator_name: nodeForm?.label || 'Unknown Node',
+                  host_name: selectedHost.host_name,
+                  device_model: selectedHost.device_model,
+                  command: verificationItem.command,
+                  parameters: verificationItem.params || {},
+                  source_filename: capture_filename,
+                  execution_order: executionOrder++,
+                  success: false,
+                  execution_time_ms: verificationTime,
+                  message: errorMessage,
+                  error_details: { error: errorMessage },
+                };
+
+                executionRecords.push(failedVerificationRecord);
+              } else {
+                // Fallback case - no results and no clear error (same as editor)
+                console.log('[@component:NodeEditDialog] No results received from batch execution');
+                gotoResults.push(`❌ Verification ${i + 1}: No verification results received`);
+                verificationSuccess = false;
+                individualVerificationSuccess = false;
+
+                // Record failed verification
+                const failedVerificationRecord = {
+                  execution_category: 'verification',
+                  execution_type:
+                    verificationItem.verification_type === 'adb'
+                      ? 'adb_verification'
+                      : `${verificationItem.verification_type || 'image'}_verification`,
+                  initiator_type: 'node',
+                  initiator_id: nodeForm?.id || 'unknown',
+                  initiator_name: nodeForm?.label || 'Unknown Node',
+                  host_name: selectedHost.host_name,
+                  device_model: selectedHost.device_model,
+                  command: verificationItem.command,
+                  parameters: verificationItem.params || {},
+                  source_filename: capture_filename,
+                  execution_order: executionOrder++,
+                  success: false,
+                  execution_time_ms: verificationTime,
+                  message: 'No verification results received',
+                  error_details: { error: 'No verification results received' },
+                };
+
+                executionRecords.push(failedVerificationRecord);
               }
             }
           } catch (err: any) {
+            console.error('[@component:NodeEditDialog] Error executing verification:', err);
             gotoResults.push(`❌ Verification ${i + 1}: ${err.message || 'Network error'}`);
             verificationSuccess = false;
             individualVerificationSuccess = false;
@@ -397,8 +535,10 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               device_model: selectedHost?.device_model,
               command: verificationItem.command,
               parameters: verificationItem.params || {},
+              source_filename: capture_filename || 'unknown',
               execution_order: executionOrder++,
               success: false,
+              execution_time_ms: Date.now() - startTime,
               message: err.message || 'Network error',
               error_details: { error: err.message },
             };

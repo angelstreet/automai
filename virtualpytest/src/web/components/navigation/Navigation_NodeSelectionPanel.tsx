@@ -229,48 +229,104 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
           return;
         }
 
-        // Extract filename from screenshot URL
+        // Extract filename from screenshot URL exactly like the editor does
         const screenshotUrl = screenshotResult.screenshot_url;
-        const filename = screenshotUrl.split('/').pop()?.split('?')[0];
-        console.log('[@component:NodeSelectionPanel] Screenshot taken:', filename);
+        let capture_filename = null;
 
-        // Step 2: Prepare verifications
+        try {
+          // Extract filename from URL like "http://localhost:5009/images/screenshot/android_mobile.jpg?t=1749217510777"
+          // or "https://host/captures/tmp/screenshot.jpg"
+          const url = new URL(screenshotUrl);
+          const pathname = url.pathname;
+          const filename = pathname.split('/').pop()?.split('?')[0]; // Get filename without query params
+          capture_filename = filename;
+
+          console.log('[@component:NodeSelectionPanel] Extracted filename from URL:', {
+            screenshotUrl,
+            pathname,
+            capture_filename,
+          });
+        } catch (urlError) {
+          // Fallback: extract filename directly from URL string
+          capture_filename = screenshotUrl.split('/').pop()?.split('?')[0];
+          console.log(
+            '[@component:NodeSelectionPanel] Fallback filename extraction:',
+            capture_filename,
+          );
+        }
+
+        if (!capture_filename) {
+          setVerificationResult('❌ Failed to extract filename from screenshot URL');
+          return;
+        }
+
+        console.log('[@component:NodeSelectionPanel] Using capture filename:', capture_filename);
+
+        // Step 2: Prepare verifications exactly like the editor
         const verifications = selectedNode.data.verifications.map((verification) => ({
           ...verification,
           verification_type: verification.verification_type || 'text',
         }));
 
-        // Step 3: Execute verifications directly
+        // Step 3: Execute verifications using the same pattern as the editor
         const verificationResponse = await fetch('/server/verification/batch/execute', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            host: selectedHost,
-            verifications: verifications,
-            source_filename: filename,
+            host: selectedHost, // Send full host object (same as editor)
+            verifications: verifications, // Send verifications directly (same as editor)
+            source_filename: capture_filename, // Use extracted filename (same as editor)
           }),
         });
 
         const verificationResult = await verificationResponse.json();
 
-        // Step 4: Process results
+        console.log(
+          '[@component:NodeSelectionPanel] Verification batch result:',
+          verificationResult,
+        );
+        console.log(
+          '[@component:NodeSelectionPanel] Verification result keys:',
+          Object.keys(verificationResult),
+        );
+        console.log(
+          '[@component:NodeSelectionPanel] Verification results:',
+          verificationResult.results,
+        );
+
+        // Step 4: Process results exactly like the editor does
         if (verificationResult.results && verificationResult.results.length > 0) {
           const results = verificationResult.results.map((result: any, index: number) => {
             if (result.success) {
               return `✅ Verification ${index + 1}: ${result.message || 'Success'}`;
             } else {
-              return `❌ Verification ${index + 1}: ${result.error || 'Failed'}`;
+              return `❌ Verification ${index + 1}: ${result.error || result.message || 'Failed'}`;
             }
           });
-          setVerificationResult(results.join('\n'));
-        } else if (verificationResult.error) {
-          setVerificationResult(`❌ ${verificationResult.error}`);
+
+          // Show success message with pass/fail count like the editor
+          const passedCount = verificationResult.passed_count || 0;
+          const totalCount = verificationResult.total_count || verificationResult.results.length;
+          const summaryMessage = `Verification completed: ${passedCount}/${totalCount} passed`;
+
+          setVerificationResult([summaryMessage, '', ...results].join('\n'));
+        } else if (verificationResult.success === false && verificationResult.error) {
+          // Only treat as error if there's an actual error and no results (same as editor)
+          const errorMessage =
+            verificationResult.message || verificationResult.error || 'Unknown error occurred';
+          console.log(
+            '[@component:NodeSelectionPanel] Batch execution failed with error:',
+            errorMessage,
+          );
+          setVerificationResult(`❌ Verification failed: ${errorMessage}`);
         } else {
-          setVerificationResult('✅ Verification completed');
+          // Fallback case - no results and no clear error (same as editor)
+          console.log('[@component:NodeSelectionPanel] No results received from batch execution');
+          setVerificationResult('❌ No verification results received');
         }
       } catch (err: any) {
         console.error('[@component:NodeSelectionPanel] Error executing verifications:', err);
-        setVerificationResult(`❌ ${err.message}`);
+        setVerificationResult(`❌ Error running verifications: ${err.message}`);
       } finally {
         setIsRunningVerifications(false);
       }
