@@ -77,14 +77,29 @@ export const ActionItem: React.FC<ActionItemProps> = ({
               }
               // Find the selected action to display its label
               let selectedLabel = '';
-              Object.values(availableActionTypes).forEach((actions) => {
-                if (Array.isArray(actions)) {
-                  const actionItem = actions.find((a) => a.command === selected);
-                  if (actionItem) {
-                    selectedLabel = actionItem.label;
+
+              // Search through all action categories to find the action (same logic as ActionsList)
+              for (const [category, categoryData] of Object.entries(availableActionTypes)) {
+                let actions = [];
+
+                if (Array.isArray(categoryData)) {
+                  // Direct array (flat structure)
+                  actions = categoryData;
+                } else if (categoryData && typeof categoryData === 'object') {
+                  // Nested structure - get the array from the nested object
+                  const nestedActions = categoryData[category];
+                  if (Array.isArray(nestedActions)) {
+                    actions = nestedActions;
                   }
                 }
-              });
+
+                const actionItem = actions.find((a) => a.command === selected);
+                if (actionItem) {
+                  selectedLabel = actionItem.label;
+                  break;
+                }
+              }
+
               return selectedLabel || selected;
             }}
           >
