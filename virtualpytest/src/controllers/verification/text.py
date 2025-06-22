@@ -129,13 +129,12 @@ class TextVerificationController(VerificationControllerInterface):
             Path to saved cropped image or None if failed
         """
         try:
-            # Create flat directory structure: /tmp/{model}/
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            output_dir = os.path.join(base_dir, 'tmp', model)
-            os.makedirs(output_dir, exist_ok=True)
+            # Create results directory - same as image verification
+            results_dir = '/var/www/html/stream/verification_results'
+            os.makedirs(results_dir, exist_ok=True)
             
             # Use consistent naming: source_cropped_{verification_index}.png
-            cropped_source_path = os.path.join(output_dir, f'source_cropped_{verification_index}.png')
+            cropped_source_path = os.path.join(results_dir, f'source_cropped_{verification_index}.png')
             
             # Read and crop source image using OpenCV
             img = cv2.imread(source_image_path)
@@ -248,13 +247,12 @@ class TextVerificationController(VerificationControllerInterface):
             Path to saved source image or None if failed
         """
         try:
-            # Create flat directory structure: /tmp/{model}/
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            output_dir = os.path.join(base_dir, 'tmp', model)
-            os.makedirs(output_dir, exist_ok=True)
+            # Create results directory - same as image verification
+            results_dir = '/var/www/html/stream/verification_results'
+            os.makedirs(results_dir, exist_ok=True)
             
             # Use consistent naming: source_image_{verification_index}.png
-            saved_source_path = os.path.join(output_dir, f'source_image_{verification_index}.png')
+            saved_source_path = os.path.join(results_dir, f'source_image_{verification_index}.png')
             
             # Copy source image to output location
             import shutil
@@ -565,8 +563,7 @@ class TextVerificationController(VerificationControllerInterface):
                 print(f"[@controller:TextVerification] Image cropped using OpenCV to area ({x},{y},{width},{height})")
             
             # Save cropped image to temporary file for OCR using consistent naming
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            temp_dir = os.path.join(base_dir, 'tmp', 'text_ocr')
+            temp_dir = '/tmp/text_ocr'
             os.makedirs(temp_dir, exist_ok=True)
             
             # Use simple incremental naming instead of timestamp
