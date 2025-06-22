@@ -430,7 +430,7 @@ def save_text_reference():
         
         print(f"[@route:server_verification_common:save_text_reference] Saving to database: {reference_name} for model: {model}")
         
-        # Save text reference to database using images table with type='reference_text'
+        # Save text reference to database using save_reference function
         # For text references, we store text data in area field and use a placeholder R2 path
         extended_area = {
             **(area or {}),
@@ -439,7 +439,7 @@ def save_text_reference():
             'confidence': text_data.get('confidence', 0.8)
         }
         
-        db_result = save_image(
+        db_result = save_reference(
             name=reference_name,
             device_model=model,
             type='reference_text',  # Use reference_text type for text references

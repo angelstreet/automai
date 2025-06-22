@@ -226,5 +226,3 @@ def delete_reference(team_id: str, reference_id: str = None, name: str = None, d
             'success': False,
             'error': str(e)
         }
-
-# Deprecated save_image alias removed - use save_reference instead 
