@@ -94,11 +94,6 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
     async (formData: any) => {
       console.log('[@context:NodeEdgeManagementProvider] === STARTING NODE SAVE ===');
       console.log('[@context:NodeEdgeManagementProvider] Form data received:', formData);
-      console.log(
-        '[@context:NodeEdgeManagementProvider] formData.verifications:',
-        formData.verifications,
-      );
-      console.log('[@context:NodeEdgeManagementProvider] formData.data:', formData.data);
       console.log('[@context:NodeEdgeManagementProvider] Current selected node:', selectedNode);
       console.log('[@context:NodeEdgeManagementProvider] Is new node:', isNewNode);
 
@@ -132,11 +127,6 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
 
           for (const verification of verificationsToSave) {
             try {
-              console.log(
-                `[@context:NodeEdgeManagementProvider] Saving individual verification:`,
-                verification,
-              );
-
               const response = await fetch('/server/verifications/save-verification', {
                 method: 'POST',
                 headers: {
@@ -152,11 +142,6 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
               });
 
               const result = await response.json();
-              console.log(
-                `[@context:NodeEdgeManagementProvider] Verification save response:`,
-                result,
-              );
-
               if (result.success && result.verification_id) {
                 const message = result.reused
                   ? 'Reused existing verification'
@@ -166,10 +151,6 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
                 );
                 // Store the verification ID for tree persistence
                 verificationIds.push(result.verification_id);
-                console.log(
-                  `[@context:NodeEdgeManagementProvider] verificationIds array after push:`,
-                  verificationIds,
-                );
               } else {
                 console.error(
                   `[@context:NodeEdgeManagementProvider] Failed to save verification: ${result.error}`,
@@ -182,17 +163,11 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
               );
             }
           }
-        } else {
-          console.log('[@context:NodeEdgeManagementProvider] No verifications to save');
         }
 
         console.log(
-          `[@context:NodeEdgeManagementProvider] FINAL verificationIds array:`,
+          `[@context:NodeEdgeManagementProvider] Verification IDs for tree storage:`,
           verificationIds,
-        );
-        console.log(
-          `[@context:NodeEdgeManagementProvider] verificationIds.length:`,
-          verificationIds.length,
         );
 
         // Step 2: Prepare node data for saving
@@ -200,12 +175,6 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
 
         if (isNewNode) {
           // For new nodes, use form data as base
-          console.log('[@context:NodeEdgeManagementProvider] Preparing NEW node data...');
-          console.log(
-            '[@context:NodeEdgeManagementProvider] formData.data before node preparation:',
-            formData.data,
-          );
-
           updatedNodeData = {
             ...formData,
             data: {
@@ -218,24 +187,11 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
             '[@context:NodeEdgeManagementProvider] NEW node data prepared:',
             updatedNodeData,
           );
-          console.log(
-            '[@context:NodeEdgeManagementProvider] NEW node verification_ids:',
-            updatedNodeData.data.verification_ids,
-          );
         } else if (selectedNode) {
           // For existing nodes, preserve original node structure and only update modified fields
-          console.log('[@context:NodeEdgeManagementProvider] Preparing EXISTING node data...');
           console.log(
             '[@context:NodeEdgeManagementProvider] ORIGINAL node before update:',
             selectedNode,
-          );
-          console.log(
-            '[@context:NodeEdgeManagementProvider] selectedNode.data before update:',
-            selectedNode.data,
-          );
-          console.log(
-            '[@context:NodeEdgeManagementProvider] formData.data before merge:',
-            formData.data,
           );
 
           updatedNodeData = {
@@ -254,14 +210,6 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
             '[@context:NodeEdgeManagementProvider] UPDATED node data prepared:',
             updatedNodeData,
           );
-          console.log(
-            '[@context:NodeEdgeManagementProvider] UPDATED node verification_ids:',
-            updatedNodeData.data.verification_ids,
-          );
-          console.log(
-            '[@context:NodeEdgeManagementProvider] UPDATED node verifications:',
-            updatedNodeData.data.verifications,
-          );
         } else {
           throw new Error('No selected node for update and not creating new node');
         }
@@ -275,10 +223,6 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           };
 
           console.log('[@context:NodeEdgeManagementProvider] Final NEW node to be added:', newNode);
-          console.log(
-            '[@context:NodeEdgeManagementProvider] Final NEW node verification_ids:',
-            newNode.data.verification_ids,
-          );
           setNodes((nds: UINavigationNode[]) => [...nds, newNode]);
           console.log('[@context:NodeEdgeManagementProvider] Created new node:', newNode.id);
         } else if (selectedNode) {
@@ -287,15 +231,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
             if (node.id === selectedNode.id) {
               console.log('[@context:NodeEdgeManagementProvider] Replacing node:', node.id);
               console.log('[@context:NodeEdgeManagementProvider] OLD node data:', node);
-              console.log(
-                '[@context:NodeEdgeManagementProvider] OLD node verification_ids:',
-                node.data.verification_ids,
-              );
               console.log('[@context:NodeEdgeManagementProvider] NEW node data:', updatedNodeData);
-              console.log(
-                '[@context:NodeEdgeManagementProvider] NEW node verification_ids:',
-                updatedNodeData.data.verification_ids,
-              );
               return updatedNodeData; // ✅ Use the carefully prepared node data
             }
             return node;
@@ -303,32 +239,11 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
 
           setNodes(updatedNodes);
           console.log('[@context:NodeEdgeManagementProvider] Updated node:', selectedNode.id);
-          console.log(
-            '[@context:NodeEdgeManagementProvider] Updated nodes array length:',
-            updatedNodes.length,
-          );
-
-          // Log the specific updated node
-          const updatedNode = updatedNodes.find((n) => n.id === selectedNode.id);
-          if (updatedNode) {
-            console.log(
-              '[@context:NodeEdgeManagementProvider] Final updated node in array:',
-              updatedNode,
-            );
-            console.log(
-              '[@context:NodeEdgeManagementProvider] Final updated node verification_ids:',
-              updatedNode.data.verification_ids,
-            );
-          }
         }
 
         // Step 3: Auto-save tree to persist verifications to database
         console.log(
           '[@context:NodeEdgeManagementProvider] Auto-saving tree with verifications to database',
-        );
-        console.log(
-          '[@context:NodeEdgeManagementProvider] Current nodes state before tree save:',
-          nodes,
         );
 
         await saveToConfig(userInterfaceId);
