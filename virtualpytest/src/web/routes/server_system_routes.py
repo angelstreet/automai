@@ -546,3 +546,69 @@ class Host(TypedDict):
     lockedBy: Optional[str]
     lockedAt: Optional[float]
 
+@system_bp.route('/server/system/getAvailableActions', methods=['POST'])
+def get_available_actions():
+    """Get available actions for a specific host."""
+    try:
+        data = request.get_json()
+        host = data.get('host')
+        
+        if not host:
+            return jsonify({'success': False, 'error': 'Host data is required'}), 400
+        
+        host_name = host.get('host_name')
+        if not host_name:
+            return jsonify({'success': False, 'error': 'Host name is required'}), 400
+        
+        print(f"[@route:server_system_routes:get_available_actions] Getting available actions for host: {host_name}")
+        
+        # Get host from connected hosts registry
+        connected_hosts = get_host_registry()
+        host_data = connected_hosts.get(host_name)
+        if not host_data:
+            print(f"[@route:server_system_routes:get_available_actions] Host {host_name} not found in connected hosts")
+            return jsonify({'success': False, 'error': f'Host {host_name} not found'}), 404
+        
+        # Get available actions from host data
+        available_actions = host_data.get('available_actions', {})
+        
+        if not available_actions:
+            print(f"[@route:server_system_routes:get_available_actions] No actions available for host {host_name}")
+            return jsonify({'success': True, 'actions': []})
+        
+        # Transform actions to the expected format for the frontend
+        transformed_actions = []
+        
+        for category, actions_list in available_actions.items():
+            if isinstance(actions_list, list):
+                for action in actions_list:
+                    if isinstance(action, dict):
+                        # Action is already in the correct format
+                        transformed_action = {
+                            'id': action.get('id', ''),
+                            'label': action.get('label', ''),
+                            'command': action.get('command', ''),
+                            'params': action.get('params', {}),
+                            'description': action.get('description', ''),
+                            'category': category,
+                            'requiresInput': action.get('requiresInput', False)
+                        }
+                        
+                        # Add input fields if required
+                        if action.get('requiresInput', False):
+                            transformed_action['inputLabel'] = action.get('inputLabel', 'Input')
+                            transformed_action['inputPlaceholder'] = action.get('inputPlaceholder', '')
+                        
+                        transformed_actions.append(transformed_action)
+        
+        print(f"[@route:server_system_routes:get_available_actions] Returning {len(transformed_actions)} actions for host {host_name}")
+        
+        return jsonify({
+            'success': True,
+            'actions': transformed_actions
+        })
+        
+    except Exception as e:
+        print(f"[@route:server_system_routes:get_available_actions] Error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+

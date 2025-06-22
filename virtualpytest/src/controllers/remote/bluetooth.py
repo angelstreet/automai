@@ -353,18 +353,170 @@ class BluetoothRemoteController(RemoteControllerInterface):
     def get_available_actions(self) -> Dict[str, Any]:
         """Get available actions for this Bluetooth controller."""
         return {
-            'basic_navigation': ['navigate_up', 'navigate_down', 'navigate_left', 'navigate_right'],
-            'control': ['select', 'back', 'home', 'menu'],
-            'power': ['power'],
-            'volume': ['volume_up', 'volume_down', 'mute'],
-            'media': ['play_pause', 'fast_forward', 'rewind'],
-            'text_input': ['input_text'],
-            'sequences': ['execute_sequence'],
-            'bluetooth_specific': {
-                'pairing': ['pair_device'],
-                'supported_keys': list(self.BT_KEYCODES.keys()),
-                'hid_features': ['alphanumeric_input', 'media_control', 'system_control']
-            }
+            'basic_navigation': [
+                {
+                    'id': 'press_key_up',
+                    'label': 'Navigate Up',
+                    'command': 'press_key',
+                    'params': {'key': 'UP'},
+                    'description': 'Navigate up in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_down',
+                    'label': 'Navigate Down',
+                    'command': 'press_key',
+                    'params': {'key': 'DOWN'},
+                    'description': 'Navigate down in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_left',
+                    'label': 'Navigate Left',
+                    'command': 'press_key',
+                    'params': {'key': 'LEFT'},
+                    'description': 'Navigate left in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_right',
+                    'label': 'Navigate Right',
+                    'command': 'press_key',
+                    'params': {'key': 'RIGHT'},
+                    'description': 'Navigate right in the interface',
+                    'requiresInput': False
+                }
+            ],
+            'control': [
+                {
+                    'id': 'press_key_ok',
+                    'label': 'Select/OK',
+                    'command': 'press_key',
+                    'params': {'key': 'OK'},
+                    'description': 'Select current item',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_back',
+                    'label': 'Back',
+                    'command': 'press_key',
+                    'params': {'key': 'BACK'},
+                    'description': 'Go back to previous screen',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_home',
+                    'label': 'Home',
+                    'command': 'press_key',
+                    'params': {'key': 'HOME'},
+                    'description': 'Go to home screen',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_menu',
+                    'label': 'Menu',
+                    'command': 'press_key',
+                    'params': {'key': 'MENU'},
+                    'description': 'Open menu',
+                    'requiresInput': False
+                }
+            ],
+            'power': [
+                {
+                    'id': 'press_key_power',
+                    'label': 'Power',
+                    'command': 'press_key',
+                    'params': {'key': 'POWER'},
+                    'description': 'Power on/off device',
+                    'requiresInput': False
+                }
+            ],
+            'volume_control': [
+                {
+                    'id': 'press_key_volume_up',
+                    'label': 'Volume Up',
+                    'command': 'press_key',
+                    'params': {'key': 'VOLUME_UP'},
+                    'description': 'Increase volume',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_volume_down',
+                    'label': 'Volume Down',
+                    'command': 'press_key',
+                    'params': {'key': 'VOLUME_DOWN'},
+                    'description': 'Decrease volume',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_mute',
+                    'label': 'Mute',
+                    'command': 'press_key',
+                    'params': {'key': 'MUTE'},
+                    'description': 'Toggle mute',
+                    'requiresInput': False
+                }
+            ],
+            'media_control': [
+                {
+                    'id': 'press_key_play_pause',
+                    'label': 'Play/Pause',
+                    'command': 'press_key',
+                    'params': {'key': 'PLAY_PAUSE'},
+                    'description': 'Toggle play/pause for media',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_fast_forward',
+                    'label': 'Fast Forward',
+                    'command': 'press_key',
+                    'params': {'key': 'FAST_FORWARD'},
+                    'description': 'Fast forward media',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_rewind',
+                    'label': 'Rewind',
+                    'command': 'press_key',
+                    'params': {'key': 'REWIND'},
+                    'description': 'Rewind media',
+                    'requiresInput': False
+                }
+            ],
+            'input': [
+                {
+                    'id': 'input_text',
+                    'label': 'Input Text',
+                    'command': 'input_text',
+                    'params': {},
+                    'description': 'Type text using Bluetooth HID',
+                    'requiresInput': True,
+                    'inputLabel': 'Text to input',
+                    'inputPlaceholder': 'Enter text...'
+                }
+            ],
+            'bluetooth_specific': [
+                {
+                    'id': 'pair_device',
+                    'label': 'Pair Device',
+                    'command': 'pair_device',
+                    'params': {},
+                    'description': 'Pair with Bluetooth device',
+                    'requiresInput': True,
+                    'inputLabel': 'PIN (optional)',
+                    'inputPlaceholder': '0000'
+                },
+                {
+                    'id': 'execute_sequence',
+                    'label': 'Execute Sequence',
+                    'command': 'execute_sequence',
+                    'params': {},
+                    'description': 'Execute a sequence of commands',
+                    'requiresInput': True,
+                    'inputLabel': 'Command sequence (JSON)',
+                    'inputPlaceholder': '[{"action": "press_key", "params": {"key": "OK"}}]'
+                }
+            ]
         }
 
 

@@ -654,23 +654,162 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Tap error: {e}")
             return False
     
-    def get_available_actions(self) -> List[Dict[str, Any]]:
+    def get_available_actions(self) -> Dict[str, Any]:
         """Get available actions for this Android mobile controller."""
-        return [
-            {'command': 'press_key', 'params': {'key': {'type': 'string', 'required': True}}},
-            {'command': 'input_text', 'params': {'text': {'type': 'string', 'required': True}}},
-            {'command': 'launch_app', 'params': {'package_name': {'type': 'string', 'required': True}}},
-            {'command': 'close_app', 'params': {'package_name': {'type': 'string', 'required': True}}},
-            {'command': 'get_installed_apps', 'params': {}},
-            {'command': 'dump_ui_elements', 'params': {}},
-            {'command': 'click_element', 'params': {'element': {'type': 'object', 'required': True}}},
-            {'command': 'find_element_by_text', 'params': {'text': {'type': 'string', 'required': True}}},
-            {'command': 'find_element_by_resource_id', 'params': {'resource_id': {'type': 'string', 'required': True}}},
-            {'command': 'find_element_by_content_desc', 'params': {'content_desc': {'type': 'string', 'required': True}}},
-            {'command': 'get_device_resolution', 'params': {}},
-            {'command': 'take_screenshot', 'params': {}},
-            {'command': 'tap_coordinates', 'params': {'x': {'type': 'int', 'required': True}, 'y': {'type': 'int', 'required': True}}}
-        ]
+        return {
+            'basic_navigation': [
+                {
+                    'id': 'press_key_up',
+                    'label': 'Navigate Up',
+                    'command': 'press_key',
+                    'params': {'key': 'UP'},
+                    'description': 'Navigate up in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_down',
+                    'label': 'Navigate Down', 
+                    'command': 'press_key',
+                    'params': {'key': 'DOWN'},
+                    'description': 'Navigate down in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_left',
+                    'label': 'Navigate Left',
+                    'command': 'press_key', 
+                    'params': {'key': 'LEFT'},
+                    'description': 'Navigate left in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_right',
+                    'label': 'Navigate Right',
+                    'command': 'press_key',
+                    'params': {'key': 'RIGHT'}, 
+                    'description': 'Navigate right in the interface',
+                    'requiresInput': False
+                }
+            ],
+            'control': [
+                {
+                    'id': 'press_key_ok',
+                    'label': 'Select/OK',
+                    'command': 'press_key',
+                    'params': {'key': 'OK'},
+                    'description': 'Select current item',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_back',
+                    'label': 'Back',
+                    'command': 'press_key',
+                    'params': {'key': 'BACK'},
+                    'description': 'Go back to previous screen',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_home',
+                    'label': 'Home',
+                    'command': 'press_key',
+                    'params': {'key': 'HOME'},
+                    'description': 'Go to home screen',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_menu',
+                    'label': 'Menu',
+                    'command': 'press_key',
+                    'params': {'key': 'MENU'},
+                    'description': 'Open menu',
+                    'requiresInput': False
+                }
+            ],
+            'input': [
+                {
+                    'id': 'input_text',
+                    'label': 'Input Text',
+                    'command': 'input_text',
+                    'params': {},
+                    'description': 'Type text into current field',
+                    'requiresInput': True,
+                    'inputLabel': 'Text to input',
+                    'inputPlaceholder': 'Enter text...'
+                }
+            ],
+            'app_management': [
+                {
+                    'id': 'launch_app',
+                    'label': 'Launch App',
+                    'command': 'launch_app',
+                    'params': {},
+                    'description': 'Launch an application',
+                    'requiresInput': True,
+                    'inputLabel': 'Package name',
+                    'inputPlaceholder': 'com.example.app'
+                },
+                {
+                    'id': 'close_app',
+                    'label': 'Close App',
+                    'command': 'close_app',
+                    'params': {},
+                    'description': 'Close an application',
+                    'requiresInput': True,
+                    'inputLabel': 'Package name', 
+                    'inputPlaceholder': 'com.example.app'
+                }
+            ],
+            'coordinate_input': [
+                {
+                    'id': 'tap_coordinates',
+                    'label': 'Tap Coordinates',
+                    'command': 'tap_coordinates',
+                    'params': {},
+                    'description': 'Tap at specific screen coordinates',
+                    'requiresInput': True,
+                    'inputLabel': 'Coordinates (x,y)',
+                    'inputPlaceholder': '100,200'
+                }
+            ],
+            'ui_interaction': [
+                {
+                    'id': 'dump_ui_elements',
+                    'label': 'Dump UI Elements',
+                    'command': 'dump_ui_elements',
+                    'params': {},
+                    'description': 'Get current screen UI elements',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'click_element',
+                    'label': 'Click UI Element',
+                    'command': 'click_element',
+                    'params': {},
+                    'description': 'Click on a UI element by ID',
+                    'requiresInput': True,
+                    'inputLabel': 'Element ID',
+                    'inputPlaceholder': 'element_id'
+                }
+            ],
+            'utility': [
+                {
+                    'id': 'take_screenshot',
+                    'label': 'Take Screenshot',
+                    'command': 'take_screenshot',
+                    'params': {},
+                    'description': 'Capture current screen',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'get_installed_apps',
+                    'label': 'Get Installed Apps',
+                    'command': 'get_installed_apps',
+                    'params': {},
+                    'description': 'List all installed applications',
+                    'requiresInput': False
+                }
+            ]
+        }
 
 # Backward compatibility alias
 RealAndroidMobileController = AndroidMobileRemoteController 

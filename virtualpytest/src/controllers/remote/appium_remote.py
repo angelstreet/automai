@@ -674,23 +674,212 @@ class AppiumRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Tap error: {e}")
             return False
     
-    def get_available_actions(self) -> List[Dict[str, Any]]:
+    def get_available_actions(self) -> Dict[str, Any]:
         """Get available actions for this Appium remote controller."""
-        return [
-            {'command': 'press_key', 'params': {'key': {'type': 'string', 'required': True}}},
-            {'command': 'input_text', 'params': {'text': {'type': 'string', 'required': True}}},
-            {'command': 'launch_app', 'params': {'app_identifier': {'type': 'string', 'required': True}}},
-            {'command': 'close_app', 'params': {'app_identifier': {'type': 'string', 'required': True}}},
-            {'command': 'get_installed_apps', 'params': {}},
-            {'command': 'dump_ui_elements', 'params': {}},
-            {'command': 'click_element', 'params': {'element': {'type': 'object', 'required': True}}},
-            {'command': 'find_element_by_text', 'params': {'text': {'type': 'string', 'required': True}}},
-            {'command': 'find_element_by_identifier', 'params': {'identifier': {'type': 'string', 'required': True}}},
-            {'command': 'find_element_by_content_desc', 'params': {'content_desc': {'type': 'string', 'required': True}}},
-            {'command': 'get_device_resolution', 'params': {}},
-            {'command': 'take_screenshot', 'params': {}},
-            {'command': 'tap_coordinates', 'params': {'x': {'type': 'int', 'required': True}, 'y': {'type': 'int', 'required': True}}}
-        ]
+        return {
+            'basic_navigation': [
+                {
+                    'id': 'press_key_up',
+                    'label': 'Navigate Up',
+                    'command': 'press_key',
+                    'params': {'key': 'UP'},
+                    'description': 'Navigate up in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_down',
+                    'label': 'Navigate Down',
+                    'command': 'press_key',
+                    'params': {'key': 'DOWN'},
+                    'description': 'Navigate down in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_left',
+                    'label': 'Navigate Left',
+                    'command': 'press_key',
+                    'params': {'key': 'LEFT'},
+                    'description': 'Navigate left in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_right',
+                    'label': 'Navigate Right',
+                    'command': 'press_key',
+                    'params': {'key': 'RIGHT'},
+                    'description': 'Navigate right in the interface',
+                    'requiresInput': False
+                }
+            ],
+            'control': [
+                {
+                    'id': 'press_key_ok',
+                    'label': 'Select/OK',
+                    'command': 'press_key',
+                    'params': {'key': 'OK'},
+                    'description': 'Select current item',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_back',
+                    'label': 'Back',
+                    'command': 'press_key',
+                    'params': {'key': 'BACK'},
+                    'description': 'Go back to previous screen',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_home',
+                    'label': 'Home',
+                    'command': 'press_key',
+                    'params': {'key': 'HOME'},
+                    'description': 'Go to home screen',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_menu',
+                    'label': 'Menu',
+                    'command': 'press_key',
+                    'params': {'key': 'MENU'},
+                    'description': 'Open menu',
+                    'requiresInput': False
+                }
+            ],
+            'input': [
+                {
+                    'id': 'input_text',
+                    'label': 'Input Text',
+                    'command': 'input_text',
+                    'params': {},
+                    'description': 'Type text into current field',
+                    'requiresInput': True,
+                    'inputLabel': 'Text to input',
+                    'inputPlaceholder': 'Enter text...'
+                }
+            ],
+            'app_management': [
+                {
+                    'id': 'launch_app',
+                    'label': 'Launch App',
+                    'command': 'launch_app',
+                    'params': {},
+                    'description': 'Launch an application',
+                    'requiresInput': True,
+                    'inputLabel': 'App identifier',
+                    'inputPlaceholder': 'com.example.app'
+                },
+                {
+                    'id': 'close_app',
+                    'label': 'Close App',
+                    'command': 'close_app',
+                    'params': {},
+                    'description': 'Close an application',
+                    'requiresInput': True,
+                    'inputLabel': 'App identifier',
+                    'inputPlaceholder': 'com.example.app'
+                },
+                {
+                    'id': 'get_installed_apps',
+                    'label': 'Get Installed Apps',
+                    'command': 'get_installed_apps',
+                    'params': {},
+                    'description': 'List all installed applications',
+                    'requiresInput': False
+                }
+            ],
+            'ui_interaction': [
+                {
+                    'id': 'dump_ui_elements',
+                    'label': 'Dump UI Elements',
+                    'command': 'dump_ui_elements',
+                    'params': {},
+                    'description': 'Get current screen UI elements',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'click_element',
+                    'label': 'Click UI Element',
+                    'command': 'click_element',
+                    'params': {},
+                    'description': 'Click on a UI element',
+                    'requiresInput': True,
+                    'inputLabel': 'Element (JSON)',
+                    'inputPlaceholder': '{"text": "Button", "resource_id": "button_id"}'
+                },
+                {
+                    'id': 'find_element_by_text',
+                    'label': 'Find Element by Text',
+                    'command': 'find_element_by_text',
+                    'params': {},
+                    'description': 'Find UI element by visible text',
+                    'requiresInput': True,
+                    'inputLabel': 'Text to search for',
+                    'inputPlaceholder': 'Button text'
+                },
+                {
+                    'id': 'find_element_by_identifier',
+                    'label': 'Find Element by ID',
+                    'command': 'find_element_by_identifier',
+                    'params': {},
+                    'description': 'Find UI element by identifier',
+                    'requiresInput': True,
+                    'inputLabel': 'Element identifier',
+                    'inputPlaceholder': 'resource_id or accessibility_id'
+                },
+                {
+                    'id': 'find_element_by_content_desc',
+                    'label': 'Find Element by Description',
+                    'command': 'find_element_by_content_desc',
+                    'params': {},
+                    'description': 'Find UI element by content description',
+                    'requiresInput': True,
+                    'inputLabel': 'Content description',
+                    'inputPlaceholder': 'Element description'
+                }
+            ],
+            'coordinate_input': [
+                {
+                    'id': 'tap_coordinates',
+                    'label': 'Tap Coordinates',
+                    'command': 'tap_coordinates',
+                    'params': {},
+                    'description': 'Tap at specific screen coordinates',
+                    'requiresInput': True,
+                    'inputLabel': 'Coordinates (x,y)',
+                    'inputPlaceholder': '100,200'
+                }
+            ],
+            'utility': [
+                {
+                    'id': 'get_device_resolution',
+                    'label': 'Get Device Resolution',
+                    'command': 'get_device_resolution',
+                    'params': {},
+                    'description': 'Get device screen resolution',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'take_screenshot',
+                    'label': 'Take Screenshot',
+                    'command': 'take_screenshot',
+                    'params': {},
+                    'description': 'Capture current screen',
+                    'requiresInput': False
+                }
+            ],
+            'sequences': [
+                {
+                    'id': 'execute_sequence',
+                    'label': 'Execute Sequence',
+                    'command': 'execute_sequence',
+                    'params': {},
+                    'description': 'Execute a sequence of commands',
+                    'requiresInput': True,
+                    'inputLabel': 'Command sequence (JSON)',
+                    'inputPlaceholder': '[{"action": "press_key", "params": {"key": "OK"}}]'
+                }
+            ]
+        }
 
 # Backward compatibility alias
 UniversalAppiumController = AppiumRemoteController 

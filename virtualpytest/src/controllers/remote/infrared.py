@@ -428,23 +428,330 @@ class IRRemoteController(RemoteControllerInterface):
     def get_available_actions(self) -> Dict[str, Any]:
         """Get available actions for this IR controller."""
         return {
-            'basic_navigation': ['navigate_up', 'navigate_down', 'navigate_left', 'navigate_right'],
-            'control': ['select', 'back', 'home', 'menu'],
-            'power': ['power'],
-            'volume': ['volume_up', 'volume_down', 'mute'],
-            'media': ['play_pause', 'fast_forward', 'rewind'],
-            'text_input': ['input_text'],
-            'sequences': ['execute_sequence'],
-            'ir_specific': {
-                'power_control': ['power_on', 'power_off'],
-                'channel_control': ['change_channel'],
-                'volume_control': ['set_volume'],
-                'numeric_input': ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
-                'color_buttons': ['RED', 'GREEN', 'YELLOW', 'BLUE'],
-                'function_buttons': ['F1', 'F2', 'F3', 'F4'],
-                'tv_controls': ['CHANNEL_UP', 'CHANNEL_DOWN', 'LAST', 'GUIDE', 'INFO'],
-                'supported_keys': list(self.IR_KEYCODES.keys())
-            }
+            'basic_navigation': [
+                {
+                    'id': 'press_key_up',
+                    'label': 'Navigate Up',
+                    'command': 'press_key',
+                    'params': {'key': 'UP'},
+                    'description': 'Navigate up in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_down',
+                    'label': 'Navigate Down',
+                    'command': 'press_key',
+                    'params': {'key': 'DOWN'},
+                    'description': 'Navigate down in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_left',
+                    'label': 'Navigate Left',
+                    'command': 'press_key',
+                    'params': {'key': 'LEFT'},
+                    'description': 'Navigate left in the interface',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_right',
+                    'label': 'Navigate Right',
+                    'command': 'press_key',
+                    'params': {'key': 'RIGHT'},
+                    'description': 'Navigate right in the interface',
+                    'requiresInput': False
+                }
+            ],
+            'control': [
+                {
+                    'id': 'press_key_ok',
+                    'label': 'Select/OK',
+                    'command': 'press_key',
+                    'params': {'key': 'OK'},
+                    'description': 'Select current item',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_back',
+                    'label': 'Back',
+                    'command': 'press_key',
+                    'params': {'key': 'BACK'},
+                    'description': 'Go back to previous screen',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_home',
+                    'label': 'Home',
+                    'command': 'press_key',
+                    'params': {'key': 'HOME'},
+                    'description': 'Go to home screen',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_menu',
+                    'label': 'Menu',
+                    'command': 'press_key',
+                    'params': {'key': 'MENU'},
+                    'description': 'Open menu',
+                    'requiresInput': False
+                }
+            ],
+            'power': [
+                {
+                    'id': 'press_key_power',
+                    'label': 'Power',
+                    'command': 'press_key',
+                    'params': {'key': 'POWER'},
+                    'description': 'Power on/off device',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'power_on',
+                    'label': 'Power On',
+                    'command': 'power_on',
+                    'params': {},
+                    'description': 'Turn device on',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'power_off',
+                    'label': 'Power Off',
+                    'command': 'power_off',
+                    'params': {},
+                    'description': 'Turn device off',
+                    'requiresInput': False
+                }
+            ],
+            'volume_control': [
+                {
+                    'id': 'press_key_volume_up',
+                    'label': 'Volume Up',
+                    'command': 'press_key',
+                    'params': {'key': 'VOLUME_UP'},
+                    'description': 'Increase volume',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_volume_down',
+                    'label': 'Volume Down',
+                    'command': 'press_key',
+                    'params': {'key': 'VOLUME_DOWN'},
+                    'description': 'Decrease volume',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_mute',
+                    'label': 'Mute',
+                    'command': 'press_key',
+                    'params': {'key': 'MUTE'},
+                    'description': 'Toggle mute',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'set_volume',
+                    'label': 'Set Volume Level',
+                    'command': 'set_volume',
+                    'params': {},
+                    'description': 'Set volume to specific level (0-100)',
+                    'requiresInput': True,
+                    'inputLabel': 'Volume level (0-100)',
+                    'inputPlaceholder': '50'
+                }
+            ],
+            'media_control': [
+                {
+                    'id': 'press_key_play_pause',
+                    'label': 'Play/Pause',
+                    'command': 'press_key',
+                    'params': {'key': 'PLAY_PAUSE'},
+                    'description': 'Toggle play/pause for media',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_fast_forward',
+                    'label': 'Fast Forward',
+                    'command': 'press_key',
+                    'params': {'key': 'FAST_FORWARD'},
+                    'description': 'Fast forward media',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_rewind',
+                    'label': 'Rewind',
+                    'command': 'press_key',
+                    'params': {'key': 'REWIND'},
+                    'description': 'Rewind media',
+                    'requiresInput': False
+                }
+            ],
+            'channel_control': [
+                {
+                    'id': 'press_key_channel_up',
+                    'label': 'Channel Up',
+                    'command': 'press_key',
+                    'params': {'key': 'CHANNEL_UP'},
+                    'description': 'Go to next channel',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_channel_down',
+                    'label': 'Channel Down',
+                    'command': 'press_key',
+                    'params': {'key': 'CHANNEL_DOWN'},
+                    'description': 'Go to previous channel',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'change_channel',
+                    'label': 'Change Channel',
+                    'command': 'change_channel',
+                    'params': {},
+                    'description': 'Change to specific channel number',
+                    'requiresInput': True,
+                    'inputLabel': 'Channel number',
+                    'inputPlaceholder': '1'
+                }
+            ],
+            'numeric_input': [
+                {
+                    'id': 'press_key_0',
+                    'label': 'Number 0',
+                    'command': 'press_key',
+                    'params': {'key': '0'},
+                    'description': 'Press number 0',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_1',
+                    'label': 'Number 1',
+                    'command': 'press_key',
+                    'params': {'key': '1'},
+                    'description': 'Press number 1',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_2',
+                    'label': 'Number 2',
+                    'command': 'press_key',
+                    'params': {'key': '2'},
+                    'description': 'Press number 2',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_3',
+                    'label': 'Number 3',
+                    'command': 'press_key',
+                    'params': {'key': '3'},
+                    'description': 'Press number 3',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_4',
+                    'label': 'Number 4',
+                    'command': 'press_key',
+                    'params': {'key': '4'},
+                    'description': 'Press number 4',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_5',
+                    'label': 'Number 5',
+                    'command': 'press_key',
+                    'params': {'key': '5'},
+                    'description': 'Press number 5',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_6',
+                    'label': 'Number 6',
+                    'command': 'press_key',
+                    'params': {'key': '6'},
+                    'description': 'Press number 6',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_7',
+                    'label': 'Number 7',
+                    'command': 'press_key',
+                    'params': {'key': '7'},
+                    'description': 'Press number 7',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_8',
+                    'label': 'Number 8',
+                    'command': 'press_key',
+                    'params': {'key': '8'},
+                    'description': 'Press number 8',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_9',
+                    'label': 'Number 9',
+                    'command': 'press_key',
+                    'params': {'key': '9'},
+                    'description': 'Press number 9',
+                    'requiresInput': False
+                }
+            ],
+            'color_buttons': [
+                {
+                    'id': 'press_key_red',
+                    'label': 'Red Button',
+                    'command': 'press_key',
+                    'params': {'key': 'RED'},
+                    'description': 'Press red color button',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_green',
+                    'label': 'Green Button',
+                    'command': 'press_key',
+                    'params': {'key': 'GREEN'},
+                    'description': 'Press green color button',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_yellow',
+                    'label': 'Yellow Button',
+                    'command': 'press_key',
+                    'params': {'key': 'YELLOW'},
+                    'description': 'Press yellow color button',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'press_key_blue',
+                    'label': 'Blue Button',
+                    'command': 'press_key',
+                    'params': {'key': 'BLUE'},
+                    'description': 'Press blue color button',
+                    'requiresInput': False
+                }
+            ],
+            'input': [
+                {
+                    'id': 'input_text',
+                    'label': 'Input Text',
+                    'command': 'input_text',
+                    'params': {},
+                    'description': 'Type text using IR remote',
+                    'requiresInput': True,
+                    'inputLabel': 'Text to input',
+                    'inputPlaceholder': 'Enter text...'
+                }
+            ],
+            'sequences': [
+                {
+                    'id': 'execute_sequence',
+                    'label': 'Execute Sequence',
+                    'command': 'execute_sequence',
+                    'params': {},
+                    'description': 'Execute a sequence of IR commands',
+                    'requiresInput': True,
+                    'inputLabel': 'Command sequence (JSON)',
+                    'inputPlaceholder': '[{"action": "press_key", "params": {"key": "OK"}}]'
+                }
+            ]
         }
 
 # Backward compatibility alias
