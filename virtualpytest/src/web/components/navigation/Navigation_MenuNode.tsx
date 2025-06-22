@@ -60,7 +60,12 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   const leftHandle = getHandleColors(id, 'leftTop', 'left-target', 'menu');
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent node double-click from triggering
+    e.preventDefault(); // Prevent default double-click behavior
+    e.nativeEvent.stopImmediatePropagation(); // Stop all event propagation immediately
+
+    console.log('[@component:UIMenuNode] Screenshot double-clicked, preventing node focus');
+
     if (screenshotUrl) {
       setIsScreenshotModalOpen(true);
     }
@@ -334,6 +339,14 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
             paddingTop: '0px',
           }}
           onClick={closeModal}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            e.nativeEvent.stopImmediatePropagation();
+            console.log(
+              '[@component:UIMenuNode] Modal overlay double-clicked, preventing node focus',
+            );
+          }}
         >
           <div
             style={{
@@ -346,6 +359,14 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
               padding: 0,
             }}
             onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              e.nativeEvent.stopImmediatePropagation();
+              console.log(
+                '[@component:UIMenuNode] Modal content double-clicked, preventing node focus',
+              );
+            }}
           >
             <img
               src={screenshotUrl}

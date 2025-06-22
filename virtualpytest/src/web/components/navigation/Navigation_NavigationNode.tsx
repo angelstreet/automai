@@ -146,6 +146,11 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent node double-click from triggering
+    e.preventDefault(); // Prevent default double-click behavior
+    e.nativeEvent.stopImmediatePropagation(); // Stop all event propagation immediately
+
+    console.log('[@component:UINavigationNode] Screenshot double-clicked, preventing node focus');
+
     if (screenshotUrl) {
       setIsScreenshotModalOpen(true);
     }
@@ -458,6 +463,14 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             paddingTop: '0px',
           }}
           onClick={closeModal}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            e.nativeEvent.stopImmediatePropagation();
+            console.log(
+              '[@component:UINavigationNode] Modal overlay double-clicked, preventing node focus',
+            );
+          }}
         >
           <div
             style={{
@@ -470,6 +483,14 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
               padding: 0,
             }}
             onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              e.nativeEvent.stopImmediatePropagation();
+              console.log(
+                '[@component:UINavigationNode] Modal content double-clicked, preventing node focus',
+              );
+            }}
           >
             {/* Full-size screenshot */}
             <img

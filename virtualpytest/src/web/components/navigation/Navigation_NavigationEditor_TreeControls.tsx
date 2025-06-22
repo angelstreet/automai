@@ -64,9 +64,9 @@ export const NavigationEditorTreeControls: React.FC<NavigationEditorTreeControls
           <MenuItem value="">
             <em>None</em>
           </MenuItem>
-          {safeNodes.map((node: TreeNode) => (
+          {safeNodes.map((node: any) => (
             <MenuItem key={node.id} value={node.id}>
-              {node.data?.label || node.id}
+              {node.label || node.data?.label || node.id}
             </MenuItem>
           ))}
         </Select>
