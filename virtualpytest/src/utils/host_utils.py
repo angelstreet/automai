@@ -203,6 +203,16 @@ def register_host_with_server():
                 # Start periodic ping thread
                 start_ping_thread()
                 
+                # Get available remote actions if remote controller exists
+                remote_controller = created_controllers.get('remote')
+                if remote_controller:
+                    try:
+                        actions = remote_controller.get_available_actions()
+                        global_host_object['available_remote_actions'] = actions
+                        print(f"   Added available remote actions for host {host_name}: {list(actions.keys()) if isinstance(actions, dict) else len(actions) if isinstance(actions, list) else type(actions)}")
+                    except Exception as e:
+                        print(f"   ⚠️ [HOST] Error getting available remote actions: {e}")
+                
             except Exception as parse_error:
                 print(f"⚠️ [HOST] Error parsing registration response: {parse_error}")
                 print(f"   Raw response: {response.text}")

@@ -22,20 +22,8 @@ export interface ControllerObject {
   status?: any;
 }
 
-export interface RemoteAction {
-  id: string;
-  label: string;
-  command: string;
-  params: any;
-  description: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-}
-
-export interface RemoteActions {
-  [category: string]: RemoteAction[];
-}
+// Import action types from the centralized ActionTypes
+import type { Actions } from '../controller/ActionTypes';
 
 /**
  * Canonical Host Type - Used consistently across all layers
@@ -76,7 +64,7 @@ export interface Host {
 
   // === VERIFICATION AND REMOTE ACTIONS DATA ===
   available_verification_types?: import('../verification/VerificationTypes').Verifications; // Available verification types from controllers
-  available_remote_actions?: RemoteActions; // Available remote actions from controllers
+  available_actions?: Actions; // Available actions from all controllers
 
   // === DEVICE LOCK MANAGEMENT ===
   isLocked: boolean; // Device lock status

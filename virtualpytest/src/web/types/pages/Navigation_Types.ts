@@ -1,5 +1,6 @@
 import { Node, Edge } from 'reactflow';
 
+import { EdgeAction } from '../controller/ActionTypes';
 import { Verification } from '../verification/VerificationTypes';
 
 // =====================================================
@@ -34,16 +35,8 @@ export interface UINavigationNodeData {
 // Define the navigation node type using ReactFlow's Node with our data type
 export type UINavigationNode = Node<UINavigationNodeData>;
 
-// Updated action interface for multiple actions with wait times
-export interface EdgeAction {
-  id: string;
-  label: string;
-  command: string;
-  params: any;
-  requiresInput?: boolean;
-  inputValue?: string;
-  waitTime: number;
-}
+// EdgeAction is now imported from ActionTypes.ts to maintain consistency
+export type { EdgeAction } from '../controller/ActionTypes';
 
 // Define the data type for navigation edges
 export interface UINavigationEdgeData {

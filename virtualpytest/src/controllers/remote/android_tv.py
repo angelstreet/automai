@@ -515,11 +515,13 @@ class AndroidTVRemoteController(RemoteControllerInterface):
     def get_available_actions(self) -> Dict[str, Any]:
         """Get available actions for this Android TV controller."""
         return {
-            'basic_navigation': [
+            'remote': [
+                # Navigation actions
                 {
                     'id': 'press_key_up',
                     'label': 'Navigate Up',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'UP'},
                     'description': 'Navigate up in the interface',
                     'requiresInput': False
@@ -527,7 +529,8 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 {
                     'id': 'press_key_down',
                     'label': 'Navigate Down',
-                    'command': 'press_key', 
+                    'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'DOWN'},
                     'description': 'Navigate down in the interface',
                     'requiresInput': False
@@ -536,6 +539,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_left',
                     'label': 'Navigate Left',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'LEFT'},
                     'description': 'Navigate left in the interface',
                     'requiresInput': False
@@ -544,16 +548,17 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_right',
                     'label': 'Navigate Right',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'RIGHT'},
                     'description': 'Navigate right in the interface',
                     'requiresInput': False
-                }
-            ],
-            'control': [
+                },
+                # Control actions
                 {
                     'id': 'press_key_ok',
                     'label': 'Select/OK',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'OK'},
                     'description': 'Select current item or confirm action',
                     'requiresInput': False
@@ -562,6 +567,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_back',
                     'label': 'Back',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'BACK'},
                     'description': 'Go back to previous screen',
                     'requiresInput': False
@@ -570,6 +576,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_home',
                     'label': 'Home',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'HOME'},
                     'description': 'Go to home screen',
                     'requiresInput': False
@@ -578,16 +585,17 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_menu',
                     'label': 'Menu',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'MENU'},
                     'description': 'Open context menu',
                     'requiresInput': False
-                }
-            ],
-            'media_control': [
+                },
+                # Media control actions
                 {
                     'id': 'press_key_play_pause',
                     'label': 'Play/Pause',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'MEDIA_PLAY_PAUSE'},
                     'description': 'Toggle play/pause for media',
                     'requiresInput': False
@@ -596,6 +604,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_stop',
                     'label': 'Stop',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'MEDIA_STOP'},
                     'description': 'Stop media playback',
                     'requiresInput': False
@@ -604,6 +613,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_next',
                     'label': 'Next Track',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'MEDIA_NEXT'},
                     'description': 'Skip to next track/chapter',
                     'requiresInput': False
@@ -612,6 +622,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_previous',
                     'label': 'Previous Track',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'MEDIA_PREVIOUS'},
                     'description': 'Go to previous track/chapter',
                     'requiresInput': False
@@ -620,6 +631,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_fast_forward',
                     'label': 'Fast Forward',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'MEDIA_FAST_FORWARD'},
                     'description': 'Fast forward media',
                     'requiresInput': False
@@ -628,16 +640,17 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_rewind',
                     'label': 'Rewind',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'MEDIA_REWIND'},
                     'description': 'Rewind media',
                     'requiresInput': False
-                }
-            ],
-            'volume_control': [
+                },
+                # Volume control actions
                 {
                     'id': 'press_key_volume_up',
                     'label': 'Volume Up',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'VOLUME_UP'},
                     'description': 'Increase volume',
                     'requiresInput': False
@@ -646,6 +659,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_volume_down',
                     'label': 'Volume Down',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'VOLUME_DOWN'},
                     'description': 'Decrease volume',
                     'requiresInput': False
@@ -654,28 +668,29 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'press_key_mute',
                     'label': 'Mute',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'VOLUME_MUTE'},
                     'description': 'Toggle mute',
                     'requiresInput': False
-                }
-            ],
-            'input': [
+                },
+                # Text input actions
                 {
                     'id': 'input_text',
                     'label': 'Input Text',
                     'command': 'input_text',
+                    'action_type': 'remote',
                     'params': {},
                     'description': 'Type text into current field',
                     'requiresInput': True,
                     'inputLabel': 'Text to input',
                     'inputPlaceholder': 'Enter text...'
-                }
-            ],
-            'app_management': [
+                },
+                # App management actions
                 {
                     'id': 'launch_app',
                     'label': 'Launch App',
                     'command': 'launch_app',
+                    'action_type': 'remote',
                     'params': {},
                     'description': 'Launch an application',
                     'requiresInput': True,
@@ -686,30 +701,31 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'close_app',
                     'label': 'Close App',
                     'command': 'close_app',
+                    'action_type': 'remote',
                     'params': {},
                     'description': 'Close an application',
                     'requiresInput': True,
                     'inputLabel': 'Package name',
                     'inputPlaceholder': 'com.example.app'
-                }
-            ],
-            'coordinate_input': [
+                },
+                # Coordinate actions
                 {
                     'id': 'tap_coordinates',
                     'label': 'Tap Coordinates',
                     'command': 'tap_coordinates',
+                    'action_type': 'remote',
                     'params': {},
                     'description': 'Tap at specific screen coordinates',
                     'requiresInput': True,
                     'inputLabel': 'Coordinates (x,y)',
                     'inputPlaceholder': '100,200'
-                }
-            ],
-            'utility': [
+                },
+                # Utility actions
                 {
                     'id': 'take_screenshot',
                     'label': 'Take Screenshot',
                     'command': 'take_screenshot',
+                    'action_type': 'remote',
                     'params': {},
                     'description': 'Capture current screen',
                     'requiresInput': False
@@ -718,6 +734,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'id': 'get_installed_apps',
                     'label': 'Get Installed Apps',
                     'command': 'get_installed_apps',
+                    'action_type': 'remote',
                     'params': {},
                     'description': 'List all installed applications',
                     'requiresInput': False

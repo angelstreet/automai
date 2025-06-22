@@ -15,23 +15,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
 import { executeEdgeActions } from '../../utils/navigation/navigationUtils';
+import type { Actions } from '../../types/controller/ActionTypes';
 
-import { EdgeActionsList } from './Navigation_EdgeActionsList';
-
-interface ControllerAction {
-  id: string;
-  label: string;
-  command: string;
-  params: any;
-  description: string;
-  requiresInput?: boolean;
-  inputLabel?: string;
-  inputPlaceholder?: string;
-}
-
-interface ControllerActions {
-  [category: string]: ControllerAction[];
-}
+import { ActionsList } from '../actions';
 
 interface EdgeEditDialogProps {
   isOpen: boolean;
@@ -63,9 +49,9 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [actionResult, setActionResult] = useState<string | null>(null);
 
   // Extract controller actions from host data
-  const controllerActions: ControllerActions = useMemo(() => {
-    return selectedHost?.available_remote_actions || {};
-  }, [selectedHost?.available_remote_actions]);
+  const controllerActions: Actions = useMemo(() => {
+    return selectedHost?.available_actions || {};
+  }, [selectedHost?.available_actions]);
 
   const canRunActions =
     isControlActive && selectedHost && edgeForm?.actions?.length > 0 && !isRunningActions;
@@ -180,11 +166,12 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             size="small"
           />
 
-          <EdgeActionsList
+          <ActionsList
             actions={edgeForm?.actions || []}
             retryActions={edgeForm?.retryActions || []}
-            finalWaitTime={edgeForm?.finalWaitTime}
+            finalWaitTime={edgeForm?.finalWaitTime || 2000}
             availableActions={controllerActions}
+            selectedHost={selectedHost || null}
             onActionsChange={(newActions) => setEdgeForm({ ...edgeForm, actions: newActions })}
             onRetryActionsChange={(newRetryActions) =>
               setEdgeForm({ ...edgeForm, retryActions: newRetryActions })

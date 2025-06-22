@@ -353,7 +353,7 @@ class BluetoothRemoteController(RemoteControllerInterface):
     def get_available_actions(self) -> Dict[str, Any]:
         """Get available actions for this Bluetooth controller."""
         return {
-            'basic_navigation': [
+            'remote': [
                 {
                     'id': 'press_key_up',
                     'label': 'Navigate Up',
