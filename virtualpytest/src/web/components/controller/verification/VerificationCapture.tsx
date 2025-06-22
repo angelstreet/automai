@@ -14,7 +14,7 @@ import {
   RadioGroup,
   Radio,
 } from '@mui/material';
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 
 import { UseVerificationEditorType } from '../../../hooks/verification/useVerificationEditor';
 
@@ -68,6 +68,67 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
     allowSelection,
   } = verification;
 
+  // Process image URLs with HTTP to HTTPS proxy logic (same as ScreenshotCapture)
+  const processedCapturedReferenceImage = useMemo(() => {
+    if (!capturedReferenceImage) return '';
+
+    console.log(`[@component:VerificationCapture] Processing captured reference image: ${capturedReferenceImage}`);
+
+    // Handle data URLs (base64) - return as is
+    if (capturedReferenceImage.startsWith('data:')) {
+      console.log('[@component:VerificationCapture] Using data URL from captured reference');
+      return capturedReferenceImage;
+    }
+
+    // Handle HTTP URLs - use proxy to convert to HTTPS
+    if (capturedReferenceImage.startsWith('http:')) {
+      console.log('[@component:VerificationCapture] HTTP URL detected in captured reference, using proxy');
+      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(capturedReferenceImage)}`;
+      console.log(`[@component:VerificationCapture] Generated proxy URL for captured reference: ${proxyUrl}`);
+      return proxyUrl;
+    }
+
+    // Handle HTTPS URLs - return as is (no proxy needed)
+    if (capturedReferenceImage.startsWith('https:')) {
+      console.log('[@component:VerificationCapture] Using HTTPS URL directly for captured reference');
+      return capturedReferenceImage;
+    }
+
+    // For relative paths or other formats, use directly
+    console.log('[@component:VerificationCapture] Using captured reference path directly');
+    return capturedReferenceImage;
+  }, [capturedReferenceImage]);
+
+  const processedSelectedReferenceImage = useMemo(() => {
+    if (!selectedReferenceImage) return '';
+
+    console.log(`[@component:VerificationCapture] Processing selected reference image: ${selectedReferenceImage}`);
+
+    // Handle data URLs (base64) - return as is
+    if (selectedReferenceImage.startsWith('data:')) {
+      console.log('[@component:VerificationCapture] Using data URL from selected reference');
+      return selectedReferenceImage;
+    }
+
+    // Handle HTTP URLs - use proxy to convert to HTTPS
+    if (selectedReferenceImage.startsWith('http:')) {
+      console.log('[@component:VerificationCapture] HTTP URL detected in selected reference, using proxy');
+      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(selectedReferenceImage)}`;
+      console.log(`[@component:VerificationCapture] Generated proxy URL for selected reference: ${proxyUrl}`);
+      return proxyUrl;
+    }
+
+    // Handle HTTPS URLs - return as is (no proxy needed)
+    if (selectedReferenceImage.startsWith('https:')) {
+      console.log('[@component:VerificationCapture] Using HTTPS URL directly for selected reference');
+      return selectedReferenceImage;
+    }
+
+    // For relative paths or other formats, use directly
+    console.log('[@component:VerificationCapture] Using selected reference path directly');
+    return selectedReferenceImage;
+  }, [selectedReferenceImage]);
+
   return (
     <Box>
       {/* Capture Section Header */}
@@ -109,10 +170,10 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
                 mb: 1.5,
               }}
             >
-              {capturedReferenceImage ? (
+              {processedCapturedReferenceImage ? (
                 <>
                   <img
-                    src={capturedReferenceImage}
+                    src={processedCapturedReferenceImage}
                     alt="Captured Reference"
                     style={{
                       width: '100%',
@@ -152,10 +213,10 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
                     </Box>
                   )}
                 </>
-              ) : selectedReferenceImage ? (
+              ) : processedSelectedReferenceImage ? (
                 <>
                   <img
-                    src={selectedReferenceImage}
+                    src={processedSelectedReferenceImage}
                     alt="Selected Reference"
                     style={{
                       width: '100%',
