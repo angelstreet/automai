@@ -473,22 +473,49 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
         // Prepare tree data for saving - clean up nodes to only include verification_ids in database
         const treeDataForSaving = {
-          nodes: state.nodes.map((node: UINavigationNode) => ({
-            ...node,
-            data: {
-              ...node.data,
-              // Only include verification_ids for database persistence
-              verification_ids: node.data.verification_ids || [],
-              // Remove the full verification objects from database storage
-              verifications: undefined,
-            },
-          })),
+          nodes: state.nodes.map((node: UINavigationNode) => {
+            const cleanedNode = {
+              ...node,
+              data: {
+                ...node.data,
+                // Only include verification_ids for database persistence
+                verification_ids: node.data.verification_ids || [],
+                // Remove the full verification objects from database storage
+                verifications: undefined,
+              },
+            };
+
+            // Log each node's verification data
+            console.log(
+              `[@context:NavigationConfigProvider:saveToConfig] Node ${node.data.label} verification data:`,
+              {
+                original_verification_ids: node.data.verification_ids,
+                original_verifications: node.data.verifications,
+                cleaned_verification_ids: cleanedNode.data.verification_ids,
+              },
+            );
+
+            return cleanedNode;
+          }),
           edges: state.edges,
         };
 
         console.log(
           '[@context:NavigationConfigProvider:saveToConfig] Tree data prepared for saving:',
           treeDataForSaving,
+        );
+
+        // Log specific verification_ids being saved
+        const nodesWithVerifications = treeDataForSaving.nodes.filter(
+          (node) => node.data.verification_ids && node.data.verification_ids.length > 0,
+        );
+        console.log(
+          '[@context:NavigationConfigProvider:saveToConfig] Nodes with verification_ids:',
+          nodesWithVerifications.map((node) => ({
+            id: node.id,
+            label: node.data.label,
+            verification_ids: node.data.verification_ids,
+          })),
         );
 
         const requestBody = {
