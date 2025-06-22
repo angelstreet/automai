@@ -951,7 +951,7 @@ class ImageVerificationController(VerificationControllerInterface):
                 print(f"[@controller:ImageVerification] Using original reference: {reference_path}")
                 self.copy_image(reference_path, reference_result_path)
             
-            # === STEP 3: Perform Verification and Create Overlay ===
+            # === STEP 3: Create Pixel-by-Pixel Difference Overlay ===
             # Load both images for comparison
             source_img = cv2.imread(source_result_path)
             ref_img = cv2.imread(reference_result_path)
@@ -963,26 +963,15 @@ class ImageVerificationController(VerificationControllerInterface):
             print(f"[@controller:ImageVerification] Source image shape: {source_img.shape}")
             print(f"[@controller:ImageVerification] Reference image shape: {ref_img.shape}")
             
-            # Perform template matching
-            result_match = cv2.matchTemplate(source_img, ref_img, cv2.TM_CCOEFF_NORMED)
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result_match)
+            # Create pixel-by-pixel difference overlay
+            overlay_img = self._create_pixel_difference_overlay(source_img, ref_img)
             
-            # Create result overlay image
-            overlay_img = source_img.copy()
-            if max_val >= 0.8:  # Use default threshold for overlay visualization
-                # Draw green rectangle around match
-                h, w = ref_img.shape[:2]
-                top_left = max_loc
-                bottom_right = (top_left[0] + w, top_left[1] + h)
-                cv2.rectangle(overlay_img, top_left, bottom_right, (0, 255, 0), 3)
-                cv2.putText(overlay_img, f'MATCH: {max_val:.3f}', (top_left[0], top_left[1] - 10), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            if overlay_img is not None:
+                cv2.imwrite(overlay_result_path, overlay_img)
+                print(f"[@controller:ImageVerification] Created pixel-by-pixel difference overlay")
             else:
-                # Draw red X or indicator for no match
-                cv2.putText(overlay_img, f'NO MATCH: {max_val:.3f}', (10, 30), 
-                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-            
-            cv2.imwrite(overlay_result_path, overlay_img)
+                print(f"[@controller:ImageVerification] Failed to create pixel difference overlay")
+                return {}
             
             # === STEP 4: Convert local paths to public URLs ===
             # Get host device info for URL building
@@ -1032,6 +1021,72 @@ class ImageVerificationController(VerificationControllerInterface):
         except Exception as e:
             print(f"[@controller:ImageVerification] Error generating comparison images: {e}")
             return {}
+
+    def _create_pixel_difference_overlay(self, source_img: np.ndarray, ref_img: np.ndarray) -> Optional[np.ndarray]:
+        """
+        Create a pixel-by-pixel difference overlay image.
+        
+        Green pixels (with transparency) = matching pixels
+        Red pixels (with transparency) = non-matching pixels
+        
+        Args:
+            source_img: Source image (BGR format)
+            ref_img: Reference image (BGR format)
+            
+        Returns:
+            BGRA overlay image with transparency, or None if failed
+        """
+        try:
+            # Ensure both images have the same dimensions
+            if source_img.shape != ref_img.shape:
+                print(f"[@controller:ImageVerification] Resizing images to match - Source: {source_img.shape}, Ref: {ref_img.shape}")
+                # Resize reference to match source
+                ref_img = cv2.resize(ref_img, (source_img.shape[1], source_img.shape[0]))
+            
+            # Convert to grayscale for pixel comparison (more reliable than color)
+            source_gray = cv2.cvtColor(source_img, cv2.COLOR_BGR2GRAY)
+            ref_gray = cv2.cvtColor(ref_img, cv2.COLOR_BGR2GRAY)
+            
+            # Calculate absolute difference between pixels
+            diff = cv2.absdiff(source_gray, ref_gray)
+            
+            # Create binary mask for matching/non-matching pixels
+            # Threshold for pixel difference (adjust as needed - smaller = more sensitive)
+            pixel_threshold = 10  # Pixels with difference <= 10 are considered matching
+            matching_mask = diff <= pixel_threshold
+            
+            # Create BGRA overlay (BGR + Alpha channel for transparency)
+            height, width = source_img.shape[:2]
+            overlay = np.zeros((height, width, 4), dtype=np.uint8)
+            
+            # Set transparency level (0-255, where 0=fully transparent, 255=fully opaque)
+            transparency = 128  # 50% transparency
+            
+            # Green pixels for matching areas (BGR format: Green = [0, 255, 0])
+            overlay[matching_mask] = [0, 255, 0, transparency]  # Green with transparency
+            
+            # Red pixels for non-matching areas (BGR format: Red = [0, 0, 255])
+            overlay[~matching_mask] = [0, 0, 255, transparency]  # Red with transparency
+            
+            # Optional: Make areas with very small differences more transparent
+            # This helps focus attention on significant differences
+            small_diff_mask = (diff > 0) & (diff <= 5)
+            if np.any(small_diff_mask):
+                overlay[small_diff_mask] = [0, 255, 0, transparency // 2]  # More transparent green
+            
+            print(f"[@controller:ImageVerification] Pixel comparison stats:")
+            matching_pixels = np.sum(matching_mask)
+            total_pixels = height * width
+            match_percentage = (matching_pixels / total_pixels) * 100
+            print(f"  Matching pixels: {matching_pixels}/{total_pixels} ({match_percentage:.1f}%)")
+            print(f"  Pixel threshold: {pixel_threshold}")
+            print(f"  Overlay transparency: {transparency}/255")
+            
+            return overlay
+            
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error creating pixel difference overlay: {e}")
+            return None
 
     def _resolve_reference_image(self, image_path: str, model: str = None) -> Optional[str]:
         """
