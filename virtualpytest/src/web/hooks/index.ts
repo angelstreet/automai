@@ -14,6 +14,7 @@ export * from './pages/useScreenEditor';
 export * from './pages/useNavigationEditor';
 export * from './pages/useDevice';
 export * from './pages/useUserInterface';
+export * from './pages/useRec';
 
 export { useDeviceControl } from './useDeviceControl';
 export { useUserSession } from './useUserSession';

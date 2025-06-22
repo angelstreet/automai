@@ -12,6 +12,7 @@ import {
   LibraryBooks as LibraryIcon,
   Memory as ModelIcon,
   BugReport as TestingIcon,
+  Videocam as VideocamIcon,
 } from '@mui/icons-material';
 import { Box, Button } from '@mui/material';
 import React from 'react';
@@ -77,6 +78,11 @@ const NavigationBar: React.FC = () => {
       path: '/configuration/environment',
       icon: <SettingsIcon fontSize="small" />,
     },
+    {
+      label: 'Remote Test',
+      path: '/remote-test',
+      icon: <TestingIcon fontSize="small" />,
+    },
   ];
 
   return (
@@ -99,14 +105,14 @@ const NavigationBar: React.FC = () => {
         Dashboard
       </Button>
 
-      {/* Remote Test - Simple button */}
+      {/* Rec - Simple button */}
       <Button
         component={Link}
-        to="/remote-test"
-        startIcon={<TestingIcon fontSize="small" />}
+        to="/rec"
+        startIcon={<VideocamIcon fontSize="small" />}
         sx={{
-          color: location.pathname === '/remote-test' ? 'secondary.main' : 'inherit',
-          fontWeight: location.pathname === '/remote-test' ? 600 : 400,
+          color: location.pathname === '/rec' ? 'secondary.main' : 'inherit',
+          fontWeight: location.pathname === '/rec' ? 600 : 400,
           textTransform: 'none',
           px: 2,
           py: 1,
@@ -115,7 +121,7 @@ const NavigationBar: React.FC = () => {
           },
         }}
       >
-        Remote Test
+        Rec
       </Button>
 
       {/* Test Plan Dropdown */}

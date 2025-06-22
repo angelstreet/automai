@@ -4,9 +4,9 @@ import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // Import navigation components (keep these as regular imports since they're always needed)
-import NavigationBar from './components/navigation/Navigation_Bar';
-import ThemeToggle from './components/common/ThemeToggle';
 import Footer from './components/common/Footer';
+import ThemeToggle from './components/common/ThemeToggle';
+import NavigationBar from './components/navigation/Navigation_Bar';
 
 // Import registration context
 import { RegistrationProvider } from './contexts/RegistrationContext';
@@ -14,6 +14,7 @@ import { ToastProvider } from './contexts/ToastContext';
 
 // Lazy load all pages for better performance and to avoid loading everything at once
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const Rec = React.lazy(() => import('./pages/Rec'));
 const CampaignEditor = React.lazy(() => import('./pages/CampaignEditor'));
 const Collections = React.lazy(() => import('./pages/Collections'));
 const Controller = React.lazy(() => import('./pages/Controller'));
@@ -148,6 +149,9 @@ const App: React.FC = () => {
                 <Routes>
                   {/* Dashboard */}
                   <Route path="/" element={<Dashboard />} />
+
+                  {/* Rec Page */}
+                  <Route path="/rec" element={<Rec />} />
 
                   {/* Test Plan Routes */}
                   <Route path="/test-plan/test-cases" element={<TestCaseEditor />} />

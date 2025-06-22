@@ -15,6 +15,7 @@ const hasCertificates = fs.existsSync(certPath) && fs.existsSync(keyPath);
 // Define registered frontend routes (must match your React Router routes)
 const registeredRoutes = [
   '/',
+  '/rec',
   '/test-plan/test-cases',
   '/test-plan/campaigns',
   '/test-plan/collections',
