@@ -94,7 +94,10 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
     async (formData: any) => {
       console.log('[@context:NodeEdgeManagementProvider] === STARTING NODE SAVE ===');
       console.log('[@context:NodeEdgeManagementProvider] Form data received:', formData);
-      console.log('[@context:NodeEdgeManagementProvider] formData.verifications:', formData.verifications);
+      console.log(
+        '[@context:NodeEdgeManagementProvider] formData.verifications:',
+        formData.verifications,
+      );
       console.log('[@context:NodeEdgeManagementProvider] formData.data:', formData.data);
       console.log('[@context:NodeEdgeManagementProvider] Current selected node:', selectedNode);
       console.log('[@context:NodeEdgeManagementProvider] Is new node:', isNewNode);
@@ -180,9 +183,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
             }
           }
         } else {
-          console.log(
-            '[@context:NodeEdgeManagementProvider] No verifications to save',
-          );
+          console.log('[@context:NodeEdgeManagementProvider] No verifications to save');
         }
 
         console.log(
@@ -199,9 +200,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
 
         if (isNewNode) {
           // For new nodes, use form data as base
-          console.log(
-            '[@context:NodeEdgeManagementProvider] Preparing NEW node data...',
-          );
+          console.log('[@context:NodeEdgeManagementProvider] Preparing NEW node data...');
           console.log(
             '[@context:NodeEdgeManagementProvider] formData.data before node preparation:',
             formData.data,
@@ -225,9 +224,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           );
         } else if (selectedNode) {
           // For existing nodes, preserve original node structure and only update modified fields
-          console.log(
-            '[@context:NodeEdgeManagementProvider] Preparing EXISTING node data...',
-          );
+          console.log('[@context:NodeEdgeManagementProvider] Preparing EXISTING node data...');
           console.log(
             '[@context:NodeEdgeManagementProvider] ORIGINAL node before update:',
             selectedNode,
@@ -278,7 +275,10 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
           };
 
           console.log('[@context:NodeEdgeManagementProvider] Final NEW node to be added:', newNode);
-          console.log('[@context:NodeEdgeManagementProvider] Final NEW node verification_ids:', newNode.data.verification_ids);
+          console.log(
+            '[@context:NodeEdgeManagementProvider] Final NEW node verification_ids:',
+            newNode.data.verification_ids,
+          );
           setNodes((nds: UINavigationNode[]) => [...nds, newNode]);
           console.log('[@context:NodeEdgeManagementProvider] Created new node:', newNode.id);
         } else if (selectedNode) {
@@ -287,9 +287,15 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
             if (node.id === selectedNode.id) {
               console.log('[@context:NodeEdgeManagementProvider] Replacing node:', node.id);
               console.log('[@context:NodeEdgeManagementProvider] OLD node data:', node);
-              console.log('[@context:NodeEdgeManagementProvider] OLD node verification_ids:', node.data.verification_ids);
+              console.log(
+                '[@context:NodeEdgeManagementProvider] OLD node verification_ids:',
+                node.data.verification_ids,
+              );
               console.log('[@context:NodeEdgeManagementProvider] NEW node data:', updatedNodeData);
-              console.log('[@context:NodeEdgeManagementProvider] NEW node verification_ids:', updatedNodeData.data.verification_ids);
+              console.log(
+                '[@context:NodeEdgeManagementProvider] NEW node verification_ids:',
+                updatedNodeData.data.verification_ids,
+              );
               return updatedNodeData; // ✅ Use the carefully prepared node data
             }
             return node;
@@ -297,13 +303,22 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
 
           setNodes(updatedNodes);
           console.log('[@context:NodeEdgeManagementProvider] Updated node:', selectedNode.id);
-          console.log('[@context:NodeEdgeManagementProvider] Updated nodes array length:', updatedNodes.length);
-          
+          console.log(
+            '[@context:NodeEdgeManagementProvider] Updated nodes array length:',
+            updatedNodes.length,
+          );
+
           // Log the specific updated node
-          const updatedNode = updatedNodes.find(n => n.id === selectedNode.id);
+          const updatedNode = updatedNodes.find((n) => n.id === selectedNode.id);
           if (updatedNode) {
-            console.log('[@context:NodeEdgeManagementProvider] Final updated node in array:', updatedNode);
-            console.log('[@context:NodeEdgeManagementProvider] Final updated node verification_ids:', updatedNode.data.verification_ids);
+            console.log(
+              '[@context:NodeEdgeManagementProvider] Final updated node in array:',
+              updatedNode,
+            );
+            console.log(
+              '[@context:NodeEdgeManagementProvider] Final updated node verification_ids:',
+              updatedNode.data.verification_ids,
+            );
           }
         }
 
@@ -438,4 +453,172 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
       setNodes(updatedNodes);
       setEdges(updatedEdges);
 
-      console.log(`
+      console.log(`[@context:NodeEdgeManagementProvider] Deleted node: ${nodeId}`);
+    } else if (selectedEdge) {
+      // Delete edge
+      const edgeId = selectedEdge.id;
+
+      // Filter out the edge
+      const updatedEdges = edges.filter((edge) => edge.id !== edgeId);
+
+      setEdges(updatedEdges);
+
+      console.log(`[@context:NodeEdgeManagementProvider] Deleted edge: ${edgeId}`);
+    }
+
+    // Clean up state
+    setSelectedNode(null);
+    setSelectedEdge(null);
+    setNodeForm(null);
+    setEdgeForm(null);
+    setIsNodeDialogOpen(false);
+    setIsEdgeDialogOpen(false);
+    setHasUnsavedChanges(true);
+  }, [
+    selectedNode,
+    selectedEdge,
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    setSelectedNode,
+    setSelectedEdge,
+    setNodeForm,
+    setEdgeForm,
+    setIsNodeDialogOpen,
+    setIsEdgeDialogOpen,
+    setHasUnsavedChanges,
+  ]);
+
+  // Add new node
+  const addNewNode = useCallback(
+    (nodeType: string, _position: { x: number; y: number }) => {
+      console.log(`[@context:NodeEdgeManagementProvider] Adding new node of type: ${nodeType}`);
+
+      // Create an initial form for the new node
+      const initialForm: NodeForm = {
+        id: `node-${Date.now()}`,
+        label: `New ${nodeType}`,
+        type: nodeType as 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry',
+        description: '',
+        depth: 0,
+        parent: [],
+      };
+
+      // Set form and open dialog
+      setNodeForm(initialForm);
+      setIsNewNode(true);
+      setIsNodeDialogOpen(true);
+
+      console.log('[@context:NodeEdgeManagementProvider] Node form initialized:', initialForm);
+    },
+    [setNodeForm, setIsNewNode, setIsNodeDialogOpen],
+  );
+
+  // Cancel node changes
+  const cancelNodeChanges = useCallback(() => {
+    console.log('[@context:NodeEdgeManagementProvider] Cancelling node changes');
+
+    // Clean up state
+    setSelectedNode(null);
+    setNodeForm(null);
+    setIsNodeDialogOpen(false);
+    setIsNewNode(false);
+  }, [setSelectedNode, setNodeForm, setIsNodeDialogOpen, setIsNewNode]);
+
+  // Close selection panel
+  const closeSelectionPanel = useCallback(() => {
+    console.log('[@context:NodeEdgeManagementProvider] Closing selection panel');
+
+    // Batch all state updates together to prevent multiple re-renders
+    setSelectedNode(null);
+    setSelectedEdge(null);
+    setNodeForm(null);
+    setEdgeForm(null);
+    setIsNodeDialogOpen(false);
+    setIsEdgeDialogOpen(false);
+    setIsNewNode(false);
+  }, [
+    setSelectedNode,
+    setSelectedEdge,
+    setNodeForm,
+    setEdgeForm,
+    setIsNodeDialogOpen,
+    setIsEdgeDialogOpen,
+    setIsNewNode,
+  ]);
+
+  // Reset node
+  const resetNode = useCallback(
+    (nodeId: string) => {
+      console.log(`[@context:NodeEdgeManagementProvider] Resetting node: ${nodeId}`);
+
+      // Find the node in the original dataset
+      const originalNode = nodes.find((node) => node.id === nodeId);
+
+      if (originalNode) {
+        // Convert UINavigationNode to NodeForm
+        const nodeForm: NodeForm = {
+          id: originalNode.id,
+          label: originalNode.data.label,
+          type: originalNode.data.type,
+          description: originalNode.data.description || '',
+          depth: originalNode.data.depth,
+          parent: originalNode.data.parent,
+          verifications: originalNode.data.verifications,
+        };
+        setNodeForm(nodeForm);
+        console.log('[@context:NodeEdgeManagementProvider] Node form reset to original state');
+      }
+    },
+    [nodes, setNodeForm],
+  );
+
+  // ========================================
+  // CONTEXT VALUE
+  // ========================================
+
+  const contextValue: NodeEdgeManagementContextType = useMemo(
+    () => ({
+      saveNodeChanges,
+      saveEdgeChanges,
+      deleteSelected,
+      addNewNode,
+      cancelNodeChanges,
+      closeSelectionPanel,
+      resetNode,
+    }),
+    [
+      saveNodeChanges,
+      saveEdgeChanges,
+      deleteSelected,
+      addNewNode,
+      cancelNodeChanges,
+      closeSelectionPanel,
+      resetNode,
+    ],
+  );
+
+  return (
+    <NodeEdgeManagementContext.Provider value={contextValue}>
+      {children}
+    </NodeEdgeManagementContext.Provider>
+  );
+};
+
+NodeEdgeManagementProvider.displayName = 'NodeEdgeManagementProvider';
+
+// ========================================
+// HOOK
+// ========================================
+
+export const useNodeEdgeManagement = (): NodeEdgeManagementContextType => {
+  const context = useContext(NodeEdgeManagementContext);
+  if (!context) {
+    throw new Error('useNodeEdgeManagement must be used within a NodeEdgeManagementProvider');
+  }
+  return context;
+};
+
+// Export the type for use in other files
+export type { NodeEdgeManagementState };
