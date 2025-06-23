@@ -122,9 +122,10 @@ def register_host_with_server():
         
         # Validate that controllers were created successfully
         if not created_controllers:
-            error_msg = f"❌ [HOST] Controller creation failed for device model '{device_model}'. Registration aborted."
+            device_models = [device['device_model'] for device in devices_config]
+            error_msg = f"❌ [HOST] Controller creation failed for device models {device_models}. Registration aborted."
             print(error_msg)
-            print(f"   This usually means the device model is not supported.")
+            print(f"   This usually means one or more device models are not supported.")
             print(f"   Check controller_config_factory.py for supported device models.")
             return
         
@@ -576,9 +577,15 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
                     if action_type in ['android_mobile', 'android_tv', 'appium_remote', 'ir_remote']:
                         # Remote action controllers
                         action_params = controller_config.get('parameters', {})
+                        
+                        # Extract device_id from controller_key (e.g., "device1_remote_android_mobile" -> "device1")
+                        device_id = controller_key.split('_')[0] if '_' in controller_key else 'device1'
+                        
                         action_controller = ControllerFactory.create_remote_controller(
                             device_type=action_type,
                             device_name=device_name,
+                            device_id=device_id,  # Required parameter
+                            device_config=device_config,  # Required parameter
                             device_ip=action_params.get('device_ip', device_ip),
                             device_port=action_params.get('device_port', device_port),
                             platform_name=action_params.get('platform_name', 'iOS'),
@@ -589,9 +596,15 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
                     elif action_type == 'hdmi_stream':
                         # AV action controller
                         action_params = controller_config.get('parameters', {})
+                        
+                        # Extract device_id from controller_key (e.g., "device1_av_hdmi_stream" -> "device1")
+                        device_id = controller_key.split('_')[0] if '_' in controller_key else 'device1'
+                        
                         action_controller = ControllerFactory.create_av_controller(
                             capture_type=action_type,
                             device_name=device_name,
+                            device_id=device_id,  # Required parameter
+                            device_config=device_config,  # Required parameter
                             video_device=action_params.get('video_device', '/dev/video0'),
                             resolution=action_params.get('resolution', '1920x1080'),
                             fps=action_params.get('fps', 30),
@@ -602,9 +615,15 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
                     elif action_type == 'usb':
                         # Power action controller
                         action_params = controller_config.get('parameters', {})
+                        
+                        # Extract device_id from controller_key (e.g., "device1_power_usb" -> "device1")
+                        device_id = controller_key.split('_')[0] if '_' in controller_key else 'device1'
+                        
                         action_controller = ControllerFactory.create_power_controller(
                             power_type=action_type,
                             device_name=device_name,
+                            device_id=device_id,  # Required parameter
+                            device_config=device_config,  # Required parameter
                             hub_location=action_params.get('hub_location', '1-1'),
                             port_number=action_params.get('port_number', 1)
                         )
