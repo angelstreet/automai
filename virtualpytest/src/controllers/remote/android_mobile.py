@@ -151,7 +151,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             
     def input_text(self, text: str) -> bool:
         """
-        Send text input to the Android device.
+        Send text input to the Android device directly (assumes focus is already on input field).
         
         Args:
             text: Text to input
@@ -163,14 +163,20 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Sending text: '{text}'")
             
-            # Use ADB text input command directly
-            success = self.adb_utils.input_text(self.android_device_id, text)
+            # Use direct ADB text input command (assumes field is already focused)
+            import subprocess
             
-            if success:
+            # Escape special characters for shell
+            escaped_text = text.replace('"', '\\"').replace("'", "\\'").replace(' ', '\\ ')
+            input_command = f"adb -s {self.android_device_id} shell input text \"{escaped_text}\""
+            
+            success, stdout, stderr, exit_code = self.adb_utils.execute_command(input_command)
+            
+            if success and exit_code == 0:
                 print(f"Remote[{self.device_type.upper()}]: Successfully sent text: '{text}'")
                 return True
             else:
-                print(f"Remote[{self.device_type.upper()}]: Text input failed")
+                print(f"Remote[{self.device_type.upper()}]: Text input failed: {stderr}")
                 return False
                 
         except Exception as e:
@@ -461,8 +467,8 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Direct click on element: '{element_identifier}'")
             
-            # Use simple ADB command to click by text
-            success = self.adb_utils.click_element_by_text(self.android_device_id, element_identifier)
+            # Use ADB search and click method (correct method name)
+            success = self.adb_utils.click_element_by_search(self.android_device_id, element_identifier)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully clicked element: '{element_identifier}'")
