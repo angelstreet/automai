@@ -81,19 +81,12 @@ def register_host():
             print(f"[@route:register_host] Processing device: {device['device_name']} ({device['device_model']})")
             
             # Build controller configs for this device
-            controller_configs = create_controller_configs_from_device_info(
-                device_model=device['device_model'],
-                device_ip=device['device_ip'],
-                device_port=device['device_port'],
-                host_url=host_info['host_url'],
-                host_port=host_port,
-                device_config=device
-            )
+            controller_configs = create_controller_configs_from_device_info(device)
             
             # Use the capabilities sent by the host (no redundant server-side detection)
-            # Extract controller names from the actual controller configs
-            device_capabilities = list(controller_configs.keys())
-            device_controller_types = [config['implementation'] for config in controller_configs.values()]
+            # Extract controller types and class names from the actual controller configs
+            device_capabilities = [config['type'] for config in controller_configs]
+            device_controller_types = [config['class'].__name__ for config in controller_configs]
             
             # Add device with its controller info
             device_with_controllers = {

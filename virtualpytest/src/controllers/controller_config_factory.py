@@ -75,7 +75,7 @@ def create_controller_configs_from_device_info(device_config: Dict[str, Any]) ->
         ]
     """
     device_id = device_config['device_id']
-    model = device_config['model']
+    model = device_config['device_model']
     
     print(f"[@controller_config_factory:create_controller_configs_from_device_info] Creating controllers for {device_id} (model: {model})")
     

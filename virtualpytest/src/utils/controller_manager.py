@@ -56,8 +56,8 @@ def _get_devices_config_from_environment() -> List[Dict[str, Any]]:
         if device_name:
             device_config = {
                 'device_id': f'device{i}',
-                'name': device_name,
-                'model': os.getenv(f'DEVICE{i}_MODEL', 'unknown'),
+                'device_name': device_name,
+                'device_model': os.getenv(f'DEVICE{i}_MODEL', 'unknown'),
                 # Video configuration
                 'video': os.getenv(f'DEVICE{i}_VIDEO'),
                 'video_stream_path': os.getenv(f'DEVICE{i}_VIDEO_STREAM_PATH'),
@@ -89,8 +89,8 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
         Device instance with controllers
     """
     device_id = device_config['device_id']
-    name = device_config['name']
-    model = device_config['model']
+    name = device_config['device_name']
+    model = device_config['device_model']
     
     print(f"[@controller_manager:_create_device_with_controllers] Creating device: {device_id}")
     
