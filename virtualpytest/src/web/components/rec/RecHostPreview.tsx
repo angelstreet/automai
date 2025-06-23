@@ -28,7 +28,8 @@ interface HostWithAVStatus extends Host {
 
 interface RecHostPreviewProps {
   host: HostWithAVStatus;
-  takeScreenshot: (host: Host) => Promise<string | null>;
+  device?: any; // Optional device for multi-device support
+  takeScreenshot: (host: Host, deviceId?: string) => Promise<string | null>;
   onFullscreen?: (host: Host) => void;
   autoRefresh?: boolean;
   refreshInterval?: number;
@@ -36,6 +37,7 @@ interface RecHostPreviewProps {
 
 export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   host,
+  device,
   takeScreenshot,
   onFullscreen,
   autoRefresh = true,
@@ -64,7 +66,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     try {
       setError(null);
 
-      const url = await takeScreenshot(host);
+      const url = await takeScreenshot(host, device?.device_id);
 
       if (url) {
         setScreenshotUrl(url);
@@ -79,7 +81,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       setError(err.message || 'Screenshot failed');
       setIsInitialLoading(false);
     }
-  }, [takeScreenshot, host]);
+  }, [takeScreenshot, host, device]);
 
   // Auto-refresh effect
   useEffect(() => {
@@ -217,7 +219,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         sx={{ p: 1, pb: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
       >
         <Typography variant="subtitle2" noWrap sx={{ flex: 1, mr: 1 }}>
-          {host.host_name}
+          {device ? `${host.host_name} - ${device.device_name}` : host.host_name}
         </Typography>
         <Box sx={{ display: 'flex', gap: 0.5 }}>
           <Chip
@@ -238,7 +240,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       {/* Device info */}
       <Box sx={{ px: 1, pb: 1 }}>
         <Typography variant="caption" color="text.secondary">
-          {host.device_model} • {host.device_ip || host.host_url}
+          {device ? `${device.device_name} (${device.device_model})` : host.host_name} •{' '}
+          {device?.device_ip || host.host_url}
         </Typography>
       </Box>
 
@@ -274,7 +277,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
             <ScreenshotCapture
               screenshotPath={screenshotUrl}
               isCapturing={false}
-              model={host.device_model}
+              model={device?.device_model || 'unknown'}
               sx={{
                 width: '100%',
                 height: '100%',

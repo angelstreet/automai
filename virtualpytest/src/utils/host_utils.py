@@ -35,6 +35,29 @@ local_controller_objects = {}
 # Import centralized URL building from utils
 from src.utils.app_utils import buildServerUrl
 
+def get_devices_config():
+    """Get device configurations from environment variables"""
+    devices_config = []
+    
+    for i in range(1, 5):  # DEVICE1 to DEVICE4
+        device_name = os.getenv(f'DEVICE{i}_NAME')
+        device_model = os.getenv(f'DEVICE{i}_MODEL')
+        
+        if device_name and device_model:
+            device_config = {
+                'device_id': f'device{i}',  # Format: device1, device2, device3, device4
+                'device_name': device_name,
+                'device_model': device_model,
+                'device_ip': os.getenv(f'DEVICE{i}_IP', '127.0.0.1'),
+                'device_port': os.getenv(f'DEVICE{i}_PORT', '5555'),
+                'video_device': os.getenv(f'DEVICE{i}_video'),
+                'video_stream_path': os.getenv(f'DEVICE{i}_video_stream_path'),
+                'video_capture_path': os.getenv(f'DEVICE{i}_video_capture_path'),
+            }
+            devices_config.append(device_config)
+    
+    return devices_config
+
 def register_host_with_server():
     """Register this host with the server"""
     global client_registration_state, global_host_object
@@ -48,29 +71,54 @@ def register_host_with_server():
         host_url = os.getenv('HOST_URL', 'http://localhost:6109')
         host_port = os.getenv('HOST_PORT', '6109')
         
-        # Get device model info
-        device_model = os.getenv('DEVICE_MODEL', os.getenv('HOST_DEVICE_MODEL', platform.system().lower()))
-        device_name = os.getenv('DEVICE_NAME', os.getenv('HOST_DEVICE_NAME', f"{device_model.replace('_', ' ').title()}"))
-        device_ip = os.getenv('DEVICE_IP', os.getenv('HOST_DEVICE_IP', '127.0.0.1'))
-        device_port = os.getenv('DEVICE_PORT', os.getenv('HOST_DEVICE_PORT', '5555'))  # Default ADB port
+        # Get device configurations
+        devices_config = get_devices_config()
+        
+        if not devices_config:
+            print("❌ [HOST] No devices configured. Please set DEVICE1_NAME/DEVICE1_MODEL or similar")
+            return
         
         print(f"   Host Name: {host_name}")
         print(f"   Host URL: {host_url}")
         print(f"   Host Port: {host_port}")
-        print(f"   Device Name: {device_name}")
-        print(f"   Device Model: {device_model}")
-        print(f"   Device IP: {device_ip}")
-        print(f"   Device Port: {device_port}")
+        print(f"   Configured Devices: {len(devices_config)}")
         
-        # Create local controllers BEFORE registration to extract capabilities
-        print(f"\n🎮 [HOST] Creating local controllers for device model: {device_model}")
-        created_controllers = create_local_controllers_from_model(
-            device_model, 
-            device_name, 
-            device_ip, 
-            device_port,
-            os.getenv('DEFAULT_TEAM_ID', '7fdeb4bb-3639-4ec3-959f-b54769a219ce')  # Use team_id from env
-        )
+        for device in devices_config:
+            print(f"     - {device['device_name']} ({device['device_model']}) at {device['device_ip']}:{device['device_port']}")
+            if device['video_device']:
+                print(f"       Video: {device['video_device']} -> {device['video_capture_path']}")
+        
+        # Create local controllers for all devices
+        print(f"\n🎮 [HOST] Creating local controllers for {len(devices_config)} devices...")
+        all_created_controllers = {}
+        all_available_verification_types = {}
+        all_available_action_types = {}
+        
+        for device_config in devices_config:
+            device_id = device_config['device_id']
+            print(f"\n   Creating controllers for {device_id}: {device_config['device_name']}")
+            
+            device_controllers = create_local_controllers_from_model(
+                device_config['device_model'], 
+                device_config['device_name'], 
+                device_config['device_ip'], 
+                device_config['device_port'],
+                os.getenv('DEFAULT_TEAM_ID', '7fdeb4bb-3639-4ec3-959f-b54769a219ce'),
+                device_config  # Pass device config for video device parameters
+            )
+            
+            if not device_controllers:
+                print(f"   ⚠️ Controller creation failed for {device_id}")
+                continue
+            
+            # Namespace controllers by device_id
+            for controller_key, controller_obj in device_controllers.items():
+                namespaced_key = f"{device_id}_{controller_key}"
+                all_created_controllers[namespaced_key] = controller_obj
+            
+            print(f"   Created controllers for {device_id}: {list(device_controllers.keys())}")
+        
+        created_controllers = all_created_controllers
         
         # Validate that controllers were created successfully
         if not created_controllers:
@@ -136,10 +184,8 @@ def register_host_with_server():
             'host_name': host_name,
             'host_url': host_url,
             'host_port': int(host_port),
-            'device_name': device_name,           # Send actual device name
-            'device_model': device_model,         # Dynamic device model detection
-            'device_ip': device_ip,               # Send actual device IP
-            'device_port': device_port,           # Send actual device port
+            'devices': devices_config,            # Send all device configurations
+            'device_count': len(devices_config),  # Number of devices
             'system_stats': get_host_system_stats(),
             'available_verification_types': available_verification_types,  # Include verification types
             'available_action_types': available_action_types  # Include available action types
@@ -479,7 +525,7 @@ def query_device_model_configuration(device_model, team_id):
         traceback.print_exc()
         return None
 
-def create_local_controllers_from_model(device_model, device_name, device_ip, device_port, team_id):
+def create_local_controllers_from_model(device_model, device_name, device_ip, device_port, team_id, device_config=None):
     """
     Create controller objects locally based on device model configuration from database.
     
@@ -489,6 +535,7 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
         device_ip: Device IP address
         device_port: Device port
         team_id: Team ID for database query
+        device_config: Optional device configuration with video device parameters
         
     Returns:
         dict: Dictionary of created controller objects
@@ -507,7 +554,8 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
             device_ip=device_ip,
             device_port=device_port,
             host_url='http://localhost:6109',  # Not used for controller creation
-            host_port='6109'  # Not used for controller creation
+            host_port='6109',  # Not used for controller creation
+            device_config=device_config  # Pass device config for video device parameters
         )
         
         print(f"[@utils:host_utils:create_local_controllers_from_model] Using hardcoded controller configuration: {controllers_config}")
@@ -661,19 +709,47 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
         traceback.print_exc()
         return {}
 
-def get_local_controller(controller_type):
+def get_local_controller(controller_type, device_id=None):
     """
-    Get a local controller by type.
+    Get a local controller by type and optional device ID.
     
     Args:
         controller_type: Type of controller ('remote', 'av', 'verification', 'power')
                         For verification controllers, can also be specific type like 'verification_adb'
+        device_id: Optional device ID (e.g., 'device1', 'device2') for device-specific controllers
         
     Returns:
         Controller object or None if not found
     """
     global local_controller_objects
     
+    if device_id:
+        # Device-specific controller lookup
+        device_controller_key = f"{device_id}_{controller_type}"
+        if device_controller_key in local_controller_objects:
+            return local_controller_objects.get(device_controller_key)
+        
+        # Try mapping abstract capability names to specific implementations for device
+        if controller_type == 'av':
+            for key, controller in local_controller_objects.items():
+                if key.startswith(f"{device_id}_av_"):
+                    return controller
+        elif controller_type == 'remote':
+            for key, controller in local_controller_objects.items():
+                if key.startswith(f"{device_id}_remote_"):
+                    return controller
+        elif controller_type == 'power':
+            for key, controller in local_controller_objects.items():
+                if key.startswith(f"{device_id}_power_"):
+                    return controller
+        elif controller_type == 'verification':
+            for key, controller in local_controller_objects.items():
+                if key.startswith(f"{device_id}_verification_"):
+                    return controller
+        
+        return None
+    
+    # Backward compatibility - get first available controller of this type
     # Direct lookup first
     if controller_type in local_controller_objects:
         return local_controller_objects.get(controller_type)
@@ -682,25 +758,56 @@ def get_local_controller(controller_type):
     if controller_type == 'av':
         # Look for any AV controller (av_hdmi_stream, etc.)
         for key, controller in local_controller_objects.items():
-            if key.startswith('av_'):
+            if key.endswith('_av_hdmi_stream') or key.startswith('av_'):
                 return controller
     elif controller_type == 'remote':
         # Look for any remote controller (remote_android_mobile, remote_android_tv, etc.)
         for key, controller in local_controller_objects.items():
-            if key.startswith('remote_'):
+            if key.endswith('_remote_android_mobile') or key.endswith('_remote_android_tv') or key.startswith('remote_'):
                 return controller
     elif controller_type == 'power':
         # Look for any power controller (power_usb, etc.)
         for key, controller in local_controller_objects.items():
-            if key.startswith('power_'):
+            if key.endswith('_power_usb') or key.startswith('power_'):
                 return controller
     elif controller_type == 'verification':
         # Look for any verification controller
         for key, controller in local_controller_objects.items():
-            if key.startswith('verification_'):
+            if key.endswith('_verification_image') or key.startswith('verification_'):
                 return controller
     
     return None
+
+def get_device_controller(device_id, controller_type):
+    """
+    Get specific device controller.
+    
+    Args:
+        device_id: Device ID (e.g., 'device1', 'device2')
+        controller_type: Controller type ('av', 'remote', 'verification', 'power')
+    
+    Returns:
+        Controller object or None if not found
+    """
+    return get_local_controller(controller_type, device_id)
+
+def list_available_devices():
+    """
+    List all available devices based on registered controllers.
+    
+    Returns:
+        list: List of device IDs
+    """
+    global local_controller_objects
+    device_ids = set()
+    
+    for key in local_controller_objects.keys():
+        if "_" in key:
+            device_id = key.split("_")[0]
+            if device_id.startswith("device"):  # Match device1, device2, etc.
+                device_ids.add(device_id)
+    
+    return sorted(list(device_ids))
 
 def get_all_local_controllers():
     """

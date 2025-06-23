@@ -54,7 +54,7 @@ def register_host():
         print(f"   Available action types: {len(host_info.get('available_action_types', {}))} controller types")
         
         # Check for required fields
-        required_fields = ['host_url', 'device_model', 'host_name']
+        required_fields = ['host_url', 'host_name', 'devices']
         missing_fields = []
         for field in required_fields:
             if field not in host_info or not host_info[field]:
@@ -69,78 +69,64 @@ def register_host():
         
         # Extract port from host_url or use provided port
         host_port = host_info.get('host_port', '6109')
+        devices = host_info.get('devices', [])
         
         print(f"[@route:register_host] Host configuration:")
         print(f"   Host URL: {host_info['host_url']}")
         print(f"   Host Port: {host_port}")
+        print(f"   Devices: {len(devices)} devices")
         
-        # Use provided device information (host now sends complete device data)
-        device_name = host_info.get('device_name', f"{host_info['device_model'].replace('_', ' ').title()}")
-        device_ip = host_info.get('device_ip', '127.0.0.1')  # Default device IP
-        device_port = host_info.get('device_port', '5555')  # Fallback to default ADB port
+        # Process each device and build combined capabilities
+        all_capabilities = set()
+        all_controller_types = set()
+        devices_with_controllers = []
         
-        print(f"[@route:register_host] Device information received:")
-        print(f"   Device Name: {device_name} ({'provided' if host_info.get('device_name') else 'generated from model'})")
-        print(f"   Device Model: {host_info['device_model']}")
-        print(f"   Device IP: {device_ip} ({'provided' if host_info.get('device_ip') else 'using host IP'})")
-        print(f"   Device Port: {device_port} ({'provided' if host_info.get('device_port') else 'default ADB port'})")
+        for device in devices:
+            print(f"[@route:register_host] Processing device: {device['device_name']} ({device['device_model']})")
+            
+            # Build controller configs for this device
+            controller_configs = create_controller_configs_from_device_info(
+                device_model=device['device_model'],
+                device_ip=device['device_ip'],
+                device_port=device['device_port'],
+                host_url=host_info['host_url'],
+                host_port=host_port,
+                device_config=device
+            )
+            
+            # Get capabilities for this device
+            device_capabilities = get_device_capabilities_from_model(device['device_model'])
+            device_controller_types = get_controller_types_from_model(device['device_model'])
+            
+            # Add device with its controller info
+            device_with_controllers = {
+                **device,
+                'controller_configs': controller_configs,
+                'capabilities': device_capabilities,
+                'controller_types': device_controller_types
+            }
+            devices_with_controllers.append(device_with_controllers)
+            
+            # Collect all capabilities and controller types
+            all_capabilities.update(device_capabilities)
+            all_controller_types.update(device_controller_types)
         
-        # Build complete controller configs using factory
-        print(f"[@route:register_host] Building controller configs using factory...")
-        controller_configs = create_controller_configs_from_device_info(
-            device_model=host_info['device_model'],
-            device_ip=device_ip,
-            device_port=device_port,
-            host_url=host_info['host_url'],
-            host_port=host_port
-        )
+        print(f"[@route:register_host] Combined capabilities: {list(all_capabilities)}")
+        print(f"[@route:register_host] Combined controller types: {list(all_controller_types)}")
         
-        # Get capabilities and controller types from factory
-        capabilities = get_device_capabilities_from_model(host_info['device_model'])
-        controller_types = get_controller_types_from_model(host_info['device_model'])
-        
-        print(f"[@route:register_host] Factory built:")
-        print(f"   Controller configs: {list(controller_configs.keys()) if controller_configs else 'None'}")
-        print(f"   Abstract capabilities: {capabilities}")
-        print(f"   Specific implementations: {controller_types}")
-        
-        # Map controller config names to abstract capabilities
-        capabilities = []
-        if controller_configs:
-            for controller_key in controller_configs.keys():
-                # Map specific controller names to abstract capability names
-                if controller_key.startswith('av_') or controller_key.startswith('verification_') and any(v_type in controller_key for v_type in ['image', 'video', 'audio']):
-                    if 'av' not in capabilities:
-                        capabilities.append('av')
-                elif controller_key.startswith('remote_') or controller_key.startswith('verification_adb'):
-                    if 'remote' not in capabilities:
-                        capabilities.append('remote')
-                elif controller_key.startswith('power_'):
-                    if 'power' not in capabilities:
-                        capabilities.append('power')
-                elif controller_key.startswith('verification_'):
-                    if 'verification' not in capabilities:
-                        capabilities.append('verification')
-        
-        print(f"[@route:register_host] Final controller mapping:")
-        print(f"   Abstract types (capabilities): {capabilities}")
-        print(f"   Specific implementations: {controller_types}")
-        
-        # Create flat host object matching Host_Types.ts interface
+        # Create host object with multi-device support
         host_object: Host = {
             # === PRIMARY IDENTIFICATION ===
             'host_name': host_info['host_name'],
-            'description': f"Device: {device_name} controlled by host: {host_info['host_name']}",
+            'description': f"Host: {host_info['host_name']} with {len(devices)} device(s)",
             
             # === NETWORK CONFIGURATION ===
             'host_url': host_info['host_url'],
             'host_port': int(host_port),
             
-            # === DEVICE CONFIGURATION ===
-            'device_ip': device_ip,
-            'device_port': device_port,
-            'device_name': device_name,
-            'device_model': host_info['device_model'],
+            # === MULTI-DEVICE CONFIGURATION ===
+            'devices': devices_with_controllers,
+            'device_count': len(devices),
             
             # === STATUS AND METADATA ===
             'status': 'online',
@@ -148,12 +134,11 @@ def register_host():
             'registered_at': datetime.now().isoformat(),
             'system_stats': host_info.get('system_stats', get_system_stats()),
             
-            # === HOST CAPABILITIES ===
-            'capabilities': capabilities,
-            'controller_configs': controller_configs,
-            'controller_types': controller_types,
-            'available_verification_types': host_info.get('available_verification_types', {}),  # Store verification types
-            'available_action_types': host_info.get('available_action_types', {}),  # Store available action types
+            # === HOST CAPABILITIES (COMBINED FROM ALL DEVICES) ===
+            'capabilities': list(all_capabilities),
+            'controller_types': list(all_controller_types),
+            'available_verification_types': host_info.get('available_verification_types', {}),
+            'available_action_types': host_info.get('available_action_types', {}),
             
             # === DEVICE LOCK MANAGEMENT ===
             'isLocked': False,
@@ -171,7 +156,7 @@ def register_host():
             # Update existing host
             print(f"🔄 [SERVER] Updating existing host registration:")
             print(f"   Host Name: {host_info['host_name']}")
-            print(f"   Device: {device_name} ({host_info['device_model']})")
+            print(f"   Devices: {len(devices)} device(s)")
             
             # Keep original registration time but update all other info
             host_object['registered_at'] = existing_host.get('registered_at', host_object['registered_at'])
@@ -190,8 +175,7 @@ def register_host():
             print(f"✅ [SERVER] New host registered successfully:")
             print(f"   Host Name: {host_info['host_name']}")
             print(f"   Host URL: {host_info['host_url']}")
-            print(f"   Device: {device_name} ({host_info['device_model']})")
-            print(f"   Device Address: {device_ip}:{device_port}")
+            print(f"   Devices: {len(devices)} device(s)")
         
         response_data = host_object
         
@@ -532,16 +516,12 @@ class Host(TypedDict):
     description: Optional[str]
     
     # === NETWORK CONFIGURATION ===
-    host_ip: str
-    host_port_internal: int
-    host_port_external: int
-    host_port_web: int
+    host_url: str
+    host_port: int
     
-    # === DEVICE CONFIGURATION ===
-    device_ip: str
-    device_port: str
-    device_name: str
-    device_model: str
+    # === MULTI-DEVICE CONFIGURATION ===
+    devices: List[Any]  # Array of device configurations
+    device_count: int
     
     # === STATUS AND METADATA ===
     status: str  # 'online' | 'offline' | 'unreachable' | 'maintenance'
@@ -549,9 +529,8 @@ class Host(TypedDict):
     registered_at: str
     system_stats: Any  # SystemStats type
     
-    # === HOST CAPABILITIES ===
+    # === HOST CAPABILITIES (COMBINED FROM ALL DEVICES) ===
     capabilities: List[str]
-    controller_configs: Optional[Any]
     controller_types: Optional[List[str]]
     available_verification_types: Any
     available_action_types: Any

@@ -11,7 +11,7 @@ interface UseRecReturn {
   isLoading: boolean;
   error: string | null;
   refreshHosts: () => Promise<void>;
-  takeScreenshot: (host: Host) => Promise<string | null>;
+  takeScreenshot: (host: Host, deviceId?: string) => Promise<string | null>;
   checkAVStatus: (host: Host) => Promise<boolean>;
 }
 
@@ -76,21 +76,32 @@ export const useRec = (): UseRecReturn => {
       console.log('[@hook:useRec] All hosts received:', data.hosts);
       console.log('[@hook:useRec] First host details:', data.hosts[0]);
 
-      // Filter hosts that have AV capabilities and are online
+      // Filter hosts that have devices with AV capabilities and are online
       const avHosts = data.hosts.filter((host: Host) => {
         console.log(`[@hook:useRec] Checking host ${host.host_name}:`, {
           status: host.status,
-          capabilities: host.capabilities,
-          hasAV: host.capabilities && host.capabilities.includes('av'),
+          devices: host.devices?.length || 0,
+          hasDevicesWithAV:
+            host.devices?.some(
+              (device: any) => device.capabilities && device.capabilities.includes('av'),
+            ) || false,
         });
 
-        return host.status === 'online' && host.capabilities && host.capabilities.includes('av');
+        // Host must be online and have at least one device with AV capability
+        return (
+          host.status === 'online' &&
+          host.devices &&
+          host.devices.length > 0 &&
+          host.devices.some(
+            (device: any) => device.capabilities && device.capabilities.includes('av'),
+          )
+        );
       });
 
       console.log(
-        `[@hook:useRec] Found ${avHosts.length} hosts with AV capabilities out of ${data.hosts.length} total hosts`,
+        `[@hook:useRec] Found ${avHosts.length} hosts with AV-capable devices out of ${data.hosts.length} total hosts`,
       );
-      console.log('[@hook:useRec] AV hosts:', avHosts);
+      console.log('[@hook:useRec] Hosts with AV-capable devices:', avHosts);
 
       // Check AV status for each host and add status property
       const hostsWithStatus: HostWithAVStatus[] = await Promise.all(
@@ -116,39 +127,51 @@ export const useRec = (): UseRecReturn => {
     }
   }, [checkAVStatus]);
 
-  // Take screenshot for a specific host
-  const takeScreenshot = useCallback(async (host: Host): Promise<string | null> => {
-    try {
-      console.log(`[@hook:useRec] Taking screenshot for host: ${host.host_name}`);
+  // Take screenshot for a specific host and device
+  const takeScreenshot = useCallback(
+    async (host: Host, deviceId?: string): Promise<string | null> => {
+      try {
+        const deviceInfo = deviceId ? ` device: ${deviceId}` : '';
+        console.log(`[@hook:useRec] Taking screenshot for host: ${host.host_name}${deviceInfo}`);
 
-      const response = await fetch('/server/av/take-screenshot', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ host }),
-      });
+        const payload = { host };
+        if (deviceId) {
+          (payload as any).device_id = deviceId;
+        }
 
-      if (!response.ok) {
-        throw new Error(`Screenshot failed: ${response.status}`);
-      }
+        const response = await fetch('/server/av/take-screenshot', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
 
-      const result = await response.json();
+        if (!response.ok) {
+          throw new Error(`Screenshot failed: ${response.status}`);
+        }
 
-      if (result.success && result.screenshot_url) {
-        console.log(
-          `[@hook:useRec] Screenshot taken for ${host.host_name}: ${result.screenshot_url}`,
-        );
-        return result.screenshot_url;
-      } else {
-        console.error(`[@hook:useRec] Screenshot failed for ${host.host_name}:`, result.error);
+        const result = await response.json();
+
+        if (result.success && result.screenshot_url) {
+          console.log(
+            `[@hook:useRec] Screenshot taken for ${host.host_name}${deviceInfo}: ${result.screenshot_url}`,
+          );
+          return result.screenshot_url;
+        } else {
+          console.error(
+            `[@hook:useRec] Screenshot failed for ${host.host_name}${deviceInfo}:`,
+            result.error,
+          );
+          return null;
+        }
+      } catch (err: any) {
+        console.error(`[@hook:useRec] Error taking screenshot for ${host.host_name}:`, err);
         return null;
       }
-    } catch (err: any) {
-      console.error(`[@hook:useRec] Error taking screenshot for ${host.host_name}:`, err);
-      return null;
-    }
-  }, []);
+    },
+    [],
+  );
 
   // Refresh hosts function
   const refreshHosts = useCallback(async () => {

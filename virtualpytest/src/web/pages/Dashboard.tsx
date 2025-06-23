@@ -15,6 +15,7 @@ import {
   Phone as PhoneIcon,
   Tv as TvIcon,
   CheckCircle as SuccessIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -41,6 +42,9 @@ import {
   ToggleButtonGroup,
   CircularProgress,
   Paper,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import React, { useState, useEffect, useCallback } from 'react';
 
@@ -324,67 +328,121 @@ const Dashboard: React.FC = () => {
 
   const renderDevicesGrid = () => (
     <Grid container spacing={2}>
-      {availableHosts.map((device) => (
-        <Grid item xs={12} sm={6} md={4} lg={3} key={device.host_name}>
+      {availableHosts.map((host) => (
+        <Grid item xs={12} sm={6} md={4} lg={3} key={host.host_name}>
           <Card variant="outlined" sx={{ height: '100%' }}>
             <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+              {/* Host Header */}
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
                 <Box display="flex" alignItems="center" gap={1}>
-                  {getDeviceIcon(device.device_model)}
+                  <ComputerIcon color="primary" />
                   <Typography variant="h6" component="div" noWrap>
-                    {device.host_name}
+                    {host.host_name}
                   </Typography>
+                  <Chip
+                    label={`${host.device_count} device${host.device_count > 1 ? 's' : ''}`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontSize: '0.7rem' }}
+                  />
                 </Box>
                 <Chip
-                  label={device.status}
+                  label={host.status}
                   size="small"
-                  color={device.status === 'online' ? 'success' : 'error'}
+                  color={host.status === 'online' ? 'success' : 'error'}
                   variant="outlined"
                 />
               </Box>
 
               <Typography color="textSecondary" variant="body2" gutterBottom>
-                Model: {device.device_model}
+                Host URL: {host.host_url}
               </Typography>
 
-              <Typography color="textSecondary" variant="body2" gutterBottom>
-                Host URL: {device.host_url}
-              </Typography>
+              {/* Devices Accordion */}
+              <Accordion
+                defaultExpanded
+                sx={{ mb: 2, boxShadow: 'none', border: '1px solid #e0e0e0' }}
+              >
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="subtitle2">Devices ({host.device_count})</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0 }}>
+                  {host.devices.map((device) => (
+                    <Box
+                      key={device.device_id}
+                      sx={{ mb: 1, pb: 1, borderBottom: '1px solid #f0f0f0' }}
+                    >
+                      <Box display="flex" alignItems="center" gap={1} mb={0.5}>
+                        {getDeviceIcon(device.device_model)}
+                        <Typography variant="body2" fontWeight="bold">
+                          {device.device_name}
+                        </Typography>
+                        <Chip
+                          label={device.device_model}
+                          size="small"
+                          variant="outlined"
+                          sx={{ fontSize: '0.6rem' }}
+                        />
+                      </Box>
 
-              <Typography color="textSecondary" variant="body2" gutterBottom>
-                Device: {device.device_name} ({device.device_ip}:{device.device_port})
-              </Typography>
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        📍 {device.device_ip}:{device.device_port}
+                      </Typography>
 
-              <Box display="flex" flexWrap="wrap" gap={0.5} mb={1}>
-                {device.capabilities.map((capability) => (
+                      {device.capabilities && device.capabilities.length > 0 && (
+                        <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5}>
+                          {device.capabilities.map((capability) => (
+                            <Chip
+                              key={capability}
+                              label={capability}
+                              size="small"
+                              variant="outlined"
+                              sx={{ fontSize: '0.6rem' }}
+                            />
+                          ))}
+                        </Box>
+                      )}
+
+                      {device.video_stream_path && (
+                        <Typography variant="caption" color="textSecondary" display="block">
+                          🎥 {device.video_stream_path}
+                        </Typography>
+                      )}
+                    </Box>
+                  ))}
+                </AccordionDetails>
+              </Accordion>
+
+              {/* System Stats Accordion */}
+              <Accordion sx={{ mb: 2, boxShadow: 'none', border: '1px solid #e0e0e0' }}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="subtitle2">System Stats</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0 }}>
+                  <SystemStatsDisplay stats={host.system_stats} />
+                </AccordionDetails>
+              </Accordion>
+
+              {/* Host Capabilities */}
+              <Box display="flex" flexWrap="wrap" gap={0.5} mb={2}>
+                {host.capabilities.map((capability) => (
                   <Chip
                     key={capability}
                     label={capability}
                     size="small"
-                    variant="outlined"
+                    variant="filled"
+                    color="primary"
                     sx={{ fontSize: '0.7rem' }}
                   />
                 ))}
               </Box>
 
-              {/* System Stats */}
-              <Box mb={2}>
-                <Typography
-                  variant="subtitle2"
-                  gutterBottom
-                  sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}
-                >
-                  System Stats
-                </Typography>
-                <SystemStatsDisplay stats={device.system_stats} />
-              </Box>
-
               <Typography color="textSecondary" variant="caption" display="block">
-                Last seen: {formatLastSeen(device.last_seen)}
+                Last seen: {formatLastSeen(host.last_seen)}
               </Typography>
 
               <Typography color="textSecondary" variant="caption" display="block">
-                Registered: {formatRegisteredAt(device.registered_at)}
+                Registered: {formatRegisteredAt(host.registered_at)}
               </Typography>
             </CardContent>
           </Card>
@@ -399,10 +457,9 @@ const Dashboard: React.FC = () => {
         <TableHead>
           <TableRow>
             <TableCell>Host</TableCell>
-            <TableCell>Model</TableCell>
+            <TableCell>Devices</TableCell>
             <TableCell>Status</TableCell>
-            <TableCell>Host IP</TableCell>
-            <TableCell>Device</TableCell>
+            <TableCell>Host URL</TableCell>
             <TableCell>CPU</TableCell>
             <TableCell>RAM</TableCell>
             <TableCell>Disk</TableCell>
@@ -412,9 +469,9 @@ const Dashboard: React.FC = () => {
           </TableRow>
         </TableHead>
         <TableBody>
-          {availableHosts.map((device) => (
+          {availableHosts.map((host) => (
             <TableRow
-              key={device.host_name}
+              key={host.host_name}
               hover
               sx={{
                 '&:hover': {
@@ -424,35 +481,45 @@ const Dashboard: React.FC = () => {
             >
               <TableCell>
                 <Box display="flex" alignItems="center" gap={1}>
-                  {getDeviceIcon(device.device_model)}
-                  <Typography variant="body2">{device.host_name}</Typography>
+                  <ComputerIcon color="primary" />
+                  <Typography variant="body2">{host.host_name}</Typography>
+                  <Chip
+                    label={`${host.device_count} device${host.device_count > 1 ? 's' : ''}`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ fontSize: '0.7rem' }}
+                  />
                 </Box>
               </TableCell>
               <TableCell>
-                <Typography variant="body2">{device.device_model}</Typography>
+                <Box>
+                  {host.devices.map((device, index) => (
+                    <Box key={device.device_id} display="flex" alignItems="center" gap={1} mb={0.5}>
+                      {getDeviceIcon(device.device_model)}
+                      <Typography variant="body2" fontFamily="monospace">
+                        {device.device_name} ({device.device_ip}:{device.device_port})
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
               </TableCell>
               <TableCell>
                 <Chip
-                  label={device.status}
+                  label={host.status}
                   size="small"
-                  color={device.status === 'online' ? 'success' : 'error'}
+                  color={host.status === 'online' ? 'success' : 'error'}
                   variant="outlined"
                 />
               </TableCell>
               <TableCell>
                 <Typography variant="body2" fontFamily="monospace">
-                  {device.host_url}
-                </Typography>
-              </TableCell>
-              <TableCell>
-                <Typography variant="body2" fontFamily="monospace">
-                  {device.device_name} ({device.device_ip}:{device.device_port})
+                  {host.host_url}
                 </Typography>
               </TableCell>
               <TableCell>
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2" fontWeight="bold">
-                    {device.system_stats.cpu_percent}%
+                    {host.system_stats.cpu_percent}%
                   </Typography>
                   <Box
                     sx={{
@@ -464,9 +531,9 @@ const Dashboard: React.FC = () => {
                   >
                     <Box
                       sx={{
-                        width: `${Math.min(device.system_stats.cpu_percent, 100)}%`,
+                        width: `${Math.min(host.system_stats.cpu_percent, 100)}%`,
                         height: '100%',
-                        backgroundColor: `${getUsageColor(device.system_stats.cpu_percent)}.main`,
+                        backgroundColor: `${getUsageColor(host.system_stats.cpu_percent)}.main`,
                         borderRadius: 1,
                       }}
                     />
@@ -476,7 +543,7 @@ const Dashboard: React.FC = () => {
               <TableCell>
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2" fontWeight="bold">
-                    {device.system_stats.memory_percent}%
+                    {host.system_stats.memory_percent}%
                   </Typography>
                   <Box
                     sx={{
@@ -488,9 +555,9 @@ const Dashboard: React.FC = () => {
                   >
                     <Box
                       sx={{
-                        width: `${Math.min(device.system_stats.memory_percent, 100)}%`,
+                        width: `${Math.min(host.system_stats.memory_percent, 100)}%`,
                         height: '100%',
-                        backgroundColor: `${getUsageColor(device.system_stats.memory_percent)}.main`,
+                        backgroundColor: `${getUsageColor(host.system_stats.memory_percent)}.main`,
                         borderRadius: 1,
                       }}
                     />
@@ -500,7 +567,7 @@ const Dashboard: React.FC = () => {
               <TableCell>
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2" fontWeight="bold">
-                    {device.system_stats.disk_percent}%
+                    {host.system_stats.disk_percent}%
                   </Typography>
                   <Box
                     sx={{
@@ -512,9 +579,9 @@ const Dashboard: React.FC = () => {
                   >
                     <Box
                       sx={{
-                        width: `${Math.min(device.system_stats.disk_percent, 100)}%`,
+                        width: `${Math.min(host.system_stats.disk_percent, 100)}%`,
                         height: '100%',
-                        backgroundColor: `${getUsageColor(device.system_stats.disk_percent)}.main`,
+                        backgroundColor: `${getUsageColor(host.system_stats.disk_percent)}.main`,
                         borderRadius: 1,
                       }}
                     />
@@ -523,7 +590,7 @@ const Dashboard: React.FC = () => {
               </TableCell>
               <TableCell>
                 <Box display="flex" flexWrap="wrap" gap={0.5}>
-                  {device.capabilities.map((capability) => (
+                  {host.capabilities.map((capability) => (
                     <Chip
                       key={capability}
                       label={capability}
@@ -535,10 +602,10 @@ const Dashboard: React.FC = () => {
                 </Box>
               </TableCell>
               <TableCell>
-                <Typography variant="body2">{formatLastSeen(device.last_seen)}</Typography>
+                <Typography variant="body2">{formatLastSeen(host.last_seen)}</Typography>
               </TableCell>
               <TableCell>
-                <Typography variant="body2">{formatRegisteredAt(device.registered_at)}</Typography>
+                <Typography variant="body2">{formatRegisteredAt(host.registered_at)}</Typography>
               </TableCell>
             </TableRow>
           ))}
@@ -621,7 +688,9 @@ const Dashboard: React.FC = () => {
                   <Typography color="textSecondary" gutterBottom>
                     Connected Devices
                   </Typography>
-                  <Typography variant="h4">{availableHosts.length}</Typography>
+                  <Typography variant="h4">
+                    {availableHosts.reduce((total, host) => total + (host.device_count || 0), 0)}
+                  </Typography>
                 </Box>
                 <DevicesIcon color="success" sx={{ fontSize: 40 }} />
               </Box>
@@ -696,7 +765,10 @@ const Dashboard: React.FC = () => {
       {/* Connected Devices */}
       <Paper sx={{ p: 2, mt: 3 }}>
         <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-          <Typography variant="h6">Registered Clients ({availableHosts.length})</Typography>
+          <Typography variant="h6">
+            Registered Hosts ({availableHosts.length}) -{' '}
+            {availableHosts.reduce((total, host) => total + (host.device_count || 0), 0)} Devices
+          </Typography>
           <Box display="flex" alignItems="center" gap={1}>
             <ToggleButtonGroup
               value={viewMode}
@@ -741,7 +813,7 @@ const Dashboard: React.FC = () => {
           <Box textAlign="center" py={4}>
             <DevicesIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
             <Typography color="textSecondary" variant="h6" gutterBottom>
-              No devices connected
+              No hosts connected
             </Typography>
           </Box>
         )}

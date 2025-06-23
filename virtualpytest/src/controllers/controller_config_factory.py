@@ -23,7 +23,7 @@ DEVICE_MODEL_ACTION_MAPPING = {
     'stb': ['ir_remote', 'hdmi_stream', 'usb'],
 }
 
-def create_controller_configs_from_device_info(device_model, device_ip, device_port, host_url, host_port):
+def create_controller_configs_from_device_info(device_model, device_ip, device_port, host_url, host_port, device_config=None):
     """
     Create complete controller_configs from basic device registration info.
     
@@ -115,14 +115,29 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 }
             }
         elif implementation == 'hdmi_stream':
+            # Use device-specific video configuration if available
+            video_device = '/dev/video0'
+            stream_path = '/stream/video'
+            capture_path = None
+            device_id = None
+            
+            if device_config:
+                video_device = device_config.get('video_device', video_device)
+                stream_path = device_config.get('video_stream_path', stream_path)
+                capture_path = device_config.get('video_capture_path')
+                device_id = device_config.get('device_id')
+            
             controller_configs[controller_key] = {
                 'implementation': 'hdmi_stream',
                 'parameters': {
-                    'video_device': '/dev/video0',
+                    'video_device': video_device,
                     'resolution': '1920x1080',
                     'fps': 30,
-                    'stream_path': '/stream/video',
-                    'service_name': 'stream'
+                    'stream_path': stream_path,
+                    'capture_path': capture_path,
+                    'service_name': 'stream',
+                    'device_id': device_id,
+                    'device_config': device_config
                 }
             }
         elif implementation == 'usb':

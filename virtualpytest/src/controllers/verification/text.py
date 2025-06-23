@@ -994,7 +994,7 @@ class TextVerificationController(VerificationControllerInterface):
                 print(f"[@controller:TextVerification] Warning: No host device found for URL building")
                 return local_path  # Return local path as fallback
             
-            # Build public URL exactly like image verification
+            # Build public URL exactly like image verification (already supports multi-device)
             public_url = buildVerificationResultUrl(host_device, local_path)
             print(f"[@controller:TextVerification] Built URL: {local_path} -> {public_url}")
             

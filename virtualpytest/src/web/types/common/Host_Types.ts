@@ -32,6 +32,20 @@ import type { Actions } from '../controller/ActionTypes';
  * Matches exactly what the host sends during registration and
  * what the server should store and return to the frontend.
  */
+export interface Device {
+  device_id: string; // Device identifier (device1, device2, etc.)
+  device_name: string; // Device display name
+  device_model: string; // Device model for controller configuration
+  device_ip: string; // Device IP address (for ADB/device control)
+  device_port: string; // Device port (for ADB/device control)
+  video_device?: string; // Video device path
+  video_stream_path?: string; // Video stream path
+  video_capture_path?: string; // Video capture path
+  controller_configs?: any; // Device-specific controller configurations
+  capabilities?: string[]; // Device-specific capabilities
+  controller_types?: string[]; // Device-specific controller types
+}
+
 export interface Host {
   // === PRIMARY IDENTIFICATION ===
   host_name: string; // Host machine name (primary identifier)
@@ -41,11 +55,9 @@ export interface Host {
   host_url: string; // Host base URL (e.g., https://virtualpytest.com or http://localhost:6109)
   host_port: number; // Host port number
 
-  // === DEVICE CONFIGURATION ===
-  device_ip: string; // Device IP address (for ADB/device control)
-  device_port: string; // Device port (for ADB/device control)
-  device_name: string; // Device display name
-  device_model: string; // Device model for controller configuration
+  // === MULTI-DEVICE CONFIGURATION ===
+  devices: Device[]; // Array of devices controlled by this host
+  device_count: number; // Number of devices
 
   // === STATUS AND METADATA ===
   status: 'online' | 'offline' | 'unreachable' | 'maintenance';

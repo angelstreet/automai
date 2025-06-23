@@ -21,7 +21,12 @@ control_bp = Blueprint('host_control', __name__, url_prefix='/host')
 def take_control():
     """Host-side take control - Use own stored host_device object (no parameters needed)"""
     try:
+        data = request.get_json() or {}
+        device_id = data.get('device_id')  # Optional device_id for multi-device hosts
+        
         print(f"[@route:take_control] Host checking controllers status using own stored host_device")
+        if device_id:
+            print(f"[@route:take_control] Specific device requested: {device_id}")
         
         # ✅ GET HOST_DEVICE FROM FLASK APP CONTEXT (contains all device info)
         host_device = getattr(current_app, 'my_host_device', None)
@@ -33,29 +38,67 @@ def take_control():
                 'error': 'Host device object not initialized. Host may need to re-register.'
             })
         
-        # Extract device info from stored host_device
-        device_model = host_device.get('device_model', 'android_mobile')
-        device_ip = host_device.get('device_ip')
-        device_port = host_device.get('device_port', 5555)
-        device_name = host_device.get('device_name')
+        # For multi-device hosts, get device info from devices array
+        devices = host_device.get('devices', [])
+        if devices and device_id:
+            # Find specific device
+            target_device = None
+            for device in devices:
+                if device.get('device_id') == device_id:
+                    target_device = device
+                    break
+            
+            if not target_device:
+                return jsonify({
+                    'success': False,
+                    'status': 'device_not_found',
+                    'error': f'Device {device_id} not found in host configuration',
+                    'available_devices': [d.get('device_id') for d in devices]
+                })
+            
+            # Use device-specific info
+            device_model = target_device.get('device_model', 'android_mobile')
+            device_ip = target_device.get('device_ip')
+            device_port = target_device.get('device_port', 5555)
+            device_name = target_device.get('device_name')
+        else:
+            # Backward compatibility - use legacy single device fields or first device
+            if devices:
+                target_device = devices[0]
+                device_model = target_device.get('device_model', 'android_mobile')
+                device_ip = target_device.get('device_ip')
+                device_port = target_device.get('device_port', 5555)
+                device_name = target_device.get('device_name')
+                device_id = target_device.get('device_id', 'device_1')
+            else:
+                # Legacy single device mode
+                device_model = host_device.get('device_model', 'android_mobile')
+                device_ip = host_device.get('device_ip')
+                device_port = host_device.get('device_port', 5555)
+                device_name = host_device.get('device_name')
+                device_id = None
+        
         host_name = host_device.get('host_name')
         
         print(f"[@route:take_control] Host device: {host_name} managing device: {device_name} ({device_model})")
         print(f"[@route:take_control] Device connection: {device_ip}:{device_port}")
+        if device_id:
+            print(f"[@route:take_control] Device ID: {device_id}")
         print(f"[@route:take_control] Available controllers: {list(host_device.get('controller_objects', {}).keys())}")
         
         # Step 1: Check AV controller from own host_device
         try:
             from src.utils.host_utils import get_local_controller
-            av_controller = get_local_controller('av')
+            av_controller = get_local_controller('av', device_id)
             
             if not av_controller:
                 return jsonify({
                     'success': False,
                     'status': 'av_controller_not_found',
-                    'error': 'No AV controller object found in host_device',
+                    'error': f'No AV controller object found for device {device_id or "default"}',
                     'error_type': 'configuration_error',
                     'device_model': device_model,
+                    'device_id': device_id,
                     'available_controllers': list(host_device.get('controller_objects', {}).keys())
                 })
             
@@ -64,51 +107,32 @@ def take_control():
             av_status = av_controller.get_status()
             print(f"[@route:take_control] AV controller status: {av_status}")
             
-            if not av_status.get('is_streaming', False):
-                # Specific error message for stream service failure
-                service_name = av_status.get('service_name', 'stream service')
-                service_status = av_status.get('service_status', 'unknown')
-                error_message = av_status.get('message', f'Stream service ({service_name}) is not active')
-                
-                return jsonify({
-                    'success': False,
-                    'status': 'stream_service_failed',
-                    'error': f'Host stream status failed: {error_message}',
-                    'error_type': 'stream_service_error',
-                    'device_model': device_model,
-                    'av_status': av_status,
-                    'service_details': {
-                        'service_name': service_name,
-                        'service_status': service_status,
-                        'systemctl_returncode': av_status.get('systemctl_returncode'),
-                        'systemctl_output': av_status.get('systemctl_output')
-                    }
-                })
-                
         except Exception as e:
             print(f"[@route:take_control] AV controller error: {e}")
             return jsonify({
                 'success': False,
                 'status': 'av_controller_error',
-                'error': f'Host stream status failed: AV controller error - {str(e)}',
+                'error': f'AV controller error: {str(e)}',
                 'error_type': 'av_controller_exception',
-                'device_model': device_model
+                'device_model': device_model,
+                'device_id': device_id
             })
         
-        # Step 2: Check Remote controller from own host_device for Android devices
-        remote_status = {'adb_status': 'not_applicable'}
+        # Step 2: Check remote controller if device supports it
+        remote_status = None
         
         if device_ip and device_model in ['android_mobile', 'android_tv']:
             try:
-                remote_controller = get_local_controller('remote')
+                remote_controller = get_local_controller('remote', device_id)
                 
                 if not remote_controller:
                     return jsonify({
                         'success': False,
                         'status': 'remote_controller_not_found',
-                        'error': 'No remote controller object found in host_device',
+                        'error': f'No remote controller object found for device {device_id or "default"}',
                         'error_type': 'configuration_error',
                         'device_model': device_model,
+                        'device_id': device_id,
                         'av_status': av_status,
                         'available_controllers': list(host_device.get('controller_objects', {}).keys())
                     })
@@ -125,6 +149,7 @@ def take_control():
                         'error': f'Host ADB connection failed: Failed to connect to remote controller',
                         'error_type': 'adb_connection_error',
                         'device_model': device_model,
+                        'device_id': device_id,
                         'av_status': av_status,
                         'adb_details': {
                             'device_ip': device_ip,
@@ -134,33 +159,9 @@ def take_control():
                         }
                     })
                 
-                print(f"[@route:take_control] Successfully connected to remote controller")
-                
-                # Now check the status after connecting
+                # Get remote controller status
                 remote_status = remote_controller.get_status()
                 print(f"[@route:take_control] Remote controller status: {remote_status}")
-                
-                if not remote_status.get('adb_connected', False):
-                    # Specific error message for ADB connection failure
-                    adb_status = remote_status.get('adb_status', 'unknown')
-                    device_status = remote_status.get('device_status', 'unknown')
-                    error_message = remote_status.get('message', f'Device {device_ip}:{device_port} not connected via ADB')
-                    
-                    return jsonify({
-                        'success': False,
-                        'status': 'adb_connection_failed',
-                        'error': f'Host ADB connection failed: {error_message}',
-                        'error_type': 'adb_connection_error',
-                        'device_model': device_model,
-                        'av_status': av_status,
-                        'remote_status': remote_status,
-                        'adb_details': {
-                            'device_ip': device_ip,
-                            'device_port': device_port,
-                            'adb_status': adb_status,
-                            'device_status': device_status
-                        }
-                    })
                     
             except Exception as e:
                 print(f"[@route:take_control] Remote controller error: {e}")
@@ -170,6 +171,7 @@ def take_control():
                     'error': f'Host ADB connection failed: Remote controller error - {str(e)}',
                     'error_type': 'remote_controller_exception',
                     'device_model': device_model,
+                    'device_id': device_id,
                     'av_status': av_status
                 })
         
@@ -180,9 +182,11 @@ def take_control():
             'status': 'ready',
             'message': f'All controllers ready for {device_name} ({device_model})',
             'device_model': device_model,
+            'device_id': device_id,
             'av_status': av_status,
             'remote_status': remote_status,
             'device': {
+                'device_id': device_id,
                 'device_name': device_name,
                 'device_model': device_model,
                 'device_ip': device_ip,
@@ -246,6 +250,101 @@ def release_control():
             'error': f'Failed to release control: {str(e)}'
         }), 500
 
+
+@control_bp.route('/devices', methods=['GET'])
+def list_devices():
+    """List all available devices on this host"""
+    try:
+        print(f"[@route:list_devices] Getting available devices")
+        
+        # Get own stored host_device object
+        host_device = getattr(current_app, 'my_host_device', None)
+        
+        if not host_device:
+            return jsonify({
+                'success': False,
+                'error': 'Host device object not initialized',
+                'devices': []
+            })
+        
+        # Get devices from host configuration
+        devices = host_device.get('devices', [])
+        
+        if not devices:
+            # Legacy single device mode
+            device_info = {
+                'device_id': 'default',
+                'device_name': host_device.get('device_name', 'Unknown Device'),
+                'device_model': host_device.get('device_model', 'unknown'),
+                'device_ip': host_device.get('device_ip'),
+                'device_port': host_device.get('device_port'),
+                'video_device': None,
+                'video_stream_path': None,
+                'video_capture_path': None
+            }
+            devices = [device_info]
+        
+        # Get available controller types for each device
+        from src.utils.host_utils import list_available_devices, get_local_controller
+        available_device_ids = list_available_devices()
+        
+        for device in devices:
+            device_id = device.get('device_id')
+            device['controllers'] = {}
+            device['controller_status'] = 'unknown'
+            
+            # Check if controllers exist for this device
+            if device_id in available_device_ids or device_id == 'default':
+                # Check AV controller
+                av_controller = get_local_controller('av', device_id)
+                if av_controller:
+                    device['controllers']['av'] = {
+                        'available': True,
+                        'type': type(av_controller).__name__
+                    }
+                
+                # Check remote controller
+                remote_controller = get_local_controller('remote', device_id)
+                if remote_controller:
+                    device['controllers']['remote'] = {
+                        'available': True,
+                        'type': type(remote_controller).__name__
+                    }
+                
+                # Check verification controller
+                verification_controller = get_local_controller('verification', device_id)
+                if verification_controller:
+                    device['controllers']['verification'] = {
+                        'available': True,
+                        'type': type(verification_controller).__name__
+                    }
+                
+                # Check power controller
+                power_controller = get_local_controller('power', device_id)
+                if power_controller:
+                    device['controllers']['power'] = {
+                        'available': True,
+                        'type': type(power_controller).__name__
+                    }
+                
+                device['controller_status'] = 'ready' if device['controllers'] else 'no_controllers'
+            else:
+                device['controller_status'] = 'not_registered'
+        
+        return jsonify({
+            'success': True,
+            'host_name': host_device.get('host_name'),
+            'device_count': len(devices),
+            'devices': devices
+        })
+        
+    except Exception as e:
+        print(f"[@route:list_devices] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Error listing devices: {str(e)}',
+            'devices': []
+        }), 500
 
 @control_bp.route('/controller-status', methods=['GET'])
 def controller_status():
