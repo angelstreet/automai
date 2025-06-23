@@ -34,6 +34,13 @@ interface AndroidMobileRemoteProps {
   streamMinimized?: boolean;
   // Current capture mode from HDMIStream
   captureMode?: 'stream' | 'screenshot' | 'video';
+  // NEW: Stream container dimensions for modal context
+  streamContainerDimensions?: {
+    width: number;
+    height: number;
+    x: number;
+    y: number;
+  };
 }
 
 export const AndroidMobileRemote = React.memo(
@@ -48,6 +55,7 @@ export const AndroidMobileRemote = React.memo(
     streamCollapsed,
     streamMinimized = false,
     captureMode = 'stream',
+    streamContainerDimensions,
   }: AndroidMobileRemoteProps) {
     const {
       // State
@@ -81,9 +89,6 @@ export const AndroidMobileRemote = React.memo(
 
     // Panel integration - prepare panelInfo for overlay
     const panelInfo: PanelInfo | undefined = React.useMemo(() => {
-      // Keep HDMI stream resolution for overlay positioning (visual alignment)
-      const hdmiStreamResolution = { width: 1920, height: 1080 };
-
       // Skip unnecessary recalculations if missing required props
       if (!panelWidth || !panelHeight || !deviceResolution) {
         console.log(
@@ -98,7 +103,35 @@ export const AndroidMobileRemote = React.memo(
         panelHeight,
         deviceResolution,
         streamCollapsed,
+        hasStreamContainerDimensions: !!streamContainerDimensions,
       });
+
+      // NEW: Use stream container dimensions if provided (modal context)
+      if (streamContainerDimensions) {
+        console.log(
+          '[@component:AndroidMobileRemote] Using stream container dimensions for modal context:',
+          streamContainerDimensions,
+        );
+
+        const info = {
+          position: {
+            x: streamContainerDimensions.x,
+            y: streamContainerDimensions.y,
+          },
+          size: {
+            width: streamContainerDimensions.width,
+            height: streamContainerDimensions.height,
+          },
+          deviceResolution: { width: 1920, height: 1080 }, // Keep HDMI resolution for overlay positioning
+          isCollapsed: false, // In modal context, stream is always expanded
+        };
+        console.log('[@component:AndroidMobileRemote] Created panelInfo for modal context:', info);
+        return info;
+      }
+
+      // EXISTING: Use HDMI stream config for floating panel context
+      // Keep HDMI stream resolution for overlay positioning (visual alignment)
+      const hdmiStreamResolution = { width: 1920, height: 1080 };
 
       // Get HDMI stream dimensions from config based on stream collapsed state (not panel state)
       const streamConfig = hdmiStreamMobileConfig.panel_layout;
@@ -122,7 +155,7 @@ export const AndroidMobileRemote = React.memo(
       const streamContentWidth = streamContentHeight / deviceAspectRatio;
 
       // Debug logging for width calculation
-      console.log(`[@component:AndroidMobileRemote] Width calculation debug:`, {
+      console.log(`[@component:AndroidMobileRemote] Width calculation debug (floating panel):`, {
         streamCollapsed,
         configState: streamCollapsed ? 'collapsed' : 'expanded',
         streamPanelWidth,
@@ -161,9 +194,16 @@ export const AndroidMobileRemote = React.memo(
         deviceResolution: hdmiStreamResolution, // Keep HDMI resolution for overlay positioning
         isCollapsed: streamCollapsed ?? true, // Use stream collapsed state directly, default to collapsed
       };
-      console.log('[@component:AndroidMobileRemote] Created panelInfo for stream overlay:', info);
+      console.log('[@component:AndroidMobileRemote] Created panelInfo for floating panel:', info);
       return info;
-    }, [isCollapsed, panelWidth, panelHeight, deviceResolution, streamCollapsed]);
+    }, [
+      isCollapsed,
+      panelWidth,
+      panelHeight,
+      deviceResolution,
+      streamCollapsed,
+      streamContainerDimensions,
+    ]);
 
     const handleDisconnectWithCallback = async () => {
       await handleDisconnect();

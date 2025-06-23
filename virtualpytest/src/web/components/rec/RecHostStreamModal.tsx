@@ -40,6 +40,46 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
     return host.controller_configs?.remote != null;
   }, [host]);
 
+  // Calculate stream container dimensions for overlay alignment
+  const streamContainerDimensions = useMemo(() => {
+    if (!isOpen || !host) return undefined;
+
+    // Modal dimensions (95vw x 90vh)
+    const modalWidth = window.innerWidth * 0.95;
+    const modalHeight = window.innerHeight * 0.9;
+
+    // Header height (estimated from the header styling)
+    const headerHeight = 64; // Approximate header height with padding
+
+    // Stream area dimensions
+    const streamAreaWidth =
+      showRemote && hasRemoteCapabilities && isControlActive
+        ? modalWidth * 0.75 // 75% when remote is shown
+        : modalWidth; // 100% when remote is hidden
+    const streamAreaHeight = modalHeight - headerHeight;
+
+    // Modal position (centered)
+    const modalX = (window.innerWidth - modalWidth) / 2;
+    const modalY = (window.innerHeight - modalHeight) / 2;
+
+    // Stream container position
+    const streamX = modalX;
+    const streamY = modalY + headerHeight;
+
+    const dimensions = {
+      width: streamAreaWidth,
+      height: streamAreaHeight,
+      x: streamX,
+      y: streamY,
+    };
+
+    console.log(
+      '[@component:RecHostStreamModal] Calculated stream container dimensions:',
+      dimensions,
+    );
+    return dimensions;
+  }, [isOpen, host, showRemote, hasRemoteCapabilities, isControlActive]);
+
   // Fetch stream URL from server
   const fetchStreamUrl = useCallback(async () => {
     if (!host) return;
@@ -398,6 +438,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
                 deviceResolution={{ width: 1920, height: 1080 }}
                 streamCollapsed={false}
                 streamMinimized={false}
+                streamContainerDimensions={streamContainerDimensions}
               />
             </Box>
           )}

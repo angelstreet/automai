@@ -27,6 +27,13 @@ interface RemotePanelProps {
   streamMinimized?: boolean;
   // Current capture mode from HDMIStream
   captureMode?: 'stream' | 'screenshot' | 'video';
+  // NEW: Stream container dimensions for modal context
+  streamContainerDimensions?: {
+    width: number;
+    height: number;
+    x: number;
+    y: number;
+  };
 }
 
 export const RemotePanel = React.memo(
@@ -38,6 +45,7 @@ export const RemotePanel = React.memo(
     streamCollapsed = true,
     streamMinimized = false,
     captureMode = 'stream',
+    streamContainerDimensions,
   }: RemotePanelProps) {
     console.log(`[@component:RemotePanel] Props debug:`, {
       hostDeviceModel: host.device_model,
@@ -150,6 +158,7 @@ export const RemotePanel = React.memo(
               streamCollapsed={streamCollapsed}
               streamMinimized={streamMinimized}
               captureMode={captureMode}
+              streamContainerDimensions={streamContainerDimensions}
               sx={{
                 height: '100%',
                 '& .MuiButton-root': {
@@ -218,6 +227,7 @@ export const RemotePanel = React.memo(
               streamCollapsed={streamCollapsed}
               streamMinimized={streamMinimized}
               captureMode={captureMode}
+              streamContainerDimensions={streamContainerDimensions}
               sx={{
                 height: '100%',
                 '& .MuiButton-root': {
@@ -253,6 +263,7 @@ export const RemotePanel = React.memo(
       streamCollapsed,
       streamMinimized,
       captureMode,
+      streamContainerDimensions,
     ]);
 
     return (
@@ -375,6 +386,9 @@ export const RemotePanel = React.memo(
     const streamMinimizedChanged = prevProps.streamMinimized !== nextProps.streamMinimized;
     const captureModeChanged = prevProps.captureMode !== nextProps.captureMode;
     const onReleaseControlChanged = prevProps.onReleaseControl !== nextProps.onReleaseControl;
+    const streamContainerDimensionsChanged =
+      JSON.stringify(prevProps.streamContainerDimensions) !==
+      JSON.stringify(nextProps.streamContainerDimensions);
 
     // Return true if props are equal (don't re-render), false if they changed (re-render)
     const shouldSkipRender =
@@ -384,7 +398,8 @@ export const RemotePanel = React.memo(
       !streamCollapsedChanged &&
       !streamMinimizedChanged &&
       !captureModeChanged &&
-      !onReleaseControlChanged;
+      !onReleaseControlChanged &&
+      !streamContainerDimensionsChanged;
 
     if (!shouldSkipRender) {
       console.log(`[@component:RemotePanel] Re-rendering due to prop changes:`, {
@@ -395,6 +410,7 @@ export const RemotePanel = React.memo(
         streamMinimizedChanged,
         captureModeChanged,
         onReleaseControlChanged,
+        streamContainerDimensionsChanged,
       });
     }
 
