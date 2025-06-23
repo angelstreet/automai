@@ -78,23 +78,27 @@ export const useRec = (): UseRecReturn => {
 
       // Filter hosts that have devices with AV capabilities and are online
       const avHosts = data.hosts.filter((host: Host) => {
+        const hasDevicesWithAV =
+          host.devices?.some(
+            (device: any) =>
+              device.capabilities &&
+              device.capabilities.some((cap: string) => cap.startsWith('av_')),
+          ) || false;
+
         console.log(`[@hook:useRec] Checking host ${host.host_name}:`, {
           status: host.status,
           devices: host.devices?.length || 0,
-          hasDevicesWithAV:
-            host.devices?.some(
-              (device: any) => device.capabilities && device.capabilities.includes('av'),
-            ) || false,
+          hasDevicesWithAV,
+          deviceCapabilities:
+            host.devices?.map((device: any) => ({
+              deviceName: device.device_name,
+              capabilities: device.capabilities || [],
+            })) || [],
         });
 
         // Host must be online and have at least one device with AV capability
         return (
-          host.status === 'online' &&
-          host.devices &&
-          host.devices.length > 0 &&
-          host.devices.some(
-            (device: any) => device.capabilities && device.capabilities.includes('av'),
-          )
+          host.status === 'online' && host.devices && host.devices.length > 0 && hasDevicesWithAV
         );
       });
 

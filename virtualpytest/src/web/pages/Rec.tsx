@@ -61,9 +61,12 @@ const Rec: React.FC = () => {
 
     hosts.forEach((host) => {
       if (host.devices && host.devices.length > 0) {
-        // Filter devices that have AV capability
+        // Filter devices that have AV capability (looking for capabilities that start with 'av_')
         host.devices.forEach((device) => {
-          if (device.capabilities && device.capabilities.includes('av')) {
+          if (
+            device.capabilities &&
+            device.capabilities.some((cap: string) => cap.startsWith('av_'))
+          ) {
             avDevices.push({ host, device });
           }
         });

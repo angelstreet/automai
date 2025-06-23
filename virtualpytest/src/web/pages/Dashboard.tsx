@@ -358,6 +358,19 @@ const Dashboard: React.FC = () => {
                 Host URL: {host.host_url}
               </Typography>
 
+              {/* System Stats Accordion */}
+              <Accordion
+                defaultExpanded
+                sx={{ mb: 2, boxShadow: 'none', border: '1px solid #e0e0e0' }}
+              >
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="subtitle2">System Stats</Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0 }}>
+                  <SystemStatsDisplay stats={host.system_stats} />
+                </AccordionDetails>
+              </Accordion>
+
               {/* Devices Accordion */}
               <Accordion
                 defaultExpanded
@@ -389,20 +402,6 @@ const Dashboard: React.FC = () => {
                         📍 {device.device_ip}:{device.device_port}
                       </Typography>
 
-                      {device.capabilities && device.capabilities.length > 0 && (
-                        <Box display="flex" flexWrap="wrap" gap={0.5} mt={0.5}>
-                          {device.capabilities.map((capability) => (
-                            <Chip
-                              key={capability}
-                              label={capability}
-                              size="small"
-                              variant="outlined"
-                              sx={{ fontSize: '0.6rem' }}
-                            />
-                          ))}
-                        </Box>
-                      )}
-
                       {device.video_stream_path && (
                         <Typography variant="caption" color="textSecondary" display="block">
                           🎥 {device.video_stream_path}
@@ -412,30 +411,6 @@ const Dashboard: React.FC = () => {
                   ))}
                 </AccordionDetails>
               </Accordion>
-
-              {/* System Stats Accordion */}
-              <Accordion sx={{ mb: 2, boxShadow: 'none', border: '1px solid #e0e0e0' }}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="subtitle2">System Stats</Typography>
-                </AccordionSummary>
-                <AccordionDetails sx={{ pt: 0 }}>
-                  <SystemStatsDisplay stats={host.system_stats} />
-                </AccordionDetails>
-              </Accordion>
-
-              {/* Host Capabilities */}
-              <Box display="flex" flexWrap="wrap" gap={0.5} mb={2}>
-                {host.capabilities.map((capability) => (
-                  <Chip
-                    key={capability}
-                    label={capability}
-                    size="small"
-                    variant="filled"
-                    color="primary"
-                    sx={{ fontSize: '0.7rem' }}
-                  />
-                ))}
-              </Box>
 
               <Typography color="textSecondary" variant="caption" display="block">
                 Last seen: {formatLastSeen(host.last_seen)}
@@ -463,7 +438,6 @@ const Dashboard: React.FC = () => {
             <TableCell>CPU</TableCell>
             <TableCell>RAM</TableCell>
             <TableCell>Disk</TableCell>
-            <TableCell>Capabilities</TableCell>
             <TableCell>Last Seen</TableCell>
             <TableCell>Registered</TableCell>
           </TableRow>
@@ -586,19 +560,6 @@ const Dashboard: React.FC = () => {
                       }}
                     />
                   </Box>
-                </Box>
-              </TableCell>
-              <TableCell>
-                <Box display="flex" flexWrap="wrap" gap={0.5}>
-                  {host.capabilities.map((capability) => (
-                    <Chip
-                      key={capability}
-                      label={capability}
-                      size="small"
-                      variant="outlined"
-                      sx={{ fontSize: '0.7rem' }}
-                    />
-                  ))}
                 </Box>
               </TableCell>
               <TableCell>
