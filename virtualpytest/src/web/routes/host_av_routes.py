@@ -72,28 +72,32 @@ def connect():
 
 @av_bp.route('/disconnect', methods=['POST'])
 def disconnect():
-    """Disconnect from AV controller using own stored host_device object"""
+    """Disconnect from AV controller using new architecture"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_av:disconnect] Disconnecting AV controller for device: {device_id}")
         
-        # Get controller object directly from own stored host_device
-        av_controller = get_local_controller('av')
+        # Get AV controller for the specified device
+        av_controller = get_controller(device_id, 'av')
         
         if not av_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No AV controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No AV controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_av:disconnect] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:host_av:disconnect] Using AV controller: {type(av_controller).__name__}")
         
         # Disconnect from controller
         disconnect_result = av_controller.disconnect()
@@ -101,7 +105,8 @@ def disconnect():
         return jsonify({
             'success': disconnect_result,
             'connected': False,
-            'streaming': False
+            'streaming': False,
+            'device_id': device_id
         })
         
     except Exception as e:
@@ -112,28 +117,31 @@ def disconnect():
 
 @av_bp.route('/status', methods=['GET'])
 def get_status():
-    """Get AV controller status using own stored host_device object"""
+    """Get AV controller status using new architecture"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from query params (defaults to device1)
+        device_id = request.args.get('device_id', 'device1')
         
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_av:status] Getting AV controller status for device: {device_id}")
         
-        # Get controller object directly from own stored host_device
-        av_controller = get_local_controller('av')
+        # Get AV controller for the specified device
+        av_controller = get_controller(device_id, 'av')
         
         if not av_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No AV controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No AV controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_av:status] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:host_av:status] Using AV controller: {type(av_controller).__name__}")
         
         # Get controller status
         status = av_controller.get_status()
@@ -141,6 +149,7 @@ def get_status():
         return jsonify({
             'success': True,
             'status': status,
+            'device_id': device_id,
             'timestamp': __import__('time').time()
         })
         
@@ -152,28 +161,32 @@ def get_status():
 
 @av_bp.route('/restart-stream', methods=['POST'])
 def restart_stream():
-    """Restart stream service using own stored host_device object"""
+    """Restart stream service using new architecture"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_av:restart_stream] Restarting stream for device: {device_id}")
         
-        # Get controller object directly from own stored host_device
-        av_controller = get_local_controller('av')
+        # Get AV controller for the specified device
+        av_controller = get_controller(device_id, 'av')
         
         if not av_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No AV controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No AV controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_av:restart_stream] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:host_av:restart_stream] Using AV controller: {type(av_controller).__name__}")
         
         # Restart stream service
         restart_result = av_controller.restart_stream()
@@ -185,6 +198,7 @@ def restart_stream():
                 'success': True,
                 'restarted': True,
                 'status': status,
+                'device_id': device_id,
                 'message': 'Stream service restarted successfully'
             })
         else:
@@ -201,33 +215,45 @@ def restart_stream():
 
 @av_bp.route('/take-control', methods=['POST'])
 def take_control():
-    """Take control of AV system using own stored host_device object"""
+    """Take control of AV system using new architecture"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_av:take_control] Taking control of AV system for device: {device_id}")
         
-        # Get controller object directly from own stored host_device
-        av_controller = get_local_controller('av')
+        # Get AV controller for the specified device
+        av_controller = get_controller(device_id, 'av')
         
         if not av_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No AV controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No AV controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_av:take_control] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:host_av:take_control] Using AV controller: {type(av_controller).__name__}")
         
         # Take control of AV system
         control_result = av_controller.take_control()
         
-        return jsonify(control_result)
+        # Add device_id to result if it's a dict
+        if isinstance(control_result, dict):
+            control_result['device_id'] = device_id
+            return jsonify(control_result)
+        else:
+            return jsonify({
+                'success': control_result,
+                'device_id': device_id
+            })
             
     except Exception as e:
         return jsonify({
@@ -237,28 +263,31 @@ def take_control():
 
 @av_bp.route('/get-stream-url', methods=['GET'])
 def get_stream_url():
-    """Get stream URL from AV controller using own stored host_device object"""
+    """Get stream URL from AV controller using new architecture"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from query params (defaults to device1)
+        device_id = request.args.get('device_id', 'device1')
         
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_av:stream_url] Getting stream URL for device: {device_id}")
         
-        # Get controller object directly from own stored host_device
-        av_controller = get_local_controller('av')
+        # Get AV controller for the specified device
+        av_controller = get_controller(device_id, 'av')
         
         if not av_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No AV controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No AV controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_av:stream_url] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:host_av:stream_url] Using AV controller: {type(av_controller).__name__}")
         
         # Get stream URL from controller
         stream_url = av_controller.get_stream_url()
@@ -266,7 +295,8 @@ def get_stream_url():
         if stream_url:
             return jsonify({
                 'success': True,
-                'stream_url': stream_url
+                'stream_url': stream_url,
+                'device_id': device_id
             })
         else:
             return jsonify({
@@ -282,28 +312,32 @@ def get_stream_url():
 
 @av_bp.route('/take-screenshot', methods=['POST'])
 def take_screenshot():
-    """Take temporary screenshot to nginx folder using own stored host_device object"""
+    """Take temporary screenshot to nginx folder using new architecture"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_av:take_screenshot] Taking screenshot for device: {device_id}")
         
-        # Get controller object directly from own stored host_device
-        av_controller = get_local_controller('av')
+        # Get AV controller for the specified device
+        av_controller = get_controller(device_id, 'av')
         
         if not av_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No AV controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No AV controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_av:take_screenshot] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:host_av:take_screenshot] Using AV controller: {type(av_controller).__name__}")
         
         # Take screenshot using controller
         # For HDMI controller, this returns a URL to the captured screenshot
@@ -318,11 +352,12 @@ def take_screenshot():
                 # It's already a URL, return it directly
                 return jsonify({
                     'success': True,
-                    'screenshot_url': screenshot_result
+                    'screenshot_url': screenshot_result,
+                    'device_id': device_id
                 })
             else:
                 # It's a file path, we need to copy it to nginx folder
-                temp_filename = "screenshot.jpg"
+                temp_filename = f"screenshot_{device_id}.jpg"
                 
                 # Ensure nginx directory exists
                 nginx_dir = "/var/www/html/captures/tmp"
@@ -336,13 +371,15 @@ def take_screenshot():
                 else:
                     print(f"[@route:host_av:take_screenshot] Warning: Source file not found at {screenshot_result}")
                 
-                # Build nginx URL for immediate access
-                host_ip = host_device.get('device_ip') or host_device.get('host_ip')
+                # Get device to build nginx URL
+                device = get_device_by_id(device_id)
+                host_ip = device.get_host_ip() if device else 'localhost'
                 nginx_url = f"https://{host_ip}/captures/tmp/{temp_filename}"
                 
                 return jsonify({
                     'success': True,
-                    'screenshot_url': nginx_url
+                    'screenshot_url': nginx_url,
+                    'device_id': device_id
                 })
         else:
             return jsonify({
@@ -357,39 +394,40 @@ def take_screenshot():
             'error': str(e)
         }), 500
 
-
-
 @av_bp.route('/start-capture', methods=['POST'])
 def start_video_capture():
-    """Start video capture using own stored host_device object"""
+    """Start video capture using new architecture"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_av:start_capture] Starting capture for device: {device_id}")
         
-        # Get controller object directly from own stored host_device
-        av_controller = get_local_controller('av')
+        # Get AV controller for the specified device
+        av_controller = get_controller(device_id, 'av')
         
         if not av_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No AV controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No AV controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_av:start_capture] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:host_av:start_capture] Using AV controller: {type(av_controller).__name__}")
         
         # Get request data for capture options
-        request_data = request.get_json() or {}
-        duration = request_data.get('duration', 60.0)  # Default 60 seconds
-        filename = request_data.get('filename')
-        resolution = request_data.get('resolution')
-        fps = request_data.get('fps')
+        duration = data.get('duration', 60.0)  # Default 60 seconds
+        filename = data.get('filename')
+        resolution = data.get('resolution')
+        fps = data.get('fps')
         
         print(f"[@route:host_av:start_capture] Starting capture with duration: {duration}s")
         
@@ -409,6 +447,7 @@ def start_video_capture():
                 'success': True,
                 'session_id': session_id,
                 'duration': duration,
+                'device_id': device_id,
                 'message': 'Video capture started successfully'
             })
         else:
@@ -426,28 +465,32 @@ def start_video_capture():
 
 @av_bp.route('/stop-capture', methods=['POST'])
 def stop_video_capture():
-    """Stop video capture using own stored host_device object"""
+    """Stop video capture using new architecture"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_av:stop_capture] Stopping capture for device: {device_id}")
         
-        # Get controller object directly from own stored host_device
-        av_controller = get_local_controller('av')
+        # Get AV controller for the specified device
+        av_controller = get_controller(device_id, 'av')
         
         if not av_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No AV controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No AV controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_av:stop_capture] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:host_av:stop_capture] Using AV controller: {type(av_controller).__name__}")
         
         # Stop video capture using controller
         stop_result = av_controller.stop_video_capture()
@@ -455,6 +498,7 @@ def stop_video_capture():
         if stop_result:
             return jsonify({
                 'success': True,
+                'device_id': device_id,
                 'message': 'Video capture stopped successfully'
             })
         else:

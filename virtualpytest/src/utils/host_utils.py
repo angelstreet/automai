@@ -272,4 +272,32 @@ def get_device_capabilities(device_id: str):
 def has_device_capability(device_id: str, capability: str):
     """Check if a device has a specific capability."""
     capabilities = get_device_capabilities(device_id)
-    return capability in capabilities 
+    return capability in capabilities
+
+
+# TEMPORARY BACKWARD COMPATIBILITY FUNCTION
+def get_local_controller(controller_type: str, device_id: str = None):
+    """
+    DEPRECATED: Backward compatibility function for old routes.
+    Use get_controller(device_id, controller_type) instead.
+    """
+    print(f"[@host_utils:get_local_controller] DEPRECATED: Use get_controller(device_id, controller_type) instead")
+    
+    # Default to device1 if no device_id provided
+    if not device_id:
+        device_id = 'device1'
+    
+    # Map old controller_type patterns to new ones
+    if controller_type.startswith('verification_'):
+        # verification_image -> verification
+        new_controller_type = 'verification'
+    elif controller_type == 'av':
+        new_controller_type = 'av'
+    elif controller_type == 'remote':
+        new_controller_type = 'remote'
+    elif controller_type == 'power':
+        new_controller_type = 'power'
+    else:
+        new_controller_type = controller_type
+    
+    return get_controller(device_id, new_controller_type) 

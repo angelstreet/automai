@@ -12,7 +12,7 @@ All verification logic is centralized here to avoid duplication.
 
 import time
 from typing import Dict, Any, List, Optional
-from src.utils.host_utils import get_local_controller
+from src.utils.host_utils import get_controller, get_device_by_id
 
 
 class VerificationController:
@@ -25,17 +25,19 @@ class VerificationController:
     - Background automation
     """
     
-    def __init__(self, host_device: Dict[str, Any] = None):
+    def __init__(self, host_device: Dict[str, Any] = None, device_id: str = 'device1'):
         """
         Initialize verification controller.
         
         Args:
             host_device: Host device information (optional, can be set later)
+            device_id: Device ID to use for controller access (default: device1)
         """
         self.host_device = host_device
+        self.device_id = device_id
         self.controllers_cache = {}
         
-        print(f"[@controller:VerificationController] Initialized")
+        print(f"[@controller:VerificationController] Initialized for device: {device_id}")
     
     def set_host_device(self, host_device: Dict[str, Any]):
         """Set or update host device information"""
@@ -45,17 +47,18 @@ class VerificationController:
         print(f"[@controller:VerificationController] Host device updated: {host_device.get('device_model', 'unknown')}")
     
     def get_controller(self, controller_type: str):
-        """Get controller instance with caching"""
-        if controller_type not in self.controllers_cache:
-            controller = get_local_controller(controller_type)
+        """Get controller instance with caching using new architecture"""
+        cache_key = f"{self.device_id}_{controller_type}"
+        if cache_key not in self.controllers_cache:
+            controller = get_controller(self.device_id, controller_type)
             if controller:
-                self.controllers_cache[controller_type] = controller
-                print(f"[@controller:VerificationController] Cached controller: {controller_type}")
+                self.controllers_cache[cache_key] = controller
+                print(f"[@controller:VerificationController] Cached controller: {controller_type} for device: {self.device_id}")
             else:
-                print(f"[@controller:VerificationController] Controller not available: {controller_type}")
+                print(f"[@controller:VerificationController] Controller not available: {controller_type} for device: {self.device_id}")
                 return None
         
-        return self.controllers_cache.get(controller_type)
+        return self.controllers_cache.get(cache_key)
     
     def execute_verifications(self, verifications: List[Dict[str, Any]], 
                             source_filename: str = None) -> Dict[str, Any]:

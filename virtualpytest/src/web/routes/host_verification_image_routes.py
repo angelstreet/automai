@@ -13,7 +13,7 @@ import os
 import json
 import time
 from datetime import datetime
-from src.utils.host_utils import get_local_controller
+from src.utils.host_utils import get_controller, get_device_by_id
 from src.utils.cloudflare_utils import download_reference_image
 
 # Create blueprint
@@ -111,10 +111,8 @@ def crop_area():
         
         # Use image controller for cropping
         try:
-            from src.utils.host_utils import get_local_controller
-            
-            # Get image verification controller
-            image_controller = get_local_controller('verification_image')
+            # Get image verification controller for device
+            image_controller = get_controller(device_id, 'verification_image')
             if not image_controller:
                 print(f"[@route:host_crop_area] Image controller not available")
                 return jsonify({
@@ -246,10 +244,8 @@ def process_area():
         
         # Use image controller for processing
         try:
-            from src.utils.host_utils import get_local_controller
-            
-            # Get image verification controller
-            image_controller = get_local_controller('verification_image')
+            # Get image verification controller for device
+            image_controller = get_controller(device_id, 'verification_image')
             if not image_controller:
                 print(f"[@route:host_process_area] Image controller not available")
                 return jsonify({

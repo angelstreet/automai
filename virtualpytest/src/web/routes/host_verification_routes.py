@@ -9,7 +9,7 @@ This module contains the host-side verification API endpoints that:
 import os
 import json
 from flask import Blueprint, request, jsonify, current_app
-from src.utils.host_utils import get_local_controller
+from src.utils.host_utils import get_controller, get_device_by_id
 
 # Create blueprint
 verification_host_bp = Blueprint('verification_host', __name__, url_prefix='/host/verification')
@@ -22,30 +22,39 @@ verification_host_bp = Blueprint('verification_host', __name__, url_prefix='/hos
 def verification_status():
     """Get verification system status."""
     try:
-        print(f"[@route:verification_status] Getting verification system status")
+        # Get device_id from query params (defaults to device1)
+        device_id = request.args.get('device_id', 'device1')
         
-        # Get host device info
-        host_device = getattr(current_app, 'my_host_device', None)
-        if not host_device:
+        print(f"[@route:verification_status] Getting verification system status for device: {device_id}")
+        
+        # Get device info
+        device = get_device_by_id(device_id)
+        if not device:
             return jsonify({
                 'success': False,
-                'error': 'Host device object not initialized'
+                'error': f'Device {device_id} not found'
             }), 404
         
-        # Check available controllers
+        # Check available controllers for this device
         available_controllers = []
         
         # Check AV controller
-        av_controller = get_local_controller('av')
+        av_controller = get_controller(device_id, 'av')
         if av_controller:
             available_controllers.append('av')
         
         # Check remote controller
-        remote_controller = get_local_controller('remote')
+        remote_controller = get_controller(device_id, 'remote')
         if remote_controller:
             available_controllers.append('remote')
         
-        print(f"[@route:verification_status] Available controllers: {available_controllers}")
+        # Check verification controllers
+        for verification_type in ['verification_image', 'verification_text', 'verification_adb']:
+            controller = get_controller(device_id, verification_type)
+            if controller:
+                available_controllers.append(verification_type)
+        
+        print(f"[@route:verification_status] Available controllers for device {device_id}: {available_controllers}")
         
         return jsonify({
             'success': True,
@@ -53,8 +62,9 @@ def verification_status():
             'controllers_available': available_controllers,
             'message': 'Verification system is ready',
             'host_connected': True,
-            'device_model': host_device.get('device_model', 'unknown'),
-            'host_name': host_device.get('host_name', 'unknown')
+            'device_id': device_id,
+            'device_model': device.device_model,
+            'device_name': device.device_name
         })
         
     except Exception as e:

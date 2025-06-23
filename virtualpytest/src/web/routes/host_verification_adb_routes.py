@@ -10,7 +10,7 @@ This module contains the host-side ADB verification API endpoints that:
 from flask import Blueprint, request, jsonify, current_app
 import os
 import json
-from src.utils.host_utils import get_local_controller
+from src.utils.host_utils import get_controller, get_device_by_id
 
 # Create blueprint
 verification_adb_host_bp = Blueprint('verification_adb_host', __name__, url_prefix='/host/verification/adb')
@@ -29,8 +29,9 @@ def execute_adb_verification():
         verification = data.get('verification')
         source_filename = data.get('source_filename')  # Not used for ADB but kept for consistency
         model = data.get('model', 'default')
+        device_id = data.get('device_id', 'device1')
         
-        print(f"[@route:host_verification_adb:execute] Verification: {verification}")
+        print(f"[@route:host_verification_adb:execute] Verification: {verification} for device: {device_id}")
         
         # Validate required parameters
         if not verification:
@@ -39,12 +40,20 @@ def execute_adb_verification():
                 'error': 'verification is required'
             }), 400
         
-        # Get ADB verification controller
-        adb_controller = get_local_controller('verification_adb')
+        # Get ADB verification controller for the specified device
+        adb_controller = get_controller(device_id, 'verification_adb')
         if not adb_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'ADB verification controller not available'
+                'error': f'ADB verification controller not available for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
         # Extract verification parameters
@@ -87,7 +96,8 @@ def execute_adb_verification():
                 'message': message,
                 'result_data': result_data,
                 'verification_type': 'adb',
-                'command': command
+                'command': command,
+                'device_id': device_id
             }
         })
         
@@ -109,6 +119,7 @@ def wait_for_element_to_appear():
         search_term = data.get('search_term')
         timeout = data.get('timeout', 10.0)
         check_interval = data.get('check_interval', 1.0)
+        device_id = data.get('device_id', 'device1')
         
         # Validate required parameters
         if not search_term:
@@ -117,12 +128,20 @@ def wait_for_element_to_appear():
                 'error': 'search_term is required'
             }), 400
         
-        # Get ADB verification controller
-        adb_controller = get_local_controller('verification_adb')
+        # Get ADB verification controller for the specified device
+        adb_controller = get_controller(device_id, 'verification_adb')
         if not adb_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'ADB verification controller not available'
+                'error': f'ADB verification controller not available for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
         # Execute the verification
@@ -137,7 +156,8 @@ def wait_for_element_to_appear():
             'message': message,
             'result_data': result_data,
             'verification_type': 'adb',
-            'command': 'waitForElementToAppear'
+            'command': 'waitForElementToAppear',
+            'device_id': device_id
         })
         
     except Exception as e:
@@ -158,6 +178,7 @@ def wait_for_element_to_disappear():
         search_term = data.get('search_term')
         timeout = data.get('timeout', 10.0)
         check_interval = data.get('check_interval', 1.0)
+        device_id = data.get('device_id', 'device1')
         
         # Validate required parameters
         if not search_term:
@@ -166,12 +187,20 @@ def wait_for_element_to_disappear():
                 'error': 'search_term is required'
             }), 400
         
-        # Get ADB verification controller
-        adb_controller = get_local_controller('verification_adb')
+        # Get ADB verification controller for the specified device
+        adb_controller = get_controller(device_id, 'verification_adb')
         if not adb_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'ADB verification controller not available'
+                'error': f'ADB verification controller not available for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
         # Execute the verification
@@ -186,7 +215,8 @@ def wait_for_element_to_disappear():
             'message': message,
             'result_data': result_data,
             'verification_type': 'adb',
-            'command': 'waitForElementToDisappear'
+            'command': 'waitForElementToDisappear',
+            'device_id': device_id
         })
         
     except Exception as e:

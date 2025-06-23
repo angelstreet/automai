@@ -9,7 +9,7 @@ This module contains the host-side navigation endpoints for:
 from flask import Blueprint, request, jsonify, current_app
 import os
 import shutil
-from src.utils.host_utils import get_local_controller
+from src.utils.host_utils import get_controller, get_device_by_id
 
 # Create blueprint with host navigation prefix
 navigation_bp = Blueprint('navigation', __name__, url_prefix='/host/navigation')
@@ -18,29 +18,32 @@ navigation_bp = Blueprint('navigation', __name__, url_prefix='/host/navigation')
 def save_navigation_screenshot():
     """Take screenshot and upload to R2 for navigation documentation"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get request data for device_id and other parameters
+        request_data = request.get_json() or {}
+        device_id = request_data.get('device_id', 'device1')
         
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_navigation:save_screenshot] Saving navigation screenshot for device: {device_id}")
         
-        # Get controller object directly from own stored host_device
-        av_controller = get_local_controller('av')
+        # Get AV controller for the specified device
+        av_controller = get_controller(device_id, 'av')
         
         if not av_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No AV controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No AV controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
         print(f"[@route:host_navigation:save_screenshot] Using AV controller: {type(av_controller).__name__}")
         
-        # Get request data for required filename parameter
-        request_data = request.get_json() or {}
+        # Get other parameters from request data
         filename = request_data.get('filename')
         device_model = request_data.get('device_model', 'android_mobile')
         
@@ -101,7 +104,8 @@ def save_navigation_screenshot():
             return jsonify({
                 'success': True,
                 'screenshot_url': r2_url,  # R2 URL for permanent storage
-                'screenshot_path': local_screenshot_path  # Keep for backward compatibility
+                'screenshot_path': local_screenshot_path,  # Keep for backward compatibility
+                'device_id': device_id
             })
             
         except Exception as upload_error:

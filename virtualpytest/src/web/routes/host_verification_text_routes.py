@@ -82,10 +82,10 @@ def text_auto_detect():
         
         # Use image controller for cropping
         try:
-            from src.utils.host_utils import get_local_controller
+            from src.utils.host_utils import get_controller
             
-            # Get image verification controller
-            image_controller = get_local_controller('verification_image')
+            # Get image verification controller for device
+            image_controller = get_controller(device_id, 'verification_image')
             if not image_controller:
                 print(f"[@route:host_text_auto_detect] Image controller not available")
                 return jsonify({

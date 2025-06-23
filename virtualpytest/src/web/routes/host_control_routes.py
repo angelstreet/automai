@@ -9,6 +9,7 @@ This module contains host-side control endpoints that:
 """
 
 from flask import Blueprint, request, jsonify, current_app
+from src.utils.host_utils import get_controller, get_device_by_id, list_available_devices
 
 # Create blueprint
 control_bp = Blueprint('host_control', __name__, url_prefix='/host')
@@ -86,20 +87,28 @@ def take_control():
             print(f"[@route:take_control] Device ID: {device_id}")
         print(f"[@route:take_control] Available controllers: {list(host_device.get('controller_objects', {}).keys())}")
         
-        # Step 1: Check AV controller from own host_device
+        # Step 1: Check AV controller using new architecture
         try:
-            from src.utils.host_utils import get_local_controller
-            av_controller = get_local_controller('av', device_id)
+            av_controller = get_controller(device_id, 'av')
             
             if not av_controller:
+                device = get_device_by_id(device_id)
+                if not device:
+                    return jsonify({
+                        'success': False,
+                        'status': 'device_not_found',
+                        'error': f'Device {device_id} not found',
+                        'error_type': 'configuration_error'
+                    })
+                
                 return jsonify({
                     'success': False,
                     'status': 'av_controller_not_found',
-                    'error': f'No AV controller object found for device {device_id or "default"}',
+                    'error': f'No AV controller found for device {device_id}',
                     'error_type': 'configuration_error',
                     'device_model': device_model,
                     'device_id': device_id,
-                    'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                    'available_capabilities': device.get_capabilities()
                 })
             
             print(f"[@route:take_control] Using AV controller: {type(av_controller).__name__}")
@@ -123,7 +132,7 @@ def take_control():
         
         if device_ip and device_model in ['android_mobile', 'android_tv']:
             try:
-                remote_controller = get_local_controller('remote', device_id)
+                remote_controller = get_controller(device_id, 'remote')
                 
                 if not remote_controller:
                     return jsonify({
@@ -285,7 +294,7 @@ def list_devices():
             devices = [device_info]
         
         # Get available controller types for each device
-        from src.utils.host_utils import list_available_devices, get_local_controller
+                    # Using already imported functions
         available_device_ids = list_available_devices()
         
         for device in devices:
@@ -296,7 +305,7 @@ def list_devices():
             # Check if controllers exist for this device
             if device_id in available_device_ids or device_id == 'default':
                 # Check AV controller
-                av_controller = get_local_controller('av', device_id)
+                av_controller = get_controller(device_id, 'av')
                 if av_controller:
                     device['controllers']['av'] = {
                         'available': True,
@@ -304,7 +313,7 @@ def list_devices():
                     }
                 
                 # Check remote controller
-                remote_controller = get_local_controller('remote', device_id)
+                remote_controller = get_controller(device_id, 'remote')
                 if remote_controller:
                     device['controllers']['remote'] = {
                         'available': True,
@@ -312,7 +321,7 @@ def list_devices():
                     }
                 
                 # Check verification controller
-                verification_controller = get_local_controller('verification', device_id)
+                verification_controller = get_controller(device_id, 'verification')
                 if verification_controller:
                     device['controllers']['verification'] = {
                         'available': True,
@@ -320,7 +329,7 @@ def list_devices():
                     }
                 
                 # Check power controller
-                power_controller = get_local_controller('power', device_id)
+                power_controller = get_controller(device_id, 'power')
                 if power_controller:
                     device['controllers']['power'] = {
                         'available': True,

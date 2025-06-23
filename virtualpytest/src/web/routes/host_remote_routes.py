@@ -5,7 +5,7 @@ Host-side remote control endpoints that execute remote commands using instantiat
 """
 
 from flask import Blueprint, request, jsonify, current_app
-from src.utils.host_utils import get_local_controller
+from src.utils.host_utils import get_controller, get_device_by_id
 
 # Create blueprint
 remote_bp = Blueprint('host_remote', __name__, url_prefix='/host/remote')
@@ -18,31 +18,38 @@ remote_bp = Blueprint('host_remote', __name__, url_prefix='/host/remote')
 def take_screenshot():
     """Take a screenshot using the remote controller."""
     try:
-        print(f"[@route:host_remote:take_screenshot] Taking screenshot")
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        host_device = getattr(current_app, 'my_host_device', None)
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_remote:take_screenshot] Taking screenshot for device: {device_id}")
         
-        remote_controller = get_local_controller('remote')
+        # Get remote controller for the specified device
+        remote_controller = get_controller(device_id, 'remote')
+        
         if not remote_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No remote controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No remote controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_remote:take_screenshot] Using own remote controller: {type(remote_controller).__name__}")
+        print(f"[@route:host_remote:take_screenshot] Using remote controller: {type(remote_controller).__name__}")
         
         success, screenshot_data, error = remote_controller.take_screenshot()
         
         if success:
             return jsonify({
                 'success': True,
-                'screenshot': screenshot_data
+                'screenshot': screenshot_data,
+                'device_id': device_id
             })
         else:
             return jsonify({
@@ -61,24 +68,30 @@ def take_screenshot():
 def screenshot_and_dump():
     """Take screenshot and dump UI elements."""
     try:
-        print(f"[@route:host_remote:screenshot_and_dump] Taking screenshot and dumping UI")
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        host_device = getattr(current_app, 'my_host_device', None)
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_remote:screenshot_and_dump] Taking screenshot and dumping UI for device: {device_id}")
         
-        remote_controller = get_local_controller('remote')
+        # Get remote controller for the specified device
+        remote_controller = get_controller(device_id, 'remote')
+        
         if not remote_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No remote controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No remote controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_remote:screenshot_and_dump] Using own remote controller: {type(remote_controller).__name__}")
+        print(f"[@route:host_remote:screenshot_and_dump] Using remote controller: {type(remote_controller).__name__}")
         
         screenshot_success, screenshot_data, screenshot_error = remote_controller.take_screenshot()
         
@@ -92,7 +105,8 @@ def screenshot_and_dump():
                 print(f"[@route:host_remote:screenshot_and_dump] Stored {len(elements)} elements in controller for clicking")
         
         response = {
-            'success': screenshot_success and (ui_success or not hasattr(remote_controller, 'dump_ui_elements'))
+            'success': screenshot_success and (ui_success or not hasattr(remote_controller, 'dump_ui_elements')),
+            'device_id': device_id
         }
         
         if screenshot_success:
@@ -145,24 +159,30 @@ def screenshot_and_dump():
 def get_apps():
     """Get list of installed apps."""
     try:
-        print(f"[@route:host_remote:get_apps] Getting installed apps")
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        host_device = getattr(current_app, 'my_host_device', None)
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_remote:get_apps] Getting installed apps for device: {device_id}")
         
-        remote_controller = get_local_controller('remote')
+        # Get remote controller for the specified device
+        remote_controller = get_controller(device_id, 'remote')
+        
         if not remote_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No remote controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No remote controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_remote:get_apps] Using own remote controller: {type(remote_controller).__name__}")
+        print(f"[@route:host_remote:get_apps] Using remote controller: {type(remote_controller).__name__}")
         
         if not hasattr(remote_controller, 'get_installed_apps'):
             return jsonify({
@@ -181,7 +201,8 @@ def get_apps():
         
         return jsonify({
             'success': True,
-            'apps': apps_data
+            'apps': apps_data,
+            'device_id': device_id
         })
             
     except Exception as e:
@@ -191,8 +212,6 @@ def get_apps():
             'error': f'Get apps error: {str(e)}'
         }), 500
 
-
-
 @remote_bp.route('/tap-coordinates', methods=['POST'])
 def tap_coordinates():
     """Handle tap coordinates - mobile control only"""
@@ -200,6 +219,7 @@ def tap_coordinates():
         data = request.get_json()
         x = data.get('x')
         y = data.get('y')
+        device_id = data.get('device_id', 'device1')
         
         if x is None or y is None:
             return jsonify({
@@ -207,31 +227,40 @@ def tap_coordinates():
                 'error': 'Missing required parameters: x, y'
             }), 400
             
-        print(f"[@route:host_remote] Handling tap coordinates: ({x}, {y})")
+        print(f"[@route:host_remote] Handling tap coordinates: ({x}, {y}) for device: {device_id}")
         
-        # Get remote controller
-        remote_controller = get_local_controller('remote')
+        # Get remote controller for the specified device
+        remote_controller = get_controller(device_id, 'remote')
+        
         if not remote_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'Remote controller not available'
-            }), 400
+                'error': f'No remote controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
+            }), 404
             
         # Execute tap command through remote controller
         success = remote_controller.tap_coordinates(x, y)
-        result = {'success': success}
         
-        if result.get('success'):
-            print(f"[@route:host_remote] Tap executed successfully at ({x}, {y})")
+        if success:
+            print(f"[@route:host_remote] Tap executed successfully at ({x}, {y}) for device: {device_id}")
             return jsonify({
                 'success': True,
-                'message': f'Tap executed at coordinates ({x}, {y})'
+                'message': f'Tap executed at coordinates ({x}, {y})',
+                'device_id': device_id
             })
         else:
-            print(f"[@route:host_remote] Tap failed: {result.get('error', 'Unknown error')}")
+            print(f"[@route:host_remote] Tap failed for device: {device_id}")
             return jsonify({
                 'success': False,
-                'error': result.get('error', 'Tap execution failed')
+                'error': 'Tap execution failed'
             }), 500
             
     except Exception as e:
@@ -248,8 +277,9 @@ def execute_command():
         data = request.get_json()
         command = data.get('command')
         params = data.get('params', {})
+        device_id = data.get('device_id', 'device1')
         
-        print(f"[@route:host_remote:execute_command] Executing command: {command} with params: {params}")
+        print(f"[@route:host_remote:execute_command] Executing command: {command} with params: {params} for device: {device_id}")
         
         if not command:
             return jsonify({
@@ -257,22 +287,24 @@ def execute_command():
                 'error': 'command is required'
             }), 400
         
-        host_device = getattr(current_app, 'my_host_device', None)
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        # Get remote controller for the specified device
+        remote_controller = get_controller(device_id, 'remote')
         
-        remote_controller = get_local_controller('remote')
         if not remote_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No remote controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No remote controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_remote:execute_command] Using own remote controller: {type(remote_controller).__name__}")
+        print(f"[@route:host_remote:execute_command] Using remote controller: {type(remote_controller).__name__}")
         
         success = False
         
@@ -429,7 +461,8 @@ def execute_command():
         if success:
             return jsonify({
                 'success': True,
-                'message': f'Command {command} executed successfully'
+                'message': f'Command {command} executed successfully',
+                'device_id': device_id
             })
         else:
             return jsonify({
@@ -448,24 +481,30 @@ def execute_command():
 def dump_ui():
     """Dump UI elements without screenshot - for HDMI stream usage"""
     try:
-        print(f"[@route:host_remote:dump_ui] Dumping UI elements without screenshot")
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        host_device = getattr(current_app, 'my_host_device', None)
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_remote:dump_ui] Dumping UI elements without screenshot for device: {device_id}")
         
-        remote_controller = get_local_controller('remote')
+        # Get remote controller for the specified device
+        remote_controller = get_controller(device_id, 'remote')
+        
         if not remote_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No remote controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No remote controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_remote:dump_ui] Using own remote controller: {type(remote_controller).__name__}")
+        print(f"[@route:host_remote:dump_ui] Using remote controller: {type(remote_controller).__name__}")
         
         if not hasattr(remote_controller, 'dump_ui_elements'):
             return jsonify({
@@ -509,7 +548,8 @@ def dump_ui():
             
             return jsonify({
                 'success': True,
-                'elements': elements_data
+                'elements': elements_data,
+                'device_id': device_id
             })
         else:
             print(f"[@route:host_remote:dump_ui] UI dump failed: {ui_error}")
