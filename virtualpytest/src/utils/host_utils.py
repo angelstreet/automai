@@ -519,7 +519,7 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
         av_controller = None
         
         for controller_key, controller_config in controllers_config.items():
-            if controller_key.startswith('action_'):
+            if controller_key.startswith(('remote_', 'av_', 'power_')):
                 action_type = controller_config['implementation']
                 expected_action_types.append(action_type)
                 print(f"[@utils:host_utils:create_local_controllers_from_model] Creating action controller: {action_type}")
@@ -678,21 +678,21 @@ def get_local_controller(controller_type):
     if controller_type in local_controller_objects:
         return local_controller_objects.get(controller_type)
     
-    # Map old capability names to new controller names for backward compatibility
+    # Map abstract capability names to specific controller implementations
     if controller_type == 'av':
-        # Look for any AV action controller
+        # Look for any AV controller (av_hdmi_stream, etc.)
         for key, controller in local_controller_objects.items():
-            if key.startswith('action_av_'):
+            if key.startswith('av_'):
                 return controller
     elif controller_type == 'remote':
-        # Look for any remote action controller
+        # Look for any remote controller (remote_android_mobile, remote_android_tv, etc.)
         for key, controller in local_controller_objects.items():
-            if key.startswith('action_remote_'):
+            if key.startswith('remote_'):
                 return controller
     elif controller_type == 'power':
-        # Look for any power action controller
+        # Look for any power controller (power_usb, etc.)
         for key, controller in local_controller_objects.items():
-            if key.startswith('action_power_'):
+            if key.startswith('power_'):
                 return controller
     elif controller_type == 'verification':
         # Look for any verification controller

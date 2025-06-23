@@ -104,27 +104,23 @@ def register_host():
         print(f"   Abstract capabilities: {capabilities}")
         print(f"   Specific implementations: {controller_types}")
         
-        # Map controller config names to simplified capabilities that existing code expects
+        # Map controller config names to abstract capabilities
         capabilities = []
         if controller_configs:
             for controller_key in controller_configs.keys():
-                # Map new action controller names back to simple capability names
-                if controller_key.startswith('action_av_') or controller_key.startswith('verification_') and any(v_type in controller_key for v_type in ['image', 'video', 'audio']):
+                # Map specific controller names to abstract capability names
+                if controller_key.startswith('av_') or controller_key.startswith('verification_') and any(v_type in controller_key for v_type in ['image', 'video', 'audio']):
                     if 'av' not in capabilities:
                         capabilities.append('av')
-                elif controller_key.startswith('action_remote_') or controller_key.startswith('verification_adb'):
+                elif controller_key.startswith('remote_') or controller_key.startswith('verification_adb'):
                     if 'remote' not in capabilities:
                         capabilities.append('remote')
-                elif controller_key.startswith('action_power_'):
+                elif controller_key.startswith('power_'):
                     if 'power' not in capabilities:
                         capabilities.append('power')
                 elif controller_key.startswith('verification_'):
                     if 'verification' not in capabilities:
                         capabilities.append('verification')
-                # Keep backward compatibility - if it's already a simple name, keep it
-                elif controller_key in ['av', 'remote', 'power', 'verification']:
-                    if controller_key not in capabilities:
-                        capabilities.append(controller_key)
         
         print(f"[@route:register_host] Final controller mapping:")
         print(f"   Abstract types (capabilities): {capabilities}")

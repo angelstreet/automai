@@ -173,7 +173,18 @@ export default function RemoteTestPage() {
           Device Model: <strong>{selectedHost.device_model}</strong>
         </Typography>
         <Typography variant="body2">
-          Remote Type: <strong>{selectedHost.controller_configs?.remote?.type || 'None'}</strong>
+          Remote Type:{' '}
+          <strong>
+            {(() => {
+              if (!selectedHost.controller_configs) return 'None';
+              const remoteKey = Object.keys(selectedHost.controller_configs).find((key) =>
+                key.startsWith('remote_'),
+              );
+              return remoteKey
+                ? selectedHost.controller_configs[remoteKey]?.implementation || 'Unknown'
+                : 'None';
+            })()}
+          </strong>
         </Typography>
         <Typography variant="body2">
           AV Type: <strong>{selectedHost.controller_configs?.av?.type || 'None'}</strong>
@@ -197,7 +208,12 @@ export default function RemoteTestPage() {
       {/* Test Components */}
       <Box sx={{ position: 'relative', minHeight: '600px' }}>
         {/* Remote Panel */}
-        {selectedHost.controller_configs?.remote && (
+        {(() => {
+          if (!selectedHost.controller_configs) return false;
+          return Object.keys(selectedHost.controller_configs).some((key) =>
+            key.startsWith('remote_'),
+          );
+        })() && (
           <RemotePanel
             host={selectedHost}
             initialCollapsed={true}

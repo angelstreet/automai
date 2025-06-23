@@ -15,12 +15,12 @@ DEVICE_MODEL_VERIFICATION_MAPPING = {
 }
 
 # Device Model to Action Controllers Mapping
-# Same pattern as verifications - defines which action controllers to create per device model
+# Same pattern as verifications - defines which action implementations to create per device model
 DEVICE_MODEL_ACTION_MAPPING = {
-    'android_mobile': ['remote_android_mobile', 'av_hdmi', 'power_usb'],
-    'android_tv': ['remote_android_tv', 'av_hdmi', 'power_usb'],
-    'ios_mobile': ['remote_appium', 'av_hdmi', 'power_usb'],
-    'stb': ['remote_ir', 'av_hdmi', 'power_usb'],
+    'android_mobile': ['android_mobile', 'hdmi_stream', 'usb'],
+    'android_tv': ['android_tv', 'hdmi_stream', 'usb'],
+    'ios_mobile': ['appium_remote', 'hdmi_stream', 'usb'],
+    'stb': ['ir_remote', 'hdmi_stream', 'usb'],
 }
 
 def create_controller_configs_from_device_info(device_model, device_ip, device_port, host_url, host_port):
@@ -56,17 +56,25 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
     controller_configs = {}
     
     # STEP 2: Configure action controllers based on device model mapping (same pattern as verifications)
-    action_types = DEVICE_MODEL_ACTION_MAPPING[device_model]
+    action_implementations = DEVICE_MODEL_ACTION_MAPPING[device_model]
     
-    if not action_types:
+    if not action_implementations:
         raise ValueError(f"No action controllers defined for device model '{device_model}'")
     
-    print(f"[@controller_config_factory:create_controller_configs] Creating {len(action_types)} action controllers: {action_types}")
+    print(f"[@controller_config_factory:create_controller_configs] Creating {len(action_implementations)} action controllers: {action_implementations}")
     
-    for action_type in action_types:
-        controller_key = f'action_{action_type}'
+    for implementation in action_implementations:
+        # Map implementation to capability type
+        if implementation in ['android_mobile', 'android_tv', 'appium_remote', 'ir_remote']:
+            controller_key = f'remote_{implementation}'
+        elif implementation in ['hdmi_stream']:
+            controller_key = f'av_{implementation}'
+        elif implementation in ['usb']:
+            controller_key = f'power_{implementation}'
+        else:
+            controller_key = f'action_{implementation}'  # Fallback
         
-        if action_type == 'remote_android_mobile':
+        if implementation == 'android_mobile':
             controller_configs[controller_key] = {
                 'implementation': 'android_mobile',
                 'parameters': {
@@ -75,7 +83,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                     'connection_timeout': 10
                 }
             }
-        elif action_type == 'remote_android_tv':
+        elif implementation == 'android_tv':
             controller_configs[controller_key] = {
                 'implementation': 'android_tv',
                 'parameters': {
@@ -84,7 +92,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                     'connection_timeout': 10
                 }
             }
-        elif action_type == 'remote_appium':
+        elif implementation == 'appium_remote':
             controller_configs[controller_key] = {
                 'implementation': 'appium_remote',
                 'parameters': {
@@ -97,7 +105,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                     'connection_timeout': 10
                 }
             }
-        elif action_type == 'remote_ir':
+        elif implementation == 'ir_remote':
             controller_configs[controller_key] = {
                 'implementation': 'ir_remote',
                 'parameters': {
@@ -106,7 +114,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                     'frequency': 38000
                 }
             }
-        elif action_type == 'av_hdmi':
+        elif implementation == 'hdmi_stream':
             controller_configs[controller_key] = {
                 'implementation': 'hdmi_stream',
                 'parameters': {
@@ -117,7 +125,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                     'service_name': 'stream'
                 }
             }
-        elif action_type == 'power_usb':
+        elif implementation == 'usb':
             controller_configs[controller_key] = {
                 'implementation': 'usb',
                 'parameters': {
@@ -128,7 +136,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         else:
             # Other action types with default parameters
             controller_configs[controller_key] = {
-                'implementation': action_type,
+                'implementation': implementation,
                 'parameters': {}
             }
     

@@ -28,9 +28,14 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
   );
 
   const getAndroidConnectionConfig = () => {
-    if (!device?.controller_configs?.remote) return undefined;
+    // Find any remote controller config
+    if (!device?.controller_configs) return undefined;
+    const remoteKey = Object.keys(device.controller_configs).find((key) =>
+      key.startsWith('remote_'),
+    );
+    if (!remoteKey) return undefined;
 
-    const config = device.controller_configs.remote;
+    const config = device.controller_configs[remoteKey];
     return {
       device_ip: config.device_ip,
       device_port: config.device_port || '5555',
@@ -38,9 +43,14 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
   };
 
   const getIRConnectionConfig = () => {
-    if (!device?.controller_configs?.remote) return undefined;
+    // Find any remote controller config
+    if (!device?.controller_configs) return undefined;
+    const remoteKey = Object.keys(device.controller_configs).find((key) =>
+      key.startsWith('remote_'),
+    );
+    if (!remoteKey) return undefined;
 
-    const config = device.controller_configs.remote;
+    const config = device.controller_configs[remoteKey];
     return {
       device_path: config.ir_device || config.device_path,
       protocol: config.protocol,
@@ -49,9 +59,14 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
   };
 
   const getBluetoothConnectionConfig = () => {
-    if (!device?.controller_configs?.remote) return undefined;
+    // Find any remote controller config
+    if (!device?.controller_configs) return undefined;
+    const remoteKey = Object.keys(device.controller_configs).find((key) =>
+      key.startsWith('remote_'),
+    );
+    if (!remoteKey) return undefined;
 
-    const config = device.controller_configs.remote;
+    const config = device.controller_configs[remoteKey];
     return {
       device_address: config.device_address,
       device_name: config.device_name,
@@ -175,8 +190,10 @@ export function getDeviceType(device: {
   const deviceModel = device.model.toLowerCase();
 
   // Check controller configs first
-  if (device.controller_configs?.remote) {
-    const remoteType = device.controller_configs.remote.type;
+  if (device.controller_configs) {
+    const remoteKey = Object.keys(device.controller_configs).find(key => key.startsWith('remote_'));
+    if (remoteKey) {
+      const remoteType = device.controller_configs[remoteKey].implementation;
     if (remoteType === 'android_mobile' || remoteType === 'android_mobile') {
       return 'android_mobile';
     }

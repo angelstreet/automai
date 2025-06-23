@@ -9,7 +9,12 @@ import { VerificationResultsDisplay } from '../components/verification/Verificat
 import { NavigationEditorDeviceControlProps } from '../types/pages/Navigation_Types';
 
 const getDeviceRemoteConfig = (selectedHost: any) => {
-  return selectedHost?.controller_configs?.remote || null;
+  // Find any remote controller config (remote_android_mobile, remote_android_tv, etc.)
+  if (!selectedHost?.controller_configs) return null;
+  const remoteControllerKey = Object.keys(selectedHost.controller_configs).find((key) =>
+    key.startsWith('remote_'),
+  );
+  return remoteControllerKey ? selectedHost.controller_configs[remoteControllerKey] : null;
 };
 
 export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceControlProps> = ({

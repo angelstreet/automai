@@ -136,7 +136,14 @@ export function useRemoteConfigs({
       console.log(`[@hook:useRemoteConfigs] Loading remote config for host: ${host.host_name}`);
 
       // Extract remote config from host controller configs
-      const config = host.controller_configs?.remote;
+      // Find any remote controller config (remote_android_mobile, remote_android_tv, etc.)
+      const config = (() => {
+        if (!host.controller_configs) return undefined;
+        const remoteKey = Object.keys(host.controller_configs).find((key) =>
+          key.startsWith('remote_'),
+        );
+        return remoteKey ? host.controller_configs[remoteKey] : undefined;
+      })();
 
       if (config) {
         setRemoteConfig({

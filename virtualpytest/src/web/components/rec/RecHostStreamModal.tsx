@@ -37,7 +37,9 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
   // Check if host has remote capabilities
   const hasRemoteCapabilities = useMemo(() => {
     if (!host) return false;
-    return host.controller_configs?.remote != null;
+    // Check for any remote controller (remote_android_mobile, remote_android_tv, etc.)
+    if (!host.controller_configs) return false;
+    return Object.keys(host.controller_configs).some((key) => key.startsWith('remote_'));
   }, [host]);
 
   // Calculate stream container dimensions for overlay alignment
