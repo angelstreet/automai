@@ -10,7 +10,7 @@ These endpoints run on the host and use the host's own stored device object.
 """
 
 from flask import Blueprint, request, jsonify, current_app, send_file
-from src.utils.host_utils import get_local_controller
+from src.utils.host_utils import get_controller, get_device_by_id
 import os
 import shutil
 
@@ -19,28 +19,32 @@ av_bp = Blueprint('host_av', __name__, url_prefix='/host/av')
 
 @av_bp.route('/connect', methods=['POST'])
 def connect():
-    """Connect to AV controller using own stored host_device object"""
+    """Connect to AV controller using new architecture"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
+        print(f"[@route:host_av:connect] Connecting to AV controller for device: {device_id}")
         
-        # Get controller object directly from own stored host_device
-        av_controller = get_local_controller('av')
+        # Get AV controller for the specified device
+        av_controller = get_controller(device_id, 'av')
         
         if not av_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'No AV controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
+                'error': f'No AV controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        print(f"[@route:host_av:connect] Using own AV controller: {type(av_controller).__name__}")
+        print(f"[@route:host_av:connect] Using AV controller: {type(av_controller).__name__}")
         
         # Connect to controller
         connect_result = av_controller.connect()
@@ -51,6 +55,7 @@ def connect():
             return jsonify({
                 'success': True,
                 'connected': True,
+                'device_id': device_id,
                 'status': status
             })
         else:

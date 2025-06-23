@@ -20,25 +20,30 @@ from ..base_controller import AVControllerInterface
 class HDMIStreamController(AVControllerInterface):
     """HDMI Stream controller that references continuously captured screenshots by timestamp."""
     
-    def __init__(self, device_name: str = "HDMI Stream Device", **kwargs):
+    def __init__(self, device_name: str = "HDMI Stream Device", video_device: str = "/dev/video0", 
+                 resolution: str = "1920x1080", fps: int = 30, stream_path: str = "/stream/video",
+                 capture_path: str = None, service_name: str = "stream", **kwargs):
         """
         Initialize the HDMI Stream controller.
         
         Args:
             device_name: Name of the device for logging
-            **kwargs: Additional parameters:
-                - service_name: systemd service name for stream (default: 'hdmi-stream')
-                - device_id: Device ID for multi-device hosts (e.g., 'device1', 'device2')
-                - device_config: Device configuration with video paths
+            video_device: Video device path (e.g., /dev/video0, /dev/video2)
+            resolution: Video resolution (default: 1920x1080)
+            fps: Frames per second (default: 30)
+            stream_path: Stream path for URLs (e.g., /stream/video, /host/stream/capture1)
+            capture_path: Local capture path (e.g., /var/www/html/stream/capture1)
+            service_name: systemd service name for stream (default: 'stream')
         """
         super().__init__(device_name, "HDMI")
         
-        # Service configuration (for stream status checking)
-        self.service_name = kwargs.get('service_name', 'stream')
-        
-        # Multi-device support
-        self.device_id = kwargs.get('device_id')
-        self.device_config = kwargs.get('device_config', {})
+        # Video configuration
+        self.video_device = video_device
+        self.resolution = resolution
+        self.fps = fps
+        self.stream_path = stream_path
+        self.capture_path = capture_path
+        self.service_name = service_name
         
         # Video capture state (timestamp-based, no FFmpeg)
         self.is_capturing_video = False
@@ -46,11 +51,12 @@ class HDMIStreamController(AVControllerInterface):
         self.capture_duration = 0
         self.capture_session_id = None
         
-        print(f"HDMI[{self.capture_source}]: Initialized with service: {self.service_name}")
-        if self.device_id:
-            print(f"HDMI[{self.capture_source}]: Device ID: {self.device_id}")
-            print(f"HDMI[{self.capture_source}]: Video stream path: {self.device_config.get('video_stream_path')}")
-            print(f"HDMI[{self.capture_source}]: Video capture path: {self.device_config.get('video_capture_path')}")
+        print(f"HDMI[{self.device_name}]: Initialized controller")
+        print(f"HDMI[{self.device_name}]: Video device: {self.video_device}")
+        print(f"HDMI[{self.device_name}]: Resolution: {self.resolution}@{self.fps}fps")
+        print(f"HDMI[{self.device_name}]: Stream path: {self.stream_path}")
+        print(f"HDMI[{self.device_name}]: Capture path: {self.capture_path}")
+        print(f"HDMI[{self.device_name}]: Service: {self.service_name}")
         
     def _get_host_info(self) -> Optional[Dict[str, Any]]:
         """
@@ -153,9 +159,10 @@ class HDMIStreamController(AVControllerInterface):
                 print(f"HDMI[{self.capture_source}]: Cannot build stream URL - no host info available")
                 return None
             
-            # Get the original stream URL using centralized stream URL builder with device ID
-            original_stream_url = buildStreamUrl(host_info, self.device_id)
-            print(f"HDMI[{self.capture_source}]: Original stream URL (device_id={self.device_id}): {original_stream_url}")
+            # Build stream URL using the configured stream path
+            host_url = host_info.get('host_url', f"http://{host_info.get('host_ip', 'localhost')}:{host_info.get('host_port', '6109')}")
+            original_stream_url = f"{host_url}{self.stream_path}/output.m3u8"
+            print(f"HDMI[{self.capture_source}]: Original stream URL: {original_stream_url}")
             
             # If URL is already HTTPS, use it directly
             if original_stream_url.startswith('https://'):
@@ -169,14 +176,9 @@ class HDMIStreamController(AVControllerInterface):
                     print(f"HDMI[{self.capture_source}]: Cannot create proxy URL - no host_name available")
                     return original_stream_url  # Fallback to original URL
                 
-                # Build device-specific proxy URL
-                if self.device_id and self.device_id != 'device1':
-                    # For device2, device3, etc., use device-specific proxy path
-                    device_num = self.device_id.replace('device', '')
-                    proxy_stream_url = buildServerUrl(f'server/stream-proxy/{host_name}/capture{device_num}/output.m3u8')
-                else:
-                    # For device1 or no device_id, use default proxy path
-                    proxy_stream_url = buildServerUrl(f'server/stream-proxy/{host_name}/output.m3u8')
+                # Build proxy URL using stream path
+                stream_path_clean = self.stream_path.strip('/')
+                proxy_stream_url = buildServerUrl(f'server/stream-proxy/{host_name}/{stream_path_clean}/output.m3u8')
                 
                 print(f"HDMI[{self.capture_source}]: Using HTTPS proxy stream URL: {proxy_stream_url}")
                 return proxy_stream_url
@@ -224,8 +226,10 @@ class HDMIStreamController(AVControllerInterface):
                 print(f'[@controller:HDMIStream] Cannot build screenshot URL - no host info available')
                 return None
             
-            screenshot_url = buildCaptureUrl(host_info, timestamp, self.device_id)
-            print(f'[@controller:HDMIStream] Built screenshot URL (device_id={self.device_id}): {screenshot_url}')
+            # Build screenshot URL using capture path
+            host_url = host_info.get('host_url', f"http://{host_info.get('host_ip', 'localhost')}:{host_info.get('host_port', '6109')}")
+            screenshot_url = f"{host_url}{self.stream_path}/captures/screenshot_{timestamp}.jpg"
+            print(f'[@controller:HDMIStream] Built screenshot URL: {screenshot_url}')
             
             # EXACT COPY: Add 600ms delay before returning URL (allows host to capture screenshot)
             print('[@controller:HDMIStream] Adding 600ms delay before returning screenshot URL...')
@@ -288,11 +292,15 @@ class HDMIStreamController(AVControllerInterface):
                     print(f'[@controller:HDMIStream] Cannot build local screenshot path - no host info available')
                     return None
                 
-                from src.utils.buildUrlUtils import get_device_local_captures_path
-                captures_path = get_device_local_captures_path(host_info, self.device_id)
+                # Build local screenshot path using capture path
+                import os
+                if self.capture_path:
+                    captures_path = os.path.join(self.capture_path, 'captures')
+                else:
+                    captures_path = '/var/www/html/stream/captures'  # Default fallback
                 local_screenshot_path = f'{captures_path}/capture_{timestamp}.jpg'
                 
-                print(f'[@controller:HDMIStream] Local screenshot path (device_id={self.device_id}): {local_screenshot_path}')
+                print(f'[@controller:HDMIStream] Local screenshot path: {local_screenshot_path}')
                 
                 # Check if local file exists
                 import os

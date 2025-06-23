@@ -1,3 +1,9 @@
+"""
+Host Utilities
+
+Clean host registration and management using the new Host/Device/Controller architecture.
+"""
+
 import os
 import sys
 import time
@@ -8,8 +14,11 @@ import requests
 import uuid
 import psutil
 import platform
-from typing import Dict, Any
-from src.controllers.system.system_info import get_host_system_stats
+from typing import Dict, Any, Optional
+
+from ..controllers.system.system_info import get_host_system_stats
+from ..utils.controller_manager import get_host, reset_host
+from ..utils.app_utils import buildServerUrl
 
 # Disable SSL warnings for self-signed certificates
 import urllib3
@@ -19,829 +28,248 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 client_registration_state = {
     'registered': False,
     'host_name': None,
-    'urls': {}  # Store all URLs built once during registration
+    'urls': {}
 }
 
 # Ping thread for host mode
 ping_thread = None
 ping_stop_event = threading.Event()
 
-# Global storage for host object (used when Flask app context is not available)
-global_host_object = None
-
-# Global storage for local controller objects (host manages its own controllers)
-local_controller_objects = {}
-
-# Import centralized URL building from utils
-from src.utils.app_utils import buildServerUrl
-
-def get_devices_config():
-    """Get device configurations from environment variables"""
-    devices_config = []
-    
-    for i in range(1, 5):  # DEVICE1 to DEVICE4
-        device_name = os.getenv(f'DEVICE{i}_NAME')
-        device_model = os.getenv(f'DEVICE{i}_MODEL')
-        
-        if device_name and device_model:
-            device_config = {
-                'device_id': f'device{i}',  # Format: device1, device2, device3, device4
-                'device_name': device_name,
-                'device_model': device_model,
-                'device_ip': os.getenv(f'DEVICE{i}_IP', '127.0.0.1'),
-                'device_port': os.getenv(f'DEVICE{i}_PORT', '5555'),
-                'video_device': os.getenv(f'DEVICE{i}_video'),
-                'video_stream_path': os.getenv(f'DEVICE{i}_video_stream_path'),
-                'video_capture_path': os.getenv(f'DEVICE{i}_video_capture_path'),
-            }
-            devices_config.append(device_config)
-    
-    return devices_config
 
 def register_host_with_server():
-    """Register this host with the server"""
-    global client_registration_state, global_host_object
+    """Register this host with the server using new architecture."""
+    global client_registration_state
     
     print("=" * 50)
     print("🔗 [HOST] Starting registration with server...")
     
     try:
-        # Get host information from environment
-        host_name = os.getenv('HOST_NAME', 'default-host')
-        host_url = os.getenv('HOST_URL', 'http://localhost:6109')
-        host_port = os.getenv('HOST_PORT', '6109')
+        # Get host with all devices and controllers
+        host = get_host()
         
-        # Get device configurations
-        devices_config = get_devices_config()
+        print(f"   Host Name: {host.host_name}")
+        print(f"   Host URL: {host.host_ip}:{host.host_port}")
+        print(f"   Configured Devices: {host.get_device_count()}")
         
-        if not devices_config:
-            print("❌ [HOST] No devices configured. Please set DEVICE1_NAME/DEVICE1_MODEL or similar")
-            return
+        # Display device information
+        for device in host.get_devices():
+            print(f"     - {device.name} ({device.model}) [{device.device_id}]")
+            capabilities = device.get_capabilities()
+            if capabilities:
+                print(f"       Capabilities: {', '.join(capabilities)}")
         
-        print(f"   Host Name: {host_name}")
-        print(f"   Host URL: {host_url}")
-        print(f"   Host Port: {host_port}")
-        print(f"   Configured Devices: {len(devices_config)}")
+        # Get system stats
+        system_stats = get_host_system_stats()
         
-        for device in devices_config:
-            print(f"     - {device['device_name']} ({device['device_model']}) at {device['device_ip']}:{device['device_port']}")
-            if device['video_device']:
-                print(f"       Video: {device['video_device']} -> {device['video_capture_path']}")
-        
-        # Create local controllers for all devices
-        print(f"\n🎮 [HOST] Creating local controllers for {len(devices_config)} devices...")
-        all_created_controllers = {}
-        all_available_verification_types = {}
-        all_available_action_types = {}
-        
-        for device_config in devices_config:
-            device_id = device_config['device_id']
-            print(f"\n   Creating controllers for {device_id}: {device_config['device_name']}")
-            
-            device_controllers = create_local_controllers_from_model(
-                device_config['device_model'], 
-                device_config['device_name'], 
-                device_config['device_ip'], 
-                device_config['device_port'],
-                os.getenv('DEFAULT_TEAM_ID', '7fdeb4bb-3639-4ec3-959f-b54769a219ce'),
-                device_config  # Pass device config for video device parameters
-            )
-            
-            if not device_controllers:
-                print(f"   ⚠️ Controller creation failed for {device_id}")
-                continue
-            
-            # Namespace controllers by device_id
-            for controller_key, controller_obj in device_controllers.items():
-                namespaced_key = f"{device_id}_{controller_key}"
-                all_created_controllers[namespaced_key] = controller_obj
-            
-            print(f"   Created controllers for {device_id}: {list(device_controllers.keys())}")
-        
-        created_controllers = all_created_controllers
-        
-        # Validate that controllers were created successfully
-        if not created_controllers:
-            device_models = [device['device_model'] for device in devices_config]
-            error_msg = f"❌ [HOST] Controller creation failed for device models {device_models}. Registration aborted."
-            print(error_msg)
-            print(f"   This usually means one or more device models are not supported.")
-            print(f"   Check controller_config_factory.py for supported device models.")
-            return
-        
-        print(f"   Created controllers: {list(created_controllers.keys())}")
-        
-        # Extract verification types and actions from created controllers
-        print(f"\n🔍 [HOST] Extracting verification types and actions from controllers...")
-        available_verification_types = {}
-        available_action_types = {}
-
-        for controller_type, controller_obj in created_controllers.items():
-            try:
-                # Extract verification types if controller has the method
-                if hasattr(controller_obj, 'get_available_verifications'):
-                    verifications = controller_obj.get_available_verifications()
-                    if verifications:
-                        # Handle both old dict format and new list format for backward compatibility
-                        if isinstance(verifications, list):
-                            # New format: flat array of verifications
-                            available_verification_types[controller_type] = verifications
-                            print(f"   ✅ {controller_type}: {len(verifications)} verifications")
-                        elif isinstance(verifications, dict):
-                            # Old format: convert dict structure to flat array
-                            verification_list = []
-                            for category, category_verifications in verifications.items():
-                                if isinstance(category_verifications, dict):
-                                    # Convert nested dict to verification objects
-                                    for ver_id, ver_data in category_verifications.items():
-                                        verification_obj = {
-                                            'command': ver_id,
-                                            'params': ver_data.get('parameters', ver_data.get('params', {}))
-                                        }
-                                        verification_list.append(verification_obj)
-                                elif isinstance(category_verifications, list):
-                                    # Already in correct format
-                                    verification_list.extend(category_verifications)
-                            
-                            available_verification_types[controller_type] = verification_list
-                            print(f"   ✅ {controller_type}: {len(verification_list)} verifications (converted from old format)")
-                
-                # Extract available actions if controller has the method  
-                if hasattr(controller_obj, 'get_available_actions'):
-                    actions = controller_obj.get_available_actions()
-                    if actions:
-                        available_action_types[controller_type] = actions
-                        total_actions = sum(len(category_actions) for category_actions in actions.values() if isinstance(category_actions, list)) if isinstance(actions, dict) else len(actions) if isinstance(actions, list) else 0
-                        print(f"   ✅ {controller_type}: {total_actions} actions")
-                        
-            except Exception as e:
-                print(f"   ⚠️ {controller_type}: Error extracting capabilities - {e}")
-
-        print(f"   Total verification types: {sum(len(v) for v in available_verification_types.values())}")
-        print(f"   Total action types: {sum(len(a) if isinstance(a, list) else sum(len(cat) for cat in a.values() if isinstance(cat, list)) if isinstance(a, dict) else 0 for a in available_action_types.values())}")
-        
-        # Create registration payload with complete device information AND capabilities
-        host_info = {
-            'host_name': host_name,
-            'host_url': host_url,
-            'host_port': int(host_port),
-            'devices': devices_config,            # Send all device configurations
-            'device_count': len(devices_config),  # Number of devices
-            'system_stats': get_host_system_stats(),
-            'available_verification_types': available_verification_types,  # Include verification types
-            'available_action_types': available_action_types  # Include available action types
+        # Create registration payload
+        registration_data = {
+            'host_name': host.host_name,
+            'host_url': f"http://{host.host_ip}:{host.host_port}",
+            'host_port': host.host_port,
+            'host_ip': host.host_ip,
+            'device_count': host.get_device_count(),
+            'devices': [device.to_dict() for device in host.get_devices()],
+            'capabilities': host.get_all_capabilities(),
+            'system_stats': system_stats
         }
         
-        # Build server URLs using standardized host URL builder system
+        # Build server URLs
         registration_url = buildServerUrl('/server/system/register')
         
-        # Store URLs for later use - all built with the standardized system
-        urls = {
-            'register': registration_url,
-            'unregister': buildServerUrl('/server/system/unregister'),
-            'ping': buildServerUrl('/server/system/ping'),
-            'health': buildServerUrl('/server/system/health')
-        }
-        
-        print(f"\n📡 [HOST] Sending registration request...")
-        print(f"   URL: {registration_url}")
-        print(f"   Payload keys: {list(host_info.keys())}")
-        print(f"   Verification types: {len(available_verification_types)} controller types")
-        print(f"   Available action types: {len(available_action_types)} controller types")
+        print(f"\n📡 [HOST] Sending registration to: {registration_url}")
         
         # Send registration request
         response = requests.post(
             registration_url,
-            json=host_info,
-            timeout=10,
-            headers={'Content-Type': 'application/json'},
+            json=registration_data,
+            timeout=30,
             verify=False
         )
         
-        print(f"\n📨 [HOST] Registration response received:")
-        print(f"   Status Code: {response.status_code}")
-        print(f"   Headers: {dict(response.headers)}")
-        
         if response.status_code == 200:
-            try:
-                response_data = response.json()
-                print(f"   Response: {response_data}")
-                
-                # Mark as registered
-                client_registration_state['registered'] = True
-                client_registration_state['host_name'] = host_name    # ✅ Store host_name as primary identifier
-                client_registration_state['urls'] = urls
-                
-                # Store global host object from server response (includes all server-added data)
-                global_host_object = response_data.get('host_data', {})
-                
-                print(f"\n✅ [HOST] Registration successful!")
-                print(f"   Host Name: {host_name}")
-                print(f"   Server returned host object with keys: {list(global_host_object.keys())}")
-                
-                # Add controller objects to the global host object (local host management)
-                global_host_object['local_controller_objects'] = created_controllers
-                print(f"   Added controller objects to host object")
-                
-                # Store verification types and action types in global host object for local access
-                global_host_object['available_verification_types'] = available_verification_types
-                global_host_object['available_action_types'] = available_action_types
-                print(f"   Added verification types and action types to host object")
-                
-                # Start periodic ping thread
-                start_ping_thread()
-                
-
-                
-            except Exception as parse_error:
-                print(f"⚠️ [HOST] Error parsing registration response: {parse_error}")
-                print(f"   Raw response: {response.text}")
-                # Still mark as registered for basic functionality
-                client_registration_state['registered'] = True
-                client_registration_state['host_name'] = host_name    # ✅ Store host_name as primary identifier
-                client_registration_state['urls'] = urls
-                start_ping_thread()
+            print("✅ [HOST] Registration successful!")
+            
+            # Update registration state
+            client_registration_state.update({
+                'registered': True,
+                'host_name': host.host_name,
+                'urls': {
+                    'register': registration_url,
+                    'ping': buildServerUrl('/server/system/ping'),
+                    'unregister': buildServerUrl('/server/system/unregister')
+                }
+            })
+            
+            print(f"   Registered as: {host.host_name}")
+            print(f"   Devices: {host.get_device_count()}")
+            print(f"   Total capabilities: {len(host.get_all_capabilities())}")
+            
         else:
-            print(f"\n❌ [HOST] Registration failed with status: {response.status_code}")
-            try:
-                error_response = response.json()
-                print(f"   Error details: {error_response}")
-            except Exception as json_error:
-                print(f"   Could not parse error response as JSON: {json_error}")
-                print(f"   Raw response: {response.text}")
-        
+            print(f"❌ [HOST] Registration failed: {response.status_code}")
+            print(f"   Response: {response.text}")
+            
     except Exception as e:
-        print(f"\n❌ [HOST] Unexpected error during registration: {e}")
-        print(f"   Full traceback:")
+        print(f"❌ [HOST] Registration error: {str(e)}")
         import traceback
         traceback.print_exc()
 
+
 def send_ping_to_server():
-    """Send a health ping to the server"""
-    if not client_registration_state['registered']:
+    """Send ping to server to maintain registration."""
+    if not client_registration_state.get('registered'):
         return
     
     try:
-        ping_url = client_registration_state['urls'].get('ping')
-        host_name = client_registration_state.get('host_name')
-        
-        if not ping_url or not host_name:
-            print(f"⚠️ [HOST] Cannot ping: missing ping URL or host identifier")
-            return
+        host = get_host()
         
         ping_data = {
-            'host_name': host_name,                 # ✅ Primary identifier
+            'host_name': host.host_name,
+            'timestamp': time.time(),
             'system_stats': get_host_system_stats(),
-            'status': 'online',
-            'available_verification_types': global_host_object.get('available_verification_types', {}),  # Include verification types
-            'available_action_types': global_host_object.get('available_action_types', {})  # Include available action types
+            'device_count': host.get_device_count()
         }
         
-        response = requests.post(
-            ping_url,
-            json=ping_data,
-            timeout=5,
-            headers={'Content-Type': 'application/json'},
-            verify=False
-        )
-        
-        if response.status_code == 200:
-            ping_response = response.json()
-            if ping_response.get('status') == 'success':
-                print(f"💓 [HOST] Ping successful - host: {host_name}")
-            elif ping_response.get('status') == 'not_registered':
-                print(f"📍 [HOST] Server says we're not registered - re-registering...")
-                client_registration_state['registered'] = False
-                register_host_with_server()
-            else:
-                print(f"⚠️ [HOST] Ping response: {ping_response}")
-        else:
-            print(f"⚠️ [HOST] Ping failed with status: {response.status_code}")
-            if response.status_code == 404:
-                print(f"📍 [HOST] Server doesn't recognize us - re-registering...")
-                client_registration_state['registered'] = False
-                register_host_with_server()
+        ping_url = client_registration_state['urls'].get('ping')
+        if ping_url:
+            response = requests.post(ping_url, json=ping_data, timeout=10, verify=False)
             
-    except requests.exceptions.ConnectionError:
-        print(f"⚠️ [HOST] Could not connect to server for ping")
-    except requests.exceptions.Timeout:
-        print(f"⚠️ [HOST] Ping request timed out")
+            if response.status_code == 200:
+                print(f"📡 [HOST] Ping sent successfully at {time.strftime('%H:%M:%S')}")
+            else:
+                print(f"⚠️ [HOST] Ping failed: {response.status_code}")
+                
     except Exception as e:
-        print(f"❌ [HOST] Unexpected error during ping: {e}")
+        print(f"❌ [HOST] Ping error: {str(e)}")
+
 
 def unregister_from_server():
-    """Unregister this host from the server"""
-    if not client_registration_state['registered']:
+    """Unregister this host from the server."""
+    global client_registration_state
+    
+    if not client_registration_state.get('registered'):
         return
     
     try:
-        unregister_url = client_registration_state['urls'].get('unregister')
-        host_name = client_registration_state.get('host_name')
-        
-        if not unregister_url:
-            print(f"⚠️ [HOST] Cannot unregister: missing unregister URL")
-            return
-        
-        print(f"\n🔌 [HOST] Unregistering from server...")
-        print(f"   Unregister URL: {unregister_url}")
-        print(f"   Host Name: {host_name}")
+        host = get_host()
         
         unregister_data = {
-            'host_name': host_name,     # ✅ Primary identifier
+            'host_name': host.host_name,
+            'timestamp': time.time()
         }
         
-        response = requests.post(
-            unregister_url,
-            json=unregister_data,
-            timeout=5,
-            headers={'Content-Type': 'application/json'},
-            verify=False
-        )
+        unregister_url = client_registration_state['urls'].get('unregister')
+        if unregister_url:
+            response = requests.post(unregister_url, json=unregister_data, timeout=10, verify=False)
+            
+            if response.status_code == 200:
+                print("✅ [HOST] Unregistered successfully")
+            else:
+                print(f"⚠️ [HOST] Unregister failed: {response.status_code}")
         
-        if response.status_code == 200:
-            print(f"✅ [HOST] Successfully unregistered from server")
-            client_registration_state['registered'] = False
-            client_registration_state['host_name'] = None
-            client_registration_state['urls'] = {}
-        else:
-            print(f"⚠️ [HOST] Unregistration failed with status: {response.status_code}")
-            try:
-                error_response = response.json()
-                print(f"   Error details: {error_response}")
-            except Exception:
-                print(f"   Raw response: {response.text}")
-                
-    except requests.exceptions.ConnectionError:
-        print(f"⚠️ [HOST] Could not connect to server for unregistration (server may be down)")
-    except requests.exceptions.Timeout:
-        print(f"⚠️ [HOST] Unregistration request timed out")
+        # Reset registration state
+        client_registration_state.update({
+            'registered': False,
+            'host_name': None,
+            'urls': {}
+        })
+        
     except Exception as e:
-        print(f"❌ [HOST] Unexpected error during unregistration: {e}")
+        print(f"❌ [HOST] Unregister error: {str(e)}")
+
 
 def start_ping_thread():
-    """Start periodic ping thread for host mode"""
-    global ping_thread, ping_stop_event
-    
-    if not client_registration_state['registered']:
-        return
-    
-    def ping_worker():
-        """Worker function that sends periodic pings to server"""
-        ping_interval = 30  # seconds
-        
-        while not ping_stop_event.is_set():
-            try:
-                if not client_registration_state['registered']:
-                    print(f"⚠️ [PING] Host not registered, stopping ping thread")
-                    break
-                
-                ping_url = client_registration_state['urls'].get('ping')
-                host_name = client_registration_state.get('host_name')
-                
-                if not ping_url or not host_name:
-                    print(f"⚠️ [PING] Missing ping URL or host name, stopping ping thread")
-                    break
-                
-                # Prepare ping data
-                ping_data = {
-                    'host_name': host_name,
-                    'system_stats': get_host_system_stats(),
-                    'timestamp': time.time()
-                }
-                
-                # Send ping to server
-                response = requests.post(
-                    ping_url,
-                    json=ping_data,
-                    timeout=10,
-                    headers={'Content-Type': 'application/json'},
-                    verify=False
-                )
-                
-                if response.status_code == 200:
-                    ping_response = response.json()
-                    print(f"💓 [PING] Ping successful - server time: {ping_response.get('server_time', 'unknown')}")
-                elif response.status_code == 404:
-                    # Server doesn't know about us, need to re-register
-                    ping_response = response.json()
-                    if ping_response.get('status') == 'not_registered':
-                        print(f"🔄 [PING] Server requests re-registration, attempting to register...")
-                        register_host_with_server()
-                    else:
-                        print(f"⚠️ [PING] Ping failed with 404: {ping_response}")
-                else:
-                    print(f"⚠️ [PING] Ping failed with status {response.status_code}: {response.text}")
-                    
-            except requests.exceptions.ConnectionError:
-                print(f"⚠️ [PING] Could not connect to server (server may be down)")
-            except requests.exceptions.Timeout:
-                print(f"⚠️ [PING] Ping request timed out")
-            except Exception as e:
-                print(f"❌ [PING] Unexpected error during ping: {e}")
-            
-            # Wait for next ping or stop event
-            ping_stop_event.wait(ping_interval)
-    
-    # Start ping thread
-    if ping_thread is None or not ping_thread.is_alive():
-        ping_stop_event.clear()
-        ping_thread = threading.Thread(target=ping_worker, daemon=True, name="host-ping")
-        ping_thread.start()
-        print(f"🏥 [PING] Started periodic ping thread (interval: 30s)")
-
-def stop_ping_thread():
-    """Stop the periodic ping thread"""
+    """Start the ping thread."""
     global ping_thread, ping_stop_event
     
     if ping_thread and ping_thread.is_alive():
-        print(f"🛑 [PING] Stopping ping thread...")
+        return
+    
+    ping_stop_event.clear()
+    
+    def ping_worker():
+        while not ping_stop_event.is_set():
+            send_ping_to_server()
+            # Wait 30 seconds or until stop event
+            ping_stop_event.wait(30)
+    
+    ping_thread = threading.Thread(target=ping_worker, daemon=True)
+    ping_thread.start()
+    print("🔄 [HOST] Ping thread started")
+
+
+def stop_ping_thread():
+    """Stop the ping thread."""
+    global ping_thread, ping_stop_event
+    
+    if ping_thread and ping_thread.is_alive():
         ping_stop_event.set()
         ping_thread.join(timeout=5)
-        if ping_thread.is_alive():
-            print(f"⚠️ [PING] Ping thread did not stop gracefully")
-        else:
-            print(f"✅ [PING] Ping thread stopped successfully")
-        ping_thread = None
+        print("⏹️ [HOST] Ping thread stopped")
+
 
 def signal_handler(signum, frame):
-    """Handle shutdown signals for host"""
+    """Handle shutdown signals."""
     print(f"\n🛑 [HOST] Received signal {signum}, shutting down gracefully...")
-    stop_ping_thread()
-    unregister_from_server()
-    import sys
+    cleanup_on_exit()
     sys.exit(0)
 
+
 def cleanup_on_exit():
-    """Cleanup function called on normal exit for host"""
-    print(f"\n🧹 [HOST] Performing cleanup on exit...")
+    """Cleanup function called on exit."""
+    print("🧹 [HOST] Cleaning up...")
     stop_ping_thread()
     unregister_from_server()
+    reset_host()  # Reset the global host instance
+
 
 def setup_host_signal_handlers():
-    """Setup signal handlers for graceful shutdown in host mode"""
-    # Register signal handlers for graceful shutdown
-    signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
-    signal.signal(signal.SIGTERM, signal_handler)  # Termination signal
-    
-    # Register exit handler for normal exit
-    atexit.register(cleanup_on_exit) 
+    """Setup signal handlers for graceful shutdown."""
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    atexit.register(cleanup_on_exit)
 
-def query_device_model_configuration(device_model, team_id):
-    """
-    Query the database to get controller configuration for the device model.
-    Uses dedicated database utilities instead of direct database queries.
-    
-    Args:
-        device_model: Device model string (e.g., 'android_mobile')
-        team_id: Team ID for database query
-        
-    Returns:
-        dict: Controller configuration from database or None if not found
-    """
-    try:
-        from src.lib.supabase.device_models_db import get_all_device_models
-        
-        print(f"[@utils:host_utils:query_device_model_configuration] Querying database for model: {device_model}")
-        
-        # Use existing database utilities to get device models
-        device_models = get_all_device_models(team_id)
-        
-        # Find the device model by name
-        for model in device_models:
-            if model['name'] == device_model:
-                controllers_config = model.get('controllers', {})
-                
-                print(f"[@utils:host_utils:query_device_model_configuration] Found configuration for {device_model}:")
-                print(f"   Controllers: {controllers_config}")
-                print(f"   Types: {model.get('types', [])}")
-                
-                return controllers_config
-        
-        print(f"[@utils:host_utils:query_device_model_configuration] No configuration found for model: {device_model}")
-        return None
-            
-    except Exception as e:
-        print(f"[@utils:host_utils:query_device_model_configuration] ERROR querying database: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return None
 
-def create_local_controllers_from_model(device_model, device_name, device_ip, device_port, team_id, device_config=None):
-    """
-    Create controller objects locally based on device model configuration from database.
-    
-    Args:
-        device_model: Device model (e.g., 'android_mobile', 'android_tv')
-        device_name: Name of the device
-        device_ip: Device IP address
-        device_port: Device port
-        team_id: Team ID for database query
-        device_config: Optional device configuration with video device parameters
-        
-    Returns:
-        dict: Dictionary of created controller objects
-    """
-    print(f"[@utils:host_utils:create_local_controllers_from_model] Creating controllers for {device_model}: {device_name}")
-    
-    controller_objects = {}
-    
-    try:
-        from src.controllers import ControllerFactory
-        from src.controllers.controller_config_factory import create_controller_configs_from_device_info
-        
-        # STEP 1: Use hardcoded controller configuration from controller_config_factory
-        controllers_config = create_controller_configs_from_device_info(
-            device_model=device_model,
-            device_ip=device_ip,
-            device_port=device_port,
-            host_url='http://localhost:6109',  # Not used for controller creation
-            host_port='6109',  # Not used for controller creation
-            device_config=device_config  # Pass device config for video device parameters
-        )
-        
-        print(f"[@utils:host_utils:create_local_controllers_from_model] Using hardcoded controller configuration: {controllers_config}")
-        
-        # STEP 2: Create action controllers based on device model mapping (same pattern as verifications)
-        action_controllers_created = 0
-        expected_action_types = []
-        failed_action_types = []
-        av_controller = None
-        
-        for controller_key, controller_config in controllers_config.items():
-            if controller_key.startswith(('remote_', 'av_', 'power_')):
-                action_type = controller_config['implementation']
-                expected_action_types.append(action_type)
-                print(f"[@utils:host_utils:create_local_controllers_from_model] Creating action controller: {action_type}")
-                
-                try:
-                    if action_type in ['android_mobile', 'android_tv', 'appium_remote', 'ir_remote']:
-                        # Remote action controllers
-                        action_params = controller_config.get('parameters', {})
-                        
-                        # Extract device_id from controller_key (e.g., "device1_remote_android_mobile" -> "device1")
-                        device_id = controller_key.split('_')[0] if '_' in controller_key else 'device1'
-                        
-                        action_controller = ControllerFactory.create_remote_controller(
-                            device_type=action_type,
-                            device_name=device_name,
-                            device_id=device_id,  # Required parameter
-                            device_config=device_config,  # Required parameter
-                            device_ip=action_params.get('device_ip', device_ip),
-                            device_port=action_params.get('device_port', device_port),
-                            platform_name=action_params.get('platform_name', 'iOS'),
-                            automation_name=action_params.get('automation_name', 'XCUITest'),
-                            appium_url=action_params.get('appium_url', 'http://localhost:4723'),
-                            connection_timeout=action_params.get('connection_timeout', 10)
-                        )
-                    elif action_type == 'hdmi_stream':
-                        # AV action controller
-                        action_params = controller_config.get('parameters', {})
-                        
-                        # Extract device_id from controller_key (e.g., "device1_av_hdmi_stream" -> "device1")
-                        device_id = controller_key.split('_')[0] if '_' in controller_key else 'device1'
-                        
-                        action_controller = ControllerFactory.create_av_controller(
-                            capture_type=action_type,
-                            device_name=device_name,
-                            device_id=device_id,  # Required parameter
-                            device_config=device_config,  # Required parameter
-                            video_device=action_params.get('video_device', '/dev/video0'),
-                            resolution=action_params.get('resolution', '1920x1080'),
-                            fps=action_params.get('fps', 30),
-                            stream_path=action_params.get('stream_path', '/stream/video'),
-                            service_name=action_params.get('service_name', 'stream')
-                        )
-                        av_controller = action_controller  # Store for verification controllers
-                    elif action_type == 'usb':
-                        # Power action controller
-                        action_params = controller_config.get('parameters', {})
-                        
-                        # Extract device_id from controller_key (e.g., "device1_power_usb" -> "device1")
-                        device_id = controller_key.split('_')[0] if '_' in controller_key else 'device1'
-                        
-                        action_controller = ControllerFactory.create_power_controller(
-                            power_type=action_type,
-                            device_name=device_name,
-                            device_id=device_id,  # Required parameter
-                            device_config=device_config,  # Required parameter
-                            hub_location=action_params.get('hub_location', '1-1'),
-                            port_number=action_params.get('port_number', 1)
-                        )
-                    else:
-                        # Generic action controller
-                        print(f"[@utils:host_utils:create_local_controllers_from_model] ⚠️ Unknown action type: {action_type}")
-                        continue
-                    
-                    controller_objects[controller_key] = action_controller
-                    action_controllers_created += 1
-                    print(f"[@utils:host_utils:create_local_controllers_from_model] ✅ Action controller {action_type} created successfully")
-                    
-                except Exception as e:
-                    failed_action_types.append(action_type)
-                    print(f"[@utils:host_utils:create_local_controllers_from_model] ❌ Failed to create action controller {action_type}: {e}")
-                    # Fail early - don't continue with broken controller setup
-                    raise Exception(f"Critical error: Failed to create {action_type} action controller: {e}")
-        
-        print(f"[@utils:host_utils:create_local_controllers_from_model] Action Controller Summary:")
-        print(f"   Expected: {len(expected_action_types)} - {expected_action_types}")
-        print(f"   Created: {action_controllers_created}")
-        print(f"   Failed: {len(failed_action_types)} - {failed_action_types}")
-        
-        if failed_action_types:
-            raise Exception(f"Action controller creation failed for: {failed_action_types}")
-        
-        if action_controllers_created == 0:
-            print(f"[@utils:host_utils:create_local_controllers_from_model] ⚠️ No action controllers were created")
-        
-        # Create verification controllers (multiple types per device model)
-        verification_controllers_created = 0
-        expected_verification_types = []
-        failed_verification_types = []
-        
-        for controller_key, controller_config in controllers_config.items():
-            if controller_key.startswith('verification_'):
-                verification_type = controller_config['implementation']
-                expected_verification_types.append(verification_type)
-                print(f"[@utils:host_utils:create_local_controllers_from_model] Creating verification controller: {verification_type}")
-                
-                try:
-                    if verification_type == 'adb':
-                        # ADB verification only needs device_ip and device_port
-                        verification_controller = ControllerFactory.create_verification_controller(
-                            verification_type=verification_type,
-                            device_ip=device_ip,
-                            device_port=device_port
-                        )
-                    elif verification_type == 'appium':
-                        # Appium verification needs device connection parameters from config
-                        verification_params = controller_config.get('parameters', {})
-                        verification_controller = ControllerFactory.create_verification_controller(
-                            verification_type=verification_type,
-                            device_ip=verification_params.get('device_ip', device_ip),
-                            device_port=verification_params.get('device_port', device_port),
-                            platform_name=verification_params.get('platform_name', 'iOS'),
-                            appium_url=verification_params.get('appium_url', 'http://localhost:4723'),
-                            automation_name=verification_params.get('automation_name', 'XCUITest'),
-                            connection_timeout=verification_params.get('connection_timeout', 10)
-                        )
-                    else:
-                        # Other verification types (image, audio, text, video) only need av_controller
-                        verification_controller = ControllerFactory.create_verification_controller(
-                            verification_type=verification_type,
-                            av_controller=av_controller
-                        )
-                    
-                    controller_objects[controller_key] = verification_controller
-                    verification_controllers_created += 1
-                    print(f"[@utils:host_utils:create_local_controllers_from_model] ✅ Verification controller {verification_type} created successfully")
-                    
-                except Exception as e:
-                    failed_verification_types.append(verification_type)
-                    print(f"[@utils:host_utils:create_local_controllers_from_model] ❌ Failed to create verification controller {verification_type}: {e}")
-                    # Fail early - don't continue with broken controller setup
-                    raise Exception(f"Critical error: Failed to create {verification_type} verification controller: {e}")
-        
-        print(f"[@utils:host_utils:create_local_controllers_from_model] Verification Controller Summary:")
-        print(f"   Expected: {len(expected_verification_types)} - {expected_verification_types}")
-        print(f"   Created: {verification_controllers_created}")
-        print(f"   Failed: {len(failed_verification_types)} - {failed_verification_types}")
-        
-        if failed_verification_types:
-            raise Exception(f"Controller creation failed for: {failed_verification_types}")
-        
-        if verification_controllers_created == 0:
-            print(f"[@utils:host_utils:create_local_controllers_from_model] ⚠️ No verification controllers were created")
-        
+# New clean controller access functions
+def get_host_instance():
+    """Get the host instance."""
+    return get_host()
 
-        
-        print(f"[@utils:host_utils:create_local_controllers_from_model] Successfully created {len(controller_objects)} controllers: {list(controller_objects.keys())}")
-        
-        # Store controllers globally for access by routes
-        global local_controller_objects
-        local_controller_objects = controller_objects
-        
-        return controller_objects
-        
-    except Exception as e:
-        print(f"[@utils:host_utils:create_local_controllers_from_model] ERROR creating controllers: {str(e)}")
-        import traceback
-        traceback.print_exc()
-        return {}
 
-def get_local_controller(controller_type, device_id=None):
-    """
-    Get a local controller by type and optional device ID.
-    
-    Args:
-        controller_type: Type of controller ('remote', 'av', 'verification', 'power')
-                        For verification controllers, can also be specific type like 'verification_adb'
-        device_id: Optional device ID (e.g., 'device1', 'device2') for device-specific controllers
-        
-    Returns:
-        Controller object or None if not found
-    """
-    global local_controller_objects
-    
-    if device_id:
-        # Device-specific controller lookup
-        device_controller_key = f"{device_id}_{controller_type}"
-        if device_controller_key in local_controller_objects:
-            return local_controller_objects.get(device_controller_key)
-        
-        # Try mapping abstract capability names to specific implementations for device
-        if controller_type == 'av':
-            for key, controller in local_controller_objects.items():
-                if key.startswith(f"{device_id}_av_"):
-                    return controller
-        elif controller_type == 'remote':
-            for key, controller in local_controller_objects.items():
-                if key.startswith(f"{device_id}_remote_"):
-                    return controller
-        elif controller_type == 'power':
-            for key, controller in local_controller_objects.items():
-                if key.startswith(f"{device_id}_power_"):
-                    return controller
-        elif controller_type == 'verification':
-            for key, controller in local_controller_objects.items():
-                if key.startswith(f"{device_id}_verification_"):
-                    return controller
-        
-        return None
-    
-    # Backward compatibility - get first available controller of this type
-    # Direct lookup first
-    if controller_type in local_controller_objects:
-        return local_controller_objects.get(controller_type)
-    
-    # Map abstract capability names to specific controller implementations
-    if controller_type == 'av':
-        # Look for any AV controller (av_hdmi_stream, etc.)
-        for key, controller in local_controller_objects.items():
-            if key.endswith('_av_hdmi_stream') or key.startswith('av_'):
-                return controller
-    elif controller_type == 'remote':
-        # Look for any remote controller (remote_android_mobile, remote_android_tv, etc.)
-        for key, controller in local_controller_objects.items():
-            if key.endswith('_remote_android_mobile') or key.endswith('_remote_android_tv') or key.startswith('remote_'):
-                return controller
-    elif controller_type == 'power':
-        # Look for any power controller (power_usb, etc.)
-        for key, controller in local_controller_objects.items():
-            if key.endswith('_power_usb') or key.startswith('power_'):
-                return controller
-    elif controller_type == 'verification':
-        # Look for any verification controller
-        for key, controller in local_controller_objects.items():
-            if key.endswith('_verification_image') or key.startswith('verification_'):
-                return controller
-    
-    return None
+def get_device_by_id(device_id: str):
+    """Get a device by its ID."""
+    host = get_host()
+    return host.get_device(device_id)
 
-def get_device_controller(device_id, controller_type):
-    """
-    Get specific device controller.
-    
-    Args:
-        device_id: Device ID (e.g., 'device1', 'device2')
-        controller_type: Controller type ('av', 'remote', 'verification', 'power')
-    
-    Returns:
-        Controller object or None if not found
-    """
-    return get_local_controller(controller_type, device_id)
+
+def get_controller(device_id: str, controller_type: str):
+    """Get a controller from a specific device."""
+    host = get_host()
+    return host.get_controller(device_id, controller_type)
+
 
 def list_available_devices():
-    """
-    List all available devices based on registered controllers.
-    
-    Returns:
-        list: List of device IDs
-    """
-    global local_controller_objects
-    device_ids = set()
-    
-    for key in local_controller_objects.keys():
-        if "_" in key:
-            device_id = key.split("_")[0]
-            if device_id.startswith("device"):  # Match device1, device2, etc.
-                device_ids.add(device_id)
-    
-    return sorted(list(device_ids))
+    """List all available devices."""
+    host = get_host()
+    return [
+        {
+            'device_id': device.device_id,
+            'name': device.name,
+            'model': device.model,
+            'capabilities': device.get_capabilities()
+        }
+        for device in host.get_devices()
+    ]
 
-def get_all_local_controllers():
-    """
-    Get all local controller objects.
-    
-    Returns:
-        dict: Dictionary of all controller objects
-    """
-    global local_controller_objects
-    return local_controller_objects.copy()
 
-def clear_local_controllers():
-    """
-    Clear all local controller objects.
-    """
-    global local_controller_objects
-    print("[@utils:host_utils:clear_local_controllers] Clearing all local controllers")
-    local_controller_objects = {} 
+def get_device_capabilities(device_id: str):
+    """Get capabilities for a specific device."""
+    device = get_device_by_id(device_id)
+    if device:
+        return device.get_capabilities()
+    return []
+
+
+def has_device_capability(device_id: str, capability: str):
+    """Check if a device has a specific capability."""
+    capabilities = get_device_capabilities(device_id)
+    return capability in capabilities 
