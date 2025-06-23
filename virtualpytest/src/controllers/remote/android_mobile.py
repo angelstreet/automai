@@ -701,8 +701,30 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             'remote': [
                 # Navigation actions
                 {
+                    'id': 'click_element',
+                    'label': 'Click UI Element',
+                    'command': 'click_element',
+                    'action_type': 'remote',
+                    'params': {},
+                    'description': 'Click on a UI element directly by text/ID (no UI dump required)',
+                    'requiresInput': True,
+                    'inputLabel': 'Element Text/ID',
+                    'inputPlaceholder': 'Home Tab'
+                },
+                {
+                    'id': 'tap_coordinates',
+                    'label': 'Tap Coordinates',
+                    'command': 'tap_coordinates',
+                    'action_type': 'remote',
+                    'params': {},
+                    'description': 'Tap at specific screen coordinates',
+                    'requiresInput': True,
+                    'inputLabel': 'Coordinates (x,y)',
+                    'inputPlaceholder': '100,200'
+                },
+                {
                     'id': 'press_key_up',
-                    'label': 'Navigate Up',
+                    'label': 'Up',
                     'command': 'press_key',
                     'action_type': 'remote',
                     'params': {'key': 'UP'},
@@ -711,7 +733,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 },
                 {
                     'id': 'press_key_down',
-                    'label': 'Navigate Down', 
+                    'label': 'Down', 
                     'command': 'press_key',
                     'action_type': 'remote',
                     'params': {'key': 'DOWN'},
@@ -720,7 +742,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 },
                 {
                     'id': 'press_key_left',
-                    'label': 'Navigate Left',
+                    'label': 'Left',
                     'command': 'press_key',
                     'action_type': 'remote',
                     'params': {'key': 'LEFT'},
@@ -729,7 +751,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 },
                 {
                     'id': 'press_key_right',
-                    'label': 'Navigate Right',
+                    'label': 'Right',
                     'command': 'press_key',
                     'action_type': 'remote',
                     'params': {'key': 'RIGHT'}, 
@@ -807,60 +829,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                     'requiresInput': True,
                     'inputLabel': 'Package name', 
                     'inputPlaceholder': 'com.example.app'
-                },
-                # Coordinate actions
-                {
-                    'id': 'tap_coordinates',
-                    'label': 'Tap Coordinates',
-                    'command': 'tap_coordinates',
-                    'action_type': 'remote',
-                    'params': {},
-                    'description': 'Tap at specific screen coordinates',
-                    'requiresInput': True,
-                    'inputLabel': 'Coordinates (x,y)',
-                    'inputPlaceholder': '100,200'
-                },
-                # UI interaction actions
-                {
-                    'id': 'dump_ui_elements',
-                    'label': 'Dump UI Elements',
-                    'command': 'dump_ui_elements',
-                    'action_type': 'remote',
-                    'params': {},
-                    'description': 'Get current screen UI elements',
-                    'requiresInput': False
-                },
-                {
-                    'id': 'click_element',
-                    'label': 'Click UI Element (Direct)',
-                    'command': 'click_element',
-                    'action_type': 'remote',
-                    'params': {},
-                    'description': 'Click on a UI element directly by text/ID (no UI dump required)',
-                    'requiresInput': True,
-                    'inputLabel': 'Element Text/ID',
-                    'inputPlaceholder': 'Home Tab'
-                },
-
-                # Utility actions
-                {
-                    'id': 'take_screenshot',
-                    'label': 'Take Screenshot',
-                    'command': 'take_screenshot',
-                    'action_type': 'remote',
-                    'params': {},
-                    'description': 'Capture current screen',
-                    'requiresInput': False
-                },
-                {
-                    'id': 'get_installed_apps',
-                    'label': 'Get Installed Apps',
-                    'command': 'get_installed_apps',
-                    'action_type': 'remote',
-                    'params': {},
-                    'description': 'List all installed applications',
-                    'requiresInput': False
-                }
+                }  
             ]
         }
 
