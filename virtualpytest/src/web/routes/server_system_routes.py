@@ -270,7 +270,8 @@ def getAllHosts():
         
         print(f"🖥️ [HOSTS] Returning {len(hosts)} online hosts")
         for host in hosts:
-            print(f"   Host: {host['host_name']} - Device: {host['device_name']} ({host['device_model']})")
+            device_count = host.get('device_count', 0)
+            print(f"   Host: {host['host_name']} - {device_count} device(s)")
         
         return jsonify({
             'success': True,
