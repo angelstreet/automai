@@ -132,15 +132,15 @@ def _create_controller_config(controller_type: str, implementation: str, device_
     # Remote Controllers
     elif controller_type == 'remote':
         if implementation == 'android_mobile':
-            if 'android_ip' not in device_config or 'android_port' not in device_config:
+            if 'device_ip' not in device_config or 'device_port' not in device_config:
                 return None
             
             return {
                 'type': 'remote',
                 'class': AndroidMobileRemoteController,
                 'params': {
-                    'device_ip': device_config['android_ip'],
-                    'device_port': device_config['android_port'],
+                    'device_ip': device_config['device_ip'],
+                    'device_port': device_config['device_port'],
                     'connection_timeout': 10,
                     'device_id': device_config['device_id'],
                     'device_config': device_config
@@ -148,15 +148,15 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             }
         
         elif implementation == 'android_tv':
-            if 'android_ip' not in device_config or 'android_port' not in device_config:
+            if 'device_ip' not in device_config or 'device_port' not in device_config:
                 return None
             
             return {
                 'type': 'remote',
                 'class': AndroidTVRemoteController,
                 'params': {
-                    'device_ip': device_config['android_ip'],
-                    'device_port': device_config['android_port'],
+                    'device_ip': device_config['device_ip'],
+                    'device_port': device_config['device_port'],
                     'connection_timeout': 10,
                     'device_id': device_config['device_id'],
                     'device_config': device_config
@@ -164,17 +164,17 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             }
         
         elif implementation == 'appium':
-            if 'appium_ip' not in device_config or 'appium_port' not in device_config:
+            if 'device_ip' not in device_config or 'device_port' not in device_config:
                 return None
             
             return {
                 'type': 'remote',
                 'class': AppiumRemoteController,
                 'params': {
-                    'device_ip': device_config['appium_ip'],
-                    'device_port': device_config['appium_port'],
+                    'device_ip': device_config['device_ip'],
+                    'device_port': device_config['device_port'],
                     'platform_name': 'iOS',
-                    'appium_url': f"http://{device_config['appium_ip']}:4723",
+                    'appium_url': f"http://{device_config['device_ip']}:4723",
                     'automation_name': 'XCUITest',
                     'connection_timeout': 10,
                     'device_id': device_config['device_id'],
@@ -243,15 +243,15 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             }
         
         elif implementation == 'adb':
-            if 'android_ip' not in device_config or 'android_port' not in device_config:
+            if 'device_ip' not in device_config or 'device_port' not in device_config:
                 return None
             
             return {
                 'type': 'verification',
                 'class': ADBVerificationController,
                 'params': {
-                    'device_ip': device_config['android_ip'],
-                    'device_port': device_config['android_port'],
+                    'device_ip': device_config['device_ip'],
+                    'device_port': device_config['device_port'],
                     'connection_timeout': 10
                 }
             }
