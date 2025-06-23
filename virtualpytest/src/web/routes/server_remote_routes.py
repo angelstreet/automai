@@ -77,7 +77,7 @@ def get_apps():
 
 @remote_bp.route('/click-element', methods=['POST'])
 def click_element():
-    """Proxy click element request to selected host"""
+    """Proxy click element request to selected host (for Appium controllers)"""
     try:
         print("[@route:server_remote:click_element] Proxying click element request")
         

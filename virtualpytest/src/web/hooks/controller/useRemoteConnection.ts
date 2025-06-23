@@ -288,18 +288,21 @@ export function useRemoteConnection(remoteType: RemoteType) {
 
       try {
         console.log(
-          `[@hook:useRemoteConnection] Clicking element using server route: ${element.id}`,
+          `[@hook:useRemoteConnection] Clicking element using execute-command: ${element.id}`,
         );
 
-        // Use direct server route call instead of proxy
-        const response = await fetch(`/server/remote/click-element`, {
+        // Use the unified execute-command route
+        const response = await fetch(`/server/remote/execute-command`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             host_name: selectedHost.host_name,
-            elementId: element.id,
+            command: 'click_element',
+            params: {
+              element_id: element.id,
+            },
           }),
         });
 

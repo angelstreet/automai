@@ -31,7 +31,6 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
     command: '/server/remote/execute-command',
     screenshotAndDump: '/server/remote/screenshot-and-dump',
     getApps: '/server/remote/get-apps',
-    clickElement: '/server/remote/click-element',
     tapElement: '/server/remote/tap-element',
   },
 };
@@ -50,7 +49,6 @@ export const APPIUM_REMOTE_CONFIG: RemoteDeviceConfig = {
     command: '/server/remote/execute-command',
     screenshotAndDump: '/server/remote/screenshot-and-dump',
     getApps: '/server/remote/get-apps',
-    clickElement: '/server/remote/click-element',
     tapElement: '/server/remote/tap-coordinates',
     getStatus: '/server/remote/get-status',
   },

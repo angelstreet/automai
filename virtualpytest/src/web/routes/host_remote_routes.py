@@ -191,89 +191,7 @@ def get_apps():
             'error': f'Get apps error: {str(e)}'
         }), 500
 
-@remote_bp.route('/click-element', methods=['POST'])
-def click_element():
-    """Click on a UI element."""
-    try:
-        data = request.get_json()
-        elementId = data.get('elementId')
-        
-        print(f"[@route:host_remote:click_element] Clicking element ID: {elementId}")
-        
-        if elementId is None:
-            return jsonify({
-                'success': False,
-                'error': 'elementId is required'
-            }), 400
-        
-        host_device = getattr(current_app, 'my_host_device', None)
-        if not host_device:
-            return jsonify({
-                'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
-            }), 404
-        
-        remote_controller = get_local_controller('remote')
-        if not remote_controller:
-            return jsonify({
-                'success': False,
-                'error': 'No remote controller object found in own host_device',
-                'available_controllers': list(host_device.get('controller_objects', {}).keys())
-            }), 404
-        
-        print(f"[@route:host_remote:click_element] Using own remote controller: {type(remote_controller).__name__}")
-        
-        if not hasattr(remote_controller, 'last_ui_elements'):
-            return jsonify({
-                'success': False,
-                'error': 'Element clicking not supported by this remote controller'
-            }), 400
-        
-        # Check if we have any elements stored
-        if not remote_controller.last_ui_elements:
-            return jsonify({
-                'success': False,
-                'error': 'No UI elements available. Please dump UI elements first using screenshot-and-dump or dump-ui.'
-            }), 400
-        
-        print(f"[@route:host_remote:click_element] Found {len(remote_controller.last_ui_elements)} stored elements")
-        
-        # Convert elementId to appropriate type for comparison
-        element = None
-        available_ids = []
-        for el in remote_controller.last_ui_elements:
-            available_ids.append(str(el.id))
-            # Try both string and int comparison
-            if str(el.id) == str(elementId) or el.id == elementId:
-                element = el
-                break
-        
-        if not element:
-            print(f"[@route:host_remote:click_element] Element {elementId} not found. Available IDs: {available_ids}")
-            return jsonify({
-                'success': False,
-                'error': f'Element with ID {elementId} not found. Available IDs: {available_ids}. Please dump UI elements first.'
-            }), 400
-        
-        success = remote_controller.click_element(element)
-        
-        if success:
-            return jsonify({
-                'success': True,
-                'message': f'Successfully clicked element {elementId}'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': f'Failed to click element {elementId}'
-            }), 400
-            
-    except Exception as e:
-        print(f"[@route:host_remote:click_element] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Element click error: {str(e)}'
-        }), 500
+
 
 @remote_bp.route('/tap-coordinates', methods=['POST'])
 def tap_coordinates():
@@ -386,6 +304,108 @@ def execute_command():
                 return jsonify({
                     'success': False,
                     'error': 'package parameter is required for launch_app command'
+                }), 400
+                
+        elif command == 'close_app':
+            package = params.get('package')
+            if package:
+                success = remote_controller.close_app(package)
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'package parameter is required for close_app command'
+                }), 400
+                
+        elif command == 'tap_coordinates':
+            x = params.get('x')
+            y = params.get('y')
+            if x is not None and y is not None:
+                success = remote_controller.tap_coordinates(int(x), int(y))
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'x and y parameters are required for tap_coordinates command'
+                }), 400
+                
+        elif command == 'click_element':
+            element_id = params.get('element_id')
+            if element_id:
+                # Check if we have stored UI elements
+                if not hasattr(remote_controller, 'last_ui_elements') or not remote_controller.last_ui_elements:
+                    return jsonify({
+                        'success': False,
+                        'error': 'No UI elements available. Please dump UI elements first using dump_ui_elements.'
+                    }), 400
+                
+                # Find the element by ID
+                element = None
+                for el in remote_controller.last_ui_elements:
+                    if str(el.id) == str(element_id):
+                        element = el
+                        break
+                
+                if not element:
+                    available_ids = [str(el.id) for el in remote_controller.last_ui_elements]
+                    return jsonify({
+                        'success': False,
+                        'error': f'Element with ID {element_id} not found. Available IDs: {available_ids}'
+                    }), 400
+                
+                success = remote_controller.click_element(element)
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'element_id parameter is required for click_element command'
+                }), 400
+                
+        elif command == 'dump_ui_elements':
+            if hasattr(remote_controller, 'dump_ui_elements'):
+                ui_success, elements, ui_error = remote_controller.dump_ui_elements()
+                if ui_success:
+                    success = True
+                    # Store elements for future click operations
+                    remote_controller.last_ui_elements = elements
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': f'UI dump failed: {ui_error}'
+                    }), 400
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'UI dumping not supported by this controller'
+                }), 400
+                
+        elif command == 'take_screenshot':
+            if hasattr(remote_controller, 'take_screenshot'):
+                screenshot_success, screenshot_data, screenshot_error = remote_controller.take_screenshot()
+                if screenshot_success:
+                    success = True
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Screenshot failed: {screenshot_error}'
+                    }), 400
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Screenshot not supported by this controller'
+                }), 400
+                
+        elif command == 'get_installed_apps':
+            if hasattr(remote_controller, 'get_installed_apps'):
+                apps_success, apps_data, apps_error = remote_controller.get_installed_apps()
+                if apps_success:
+                    success = True
+                else:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Get apps failed: {apps_error}'
+                    }), 400
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'Get installed apps not supported by this controller'
                 }), 400
                 
         else:

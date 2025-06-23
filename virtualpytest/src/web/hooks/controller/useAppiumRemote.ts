@@ -311,14 +311,17 @@ export const useAppiumRemote = (host: Host): UseAppiumRemoteReturn => {
       try {
         console.log(`[@hook:useAppiumRemote] Clicking overlay element: ${element.id}`);
 
-        const response = await fetch('/server/remote/click-element', {
+        const response = await fetch('/server/remote/execute-command', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            host: host,
-            element: element,
+            host_name: host.host_name,
+            command: 'click_element',
+            params: {
+              element_id: element.id,
+            },
           }),
         });
 
