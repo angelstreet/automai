@@ -84,9 +84,9 @@ def register_host():
             controller_configs = create_controller_configs_from_device_info(device)
             
             # Use the capabilities sent by the host (no redundant server-side detection)
-            # Extract controller types and class names from the actual controller configs
-            device_capabilities = [config['type'] for config in controller_configs]
-            device_controller_types = [config['class'].__name__ for config in controller_configs]
+            # Extract controller types and implementation names from the actual controller configs
+            device_capabilities = list(set([config['type'] for config in controller_configs.values()]))
+            device_controller_types = [f"{config['type']}_{config['implementation']}" for config in controller_configs.values()]
             
             # Add device with its controller info
             device_with_controllers = {

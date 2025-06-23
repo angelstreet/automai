@@ -10,6 +10,15 @@ from ..models.host import Host
 from ..models.device import Device
 from ..controllers.controller_config_factory import create_controller_configs_from_device_info
 
+# Import controller classes
+from ..controllers.audiovideo.hdmi_stream import HDMIStreamController
+from ..controllers.remote.android_mobile import AndroidMobileRemoteController
+from ..controllers.remote.android_tv import AndroidTVRemoteController
+from ..controllers.remote.appium_remote import AppiumRemoteController
+from ..controllers.verification.image import ImageVerificationController
+from ..controllers.verification.text import TextVerificationController
+from ..controllers.verification.adb import ADBVerificationController
+
 
 def create_host_from_environment() -> Host:
     """
@@ -77,6 +86,45 @@ def _get_devices_config_from_environment() -> List[Dict[str, Any]]:
     return devices_config
 
 
+def _create_controller_instance(controller_type: str, implementation: str, params: Dict[str, Any]):
+    """
+    Create a controller instance based on type and implementation.
+    
+    Args:
+        controller_type: Abstract type ('av', 'remote', 'verification', etc.)
+        implementation: Specific implementation ('hdmi_stream', 'android_mobile', etc.)
+        params: Constructor parameters
+        
+    Returns:
+        Controller instance or None if not found
+    """
+    # AV Controllers
+    if controller_type == 'av':
+        if implementation == 'hdmi_stream':
+            return HDMIStreamController(**params)
+    
+    # Remote Controllers
+    elif controller_type == 'remote':
+        if implementation == 'android_mobile':
+            return AndroidMobileRemoteController(**params)
+        elif implementation == 'android_tv':
+            return AndroidTVRemoteController(**params)
+        elif implementation == 'appium':
+            return AppiumRemoteController(**params)
+    
+    # Verification Controllers
+    elif controller_type == 'verification':
+        if implementation == 'image':
+            return ImageVerificationController(**params)
+        elif implementation == 'text':
+            return TextVerificationController(**params)
+        elif implementation == 'adb':
+            return ADBVerificationController(**params)
+    
+    print(f"[@controller_manager:_create_controller_instance] WARNING: Unknown controller {controller_type}_{implementation}")
+    return None
+
+
 def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
     """
     Create a device with all its controllers from configuration.
@@ -103,68 +151,76 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
         device_config.get('device_port')
     )
     
-    # Create controllers using the factory
+    # Create controllers using the factory (returns dict now)
     controller_configs = create_controller_configs_from_device_info(device_config)
     
-    # Separate controllers by type to handle dependencies
-    av_controllers = [c for c in controller_configs if c['type'] == 'av']
-    remote_controllers = [c for c in controller_configs if c['type'] == 'remote']
-    verification_controllers = [c for c in controller_configs if c['type'] == 'verification']
-    power_controllers = [c for c in controller_configs if c['type'] == 'power']
+    # Convert dict to list for processing
+    controller_list = list(controller_configs.values())
     
-    # Step 1: Create AV controllers first (no dependencies)
+    # Separate controllers by type to handle dependencies
+    av_controllers = [c for c in controller_list if c['type'] == 'av']
+    remote_controllers = [c for c in controller_list if c['type'] == 'remote']
+    verification_controllers = [c for c in controller_list if c['type'] == 'verification']
+    power_controllers = [c for c in controller_list if c['type'] == 'power']
+    
+    # Step 1: Create AV controllers first (no dependencies)  
     av_controller = None
     for controller_config in av_controllers:
         controller_type = controller_config['type']
-        controller_class = controller_config['class']
+        implementation = controller_config['implementation']
         controller_params = controller_config['params']
         
-        print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {controller_class.__name__}")
+        print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {implementation}")
         
-        controller = controller_class(**controller_params)
-        device.add_controller(controller_type, controller)
-        av_controller = controller  # Keep reference for verification controllers
+        # Create controller based on implementation type
+        controller = _create_controller_instance(controller_type, implementation, controller_params)
+        if controller:
+            device.add_controller(controller_type, controller)
+            av_controller = controller  # Keep reference for verification controllers
     
     # Step 2: Create remote controllers (no dependencies)
     for controller_config in remote_controllers:
         controller_type = controller_config['type']
-        controller_class = controller_config['class']
+        implementation = controller_config['implementation']
         controller_params = controller_config['params']
         
-        print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {controller_class.__name__}")
+        print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {implementation}")
         
-        controller = controller_class(**controller_params)
-        device.add_controller(controller_type, controller)
+        controller = _create_controller_instance(controller_type, implementation, controller_params)
+        if controller:
+            device.add_controller(controller_type, controller)
     
     # Step 3: Create verification controllers (depend on AV controller)
     for controller_config in verification_controllers:
         controller_type = controller_config['type']
-        controller_class = controller_config['class']
+        implementation = controller_config['implementation']
         controller_params = controller_config['params']
         
-        print(f"[@controller_manager:_create_device_with_controllers] Creating verification controller: {controller_class.__name__}")
+        print(f"[@controller_manager:_create_device_with_controllers] Creating verification controller: {implementation}")
         
         # Add av_controller dependency for verification controllers that need it
         # ADB verification controller doesn't need av_controller (uses direct ADB communication)
-        if controller_class.__name__ in ['ImageVerificationController', 'TextVerificationController', 'AudioVerificationController', 'VideoVerificationController']:
+        if implementation in ['image', 'text']:
             if av_controller:
                 controller_params['av_controller'] = av_controller
             else:
-                print(f"[@controller_manager:_create_device_with_controllers] WARNING: {controller_class.__name__} needs AV controller but none available")
+                print(f"[@controller_manager:_create_device_with_controllers] WARNING: {implementation} verification needs AV controller but none available")
         
-        controller = controller_class(**controller_params)
-        device.add_controller(controller_type, controller)
+        controller = _create_controller_instance(controller_type, implementation, controller_params)
+        if controller:
+            device.add_controller(controller_type, controller)
     
     # Step 4: Create power controllers (no dependencies)
     for controller_config in power_controllers:
         controller_type = controller_config['type']
-        controller_class = controller_config['class']
+        implementation = controller_config['implementation']
         controller_params = controller_config['params']
         
-        print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {controller_class.__name__}")
+        print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {implementation}")
         
-        controller = controller_class(**controller_params)
-        device.add_controller(controller_type, controller)
+        controller = _create_controller_instance(controller_type, implementation, controller_params)
+        if controller:
+            device.add_controller(controller_type, controller)
     
     print(f"[@controller_manager:_create_device_with_controllers] Device {device_id} created with capabilities: {device.get_capabilities()}")
     return device

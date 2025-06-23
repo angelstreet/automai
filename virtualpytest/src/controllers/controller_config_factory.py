@@ -56,7 +56,7 @@ DEVICE_MODEL_CONTROLLERS = {
 }
 
 
-def create_controller_configs_from_device_info(device_config: Dict[str, Any]) -> List[Dict[str, Any]]:
+def create_controller_configs_from_device_info(device_config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Create controller configurations from device information.
     
@@ -64,15 +64,20 @@ def create_controller_configs_from_device_info(device_config: Dict[str, Any]) ->
         device_config: Device configuration with all necessary parameters
         
     Returns:
-        List of controller configurations with format:
-        [
-            {
-                'type': 'av',  # Abstract type
-                'class': HDMIStreamController,  # Controller class
-                'params': {...}  # Constructor parameters
+        Dictionary of controller configurations (JSON serializable):
+        {
+            'av': {
+                'type': 'av',
+                'implementation': 'hdmi_stream',
+                'params': {...}
+            },
+            'remote': {
+                'type': 'remote', 
+                'implementation': 'android_mobile',
+                'params': {...}
             },
             ...
-        ]
+        }
     """
     device_id = device_config['device_id']
     model = device_config['device_model']
@@ -83,23 +88,25 @@ def create_controller_configs_from_device_info(device_config: Dict[str, Any]) ->
         supported_models = list(DEVICE_MODEL_CONTROLLERS.keys())
         raise ValueError(f"Unsupported device model '{model}'. Supported models: {supported_models}")
     
-    controller_configs = []
+    controller_configs = {}
     model_controllers = DEVICE_MODEL_CONTROLLERS[model]
     
     # Create controllers for each type
     for controller_type, implementations in model_controllers.items():
         for implementation in implementations:
-            config = _create_controller_config(controller_type, implementation, device_config)
+            config = _create_serializable_controller_config(controller_type, implementation, device_config)
             if config:
-                controller_configs.append(config)
+                # Use a unique key for each controller
+                key = f"{controller_type}_{implementation}" if len(implementations) > 1 else controller_type
+                controller_configs[key] = config
     
     print(f"[@controller_config_factory:create_controller_configs_from_device_info] Created {len(controller_configs)} controllers for {device_id}")
     return controller_configs
 
 
-def _create_controller_config(controller_type: str, implementation: str, device_config: Dict[str, Any]) -> Dict[str, Any]:
+def _create_serializable_controller_config(controller_type: str, implementation: str, device_config: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Create a single controller configuration.
+    Create a single controller configuration (JSON serializable).
     
     Args:
         controller_type: Abstract type ('av', 'remote', 'verification', etc.)
@@ -107,7 +114,7 @@ def _create_controller_config(controller_type: str, implementation: str, device_
         device_config: Device configuration
         
     Returns:
-        Controller configuration or None if not applicable
+        Serializable controller configuration or None if not applicable
     """
     device_id = device_config['device_id']
     
@@ -118,7 +125,7 @@ def _create_controller_config(controller_type: str, implementation: str, device_
         
         return {
             'type': 'av',
-            'class': HDMIStreamController,
+            'implementation': 'hdmi_stream',
             'params': {
                 'video_device': device_config['video'],
                 'resolution': '1920x1080',
@@ -137,13 +144,12 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             
             return {
                 'type': 'remote',
-                'class': AndroidMobileRemoteController,
+                'implementation': 'android_mobile',
                 'params': {
                     'device_ip': device_config['device_ip'],
                     'device_port': device_config['device_port'],
                     'connection_timeout': 10,
-                    'device_id': device_config['device_id'],
-                    'device_config': device_config
+                    'device_id': device_config['device_id']
                 }
             }
         
@@ -153,13 +159,12 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             
             return {
                 'type': 'remote',
-                'class': AndroidTVRemoteController,
+                'implementation': 'android_tv',
                 'params': {
                     'device_ip': device_config['device_ip'],
                     'device_port': device_config['device_port'],
                     'connection_timeout': 10,
-                    'device_id': device_config['device_id'],
-                    'device_config': device_config
+                    'device_id': device_config['device_id']
                 }
             }
         
@@ -169,7 +174,7 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             
             return {
                 'type': 'remote',
-                'class': AppiumRemoteController,
+                'implementation': 'appium',
                 'params': {
                     'device_ip': device_config['device_ip'],
                     'device_port': device_config['device_port'],
@@ -177,8 +182,7 @@ def _create_controller_config(controller_type: str, implementation: str, device_
                     'appium_url': f"http://{device_config['device_ip']}:4723",
                     'automation_name': 'XCUITest',
                     'connection_timeout': 10,
-                    'device_id': device_config['device_id'],
-                    'device_config': device_config
+                    'device_id': device_config['device_id']
                 }
             }
         
@@ -188,13 +192,12 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             
             return {
                 'type': 'remote',
-                'class': IRRemoteController,
+                'implementation': 'infrared',
                 'params': {
                     'device_path': device_config['ir_device'],
                     'protocol': 'NEC',
                     'frequency': 38000,
-                    'device_id': device_config['device_id'],
-                    'device_config': device_config
+                    'device_id': device_config['device_id']
                 }
             }
         
@@ -204,11 +207,10 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             
             return {
                 'type': 'remote',
-                'class': BluetoothRemoteController,
+                'implementation': 'bluetooth',
                 'params': {
                     'device_address': device_config['bluetooth_device'],
-                    'device_id': device_config['device_id'],
-                    'device_config': device_config
+                    'device_id': device_config['device_id']
                 }
             }
     
@@ -217,29 +219,39 @@ def _create_controller_config(controller_type: str, implementation: str, device_
         if implementation == 'image':
             return {
                 'type': 'verification',
-                'class': ImageVerificationController,
-                'params': {}
+                'implementation': 'image',
+                'params': {
+                    'device_id': device_id,
+                    'similarity_threshold': 0.8
+                }
             }
         
         elif implementation == 'text':
             return {
                 'type': 'verification',
-                'class': TextVerificationController,
-                'params': {}
+                'implementation': 'text',
+                'params': {
+                    'device_id': device_id,
+                    'ocr_language': 'eng'
+                }
             }
         
         elif implementation == 'audio':
             return {
                 'type': 'verification',
-                'class': AudioVerificationController,
-                'params': {}
+                'implementation': 'audio',
+                'params': {
+                    'device_id': device_id
+                }
             }
         
         elif implementation == 'video':
             return {
                 'type': 'verification',
-                'class': VideoVerificationController,
-                'params': {}
+                'implementation': 'video',
+                'params': {
+                    'device_id': device_id
+                }
             }
         
         elif implementation == 'adb':
@@ -248,34 +260,79 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             
             return {
                 'type': 'verification',
-                'class': ADBVerificationController,
+                'implementation': 'adb',
                 'params': {
                     'device_ip': device_config['device_ip'],
                     'device_port': device_config['device_port'],
-                    'connection_timeout': 10
+                    'device_id': device_id
                 }
             }
     
     # Power Controllers
-    elif controller_type == 'power' and implementation == 'usb':
-        if 'power_device' not in device_config:
-            return None
-        
-        return {
-            'type': 'power',
-            'class': USBPowerController,
-            'params': {
-                'hub_location': device_config['power_device'],
-                'port_number': 1
+    elif controller_type == 'power':
+        if implementation == 'smart_plug':
+            if 'power_device' not in device_config:
+                return None
+            
+            return {
+                'type': 'power',
+                'implementation': 'smart_plug',
+                'params': {
+                    'device_address': device_config['power_device'],
+                    'device_id': device_id
+                }
             }
-        }
     
-    # Network Controllers
-    elif controller_type == 'network' and implementation == 'network':
-        return {
-            'type': 'network',
-            'class': NetworkController,
-            'params': {}
-        }
+    return None
+
+
+def get_device_capabilities_from_model(device_model):
+    """
+    Get device capabilities based on device model by checking actual controller configs.
     
-    return None 
+    Args:
+        device_model: Device model string
+        
+    Returns:
+        list: List of actual controller types that exist
+    """
+    
+    # Create dummy device config for capability detection
+    dummy_device_config = {
+        'device_id': 'dummy',
+        'device_model': device_model,
+        'device_ip': '0.0.0.0',
+        'device_port': '0000'
+    }
+    
+    # Get the actual controller configs for this device model
+    controller_configs = create_controller_configs_from_device_info(dummy_device_config)
+    
+    # Return unique controller types
+    return list(set([config['type'] for config in controller_configs.values()]))
+
+
+def get_controller_types_from_model(device_model):
+    """
+    Get specific controller implementation types supported by device model.
+    
+    Args:
+        device_model: Device model string
+        
+    Returns:
+        list: List of controller implementation names
+    """
+    
+    # Create dummy device config for capability detection
+    dummy_device_config = {
+        'device_id': 'dummy',
+        'device_model': device_model,
+        'device_ip': '0.0.0.0',
+        'device_port': '0000'
+    }
+    
+    # Get the actual controller configs for this device model
+    controller_configs = create_controller_configs_from_device_info(dummy_device_config)
+    
+    # Return controller implementation names
+    return [f"{config['type']}_{config['implementation']}" for config in controller_configs.values()] 

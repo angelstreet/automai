@@ -74,7 +74,7 @@ def register_host_routes(app):
     """Register host routes - FAIL FAST"""
     print("[@host:main:register_host_routes] Loading host routes...")
     try:
-        from routes import register_routes
+        from src.web.routes import register_routes
         register_routes(app, mode='host')
         print("[@host:main:register_host_routes] Host routes registered successfully")
         return True
