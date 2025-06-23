@@ -5,8 +5,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 
 // Import navigation components (keep these as regular imports since they're always needed)
 import Footer from './components/common/Footer';
+import NavigationBar from './components/common/Navigation_Bar';
 import ThemeToggle from './components/common/ThemeToggle';
-import NavigationBar from './components/navigation/Navigation_Bar';
 import { RegistrationProvider } from './contexts/RegistrationContext';
 import { ToastProvider } from './contexts/ToastContext';
 
