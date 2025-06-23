@@ -50,9 +50,48 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [localActions, setLocalActions] = useState<EdgeAction[]>([]);
   const [localRetryActions, setLocalRetryActions] = useState<EdgeAction[]>([]);
 
-  // Extract controller actions from host data
+  // Extract controller actions from host data and flatten the structure
   const controllerActions: Actions = useMemo(() => {
-    return selectedHost?.available_action_types || {};
+    const rawActions = selectedHost?.available_action_types || {};
+    console.log('[@component:EdgeEditDialog] Raw available_action_types:', rawActions);
+    console.log(
+      '[@component:EdgeEditDialog] Available action types keys:',
+      Object.keys(rawActions),
+    );
+
+    // Flatten the action structure from controller-based to category-based
+    // Transform from: { "action_remote_android": { "remote": [...], "control": [...] } }
+    // To: { "remote": [...], "control": [...] }
+    const flattenedActions: Actions = {};
+
+    for (const [_controllerKey, controllerData] of Object.entries(rawActions)) {
+      if (controllerData && typeof controllerData === 'object') {
+        for (const [category, categoryActions] of Object.entries(controllerData)) {
+          if (Array.isArray(categoryActions)) {
+            // Merge actions from multiple controllers into the same category
+            if (!flattenedActions[category]) {
+              flattenedActions[category] = [];
+            }
+            flattenedActions[category] = [...flattenedActions[category], ...categoryActions];
+          }
+        }
+      }
+    }
+
+    console.log('[@component:EdgeEditDialog] Flattened actions structure:', flattenedActions);
+    console.log(
+      '[@component:EdgeEditDialog] Flattened action categories:',
+      Object.keys(flattenedActions),
+    );
+    console.log(
+      '[@component:EdgeEditDialog] Total action count:',
+      Object.values(flattenedActions).reduce(
+        (sum, actions) => sum + (Array.isArray(actions) ? actions.length : 0),
+        0,
+      ),
+    );
+
+    return flattenedActions;
   }, [selectedHost?.available_action_types]);
 
   const canRunActions =
