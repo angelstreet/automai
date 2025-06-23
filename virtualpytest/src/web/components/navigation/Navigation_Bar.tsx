@@ -12,7 +12,6 @@ import {
   LibraryBooks as LibraryIcon,
   Memory as ModelIcon,
   BugReport as TestingIcon,
-  Videocam as VideocamIcon,
 } from '@mui/icons-material';
 import { Box, Button } from '@mui/material';
 import React from 'react';
@@ -109,7 +108,7 @@ const NavigationBar: React.FC = () => {
       <Button
         component={Link}
         to="/rec"
-        startIcon={<VideocamIcon fontSize="small" />}
+        startIcon={<MonitorIcon fontSize="small" />}
         sx={{
           color: location.pathname === '/rec' ? 'secondary.main' : 'inherit',
           fontWeight: location.pathname === '/rec' ? 600 : 400,

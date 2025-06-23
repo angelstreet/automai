@@ -7,8 +7,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Footer from './components/common/Footer';
 import ThemeToggle from './components/common/ThemeToggle';
 import NavigationBar from './components/navigation/Navigation_Bar';
-
-// Import registration context
 import { RegistrationProvider } from './contexts/RegistrationContext';
 import { ToastProvider } from './contexts/ToastContext';
 

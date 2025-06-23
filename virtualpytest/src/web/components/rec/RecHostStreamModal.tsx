@@ -2,11 +2,11 @@ import { Close as CloseIcon, Tv as TvIcon } from '@mui/icons-material';
 import { Box, IconButton, Typography, Button, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
-import { StreamViewer } from '../controller/av/StreamViewer';
-import { RemotePanel } from '../controller/remote/RemotePanel';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useToast } from '../../hooks/useToast';
 import { Host } from '../../types/common/Host_Types';
+import { StreamViewer } from '../controller/av/StreamViewer';
+import { RemotePanel } from '../controller/remote/RemotePanel';
 
 interface RecHostStreamModalProps {
   host: Host | null;
