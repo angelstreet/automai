@@ -267,10 +267,19 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 success = self.close_app(params.get('package', ''))
             elif action == 'click_element':
                 element_id = params.get('element_id')
+                if element_id:
+                    # Use the low-level direct click method
+                    success = self.click_element(element_id)
+                else:
+                    print(f"Remote[{self.device_type.upper()}]: No element ID provided")
+                    return False
+            elif action == 'click_element_by_id':
+                element_id = params.get('element_id')
                 if element_id and self.last_ui_elements:
-                    element = next((el for el in self.last_ui_elements if el.id == element_id), None)
+                    # Find element in dumped elements and pass AndroidElement object
+                    element = next((el for el in self.last_ui_elements if str(el.id) == str(element_id)), None)
                     if element:
-                        success = self.click_element(element)
+                        success = self.click_element_by_id(element)
                     else:
                         print(f"Remote[{self.device_type.upper()}]: Element with ID {element_id} not found")
                         return False
@@ -404,9 +413,10 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: {error_msg}")
             return False, [], error_msg
             
-    def click_element(self, element: AndroidElement) -> bool:
+    def click_element_by_id(self, element: AndroidElement) -> bool:
         """
-        Click on a UI element.
+        PRIVATE: Click on a UI element (for internal/frontend use only).
+        This method is used by routes/frontend after UI dump, not exposed in available actions.
         
         Args:
             element: AndroidElement to click
@@ -432,6 +442,37 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: Element click error: {e}")
+            return False
+            
+    def click_element(self, element_identifier: str) -> bool:
+        """
+        Click element directly by text, resource_id, or content_desc using simple ADB command.
+        
+        Args:
+            element_identifier: Text, resource ID, or content description to click
+            
+        Returns:
+            bool: True if click successful
+        """
+        if not self.is_connected or not self.adb_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Direct click on element: '{element_identifier}'")
+            
+            # Use simple ADB command to click by text
+            success = self.adb_utils.click_element_by_text(self.android_device_id, element_identifier)
+            
+            if success:
+                print(f"Remote[{self.device_type.upper()}]: Successfully clicked element: '{element_identifier}'")
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Failed to click element: '{element_identifier}'")
+                
+            return success
+            
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Direct element click error: {e}")
             return False
             
     def find_element_by_text(self, text: str) -> Optional[AndroidElement]:
@@ -791,15 +832,16 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 },
                 {
                     'id': 'click_element',
-                    'label': 'Click UI Element',
+                    'label': 'Click UI Element (Direct)',
                     'command': 'click_element',
                     'action_type': 'remote',
                     'params': {},
-                    'description': 'Click on a UI element by ID',
+                    'description': 'Click on a UI element directly by text/ID (no UI dump required)',
                     'requiresInput': True,
-                    'inputLabel': 'Element ID',
-                    'inputPlaceholder': 'element_id'
+                    'inputLabel': 'Element Text/ID',
+                    'inputPlaceholder': 'Home Tab'
                 },
+
                 # Utility actions
                 {
                     'id': 'take_screenshot',

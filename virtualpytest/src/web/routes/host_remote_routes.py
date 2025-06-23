@@ -330,6 +330,17 @@ def execute_command():
         elif command == 'click_element':
             element_id = params.get('element_id')
             if element_id:
+                # Use low-level direct click method (no UI dump required)
+                success = remote_controller.click_element(element_id)
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'element_id parameter is required for click_element command'
+                }), 400
+                
+        elif command == 'click_element_by_id':
+            element_id = params.get('element_id')
+            if element_id:
                 # Check if we have stored UI elements
                 if not hasattr(remote_controller, 'last_ui_elements') or not remote_controller.last_ui_elements:
                     return jsonify({
@@ -337,7 +348,7 @@ def execute_command():
                         'error': 'No UI elements available. Please dump UI elements first using dump_ui_elements.'
                     }), 400
                 
-                # Find the element by ID
+                # Find the element by ID in dumped elements
                 element = None
                 for el in remote_controller.last_ui_elements:
                     if str(el.id) == str(element_id):
@@ -351,11 +362,12 @@ def execute_command():
                         'error': f'Element with ID {element_id} not found. Available IDs: {available_ids}'
                     }), 400
                 
-                success = remote_controller.click_element(element)
+                # Pass AndroidElement object to the method
+                success = remote_controller.click_element_by_id(element)
             else:
                 return jsonify({
                     'success': False,
-                    'error': 'element_id parameter is required for click_element command'
+                    'error': 'element_id parameter is required for click_element_by_id command'
                 }), 400
                 
         elif command == 'dump_ui_elements':

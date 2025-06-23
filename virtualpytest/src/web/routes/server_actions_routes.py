@@ -14,8 +14,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from lib.supabase.actions_db import save_action, get_actions, delete_action, get_all_actions, load_actions_by_ids
 
-# Default team ID for testing
-DEFAULT_TEAM_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+# Import default team ID from app utils (same as verifications)
+from src.utils.app_utils import DEFAULT_TEAM_ID
 
 from src.web.utils.routeUtils import proxy_to_host
 import time
