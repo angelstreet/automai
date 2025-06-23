@@ -1,4 +1,11 @@
 import {
+  Refresh as RefreshIcon,
+  GridView as GridViewIcon,
+  TableRows as TableViewIcon,
+  Visibility as EyeIcon,
+  Computer as ComputerIcon,
+} from '@mui/icons-material';
+import {
   Box,
   Typography,
   Button,
@@ -10,22 +17,10 @@ import {
   Paper,
   Chip,
 } from '@mui/material';
-import {
-  Refresh as RefreshIcon,
-  GridView as GridViewIcon,
-  TableRows as TableViewIcon,
-  Videocam as VideocamIcon,
-  Computer as ComputerIcon,
-} from '@mui/icons-material';
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { useRec } from '../hooks/pages/useRec';
 import { RecHostPreview } from '../components/rec/RecHostPreview';
-import { Host } from '../types/common/Host_Types';
-
-interface HostWithAVStatus extends Host {
-  avStatus: 'online' | 'offline' | 'checking';
-}
+import { useRec } from '../hooks/pages/useRec';
 
 type ViewMode = 'grid' | 'table';
 
@@ -115,9 +110,9 @@ const Rec: React.FC = () => {
       <Box sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <VideocamIcon color="primary" sx={{ fontSize: 32 }} />
+            <EyeIcon color="primary" sx={{ fontSize: 32 }} />
             <Typography variant="h4" component="h1">
-              AV Capture Monitoring
+              Remote Eye Controller
             </Typography>
           </Box>
 

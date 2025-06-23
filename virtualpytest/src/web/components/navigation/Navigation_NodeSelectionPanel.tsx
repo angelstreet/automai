@@ -387,7 +387,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             position: 'absolute',
             top: 16,
             right: 16,
-            width: 280,
+            width: 340,
             p: 1.5,
             zIndex: 1000,
           }}
