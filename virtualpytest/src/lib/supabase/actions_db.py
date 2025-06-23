@@ -8,7 +8,11 @@ import json
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from .client import get_supabase
+from src.utils.supabase_utils import get_supabase_client
+
+def get_supabase():
+    """Get the Supabase client instance."""
+    return get_supabase_client()
 
 def find_existing_action(team_id: str, device_model: str, action_type: str, command: str, parameters: Dict = None) -> Dict:
     """
