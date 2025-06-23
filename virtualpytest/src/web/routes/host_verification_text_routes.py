@@ -160,10 +160,16 @@ def text_auto_detect():
                     print(f"[@route:host_text_auto_detect] Fallback OCR: '{detected_text}'")
                 except Exception as fallback_error:
                     print(f"[@route:host_text_auto_detect] Error: {str(fallback_error)}")
+                    
+                    # Build device-specific preview URL
+                    from src.utils.buildUrlUtils import _get_device_capture_path
+                    capture_path = _get_device_capture_path(host_device, device_id)
+                    preview_url = f'{capture_path}/cropped/{target_filename}'
+                    
                     return jsonify({
                         'success': False,
                         'error': str(fallback_error),
-                        'preview_url': f'/host/stream/captures/cropped/{target_filename}'  # Still provide preview
+                        'preview_url': preview_url  # Device-specific preview URL
                     }), 500
             
             # Attempt language detection
@@ -198,7 +204,9 @@ def text_auto_detect():
                     print(f"[@route:host_text_auto_detect] Language detection failed: {str(lang_error)}")
             
             # Return URL path for the preview image
-            preview_url = f'/stream/captures/cropped/{target_filename}'
+            from src.utils.buildUrlUtils import _get_device_capture_path
+            capture_path = _get_device_capture_path(host_device, device_id)
+            preview_url = f'{capture_path}/cropped/{target_filename}'
             
             # Check if we have meaningful text (confidence threshold)
             if avg_confidence >= 30 and detected_text.strip():
@@ -216,6 +224,12 @@ def text_auto_detect():
                 })
             else:
                 print(f"[@route:host_text_auto_detect] Low confidence or no text detected")
+                
+                # Build device-specific preview URL for low confidence case
+                from src.utils.buildUrlUtils import _get_device_capture_path
+                capture_path = _get_device_capture_path(host_device, device_id)
+                preview_url = f'{capture_path}/cropped/{target_filename}'
+                
                 return jsonify({
                     'success': False,
                     'error': f'No reliable text detected (confidence: {avg_confidence:.1f}%)',
@@ -226,10 +240,16 @@ def text_auto_detect():
                 
         except ImportError as e:
             print(f"[@route:host_text_auto_detect] OCR libraries not available: {e}")
+            
+            # Build device-specific preview URL for error case
+            from src.utils.buildUrlUtils import _get_device_capture_path
+            capture_path = _get_device_capture_path(host_device, device_id)
+            preview_url = f'{capture_path}/cropped/{target_filename}'
+            
             return jsonify({
                 'success': False,
                 'error': 'OCR libraries not available (pytesseract/cv2 not installed)',
-                'preview_url': f'/stream/captures/cropped/{target_filename}'
+                'preview_url': preview_url
             }), 500
             
     except Exception as e:

@@ -211,5 +211,5 @@ const getDeviceCaptureUrlPath = (host: any, deviceId?: string): string => {
   }
 
   // Final fallback
-  return '/stream/captures';
+  return '/stream/capture1';
 };

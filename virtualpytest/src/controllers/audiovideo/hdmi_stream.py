@@ -284,19 +284,13 @@ class HDMIStreamController(AVControllerInterface):
                 
                 # Build local file path to the captured screenshot using device-specific path
                 host_info = self._get_host_info()
-                if host_info:
-                    from src.utils.buildUrlUtils import get_device_local_captures_path
-                    captures_path = get_device_local_captures_path(host_info, self.device_id)
-                    local_screenshot_path = f'{captures_path}/capture_{timestamp}.jpg'
-                else:
-                    # Fallback to device-specific path construction
-                    if self.device_id and self.device_id != 'device1':
-                        # For device2, device3, etc., use device-specific capture path
-                        device_num = self.device_id.replace('device', '')
-                        local_screenshot_path = f'/var/www/html/stream/capture{device_num}/captures/capture_{timestamp}.jpg'
-                    else:
-                        # For device1 or no device_id, use default capture path
-                        local_screenshot_path = f'/var/www/html/stream/captures/capture_{timestamp}.jpg'
+                if not host_info:
+                    print(f'[@controller:HDMIStream] Cannot build local screenshot path - no host info available')
+                    return None
+                
+                from src.utils.buildUrlUtils import get_device_local_captures_path
+                captures_path = get_device_local_captures_path(host_info, self.device_id)
+                local_screenshot_path = f'{captures_path}/capture_{timestamp}.jpg'
                 
                 print(f'[@controller:HDMIStream] Local screenshot path (device_id={self.device_id}): {local_screenshot_path}')
                 
@@ -404,7 +398,7 @@ class HDMIStreamController(AVControllerInterface):
                 from src.utils.buildUrlUtils import buildHostImageUrl
                 host_info = self._get_host_info()
                 if host_info:
-                    captures_url = buildHostImageUrl(host_info, 'stream/captures/')
+                    captures_url = buildHostImageUrl(host_info, 'stream/capture1/')
                     print(f"HDMI[{self.capture_source}]: Will reference screenshots from: {captures_url}")
             except Exception:
                 pass  # Logging only, don't fail if URL building fails

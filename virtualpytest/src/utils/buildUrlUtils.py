@@ -202,30 +202,39 @@ def get_device_local_captures_path(host_info: dict, device_id: str = None) -> st
         device_id: Optional device ID (e.g., 'device1', 'device2')
         
     Returns:
-        Local file system path for captures (e.g., '/var/www/html/stream/captures', '/var/www/html/stream/capture2/captures')
+        Local file system path for captures from device configuration (DEVICE1_VIDEO_CAPTURE_PATH)
+        
+    Raises:
+        ValueError: If device configuration or capture path is not found
     """
+    if not host_info:
+        raise ValueError("host_info is required for device path resolution")
+    
     if not device_id:
-        # Default to first device or legacy single-device path
-        return '/var/www/html/stream/captures'
+        # Get first device if no device_id specified
+        devices = host_info.get('devices', [])
+        if not devices:
+            raise ValueError("No devices configured in host_info")
+        device_id = devices[0].get('device_id')
+        if not device_id:
+            raise ValueError("First device has no device_id configured")
     
     # Get devices configuration from host_info
     devices = host_info.get('devices', [])
+    if not devices:
+        raise ValueError(f"No devices configured in host_info for device_id: {device_id}")
     
     # Find the specific device
     for device in devices:
         if device.get('device_id') == device_id:
             capture_path = device.get('video_capture_path')
-            if capture_path:
-                # Use the configured capture path directly
-                return capture_path
+            if not capture_path:
+                raise ValueError(f"Device {device_id} has no video_capture_path configured (DEVICE{device_id.replace('device', '')}_VIDEO_CAPTURE_PATH missing)")
+            
+            print(f"[@buildUrlUtils:get_device_local_captures_path] Using device {device_id} capture path: {capture_path}")
+            return capture_path
     
-    # Fallback: try to construct from device_id (device1 -> capture1, device2 -> capture2)
-    if device_id.startswith('device'):
-        device_num = device_id.replace('device', '')
-        return f'/var/www/html/stream/capture{device_num}/captures'
-    
-    # Final fallback
-    return '/var/www/html/stream/captures'
+    raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")
 
 def get_device_local_stream_path(host_info: dict, device_id: str = None) -> str:
     """
@@ -236,32 +245,44 @@ def get_device_local_stream_path(host_info: dict, device_id: str = None) -> str:
         device_id: Optional device ID (e.g., 'device1', 'device2')
         
     Returns:
-        Local file system path for stream (e.g., '/var/www/html/stream', '/var/www/html/stream/capture2')
+        Local file system path for stream from device configuration (DEVICE1_VIDEO_STREAM_PATH)
+        
+    Raises:
+        ValueError: If device configuration or stream path is not found
     """
+    if not host_info:
+        raise ValueError("host_info is required for device path resolution")
+    
     if not device_id:
-        # Default to first device or legacy single-device path
-        return '/var/www/html/stream'
+        # Get first device if no device_id specified
+        devices = host_info.get('devices', [])
+        if not devices:
+            raise ValueError("No devices configured in host_info")
+        device_id = devices[0].get('device_id')
+        if not device_id:
+            raise ValueError("First device has no device_id configured")
     
     # Get devices configuration from host_info
     devices = host_info.get('devices', [])
+    if not devices:
+        raise ValueError(f"No devices configured in host_info for device_id: {device_id}")
     
     # Find the specific device
     for device in devices:
         if device.get('device_id') == device_id:
             stream_path = device.get('video_stream_path')
-            if stream_path:
-                # Convert URL path to local file system path
-                # Remove '/host' prefix and convert to absolute path
-                clean_path = stream_path.replace('/host', '')
-                return f'/var/www/html{clean_path}'
+            if not stream_path:
+                raise ValueError(f"Device {device_id} has no video_stream_path configured (DEVICE{device_id.replace('device', '')}_VIDEO_STREAM_PATH missing)")
+            
+            # Convert URL path to local file system path
+            # Remove '/host' prefix and convert to absolute path
+            clean_path = stream_path.replace('/host', '')
+            local_path = f'/var/www/html{clean_path}'
+            
+            print(f"[@buildUrlUtils:get_device_local_stream_path] Using device {device_id} stream path: {local_path}")
+            return local_path
     
-    # Fallback: try to construct from device_id (device1 -> capture1, device2 -> capture2)
-    if device_id.startswith('device'):
-        device_num = device_id.replace('device', '')
-        return f'/var/www/html/stream/capture{device_num}'
-    
-    # Final fallback
-    return '/var/www/html/stream'
+    raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")
 
 def get_current_device_id() -> str:
     """
@@ -312,31 +333,43 @@ def _get_device_stream_path(host_info: dict, device_id: str = None) -> str:
         device_id: Optional device ID (e.g., 'device1', 'device2')
         
     Returns:
-        Stream path for the device (e.g., '/stream', '/stream/capture2')
+        Stream path for the device from device configuration (DEVICE1_VIDEO_STREAM_PATH)
+        
+    Raises:
+        ValueError: If device configuration or stream path is not found
     """
+    if not host_info:
+        raise ValueError("host_info is required for device path resolution")
+    
     if not device_id:
-        # Default to first device or legacy single-device path
-        return '/stream'
+        # Get first device if no device_id specified
+        devices = host_info.get('devices', [])
+        if not devices:
+            raise ValueError("No devices configured in host_info")
+        device_id = devices[0].get('device_id')
+        if not device_id:
+            raise ValueError("First device has no device_id configured")
     
     # Get devices configuration from host_info
     devices = host_info.get('devices', [])
+    if not devices:
+        raise ValueError(f"No devices configured in host_info for device_id: {device_id}")
     
     # Find the specific device
     for device in devices:
         if device.get('device_id') == device_id:
             stream_path = device.get('video_stream_path')
-            if stream_path:
-                # Remove '/host' prefix if present and ensure starts with /
-                clean_path = stream_path.replace('/host', '').lstrip('/')
-                return f'/{clean_path}'
+            if not stream_path:
+                raise ValueError(f"Device {device_id} has no video_stream_path configured (DEVICE{device_id.replace('device', '')}_VIDEO_STREAM_PATH missing)")
+            
+            # Remove '/host' prefix if present and ensure starts with /
+            clean_path = stream_path.replace('/host', '').lstrip('/')
+            url_path = f'/{clean_path}'
+            
+            print(f"[@buildUrlUtils:_get_device_stream_path] Using device {device_id} stream path: {url_path}")
+            return url_path
     
-    # Fallback: try to construct from device_id (device1 -> capture1, device2 -> capture2)
-    if device_id.startswith('device'):
-        device_num = device_id.replace('device', '')
-        return f'/stream/capture{device_num}'
-    
-    # Final fallback
-    return '/stream'
+    raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")
 
 def _get_device_capture_path(host_info: dict, device_id: str = None) -> str:
     """
@@ -347,31 +380,43 @@ def _get_device_capture_path(host_info: dict, device_id: str = None) -> str:
         device_id: Optional device ID (e.g., 'device1', 'device2')
         
     Returns:
-        Capture path for the device (e.g., '/stream/captures', '/stream/capture2/captures')
+        Capture path for the device from device configuration (DEVICE1_VIDEO_STREAM_PATH + /captures)
+        
+    Raises:
+        ValueError: If device configuration or stream path is not found
     """
+    if not host_info:
+        raise ValueError("host_info is required for device path resolution")
+    
     if not device_id:
-        # Default to first device or legacy single-device path
-        return '/stream/captures'
+        # Get first device if no device_id specified
+        devices = host_info.get('devices', [])
+        if not devices:
+            raise ValueError("No devices configured in host_info")
+        device_id = devices[0].get('device_id')
+        if not device_id:
+            raise ValueError("First device has no device_id configured")
     
     # Get devices configuration from host_info
     devices = host_info.get('devices', [])
+    if not devices:
+        raise ValueError(f"No devices configured in host_info for device_id: {device_id}")
     
     # Find the specific device
     for device in devices:
         if device.get('device_id') == device_id:
             stream_path = device.get('video_stream_path')
-            if stream_path:
-                # Remove '/host' prefix if present and ensure starts with /
-                clean_path = stream_path.replace('/host', '').lstrip('/')
-                return f'/{clean_path}/captures'
+            if not stream_path:
+                raise ValueError(f"Device {device_id} has no video_stream_path configured (DEVICE{device_id.replace('device', '')}_VIDEO_STREAM_PATH missing)")
+            
+            # Remove '/host' prefix if present and ensure starts with /
+            clean_path = stream_path.replace('/host', '').lstrip('/')
+            url_path = f'/{clean_path}/captures'
+            
+            print(f"[@buildUrlUtils:_get_device_capture_path] Using device {device_id} capture path: {url_path}")
+            return url_path
     
-    # Fallback: try to construct from device_id (device1 -> capture1, device2 -> capture2)
-    if device_id.startswith('device'):
-        device_num = device_id.replace('device', '')
-        return f'/stream/capture{device_num}/captures'
-    
-    # Final fallback
-    return '/stream/captures'
+    raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")
 
 def get_device_by_id(host_info: dict, device_id: str) -> dict:
     """

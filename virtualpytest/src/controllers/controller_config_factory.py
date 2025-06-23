@@ -17,10 +17,10 @@ DEVICE_MODEL_VERIFICATION_MAPPING = {
 # Device Model to Action Controllers Mapping
 # Same pattern as verifications - defines which action implementations to create per device model
 DEVICE_MODEL_ACTION_MAPPING = {
-    'android_mobile': ['android_mobile', 'hdmi_stream', 'usb'],
-    'android_tv': ['android_tv', 'hdmi_stream', 'usb'],
-    'ios_mobile': ['appium_remote', 'hdmi_stream', 'usb'],
-    'stb': ['ir_remote', 'hdmi_stream', 'usb'],
+    'android_mobile': ['android_mobile', 'hdmi_stream'],
+    'android_tv': ['android_tv', 'hdmi_stream'],
+    'ios_mobile': ['appium_remote', 'hdmi_stream'],
+    'stb': ['hdmi_stream'],
 }
 
 def create_controller_configs_from_device_info(device_model, device_ip, device_port, host_url, host_port, device_config=None):

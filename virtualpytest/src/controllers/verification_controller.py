@@ -99,9 +99,7 @@ class VerificationController:
                 source_path = f'{captures_path}/{source_filename}'
                 print(f"[@controller:VerificationController] Using device-specific source path: {source_path} (device_id: {device_id})")
             else:
-                # Fallback to default path
-                source_path = f'/var/www/html/stream/captures/{source_filename}'
-                print(f"[@controller:VerificationController] Using fallback source path: {source_path}")
+                raise ValueError("Host device configuration required for device-specific path resolution")
             print(f"[@controller:VerificationController] Using provided screenshot: {source_filename}")
         else:
             source_path = self._take_screenshot()
