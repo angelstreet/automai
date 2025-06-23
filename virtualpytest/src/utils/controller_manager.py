@@ -94,8 +94,14 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
     
     print(f"[@controller_manager:_create_device_with_controllers] Creating device: {device_id}")
     
-    # Create device
-    device = Device(device_id, name, model)
+    # Create device with IP/port values
+    device = Device(
+        device_id, 
+        name, 
+        model,
+        device_config.get('device_ip'),
+        device_config.get('device_port')
+    )
     
     # Create controllers using the factory
     controller_configs = create_controller_configs_from_device_info(device_config)

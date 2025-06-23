@@ -19,7 +19,7 @@ class Device:
         verification_controllers = device.get_controllers('verification')
     """
     
-    def __init__(self, device_id: str, name: str, model: str):
+    def __init__(self, device_id: str, name: str, model: str, device_ip: str = None, device_port: str = None):
         """
         Initialize a device.
         
@@ -27,10 +27,14 @@ class Device:
             device_id: Device identifier (e.g., 'device1', 'device2')
             name: Device name from environment (e.g., 'EOSv1_PROD_Test2')
             model: Device model from environment (e.g., 'stb')
+            device_ip: Device IP address
+            device_port: Device port
         """
         self.device_id = device_id
         self.name = name
         self.model = model
+        self.device_ip = device_ip
+        self.device_port = device_port
         
         # Controllers organized by type
         self._controllers: Dict[str, List[BaseController]] = {
@@ -56,17 +60,6 @@ class Device:
             self._controllers[controller_type] = []
         
         self._controllers[controller_type].append(controller)
-        
-        # Update capabilities
-        if hasattr(controller, 'get_capabilities'):
-            capabilities = controller.get_capabilities()
-            if isinstance(capabilities, list):
-                for cap in capabilities:
-                    if cap not in self._capabilities:
-                        self._capabilities.append(cap)
-            elif isinstance(capabilities, str):
-                if capabilities not in self._capabilities:
-                    self._capabilities.append(capabilities)
     
     def get_controller(self, controller_type: str) -> Optional[BaseController]:
         """
@@ -110,9 +103,14 @@ class Device:
         Get all capabilities of this device.
         
         Returns:
-            List of capability strings
+            List of abstract capability types (what the device can do)
         """
-        return self._capabilities.copy()
+        # Return abstract types based on which controllers are present
+        capabilities = []
+        for controller_type, controllers in self._controllers.items():
+            if controllers:  # If we have controllers of this type
+                capabilities.append(controller_type)
+        return capabilities
     
     def to_dict(self) -> Dict[str, Any]:
         """
@@ -121,10 +119,18 @@ class Device:
         Returns:
             Dictionary representation of the device
         """
+        # Get concrete controller implementations
+        controller_implementations = []
+        for controllers in self._controllers.values():
+            for controller in controllers:
+                controller_implementations.append(type(controller).__name__)
+        
         return {
             'device_id': self.device_id,
-            'name': self.name,
-            'model': self.model,
-            'capabilities': self._capabilities,
-            'controller_types': list(self._controllers.keys())
+            'device_name': self.name,
+            'device_model': self.model,
+            'device_ip': self.device_ip,
+            'device_port': self.device_port,
+            'capabilities': self.get_capabilities(),  # Abstract types: ['av', 'remote', 'verification']
+            'controller_types': controller_implementations  # Concrete classes: ['HDMIStreamController', 'AndroidMobileRemoteController', ...]
         } 

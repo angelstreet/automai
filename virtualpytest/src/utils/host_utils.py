@@ -107,7 +107,7 @@ def register_host_with_server():
         else:
             print(f"❌ [HOST] Registration failed: {response.status_code}")
             print(f"   Response: {response.text}")
-            
+        
     except Exception as e:
         print(f"❌ [HOST] Registration error: {str(e)}")
         import traceback
@@ -132,8 +132,8 @@ def send_ping_to_server():
         ping_url = client_registration_state['urls'].get('ping')
         if ping_url:
             response = requests.post(ping_url, json=ping_data, timeout=10, verify=False)
-            
-            if response.status_code == 200:
+        
+        if response.status_code == 200:
                 print(f"📡 [HOST] Ping sent successfully at {time.strftime('%H:%M:%S')}")
             else:
                 print(f"⚠️ [HOST] Ping failed: {response.status_code}")
@@ -160,10 +160,10 @@ def unregister_from_server():
         unregister_url = client_registration_state['urls'].get('unregister')
         if unregister_url:
             response = requests.post(unregister_url, json=unregister_data, timeout=10, verify=False)
-            
-            if response.status_code == 200:
+        
+        if response.status_code == 200:
                 print("✅ [HOST] Unregistered successfully")
-            else:
+        else:
                 print(f"⚠️ [HOST] Unregister failed: {response.status_code}")
         
         # Reset registration state
@@ -193,7 +193,7 @@ def start_ping_thread():
             ping_stop_event.wait(30)
     
     ping_thread = threading.Thread(target=ping_worker, daemon=True)
-    ping_thread.start()
+        ping_thread.start()
     print("🔄 [HOST] Ping thread started")
 
 
@@ -226,7 +226,7 @@ def setup_host_signal_handlers():
     """Setup signal handlers for graceful shutdown."""
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    atexit.register(cleanup_on_exit)
+    atexit.register(cleanup_on_exit) 
 
 
 # New clean controller access functions
