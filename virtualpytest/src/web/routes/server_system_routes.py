@@ -14,11 +14,7 @@ import json
 from typing import TypedDict, Optional, List, Any
 
 # Import using consistent src. prefix (project root is already in sys.path from app startup)
-from src.controllers.controller_config_factory import (
-    create_controller_configs_from_device_info,
-    get_device_capabilities_from_model,
-    get_controller_types_from_model
-)
+from src.controllers.controller_config_factory import create_controller_configs_from_device_info
 
 # Import URL builders from app_utils following the pattern like useRegistration
 from src.utils.app_utils import (
@@ -94,9 +90,10 @@ def register_host():
                 device_config=device
             )
             
-            # Get capabilities for this device
-            device_capabilities = get_device_capabilities_from_model(device['device_model'])
-            device_controller_types = get_controller_types_from_model(device['device_model'])
+            # Use the capabilities sent by the host (no redundant server-side detection)
+            # Extract controller names from the actual controller configs
+            device_capabilities = list(controller_configs.keys())
+            device_controller_types = [config['implementation'] for config in controller_configs.values()]
             
             # Add device with its controller info
             device_with_controllers = {

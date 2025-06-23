@@ -213,61 +213,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 'parameters': {}
             }
     
-
-    
     print(f"[@controller_config_factory:create_controller_configs] Successfully created configuration with {len(controller_configs)} controllers")
     return controller_configs
 
-
-def get_device_capabilities_from_model(device_model):
-    """
-    Get device capabilities based on device model by checking actual controller configs.
-    
-    Args:
-        device_model: Device model string
-        
-    Returns:
-        list: List of actual controller names that exist
-    """
-    
-    # Get the actual controller configs for this device model
-    controller_configs = create_controller_configs_from_device_info(
-        device_model=device_model,
-        device_ip='0.0.0.0',  # Placeholder for capability detection
-        device_port='0000',   # Placeholder for capability detection
-        host_url='http://localhost:0000',    # Placeholder for capability detection
-        host_port='0000'      # Placeholder for capability detection
-    )
-    
-    # Return the actual controller names that exist
-    return list(controller_configs.keys())
-
-
-def get_controller_types_from_model(device_model):
-    """
-    Get specific controller implementation types supported by device model.
-    
-    Args:
-        device_model: Device model string
-        
-    Returns:
-        list: List of specific implementation type strings (e.g., ['android_mobile', 'hdmi_stream', 'adb', 'usb'])
-    """
-    
-    # Get the actual controller configs for this device model
-    controller_configs = create_controller_configs_from_device_info(
-        device_model=device_model,
-        device_ip='0.0.0.0',  # Placeholder for capability detection
-        device_port='0000',   # Placeholder for capability detection
-        host_url='http://localhost:0000',    # Placeholder for capability detection
-        host_port='0000'      # Placeholder for capability detection
-    )
-    
-    # Extract the specific implementation types from each controller config
-    implementation_types = []
-    for controller_type, config in controller_configs.items():
-        implementation = config.get('implementation')
-        if implementation:
-            implementation_types.append(implementation)
-    
-    return implementation_types 
+# Note: Capability detection functions removed - server now uses capabilities sent by host directly 
