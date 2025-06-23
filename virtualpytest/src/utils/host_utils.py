@@ -204,15 +204,7 @@ def register_host_with_server():
                 # Start periodic ping thread
                 start_ping_thread()
                 
-                # Get available remote actions if remote controller exists
-                remote_controller = created_controllers.get('remote')
-                if remote_controller:
-                    try:
-                        actions = remote_controller.get_available_actions()
-                        global_host_object['available_remote_actions'] = actions
-                        print(f"   Added available remote actions for host {host_name}: {list(actions.keys()) if isinstance(actions, dict) else len(actions) if isinstance(actions, list) else type(actions)}")
-                    except Exception as e:
-                        print(f"   ⚠️ [HOST] Error getting available remote actions: {e}")
+
                 
             except Exception as parse_error:
                 print(f"⚠️ [HOST] Error parsing registration response: {parse_error}")
@@ -520,45 +512,79 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
         
         print(f"[@utils:host_utils:create_local_controllers_from_model] Using hardcoded controller configuration: {controllers_config}")
         
-        # STEP 2: Create controllers based on database configuration
+        # STEP 2: Create action controllers based on device model mapping (same pattern as verifications)
+        action_controllers_created = 0
+        expected_action_types = []
+        failed_action_types = []
         av_controller = None
         
-        # Create AV controller if configured
-        if controllers_config.get('av'):
-            av_config = controllers_config['av']
-            av_type = av_config['implementation']
-            av_params = av_config.get('parameters', {})
-            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating AV controller: {av_type}")
-            av_controller = ControllerFactory.create_av_controller(
-                capture_type=av_type,
-                device_name=device_name,
-                video_device=av_params.get('video_device', '/dev/video0'),
-                resolution=av_params.get('resolution', '1920x1080'),
-                fps=av_params.get('fps', 30),
-                stream_path=av_params.get('stream_path', '/stream/video'),
-                service_name=av_params.get('service_name', 'stream')
-            )
-            controller_objects['av'] = av_controller
-            print(f"[@utils:host_utils:create_local_controllers_from_model] AV controller created: {type(av_controller).__name__}")
+        for controller_key, controller_config in controllers_config.items():
+            if controller_key.startswith('action_'):
+                action_type = controller_config['implementation']
+                expected_action_types.append(action_type)
+                print(f"[@utils:host_utils:create_local_controllers_from_model] Creating action controller: {action_type}")
+                
+                try:
+                    if action_type in ['android_mobile', 'android_tv', 'appium_remote', 'ir_remote']:
+                        # Remote action controllers
+                        action_params = controller_config.get('parameters', {})
+                        action_controller = ControllerFactory.create_remote_controller(
+                            device_type=action_type,
+                            device_name=device_name,
+                            device_ip=action_params.get('device_ip', device_ip),
+                            device_port=action_params.get('device_port', device_port),
+                            platform_name=action_params.get('platform_name', 'iOS'),
+                            automation_name=action_params.get('automation_name', 'XCUITest'),
+                            appium_url=action_params.get('appium_url', 'http://localhost:4723'),
+                            connection_timeout=action_params.get('connection_timeout', 10)
+                        )
+                    elif action_type == 'hdmi_stream':
+                        # AV action controller
+                        action_params = controller_config.get('parameters', {})
+                        action_controller = ControllerFactory.create_av_controller(
+                            capture_type=action_type,
+                            device_name=device_name,
+                            video_device=action_params.get('video_device', '/dev/video0'),
+                            resolution=action_params.get('resolution', '1920x1080'),
+                            fps=action_params.get('fps', 30),
+                            stream_path=action_params.get('stream_path', '/stream/video'),
+                            service_name=action_params.get('service_name', 'stream')
+                        )
+                        av_controller = action_controller  # Store for verification controllers
+                    elif action_type == 'usb':
+                        # Power action controller
+                        action_params = controller_config.get('parameters', {})
+                        action_controller = ControllerFactory.create_power_controller(
+                            power_type=action_type,
+                            device_name=device_name,
+                            hub_location=action_params.get('hub_location', '1-1'),
+                            port_number=action_params.get('port_number', 1)
+                        )
+                    else:
+                        # Generic action controller
+                        print(f"[@utils:host_utils:create_local_controllers_from_model] ⚠️ Unknown action type: {action_type}")
+                        continue
+                    
+                    controller_objects[controller_key] = action_controller
+                    action_controllers_created += 1
+                    print(f"[@utils:host_utils:create_local_controllers_from_model] ✅ Action controller {action_type} created successfully")
+                    
+                except Exception as e:
+                    failed_action_types.append(action_type)
+                    print(f"[@utils:host_utils:create_local_controllers_from_model] ❌ Failed to create action controller {action_type}: {e}")
+                    # Fail early - don't continue with broken controller setup
+                    raise Exception(f"Critical error: Failed to create {action_type} action controller: {e}")
         
-        # Create remote controller if configured
-        if controllers_config.get('remote'):
-            remote_config = controllers_config['remote']
-            remote_type = remote_config['implementation']
-            remote_params = remote_config.get('parameters', {})
-            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating remote controller: {remote_type}")
-            remote_controller = ControllerFactory.create_remote_controller(
-                device_type=remote_type,
-                device_name=device_name,
-                device_ip=remote_params.get('device_ip', device_ip),
-                device_port=remote_params.get('device_port', device_port),
-                platform_name=remote_params.get('platform_name', 'iOS'),
-                automation_name=remote_params.get('automation_name', 'XCUITest'),
-                appium_url=remote_params.get('appium_url', 'http://localhost:4723'),
-                connection_timeout=remote_params.get('connection_timeout', 10)
-            )
-            controller_objects['remote'] = remote_controller
-            print(f"[@utils:host_utils:create_local_controllers_from_model] Remote controller created: {type(remote_controller).__name__}")
+        print(f"[@utils:host_utils:create_local_controllers_from_model] Action Controller Summary:")
+        print(f"   Expected: {len(expected_action_types)} - {expected_action_types}")
+        print(f"   Created: {action_controllers_created}")
+        print(f"   Failed: {len(failed_action_types)} - {failed_action_types}")
+        
+        if failed_action_types:
+            raise Exception(f"Action controller creation failed for: {failed_action_types}")
+        
+        if action_controllers_created == 0:
+            print(f"[@utils:host_utils:create_local_controllers_from_model] ⚠️ No action controllers were created")
         
         # Create verification controllers (multiple types per device model)
         verification_controllers_created = 0
@@ -619,28 +645,7 @@ def create_local_controllers_from_model(device_model, device_name, device_ip, de
         if verification_controllers_created == 0:
             print(f"[@utils:host_utils:create_local_controllers_from_model] ⚠️ No verification controllers were created")
         
-        # Create power controller if configured
-        if controllers_config.get('power'):
-            power_config = controllers_config['power']
-            power_type = power_config['implementation']
-            power_params = power_config.get('parameters', {})
-            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating power controller: {power_type}")
-            power_controller = ControllerFactory.create_power_controller(
-                power_type=power_type,
-                device_name=device_name,
-                hub_location=power_params.get('hub_location', '1-1'),
-                port_number=power_params.get('port_number', 1)
-            )
-            controller_objects['power'] = power_controller
-            print(f"[@utils:host_utils:create_local_controllers_from_model] Power controller created: {type(power_controller).__name__}")
-        
-        # Create network controller if configured
-        if controllers_config.get('network'):
-            network_config = controllers_config['network']
-            network_type = network_config['implementation']
-            print(f"[@utils:host_utils:create_local_controllers_from_model] Creating network controller: {network_type}")
-            # Note: Network controller creation would need to be implemented in ControllerFactory
-            print(f"[@utils:host_utils:create_local_controllers_from_model] Network controller type {network_type} - implementation needed")
+
         
         print(f"[@utils:host_utils:create_local_controllers_from_model] Successfully created {len(controller_objects)} controllers: {list(controller_objects.keys())}")
         
