@@ -51,6 +51,34 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
     return null;
   }
 
+  // Get the current input value from either inputValue or params (for loaded actions)
+  const getCurrentInputValue = () => {
+    // First check if inputValue is set (user has typed something)
+    if (action.inputValue) {
+      return action.inputValue;
+    }
+
+    // Otherwise, extract from params based on action command (for loaded actions)
+    if (action.command === 'launch_app') {
+      return action.params?.package || '';
+    } else if (action.command === 'input_text') {
+      return action.params?.text || '';
+    } else if (action.command === 'click_element') {
+      return action.params?.element_id || '';
+    } else if (action.command === 'coordinate_tap' || action.command === 'tap_coordinates') {
+      if (action.params?.coordinates) {
+        return action.params.coordinates;
+      } else if (action.params?.x !== undefined && action.params?.y !== undefined) {
+        return `${action.params.x},${action.params.y}`;
+      }
+      return '';
+    } else if (action.command === 'press_key') {
+      return action.params?.key || '';
+    }
+
+    return '';
+  };
+
   const getPlaceholder = () => {
     switch (action.command) {
       case 'launch_app':
@@ -73,7 +101,7 @@ export const ActionControls: React.FC<ActionControlsProps> = ({
     <Box sx={{ mb: 0.5 }}>
       <TextField
         size="small"
-        value={action.inputValue || ''}
+        value={getCurrentInputValue()}
         onChange={(e) => handleInputValueChange(e.target.value)}
         placeholder={getPlaceholder()}
         fullWidth
