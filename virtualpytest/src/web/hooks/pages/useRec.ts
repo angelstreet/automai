@@ -80,9 +80,7 @@ export const useRec = (): UseRecReturn => {
       const avHosts = data.hosts.filter((host: Host) => {
         const hasDevicesWithAV =
           host.devices?.some(
-            (device: any) =>
-              device.capabilities &&
-              device.capabilities.some((cap: string) => cap.startsWith('av_')),
+            (device: any) => device.capabilities && device.capabilities.includes('av'),
           ) || false;
 
         console.log(`[@hook:useRec] Checking host ${host.host_name}:`, {
