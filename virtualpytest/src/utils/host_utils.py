@@ -678,8 +678,24 @@ def get_local_controller(controller_type):
     if controller_type in local_controller_objects:
         return local_controller_objects.get(controller_type)
     
-    # For backward compatibility, if looking for 'verification', return the first verification controller
-    if controller_type == 'verification':
+    # Map old capability names to new controller names for backward compatibility
+    if controller_type == 'av':
+        # Look for any AV action controller
+        for key, controller in local_controller_objects.items():
+            if key.startswith('action_av_'):
+                return controller
+    elif controller_type == 'remote':
+        # Look for any remote action controller
+        for key, controller in local_controller_objects.items():
+            if key.startswith('action_remote_'):
+                return controller
+    elif controller_type == 'power':
+        # Look for any power action controller
+        for key, controller in local_controller_objects.items():
+            if key.startswith('action_power_'):
+                return controller
+    elif controller_type == 'verification':
+        # Look for any verification controller
         for key, controller in local_controller_objects.items():
             if key.startswith('verification_'):
                 return controller
