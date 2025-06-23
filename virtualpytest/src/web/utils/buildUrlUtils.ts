@@ -31,16 +31,22 @@ const internalBuildHostUrl = (host: any, endpoint: string): string => {
 
 /**
  * Build URL for live screenshot captures
+ * Supports device-specific capture paths for multi-device hosts
  */
-export const buildCaptureUrl = (host: any, timestamp: string): string => {
-  return internalBuildHostUrl(host, `host/stream/captures/capture_${timestamp}.jpg`);
+export const buildCaptureUrl = (host: any, timestamp: string, deviceId?: string): string => {
+  // Get device-specific capture path
+  const capturePath = getDeviceCaptureUrlPath(host, deviceId);
+  return internalBuildHostUrl(host, `host${capturePath}/capture_${timestamp}.jpg`);
 };
 
 /**
  * Build URL for cropped images
+ * Supports device-specific capture paths for multi-device hosts
  */
-export const buildCroppedImageUrl = (host: any, filename: string): string => {
-  return internalBuildHostUrl(host, `host/stream/captures/cropped/${filename}`);
+export const buildCroppedImageUrl = (host: any, filename: string, deviceId?: string): string => {
+  // Get device-specific capture path
+  const capturePath = getDeviceCaptureUrlPath(host, deviceId);
+  return internalBuildHostUrl(host, `host${capturePath}/cropped/${filename}`);
 };
 
 /**
@@ -66,9 +72,12 @@ export const buildVerificationResultUrl = (host: any, resultsPath: string): stri
 
 /**
  * Build URL for HLS stream
+ * Supports device-specific stream paths for multi-device hosts
  */
-export const buildStreamUrl = (host: any): string => {
-  return internalBuildHostUrl(host, 'host/stream/output.m3u8');
+export const buildStreamUrl = (host: any, deviceId?: string): string => {
+  // Get device-specific stream path
+  const streamPath = getDeviceStreamUrlPath(host, deviceId);
+  return internalBuildHostUrl(host, `host${streamPath}/output.m3u8`);
 };
 
 /**
@@ -130,3 +139,77 @@ export const buildCloudImageUrl = (
  * @deprecated Use buildHostImageUrl instead for host images, buildCloudImageUrl for cloud images
  */
 export const buildImageUrl = buildHostImageUrl;
+
+// =====================================================
+// MULTI-DEVICE HELPER FUNCTIONS (Frontend)
+// =====================================================
+
+/**
+ * Get device-specific stream URL path from host configuration.
+ * Mirrors the Python _get_device_stream_path function.
+ */
+const getDeviceStreamUrlPath = (host: any, deviceId?: string): string => {
+  if (!deviceId) {
+    // Default to first device or legacy single-device path
+    return '/stream';
+  }
+
+  // Get devices configuration from host
+  const devices = host?.devices || [];
+
+  // Find the specific device
+  for (const device of devices) {
+    if (device?.device_id === deviceId) {
+      const streamPath = device?.video_stream_path;
+      if (streamPath) {
+        // Remove '/host' prefix if present and ensure starts with /
+        const cleanPath = streamPath.replace('/host', '').replace(/^\/+/, '/');
+        return cleanPath;
+      }
+    }
+  }
+
+  // Fallback: try to construct from device_id (device1 -> capture1, device2 -> capture2)
+  if (deviceId.startsWith('device')) {
+    const deviceNum = deviceId.replace('device', '');
+    return `/stream/capture${deviceNum}`;
+  }
+
+  // Final fallback
+  return '/stream';
+};
+
+/**
+ * Get device-specific capture URL path from host configuration.
+ * Mirrors the Python _get_device_capture_path function.
+ */
+const getDeviceCaptureUrlPath = (host: any, deviceId?: string): string => {
+  if (!deviceId) {
+    // Default to first device or legacy single-device path
+    return '/stream/captures';
+  }
+
+  // Get devices configuration from host
+  const devices = host?.devices || [];
+
+  // Find the specific device
+  for (const device of devices) {
+    if (device?.device_id === deviceId) {
+      const streamPath = device?.video_stream_path;
+      if (streamPath) {
+        // Remove '/host' prefix if present and ensure starts with /
+        const cleanPath = streamPath.replace('/host', '').replace(/^\/+/, '/');
+        return `${cleanPath}/captures`;
+      }
+    }
+  }
+
+  // Fallback: try to construct from device_id (device1 -> capture1, device2 -> capture2)
+  if (deviceId.startsWith('device')) {
+    const deviceNum = deviceId.replace('device', '');
+    return `/stream/capture${deviceNum}/captures`;
+  }
+
+  // Final fallback
+  return '/stream/captures';
+};

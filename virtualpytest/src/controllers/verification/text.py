@@ -646,10 +646,9 @@ class TextVerificationController(VerificationControllerInterface):
                 print(f"[@controller:TextVerification] OCR confidence calculated: {ocr_confidence:.1f}% for text: '{detected_text}'")
                 
             except Exception as ocr_error:
-                print(f"[@controller:TextVerification] OCR data extraction failed, trying fallback: {ocr_error}")
-                # Fallback to simple string method
-                detected_text = pytesseract.image_to_string(image, lang='eng').strip()
-                ocr_confidence = 70.0 if detected_text else 0.0  # Assume reasonable confidence for fallback
+                print(f"[@controller:TextVerification] OCR data extraction failed: {ocr_error}")
+                print(f"[@controller:TextVerification] ERROR - pytesseract is required for text verification")
+                raise ValueError("pytesseract OCR failed - ensure pytesseract and tesseract are properly installed")
             
             print(f"[@controller:TextVerification] Extracted text: '{detected_text}' ({len(detected_text)} chars)")
             
@@ -669,8 +668,8 @@ class TextVerificationController(VerificationControllerInterface):
                 
                 return tesseract_lang, confidence, detected_text, ocr_confidence
             else:
-                print(f"[@controller:TextVerification] langdetect not available, defaulting to English")
-                return 'eng', 0.8, detected_text, ocr_confidence  # High confidence for English as fallback
+                print(f"[@controller:TextVerification] langdetect not available, using English")
+                return 'eng', 0.8, detected_text, ocr_confidence
                 
         except Exception as e:
             print(f"[@controller:TextVerification] Language detection error: {e}")
@@ -976,7 +975,7 @@ class TextVerificationController(VerificationControllerInterface):
 
     def _build_image_url(self, local_path: str) -> str:
         """
-        Convert local image path to public URL like image verification.
+        Convert local image path to public URL using device-specific path building.
         
         Args:
             local_path: Local file path
@@ -991,10 +990,10 @@ class TextVerificationController(VerificationControllerInterface):
             # Get host info from current app context
             host_device = getattr(current_app, 'my_host_device', None)
             if not host_device:
-                print(f"[@controller:TextVerification] Warning: No host device found for URL building")
-                return local_path  # Return local path as fallback
+                print(f"[@controller:TextVerification] ERROR: No host device found for URL building")
+                raise ValueError("Host device context required for URL building - ensure proper request context")
             
-            # Build public URL exactly like image verification (already supports multi-device)
+            # Build public URL using device-specific path building (already supports multi-device)
             public_url = buildVerificationResultUrl(host_device, local_path)
             print(f"[@controller:TextVerification] Built URL: {local_path} -> {public_url}")
             
@@ -1002,7 +1001,7 @@ class TextVerificationController(VerificationControllerInterface):
             
         except Exception as url_error:
             print(f"[@controller:TextVerification] URL building error: {url_error}")
-            return local_path  # Return local path as fallback
+            raise ValueError(f"Failed to build verification result URL: {url_error}")
 
     def save_text_reference(self, text: str, reference_name: str, model: str, 
                            area: dict, font_size: float = 12.0, confidence: float = 0.8) -> str:

@@ -58,6 +58,10 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 
                 # Connection Parameters
                 - connection_timeout: Connection timeout in seconds (default: 10)
+                
+                # Multi-device Parameters (required)
+                - device_id: Device ID for multi-device hosts (required)
+                - device_config: Device configuration with paths and settings (required)
         """
         super().__init__(device_name, device_type)
         
@@ -68,13 +72,24 @@ class AndroidTVRemoteController(RemoteControllerInterface):
         # Connection settings
         self.connection_timeout = kwargs.get('connection_timeout', 10)
         
+        # Multi-device support (required)
+        self.device_id = kwargs.get('device_id')
+        self.device_config = kwargs.get('device_config')
+        
         # Validate required parameters
         if not self.device_ip:
             raise ValueError("device_ip is required for AndroidTVRemoteController")
+        if not self.device_id:
+            raise ValueError("device_id is required for AndroidTVRemoteController")
+        if not self.device_config:
+            raise ValueError("device_config is required for AndroidTVRemoteController")
             
         self.adb_device = f"{self.device_ip}:{self.device_port}"
         self.adb_utils = None
         self.device_resolution = None
+        
+        print(f"[@controller:AndroidTVRemote] Initialized for device_id: {self.device_id}")
+        print(f"[@controller:AndroidTVRemote] Device config: {self.device_config}")
         
     def connect(self) -> bool:
         """Connect to the Android TV device via ADB."""
@@ -720,6 +735,10 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 }
             ]
         }
+
+    def get_device_capture_path(self) -> str:
+        """Get device-specific capture path for screenshots."""
+        return self.device_config['video_capture_path']
 
 # Backward compatibility alias
 RealAndroidTVController = AndroidTVRemoteController 

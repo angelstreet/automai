@@ -46,7 +46,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         except Exception as e:
             raise RuntimeError(f"Error loading Appium remote config from file: {e}")
     
-    def __init__(self, device_name: str = "Appium Device", device_type: str = "appium_remote", **kwargs):
+    def __init__(self, device_name: str = "Appium Remote", device_type: str = "appium", **kwargs):
         """
         Initialize the Appium remote controller.
         
@@ -54,63 +54,86 @@ class AppiumRemoteController(RemoteControllerInterface):
             device_name: Name of the device
             device_type: Type identifier for the device
             **kwargs: Additional parameters including:
-                - device_ip: Device IP address (required for network connections)
-                - device_port: Device port (required for network connections)
-                - platform_name: Platform name ('iOS', 'Android', etc.) (required)
-                - platform_version: Platform version (optional)
-                - appium_url: Appium server URL (default: http://localhost:4723)
-                - automation_name: Automation name ('XCUITest', 'UIAutomator2', etc.) (optional)
-                - app_package: Android app package (optional)
-                - app_activity: Android app activity (optional)
-                - bundle_id: iOS bundle ID (optional)
-                - connection_timeout: Connection timeout in seconds (default: 10)
+                # Appium Server Parameters
+                - appium_server_url: URL of the Appium server (default: http://localhost:4723)
+                
+                # Device Parameters (required)
+                - device_ip: IP address of the target device (required)
+                - device_port: Port for device communication (default: 5555)
+                - platform_name: Platform name (iOS, Android, etc.) (required)
+                - platform_version: Platform version (required)
+                - device_name_cap: Device name for Appium capabilities (required)
+                - app_package: App package name (for Android)
+                - app_activity: App activity name (for Android)
+                - bundle_id: Bundle ID (for iOS)
+                - udid: Device UDID (for iOS)
+                
+                # Connection Parameters
+                - connection_timeout: Connection timeout in seconds (default: 30)
+                - implicit_wait: Implicit wait timeout in seconds (default: 10)
+                
+                # Multi-device Parameters (required)
+                - device_id: Device ID for multi-device hosts (required)
+                - device_config: Device configuration with paths and settings (required)
         """
         super().__init__(device_name, device_type)
         
-        # Required parameters
-        self.device_ip = kwargs.get('device_ip')
-        self.device_port = kwargs.get('device_port')
-        self.platform_name = kwargs.get('platform_name')
+        # Appium server configuration
+        self.appium_server_url = kwargs.get('appium_server_url', 'http://localhost:4723')
         
-        # Optional parameters
-        self.platform_version = kwargs.get('platform_version', '')
-        self.appium_url = kwargs.get('appium_url', 'http://localhost:4723')
-        self.automation_name = kwargs.get('automation_name', '')
-        self.app_package = kwargs.get('app_package', '')
-        self.app_activity = kwargs.get('app_activity', '')
-        self.bundle_id = kwargs.get('bundle_id', '')
-        self.connection_timeout = kwargs.get('connection_timeout', 10)
+        # Device parameters
+        self.device_ip = kwargs.get('device_ip')
+        self.device_port = kwargs.get('device_port', 5555)
+        self.platform_name = kwargs.get('platform_name')
+        self.platform_version = kwargs.get('platform_version')  
+        self.device_name_cap = kwargs.get('device_name_cap')
+        self.app_package = kwargs.get('app_package')
+        self.app_activity = kwargs.get('app_activity')
+        self.bundle_id = kwargs.get('bundle_id')
+        self.udid = kwargs.get('udid')
+        
+        # Connection settings
+        self.connection_timeout = kwargs.get('connection_timeout', 30)
+        self.implicit_wait = kwargs.get('implicit_wait', 10)
+        
+        # Multi-device support (required)
+        self.device_id = kwargs.get('device_id')
+        self.device_config = kwargs.get('device_config')
         
         # Validate required parameters
         if not self.device_ip:
             raise ValueError("device_ip is required for AppiumRemoteController")
-        if not self.device_port:
-            raise ValueError("device_port is required for AppiumRemoteController")
         if not self.platform_name:
             raise ValueError("platform_name is required for AppiumRemoteController")
+        if not self.platform_version:
+            raise ValueError("platform_version is required for AppiumRemoteController")
+        if not self.device_name_cap:
+            raise ValueError("device_name_cap is required for AppiumRemoteController")
+        if not self.device_id:
+            raise ValueError("device_id is required for AppiumRemoteController")
+        if not self.device_config:
+            raise ValueError("device_config is required for AppiumRemoteController")
             
-        self.device_id = f"{self.platform_name.lower()}_{self.device_ip}_{self.device_port}"
-        self.appium_utils = None
-        self.device_resolution = None
-        self.detected_platform = None
+        # Driver instance
+        self.driver = None
         
-        # UI elements state
-        self.last_ui_elements = []
-        self.last_dump_time = 0
+        print(f"[@controller:AppiumRemote] Initialized for device_id: {self.device_id}")
+        print(f"[@controller:AppiumRemote] Device config: {self.device_config}")
+        print(f"[@controller:AppiumRemote] Platform: {self.platform_name} {self.platform_version}")
         
     def connect(self) -> bool:
         """Connect to device via Appium WebDriver."""
         try:
             print(f"Remote[{self.device_type.upper()}]: Connecting to {self.platform_name} device")
             print(f"Remote[{self.device_type.upper()}]: Device IP: {self.device_ip}:{self.device_port}")
-            print(f"Remote[{self.device_type.upper()}]: Appium URL: {self.appium_url}")
+            print(f"Remote[{self.device_type.upper()}]: Appium URL: {self.appium_server_url}")
             
             # Initialize Appium utilities
             self.appium_utils = AppiumUtils()
             
             # Check if Appium server is running
-            if not self.appium_utils.is_appium_server_running(self.appium_url):
-                print(f"Remote[{self.device_type.upper()}]: ERROR - Appium server is not running at {self.appium_url}")
+            if not self.appium_utils.is_appium_server_running(self.appium_server_url):
+                print(f"Remote[{self.device_type.upper()}]: ERROR - Appium server is not running at {self.appium_server_url}")
                 print(f"Remote[{self.device_type.upper()}]: Please start Appium server: appium --address 127.0.0.1 --port 4723")
                 return False
             
@@ -127,7 +150,7 @@ class AppiumRemoteController(RemoteControllerInterface):
                 print(f"Remote[{self.device_type.upper()}]: 4. WebDriverAgent must be installed on device")
             
             # Connect to device via Appium
-            if not self.appium_utils.connect_device(self.device_id, capabilities, self.appium_url):
+            if not self.appium_utils.connect_device(self.device_id, capabilities, self.appium_server_url):
                 print(f"Remote[{self.device_type.upper()}]: Failed to connect to device")
                 if self.platform_name.lower() == 'ios':
                     print(f"Remote[{self.device_type.upper()}]: Troubleshooting steps:")
@@ -177,8 +200,8 @@ class AppiumRemoteController(RemoteControllerInterface):
             capabilities['platformVersion'] = self.platform_version
         
         # Add automation name if provided, otherwise use defaults
-        if self.automation_name:
-            capabilities['automationName'] = self.automation_name
+        if self.device_name_cap:
+            capabilities['automationName'] = self.device_name_cap
         elif self.platform_name.lower() == 'ios':
             capabilities['automationName'] = 'XCUITest'
         elif self.platform_name.lower() == 'android':
@@ -592,17 +615,17 @@ class AppiumRemoteController(RemoteControllerInterface):
                 'device_id': self.device_id,
                 'platform_name': self.platform_name,
                 'detected_platform': self.detected_platform,
-                'appium_url': self.appium_url,
+                'appium_url': self.appium_server_url,
                 'connected': self.is_connected
             }
             
             # Check Appium server connectivity
             if self.appium_utils:
-                server_running = self.appium_utils.is_appium_server_running(self.appium_url)
+                server_running = self.appium_utils.is_appium_server_running(self.appium_server_url)
                 base_status.update({
                     'appium_server_running': server_running,
                     'appium_status': 'server_running' if server_running else 'server_not_running',
-                    'message': f'Appium server is {"running" if server_running else "not running"} at {self.appium_url}'
+                    'message': f'Appium server is {"running" if server_running else "not running"} at {self.appium_server_url}'
                 })
                 
                 if self.is_connected:
@@ -880,6 +903,10 @@ class AppiumRemoteController(RemoteControllerInterface):
                 }
             ]
         }
+
+    def get_device_capture_path(self) -> str:
+        """Get device-specific capture path for screenshots."""
+        return self.device_config['video_capture_path']
 
 # Backward compatibility alias
 UniversalAppiumController = AppiumRemoteController 

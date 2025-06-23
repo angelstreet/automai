@@ -33,15 +33,24 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         device_port: Device port (e.g., '5555' for ADB)
         host_url: Host base URL (e.g., 'https://virtualpytest.com' or 'http://localhost:6109')
         host_port: Host port (for Flask API communication)
+        device_config: Device configuration with device_id and paths (REQUIRED)
     
     Returns:
         dict: Complete controller_configs structure
         
     Raises:
-        ValueError: If device_model is not supported
+        ValueError: If device_model is not supported or device_config is missing
     """
     
-    # STEP 1: Validate device model exists in both mappings
+    # STEP 1: Validate required parameters
+    if not device_config:
+        raise ValueError("device_config is required for multi-device support")
+    
+    device_id = device_config.get('device_id')
+    if not device_id:
+        raise ValueError("device_id is required in device_config")
+    
+    # STEP 2: Validate device model exists in both mappings
     if device_model not in DEVICE_MODEL_VERIFICATION_MAPPING:
         supported_models = list(DEVICE_MODEL_VERIFICATION_MAPPING.keys())
         raise ValueError(f"Unsupported device model '{device_model}'. Supported models: {supported_models}")
@@ -50,12 +59,12 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
         supported_models = list(DEVICE_MODEL_ACTION_MAPPING.keys())
         raise ValueError(f"No action mapping for device model '{device_model}'. Supported models: {supported_models}")
     
-    print(f"[@controller_config_factory:create_controller_configs] Creating configuration for device model: {device_model}")
+    print(f"[@controller_config_factory:create_controller_configs] Creating configuration for device model: {device_model}, device_id: {device_id}")
     
     # Base configuration - all devices get these
     controller_configs = {}
     
-    # STEP 2: Configure action controllers based on device model mapping (same pattern as verifications)
+    # STEP 3: Configure action controllers based on device model mapping (same pattern as verifications)
     action_implementations = DEVICE_MODEL_ACTION_MAPPING[device_model]
     
     if not action_implementations:
@@ -80,7 +89,9 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 'parameters': {
                     'device_ip': device_ip,
                     'device_port': device_port,
-                    'connection_timeout': 10
+                    'connection_timeout': 10,
+                    'device_id': device_id,
+                    'device_config': device_config
                 }
             }
         elif implementation == 'android_tv':
@@ -89,7 +100,9 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 'parameters': {
                     'device_ip': device_ip,
                     'device_port': device_port,
-                    'connection_timeout': 10
+                    'connection_timeout': 10,
+                    'device_id': device_id,
+                    'device_config': device_config
                 }
             }
         elif implementation == 'appium_remote':
@@ -102,7 +115,9 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                     'platform_version': '',
                     'appium_url': 'http://localhost:4723',
                     'automation_name': 'XCUITest',
-                    'connection_timeout': 10
+                    'connection_timeout': 10,
+                    'device_id': device_id,
+                    'device_config': device_config
                 }
             }
         elif implementation == 'ir_remote':
@@ -111,7 +126,9 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 'parameters': {
                     'device_path': '/dev/lirc0',
                     'protocol': 'NEC',
-                    'frequency': 38000
+                    'frequency': 38000,
+                    'device_id': device_id,
+                    'device_config': device_config
                 }
             }
         elif implementation == 'hdmi_stream':
@@ -155,7 +172,7 @@ def create_controller_configs_from_device_info(device_model, device_ip, device_p
                 'parameters': {}
             }
     
-    # STEP 3: Configure verification controllers based on device model mapping
+    # STEP 4: Configure verification controllers based on device model mapping
     verification_types = DEVICE_MODEL_VERIFICATION_MAPPING[device_model]  # No fallback - must exist
     
     if not verification_types:

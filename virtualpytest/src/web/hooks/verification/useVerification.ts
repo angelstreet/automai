@@ -199,8 +199,6 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
           const pathname = url.pathname;
           const filename = pathname.split('/').pop()?.split('?')[0]; // Get filename without query params
 
-          // Use just the filename - server will look in captures directory
-          // Original screenshots are stored in /var/www/html/stream/captures/
           capture_filename = filename;
 
           console.log('[@hook:useVerification] Using specific capture:', capture_filename);

@@ -193,6 +193,116 @@ def buildCloudImageUrl(bucket_name: str, image_path: str, base_url: str = None) 
 # MULTI-DEVICE HELPER FUNCTIONS
 # =====================================================
 
+def get_device_local_captures_path(host_info: dict, device_id: str = None) -> str:
+    """
+    Get device-specific local captures path for file system operations.
+    
+    Args:
+        host_info: Host information from registry
+        device_id: Optional device ID (e.g., 'device1', 'device2')
+        
+    Returns:
+        Local file system path for captures (e.g., '/var/www/html/stream/captures', '/var/www/html/stream/capture2/captures')
+    """
+    if not device_id:
+        # Default to first device or legacy single-device path
+        return '/var/www/html/stream/captures'
+    
+    # Get devices configuration from host_info
+    devices = host_info.get('devices', [])
+    
+    # Find the specific device
+    for device in devices:
+        if device.get('device_id') == device_id:
+            capture_path = device.get('video_capture_path')
+            if capture_path:
+                # Use the configured capture path directly
+                return capture_path
+    
+    # Fallback: try to construct from device_id (device1 -> capture1, device2 -> capture2)
+    if device_id.startswith('device'):
+        device_num = device_id.replace('device', '')
+        return f'/var/www/html/stream/capture{device_num}/captures'
+    
+    # Final fallback
+    return '/var/www/html/stream/captures'
+
+def get_device_local_stream_path(host_info: dict, device_id: str = None) -> str:
+    """
+    Get device-specific local stream path for file system operations.
+    
+    Args:
+        host_info: Host information from registry
+        device_id: Optional device ID (e.g., 'device1', 'device2')
+        
+    Returns:
+        Local file system path for stream (e.g., '/var/www/html/stream', '/var/www/html/stream/capture2')
+    """
+    if not device_id:
+        # Default to first device or legacy single-device path
+        return '/var/www/html/stream'
+    
+    # Get devices configuration from host_info
+    devices = host_info.get('devices', [])
+    
+    # Find the specific device
+    for device in devices:
+        if device.get('device_id') == device_id:
+            stream_path = device.get('video_stream_path')
+            if stream_path:
+                # Convert URL path to local file system path
+                # Remove '/host' prefix and convert to absolute path
+                clean_path = stream_path.replace('/host', '')
+                return f'/var/www/html{clean_path}'
+    
+    # Fallback: try to construct from device_id (device1 -> capture1, device2 -> capture2)
+    if device_id.startswith('device'):
+        device_num = device_id.replace('device', '')
+        return f'/var/www/html/stream/capture{device_num}'
+    
+    # Final fallback
+    return '/var/www/html/stream'
+
+def get_current_device_id() -> str:
+    """
+    Get the current device ID from Flask app context.
+    This helps routes determine which device they're working with.
+    
+    Returns:
+        Device ID (e.g., 'device1', 'device2') or None if not available
+    """
+    try:
+        from flask import current_app, request
+        
+        # First try to get device_id from request parameters
+        if request and request.method in ['POST', 'GET']:
+            if request.method == 'POST' and request.is_json:
+                data = request.get_json() or {}
+                device_id = data.get('device_id')
+                if device_id:
+                    return device_id
+            elif request.method == 'GET':
+                device_id = request.args.get('device_id')
+                if device_id:
+                    return device_id
+        
+        # Fallback: get from host device configuration
+        host_device = getattr(current_app, 'my_host_device', None)
+        if host_device and host_device.get('devices'):
+            devices = host_device['devices']
+            if len(devices) == 1:
+                # Single device host - return the device ID
+                return devices[0].get('device_id')
+            # Multi-device host - default to first device if no specific device requested
+            # This could be enhanced to be smarter about device selection
+            return devices[0].get('device_id')
+        
+        return None
+        
+    except Exception as e:
+        print(f"[@buildUrlUtils:get_current_device_id] Error getting device ID: {e}")
+        return None
+
 def _get_device_stream_path(host_info: dict, device_id: str = None) -> str:
     """
     Get device-specific stream path from host configuration.

@@ -998,14 +998,8 @@ class ImageVerificationController(VerificationControllerInterface):
                 # Get host info from current app context
                 host_device = getattr(current_app, 'my_host_device', None)
                 if not host_device:
-                    print(f"[@controller:ImageVerification] Warning: No host device found for URL building")
-                    # Return local paths as fallback
-                    return {
-                        'source_image_path': source_result_path,
-                        'reference_image_path': reference_result_path,
-                        'result_overlay_path': overlay_result_path,
-                        'sourceImageUrl': source_url,  # Use R2 URL if available
-                    }
+                    print(f"[@controller:ImageVerification] ERROR: No host device found for URL building")
+                    raise ValueError("Host device context required for URL building - ensure proper request context")
                 
                 # Build public URLs - use R2 URL for source if available, build URLs for reference and overlay
                 if not source_url:
@@ -1029,13 +1023,7 @@ class ImageVerificationController(VerificationControllerInterface):
                 
             except Exception as url_error:
                 print(f"[@controller:ImageVerification] URL building error: {url_error}")
-                # Return local paths as fallback
-                return {
-                    'source_image_path': source_result_path,
-                    'reference_image_path': reference_result_path,
-                    'result_overlay_path': overlay_result_path,
-                    'sourceImageUrl': source_url,  # Use R2 URL if available
-                }
+                raise ValueError(f"Failed to build verification result URLs: {url_error}")
                 
         except Exception as e:
             print(f"[@controller:ImageVerification] Error generating comparison images: {e}")

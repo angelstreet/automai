@@ -14,10 +14,8 @@ from datetime import datetime
 # Create blueprint
 verification_text_host_bp = Blueprint('verification_text_host', __name__, url_prefix='/host/verification/text')
 
-# Path configuration constants
-STREAM_BASE_PATH = '/var/www/html/stream'
-CAPTURES_PATH = f'{STREAM_BASE_PATH}/captures'
-CROPPED_PATH = f'{CAPTURES_PATH}/cropped'
+# Path configuration constants - now dynamic based on device
+# These will be replaced by device-specific path functions
 
 # =====================================================
 # HOST-SIDE TEXT AUTO-DETECTION ENDPOINT
@@ -51,11 +49,20 @@ def text_auto_detect():
                 'error': 'source_filename and area are required'
             }), 400
         
+        # Get device-specific paths
+        from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
+        
+        device_id = get_current_device_id()
+        captures_path = get_device_local_captures_path(host_device, device_id)
+        cropped_dir = f'{captures_path}/cropped'
+        
+        print(f"[@route:host_text_auto_detect] Using device_id: {device_id}")
+        print(f"[@route:host_text_auto_detect] Using captures_path: {captures_path}")
+        
         # Build source path
-        source_path = f'{CAPTURES_PATH}/{source_filename}'
+        source_path = f'{captures_path}/{source_filename}'
         
         # Build target path for cropped preview in dedicated cropped folder
-        cropped_dir = CROPPED_PATH
         os.makedirs(cropped_dir, exist_ok=True)  # Ensure cropped directory exists
         
         # Extract base name without extension
@@ -330,10 +337,14 @@ def execute_text_verification():
         
         verification_controller = get_verification_controller(host_device)
         
-        # Convert source_filename to source_path if provided
+        # Convert source_filename to source_path if provided (using device-specific path)
         source_path = None
         if source_filename:
-            source_path = f'/var/www/html/stream/captures/{source_filename}'
+            from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
+            device_id = get_current_device_id()
+            captures_path = get_device_local_captures_path(host_device, device_id)
+            source_path = f'{captures_path}/{source_filename}'
+            print(f"[@route:host_verification_text:execute] Using device-specific source path: {source_path} (device_id: {device_id})")
         
         result = verification_controller.execute_verification(verification, 
                                                             source_path=source_path)

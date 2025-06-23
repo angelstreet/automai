@@ -92,7 +92,16 @@ class VerificationController:
         # Take screenshot if not provided
         source_path = None
         if source_filename:
-            source_path = f'/var/www/html/stream/captures/{source_filename}'
+            if self.host_device:
+                from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
+                device_id = get_current_device_id()
+                captures_path = get_device_local_captures_path(self.host_device, device_id)
+                source_path = f'{captures_path}/{source_filename}'
+                print(f"[@controller:VerificationController] Using device-specific source path: {source_path} (device_id: {device_id})")
+            else:
+                # Fallback to default path
+                source_path = f'/var/www/html/stream/captures/{source_filename}'
+                print(f"[@controller:VerificationController] Using fallback source path: {source_path}")
             print(f"[@controller:VerificationController] Using provided screenshot: {source_filename}")
         else:
             source_path = self._take_screenshot()

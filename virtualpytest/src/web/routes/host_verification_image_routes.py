@@ -20,11 +20,9 @@ from src.utils.cloudflare_utils import download_reference_image
 verification_image_host_bp = Blueprint('verification_image_host', __name__, url_prefix='/host/verification/image')
 
 
-# Path configuration constants
-STREAM_BASE_PATH = '/var/www/html/stream'
-CAPTURES_PATH = f'{STREAM_BASE_PATH}/captures'
-CROPPED_PATH = f'{CAPTURES_PATH}/cropped'
-RESOURCES_PATH = f'{STREAM_BASE_PATH}/resources'
+# Path configuration constants - now dynamic based on device
+# These will be replaced by device-specific path functions
+RESOURCES_PATH = '/var/www/html/stream/resources'  # Resources are still shared across devices
 
 
 # =====================================================
@@ -60,6 +58,16 @@ def crop_area():
                 'error': 'area is required'
             }), 400
         
+        # Get device-specific paths
+        from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
+        
+        device_id = get_current_device_id()
+        captures_path = get_device_local_captures_path(host_device, device_id)
+        cropped_dir = f'{captures_path}/cropped'
+        
+        print(f"[@route:host_crop_area] Using device_id: {device_id}")
+        print(f"[@route:host_crop_area] Using captures_path: {captures_path}")
+        
         # Determine source path
         if source_path:
             # Extract filename from URL if it's a full URL
@@ -68,13 +76,13 @@ def crop_area():
                 from urllib.parse import urlparse
                 parsed_url = urlparse(source_path)
                 source_filename = parsed_url.path.split('/')[-1].split('?')[0]
-                final_source_path = f'{CAPTURES_PATH}/{source_filename}'
+                final_source_path = f'{captures_path}/{source_filename}'
             else:
                 # Use source_path directly if it's a file path
                 final_source_path = source_path
         elif source_filename:
             # Build source path from filename
-            final_source_path = f'{CAPTURES_PATH}/{source_filename}'
+            final_source_path = f'{captures_path}/{source_filename}'
         else:
             return jsonify({
                 'success': False,
@@ -82,7 +90,6 @@ def crop_area():
             }), 400
         
         # Build target path for cropped image in dedicated cropped folder
-        cropped_dir = CROPPED_PATH
         os.makedirs(cropped_dir, exist_ok=True)  # Ensure cropped directory exists
         
         # Extract timestamp from original screenshot filename (last part after splitting by _)
@@ -186,6 +193,16 @@ def process_area():
                 'error': 'area is required'
             }), 400
         
+        # Get device-specific paths
+        from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
+        
+        device_id = get_current_device_id()
+        captures_path = get_device_local_captures_path(host_device, device_id)
+        cropped_dir = f'{captures_path}/cropped'
+        
+        print(f"[@route:host_process_area] Using device_id: {device_id}")
+        print(f"[@route:host_process_area] Using captures_path: {captures_path}")
+        
         # Determine source path
         if source_path:
             # Extract filename from URL if it's a full URL
@@ -194,13 +211,13 @@ def process_area():
                 from urllib.parse import urlparse
                 parsed_url = urlparse(source_path)
                 source_filename = parsed_url.path.split('/')[-1].split('?')[0]
-                final_source_path = f'{CAPTURES_PATH}/{source_filename}'
+                final_source_path = f'{captures_path}/{source_filename}'
             else:
                 # Use source_path directly if it's a file path
                 final_source_path = source_path
         elif source_filename:
             # Build source path from filename
-            final_source_path = f'{CAPTURES_PATH}/{source_filename}'
+            final_source_path = f'{captures_path}/{source_filename}'
         else:
             return jsonify({
                 'success': False,
@@ -208,7 +225,6 @@ def process_area():
             }), 400
         
         # Build target path for processed image in dedicated cropped folder
-        cropped_dir = CROPPED_PATH
         os.makedirs(cropped_dir, exist_ok=True)  # Ensure cropped directory exists
         
         # Extract timestamp from original screenshot filename (last part after splitting by _)
@@ -343,8 +359,18 @@ def save_resource():
                 'error': 'cropped_filename is required - must capture area first'
             }), 400
         
+        # Get device-specific paths
+        from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
+        
+        device_id = get_current_device_id()
+        captures_path = get_device_local_captures_path(host_device, device_id)
+        cropped_dir = f'{captures_path}/cropped'
+        
+        print(f"[@route:host_save_resource] Using device_id: {device_id}")
+        print(f"[@route:host_save_resource] Using captures_path: {captures_path}")
+        
         # Build source path for cropped file
-        cropped_source_path = f'{CROPPED_PATH}/{cropped_filename}'
+        cropped_source_path = f'{cropped_dir}/{cropped_filename}'
         
         print(f"[@route:host_save_resource] Uploading from {cropped_source_path} to Cloudflare R2")
         
@@ -478,10 +504,14 @@ def execute_image_verification():
         
         verification_controller = get_verification_controller(host_device)
         
-        # Convert source_filename to source_path if provided
+        # Convert source_filename to source_path if provided (using device-specific path)
         source_path = None
         if source_filename:
-            source_path = f'/var/www/html/stream/captures/{source_filename}'
+            from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
+            device_id = get_current_device_id()
+            captures_path = get_device_local_captures_path(host_device, device_id)
+            source_path = f'{captures_path}/{source_filename}'
+            print(f"[@route:host_verification_image:execute] Using device-specific source path: {source_path} (device_id: {device_id})")
         
         result = verification_controller.execute_verification(verification, 
                                                             source_path=source_path)

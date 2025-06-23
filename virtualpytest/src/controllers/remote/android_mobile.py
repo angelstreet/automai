@@ -56,6 +56,8 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 - device_ip: Android device IP address (required)
                 - adb_port: ADB port (default: 5555)
                 - connection_timeout: Connection timeout in seconds (default: 10)
+                - device_id: Device ID for multi-device hosts (required)
+                - device_config: Device configuration with paths and settings (required)
         """
         super().__init__(device_name, device_type)
         
@@ -64,9 +66,17 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         self.adb_port = kwargs.get('adb_port', 5555)
         self.connection_timeout = kwargs.get('connection_timeout', 10)
         
+        # Multi-device support (required)
+        self.device_id = kwargs.get('device_id')
+        self.device_config = kwargs.get('device_config')
+        
         # Validate required parameters
         if not self.device_ip:
             raise ValueError("device_ip is required for AndroidMobileRemoteController")
+        if not self.device_id:
+            raise ValueError("device_id is required for AndroidMobileRemoteController")
+        if not self.device_config:
+            raise ValueError("device_config is required for AndroidMobileRemoteController")
             
         self.android_device_id = f"{self.device_ip}:{self.adb_port}"
         self.adb_utils = None
@@ -76,6 +86,13 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         self.last_ui_elements = []
         self.last_dump_time = 0
         
+        print(f"[@controller:AndroidMobileRemote] Initialized for device_id: {self.device_id}")
+        print(f"[@controller:AndroidMobileRemote] Device config: {self.device_config}")
+        
+    def get_device_capture_path(self) -> str:
+        """Get device-specific capture path for screenshots."""
+        return self.device_config['video_capture_path']
+    
     def connect(self) -> bool:
         """Connect to Android device via ADB."""
         try:

@@ -27,7 +27,6 @@ class AudioVerificationController(VerificationControllerInterface):
         Args:
             av_controller: Reference to AV controller (HDMIStreamController, etc.) - REQUIRED
             **kwargs: Optional parameters:
-                - audio_device: Audio input device (e.g., '/dev/audio0') for fallback
                 - sample_rate: Audio sample rate (default: 44100)
                 - channels: Number of audio channels (default: 2)
         """
@@ -39,7 +38,6 @@ class AudioVerificationController(VerificationControllerInterface):
         
         # AV controller reference (REQUIRED)
         self.av_controller = av_controller
-        self.audio_device = kwargs.get('audio_device', '/dev/audio0')
         self.sample_rate = kwargs.get('sample_rate', 44100)
         self.channels = kwargs.get('channels', 2)
         
@@ -64,20 +62,24 @@ class AudioVerificationController(VerificationControllerInterface):
             else:
                 print(f"AudioVerify[{self.device_name}]: Using AV controller: {self.av_controller.device_name}")
             
-            # Check if AV controller has video device for audio capture
-            if hasattr(self.av_controller, 'video_device'):
-                print(f"AudioVerify[{self.device_name}]: Will capture audio from video device: {self.av_controller.video_device}")
-            else:
-                print(f"AudioVerify[{self.device_name}]: WARNING - AV controller has no video_device, will use fallback audio device")
+            # Require AV controller to have video device for audio capture
+            if not hasattr(self.av_controller, 'video_device'):
+                print(f"AudioVerify[{self.device_name}]: ERROR - AV controller has no video_device")
+                print(f"AudioVerify[{self.device_name}]: Audio verification requires AV controller with video_device")
+                return False
+                
+            print(f"AudioVerify[{self.device_name}]: Will capture audio from video device: {self.av_controller.video_device}")
             
             # Test FFmpeg availability for audio processing
             try:
                 result = subprocess.run(['/usr/bin/ffmpeg', '-version'], 
                                       capture_output=True, text=True, timeout=5)
                 if result.returncode != 0:
-                    print(f"AudioVerify[{self.device_name}]: WARNING - FFmpeg not available")
+                    print(f"AudioVerify[{self.device_name}]: ERROR - FFmpeg not available")
+                    return False
             except (subprocess.TimeoutExpired, FileNotFoundError):
-                print(f"AudioVerify[{self.device_name}]: WARNING - FFmpeg not found")
+                print(f"AudioVerify[{self.device_name}]: ERROR - FFmpeg not found")
+                return False
             
             self.is_connected = True
             self.verification_session_id = f"audio_verify_{int(time.time())}"
@@ -110,7 +112,7 @@ class AudioVerificationController(VerificationControllerInterface):
         
         Args:
             duration: Duration in seconds (default: self.analysis_duration)
-            source: Audio source ("av_controller", "device", or file path)
+            source: Audio source ("av_controller" or file path)
             
         Returns:
             Path to the captured audio file
@@ -126,32 +128,13 @@ class AudioVerificationController(VerificationControllerInterface):
         try:
             if source == "av_controller":
                 # Capture from AV controller (e.g., HDMI stream)
-                if hasattr(self.av_controller, 'video_device'):
-                    print(f"AudioVerify[{self.device_name}]: Capturing audio from {self.av_controller.device_name}")
-                    # Use FFmpeg to capture audio from video device
-                    cmd = [
-                        '/usr/bin/ffmpeg',
-                        '-f', 'v4l2',
-                        '-i', self.av_controller.video_device,
-                        '-vn',  # No video
-                        '-acodec', 'pcm_s16le',
-                        '-ar', str(self.sample_rate),
-                        '-ac', str(self.channels),
-                        '-t', str(duration),
-                        '-y',
-                        str(audio_file)
-                    ]
-                else:
-                    print(f"AudioVerify[{self.device_name}]: ERROR - AV controller has no video_device")
-                    return None
-                    
-            elif source == "device":
-                # Capture from audio device
-                print(f"AudioVerify[{self.device_name}]: Capturing audio from device: {self.audio_device}")
+                print(f"AudioVerify[{self.device_name}]: Capturing audio from {self.av_controller.device_name}")
+                # Use FFmpeg to capture audio from video device
                 cmd = [
                     '/usr/bin/ffmpeg',
-                    '-f', 'alsa',
-                    '-i', self.audio_device,
+                    '-f', 'v4l2',
+                    '-i', self.av_controller.video_device,
+                    '-vn',  # No video
                     '-acodec', 'pcm_s16le',
                     '-ar', str(self.sample_rate),
                     '-ac', str(self.channels),
@@ -488,7 +471,6 @@ class AudioVerificationController(VerificationControllerInterface):
             'session_id': self.verification_session_id,
             'verification_count': len(self.verification_results),
             'acquisition_source': self.av_controller.device_name if self.av_controller else None,
-            'audio_device': self.audio_device,
             'sample_rate': self.sample_rate,
             'channels': self.channels,
             'capabilities': [

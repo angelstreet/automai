@@ -272,7 +272,6 @@ class HDMIStreamController(AVControllerInterface):
             print(f'[@controller:HDMIStream] Using device model: {device_model}')
             
             # Extract timestamp from temp screenshot URL to get the actual image file
-            # temp_screenshot_url format: https://virtualpytest.com/host/stream/captures/capture_20250617134657.jpg
             try:
                 import re
                 timestamp_match = re.search(r'capture_(\d{14})\.jpg', temp_screenshot_url)
@@ -284,13 +283,20 @@ class HDMIStreamController(AVControllerInterface):
                 print(f'[@controller:HDMIStream] Extracted timestamp: {timestamp}')
                 
                 # Build local file path to the captured screenshot using device-specific path
-                if self.device_id and self.device_id != 'device1':
-                    # For device2, device3, etc., use device-specific capture path
-                    device_num = self.device_id.replace('device', '')
-                    local_screenshot_path = f'/var/www/html/stream/capture{device_num}/captures/capture_{timestamp}.jpg'
+                host_info = self._get_host_info()
+                if host_info:
+                    from src.utils.buildUrlUtils import get_device_local_captures_path
+                    captures_path = get_device_local_captures_path(host_info, self.device_id)
+                    local_screenshot_path = f'{captures_path}/capture_{timestamp}.jpg'
                 else:
-                    # For device1 or no device_id, use default capture path
-                    local_screenshot_path = f'/var/www/html/stream/captures/capture_{timestamp}.jpg'
+                    # Fallback to device-specific path construction
+                    if self.device_id and self.device_id != 'device1':
+                        # For device2, device3, etc., use device-specific capture path
+                        device_num = self.device_id.replace('device', '')
+                        local_screenshot_path = f'/var/www/html/stream/capture{device_num}/captures/capture_{timestamp}.jpg'
+                    else:
+                        # For device1 or no device_id, use default capture path
+                        local_screenshot_path = f'/var/www/html/stream/captures/capture_{timestamp}.jpg'
                 
                 print(f'[@controller:HDMIStream] Local screenshot path (device_id={self.device_id}): {local_screenshot_path}')
                 

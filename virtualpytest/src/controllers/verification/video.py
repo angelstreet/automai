@@ -27,7 +27,6 @@ class VideoVerificationController(VerificationControllerInterface):
         Args:
             av_controller: Reference to AV controller (HDMIStreamController, etc.) - REQUIRED
             **kwargs: Optional parameters:
-                - video_device: Video input device (e.g., '/dev/video0') for fallback
                 - analysis_resolution: Resolution for analysis (default: '640x480')
         """
         if not av_controller:
@@ -38,7 +37,6 @@ class VideoVerificationController(VerificationControllerInterface):
         
         # AV controller reference (REQUIRED)
         self.av_controller = av_controller
-        self.video_device = kwargs.get('video_device', '/dev/video0')
         self.analysis_resolution = kwargs.get('analysis_resolution', '640x480')
         
         # Video analysis settings
@@ -62,19 +60,15 @@ class VideoVerificationController(VerificationControllerInterface):
             else:
                 print(f"VideoVerify[{self.device_name}]: Using AV controller: {self.av_controller.device_name}")
             
-            # Check if AV controller has screenshot capability
-            if not hasattr(self.av_controller, 'take_screenshot'):
-                print(f"VideoVerify[{self.device_name}]: ERROR - AV controller has no screenshot capability")
+            # Require AV controller to have video device for verification
+            if not hasattr(self.av_controller, 'video_device') or not self.av_controller.video_device:
+                print(f"VideoVerify[{self.device_name}]: ERROR - AV controller missing video device configuration")
                 return False
             
-            # Test FFmpeg availability for video processing
-            try:
-                result = subprocess.run(['/usr/bin/ffmpeg', '-version'], 
-                                      capture_output=True, text=True, timeout=5)
-                if result.returncode != 0:
-                    print(f"VideoVerify[{self.device_name}]: WARNING - FFmpeg not available")
-            except (subprocess.TimeoutExpired, FileNotFoundError):
-                print(f"VideoVerify[{self.device_name}]: WARNING - FFmpeg not found")
+            print(f"VideoVerify[{self.device_name}]: Video device: {self.av_controller.video_device}")
+            
+            # Create temp directories for analysis
+            self.temp_video_path.mkdir(parents=True, exist_ok=True)
             
             self.is_connected = True
             self.verification_session_id = f"video_verify_{int(time.time())}"
@@ -82,7 +76,8 @@ class VideoVerificationController(VerificationControllerInterface):
             return True
             
         except Exception as e:
-            print(f"VideoVerify[{self.device_name}]: Connection failed: {e}")
+            print(f"VideoVerify[{self.device_name}]: Connection error: {e}")
+            self.is_connected = False
             return False
 
     def disconnect(self) -> bool:
@@ -108,7 +103,7 @@ class VideoVerificationController(VerificationControllerInterface):
         
         Args:
             filename: Optional filename for the screenshot
-            source: Video source ("av_controller", "device", or file path)
+            source: Video source ("av_controller" or file path)
             
         Returns:
             Path to the captured screenshot file
@@ -133,27 +128,6 @@ class VideoVerificationController(VerificationControllerInterface):
                     return str(screenshot_path)
                 else:
                     print(f"VideoVerify[{self.device_name}]: Failed to get screenshot from AV controller")
-                    return None
-                    
-            elif source == "device":
-                # Capture from video device
-                print(f"VideoVerify[{self.device_name}]: Capturing from video device: {self.video_device}")
-                cmd = [
-                    '/usr/bin/ffmpeg',
-                    '-f', 'v4l2',
-                    '-i', self.video_device,
-                    '-vframes', '1',
-                    '-y',
-                    str(screenshot_path)
-                ]
-                
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-                
-                if result.returncode == 0 and screenshot_path.exists():
-                    print(f"VideoVerify[{self.device_name}]: Screenshot captured: {screenshot_path}")
-                    return str(screenshot_path)
-                else:
-                    print(f"VideoVerify[{self.device_name}]: Screenshot capture failed: {result.stderr}")
                     return None
                 
             elif os.path.exists(source):
@@ -616,7 +590,6 @@ class VideoVerificationController(VerificationControllerInterface):
             'session_id': self.verification_session_id,
             'verification_count': len(self.verification_results),
             'acquisition_source': self.av_controller.device_name if self.av_controller else None,
-            'video_device': self.video_device,
             'analysis_resolution': self.analysis_resolution,
             'capabilities': [
                 'motion_detection', 'video_playback_verification',
