@@ -15,22 +15,19 @@ from ..base_controller import PowerControllerInterface
 class USBPowerController(PowerControllerInterface):
     """USB power controller using uhubctl commands."""
     
-    def __init__(self, device_name: str = "USB Device", power_type: str = "usb", **kwargs):
+    def __init__(self, usb_hub: int = 1, **kwargs):
         """
         Initialize the USB power controller.
         
         Args:
-            device_name: Name of the USB device
-            power_type: Type identifier for the power controller
-            **kwargs: Additional parameters including:
-                - usb_hub: USB hub number (default: 1)
-                - connection_timeout: Connection timeout in seconds (default: 10)
+            usb_hub: USB hub number (default: 1)
         """
-        super().__init__(device_name, power_type)
+        super().__init__("USB Power", "usb")
         
         # USB parameters
-        self.usb_hub = kwargs.get('usb_hub', 1)
-        self.connection_timeout = kwargs.get('connection_timeout', 10)
+        self.usb_hub = usb_hub
+        
+        print(f"[@controller:USBPower] Initialized for USB hub {self.usb_hub}")
         
     def connect(self) -> bool:
         """Connect to USB hub."""

@@ -25,20 +25,17 @@ class VideoVerificationController(VerificationControllerInterface):
         Initialize the Video Verification controller.
         
         Args:
-            av_controller: Reference to AV controller (HDMIStreamController, etc.) - REQUIRED
-            **kwargs: Optional parameters:
-                - analysis_resolution: Resolution for analysis (default: '640x480')
+            av_controller: AV controller for capturing video/images (dependency injection)
         """
-        if not av_controller:
-            raise ValueError("av_controller is required - must provide HDMIStreamController or similar")
-            
-        device_name = f"VideoVerify-{av_controller.device_name}"
-        super().__init__(device_name)
+        super().__init__("Video Verification", "video")
         
-        # AV controller reference (REQUIRED)
+        # Dependency injection
         self.av_controller = av_controller
-        self.analysis_resolution = kwargs.get('analysis_resolution', '640x480')
         
+        # Validate required dependency
+        if not self.av_controller:
+            raise ValueError("av_controller is required for VideoVerificationController")
+            
         # Video analysis settings
         self.motion_threshold = 5.0  # Default motion threshold percentage
         self.frame_comparison_threshold = 10.0  # Default frame change threshold
@@ -46,6 +43,8 @@ class VideoVerificationController(VerificationControllerInterface):
         # Temporary files for analysis
         self.temp_video_path = Path("/tmp/video_verification")
         self.temp_video_path.mkdir(exist_ok=True)
+        
+        print(f"[@controller:VideoVerification] Initialized with AV controller")
         
     def connect(self) -> bool:
         """Connect to the video verification system."""
@@ -590,7 +589,6 @@ class VideoVerificationController(VerificationControllerInterface):
             'session_id': self.verification_session_id,
             'verification_count': len(self.verification_results),
             'acquisition_source': self.av_controller.device_name if self.av_controller else None,
-            'analysis_resolution': self.analysis_resolution,
             'capabilities': [
                 'motion_detection', 'video_playback_verification',
                 'color_verification', 'screen_state_verification',

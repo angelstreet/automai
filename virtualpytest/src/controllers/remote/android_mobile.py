@@ -45,40 +45,25 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         except Exception as e:
             raise RuntimeError(f"Error loading Android Mobile remote config from file: {e}")
     
-    def __init__(self, device_name: str = "Android Mobile", device_type: str = "android_mobile", **kwargs):
+    def __init__(self, device_ip: str, device_port: int = 5555, **kwargs):
         """
         Initialize the Android mobile remote controller.
         
         Args:
-            device_name: Name of the Android mobile device
-            device_type: Type identifier for the device
-            **kwargs: Additional parameters including:
-                - device_ip: Android device IP address (required)
-                - adb_port: ADB port (default: 5555)
-                - connection_timeout: Connection timeout in seconds (default: 10)
-                - device_id: Device ID for multi-device hosts (required)
-                - device_config: Device configuration with paths and settings (required)
+            device_ip: Android device IP address (required)
+            device_port: ADB port (default: 5555)
         """
-        super().__init__(device_name, device_type)
+        super().__init__("Android Mobile", "android_mobile")
         
         # Android device parameters
-        self.device_ip = kwargs.get('device_ip')
-        self.adb_port = kwargs.get('adb_port', 5555)
-        self.connection_timeout = kwargs.get('connection_timeout', 10)
-        
-        # Multi-device support (required)
-        self.device_id = kwargs.get('device_id')
-        self.device_config = kwargs.get('device_config')
+        self.device_ip = device_ip
+        self.device_port = device_port
         
         # Validate required parameters
         if not self.device_ip:
             raise ValueError("device_ip is required for AndroidMobileRemoteController")
-        if not self.device_id:
-            raise ValueError("device_id is required for AndroidMobileRemoteController")
-        if not self.device_config:
-            raise ValueError("device_config is required for AndroidMobileRemoteController")
             
-        self.android_device_id = f"{self.device_ip}:{self.adb_port}"
+        self.android_device_id = f"{self.device_ip}:{self.device_port}"
         self.adb_utils = None
         self.device_resolution = None
         
@@ -86,12 +71,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         self.last_ui_elements = []
         self.last_dump_time = 0
         
-        print(f"[@controller:AndroidMobileRemote] Initialized for device_id: {self.device_id}")
-        print(f"[@controller:AndroidMobileRemote] Device config: {self.device_config}")
-        
-    def get_device_capture_path(self) -> str:
-        """Get device-specific capture path for screenshots."""
-        return self.device_config['video_capture_path']
+        print(f"[@controller:AndroidMobileRemote] Initialized for {self.android_device_id}")
     
     def connect(self) -> bool:
         """Connect to Android device via ADB."""

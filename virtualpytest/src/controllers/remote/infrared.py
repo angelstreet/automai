@@ -120,67 +120,29 @@ class IRRemoteController(RemoteControllerInterface):
         except Exception as e:
             raise RuntimeError(f"Error loading IR remote config from file: {e}")
     
-    def __init__(self, device_name: str = "IR Remote", device_type: str = "infrared", **kwargs):
+    def __init__(self, device_ip: str, device_port: int = 8080, **kwargs):
         """
         Initialize the Infrared remote controller.
         
         Args:
-            device_name: Name of the IR remote device
-            device_type: Type identifier for the device
-            **kwargs: Additional parameters including:
-                # IR Device Parameters (required)
-                - device_ip: IP address of the IR blaster/device (required)
-                - device_port: Port for IR device communication (default: 8080)
-                - ir_protocol: IR protocol to use (required)
-                - device_brand: Brand of the target device (required)
-                - device_model: Model of the target device (required)
-                
-                # Connection Parameters
-                - connection_timeout: Connection timeout in seconds (default: 5)
-                - command_delay: Delay between IR commands in seconds (default: 0.1)
-                
-                # Multi-device Parameters (required)
-                - device_id: Device ID for multi-device hosts (required)
-                - device_config: Device configuration with paths and settings (required)
+            device_ip: IP address of the IR blaster/device (required)
+            device_port: Port for IR device communication (default: 8080)
         """
-        super().__init__(device_name, device_type)
+        super().__init__("IR Remote", "infrared")
         
         # IR device parameters
-        self.device_ip = kwargs.get('device_ip')
-        self.device_port = kwargs.get('device_port', 8080)
-        self.ir_protocol = kwargs.get('ir_protocol')
-        self.device_brand = kwargs.get('device_brand')
-        self.device_model = kwargs.get('device_model')
-        
-        # Connection settings
-        self.connection_timeout = kwargs.get('connection_timeout', 5)
-        self.command_delay = kwargs.get('command_delay', 0.1)
-        
-        # Multi-device support (required)
-        self.device_id = kwargs.get('device_id')
-        self.device_config = kwargs.get('device_config')
+        self.device_ip = device_ip
+        self.device_port = device_port
         
         # Validate required parameters
         if not self.device_ip:
             raise ValueError("device_ip is required for InfraredRemoteController")
-        if not self.ir_protocol:
-            raise ValueError("ir_protocol is required for InfraredRemoteController")
-        if not self.device_brand:
-            raise ValueError("device_brand is required for InfraredRemoteController")
-        if not self.device_model:
-            raise ValueError("device_model is required for InfraredRemoteController")
-        if not self.device_id:
-            raise ValueError("device_id is required for InfraredRemoteController")
-        if not self.device_config:
-            raise ValueError("device_config is required for InfraredRemoteController")
             
         # IR connection state
         self.ir_blaster = None
         self.ir_codeset = None
         
-        print(f"[@controller:InfraredRemote] Initialized for device_id: {self.device_id}")
-        print(f"[@controller:InfraredRemote] Device config: {self.device_config}")
-        print(f"[@controller:InfraredRemote] IR Protocol: {self.ir_protocol}, Brand: {self.device_brand}, Model: {self.device_model}")
+        print(f"[@controller:InfraredRemote] Initialized for {self.device_ip}:{self.device_port}")
         
     def connect(self) -> bool:
         """Connect to IR transmitter device."""
@@ -189,13 +151,12 @@ class IRRemoteController(RemoteControllerInterface):
             
             # In a real implementation, this would initialize the IR hardware
             # For now, we'll simulate the connection
-            print(f"Remote[{self.device_type.upper()}]: Initializing {self.ir_protocol} protocol")
+            print(f"Remote[{self.device_type.upper()}]: Initializing IR protocol")
             
             # Simulate IR device initialization
             self.ir_blaster = {
                 'device_ip': self.device_ip,
                 'device_port': self.device_port,
-                'protocol': self.ir_protocol,
                 'ready': True
             }
             
@@ -795,9 +756,7 @@ class IRRemoteController(RemoteControllerInterface):
             ]
         }
 
-    def get_device_capture_path(self) -> str:
-        """Get device-specific capture path for screenshots."""
-        return self.device_config['video_capture_path']
+
 
 # Backward compatibility alias
 IRController = IRRemoteController 

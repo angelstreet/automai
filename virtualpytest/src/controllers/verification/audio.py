@@ -25,22 +25,17 @@ class AudioVerificationController(VerificationControllerInterface):
         Initialize the Audio Verification controller.
         
         Args:
-            av_controller: Reference to AV controller (HDMIStreamController, etc.) - REQUIRED
-            **kwargs: Optional parameters:
-                - sample_rate: Audio sample rate (default: 44100)
-                - channels: Number of audio channels (default: 2)
+            av_controller: AV controller for capturing audio (dependency injection)
         """
-        if not av_controller:
-            raise ValueError("av_controller is required - must provide HDMIStreamController or similar")
-            
-        device_name = f"AudioVerify-{av_controller.device_name}"
-        super().__init__(device_name)
+        super().__init__("Audio Verification", "audio")
         
-        # AV controller reference (REQUIRED)
+        # Dependency injection
         self.av_controller = av_controller
-        self.sample_rate = kwargs.get('sample_rate', 44100)
-        self.channels = kwargs.get('channels', 2)
         
+        # Validate required dependency
+        if not self.av_controller:
+            raise ValueError("av_controller is required for AudioVerificationController")
+            
         # Audio analysis settings
         self.analysis_duration = 2.0  # Default analysis duration
         self.silence_threshold = 5.0  # Default silence threshold percentage
@@ -49,6 +44,8 @@ class AudioVerificationController(VerificationControllerInterface):
         self.temp_audio_path = Path("/tmp/audio_verification")
         self.temp_audio_path.mkdir(exist_ok=True)
         
+        print(f"[@controller:AudioVerification] Initialized with AV controller")
+
     def connect(self) -> bool:
         """Connect to the audio verification system."""
         try:
@@ -136,8 +133,8 @@ class AudioVerificationController(VerificationControllerInterface):
                     '-i', self.av_controller.video_device,
                     '-vn',  # No video
                     '-acodec', 'pcm_s16le',
-                    '-ar', str(self.sample_rate),
-                    '-ac', str(self.channels),
+                    '-ar', '44100',
+                    '-ac', '2',
                     '-t', str(duration),
                     '-y',
                     str(audio_file)

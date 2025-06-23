@@ -21,24 +21,25 @@ from adb_utils import ADBUtils, AndroidElement
 class ADBVerificationController:
     """ADB verification controller that uses direct ADB commands to verify UI elements."""
     
-    def __init__(self, device_ip: str, device_port: str, **kwargs):
+    def __init__(self, av_controller, **kwargs):
         """
         Initialize the ADB Verification controller.
         
         Args:
-            device_ip: Android device IP address (e.g., "192.168.1.100")
-            device_port: Android device port (e.g., "5555")
-            **kwargs: Additional parameters including:
-                - connection_timeout: Connection timeout in seconds (default: 10)
+            av_controller: AV controller for capturing screenshots (dependency injection)
         """
-        self.device_ip = device_ip
-        self.device_port = device_port
-        self.device_id = f"{device_ip}:{device_port}"  # Combine internally for ADB commands
-        self.connection_timeout = kwargs.get('connection_timeout', 10)
+        # Dependency injection
+        self.av_controller = av_controller
+        
+        # Validate required dependency
+        if not self.av_controller:
+            raise ValueError("av_controller is required for ADBVerificationController")
+            
+        self.device_id = f"adb_verification"  # Internal device identifier
         self.adb_utils = ADBUtils()
         self.is_connected = True  # Assume connected since we're using direct ADB
         
-        print(f"[@controller:ADBVerification] Initialized for device {self.device_ip}:{self.device_port}")
+        print(f"[@controller:ADBVerification] Initialized with AV controller")
 
     def getElementLists(self) -> Tuple[bool, List[Dict[str, Any]], str]:
         """
@@ -111,7 +112,7 @@ class ADBVerificationController:
                 "elements": element_list,
                 "device_info": {
                     "device_id": self.device_id,
-                    "device_name": self.device_ip
+                    "device_name": "adb_verification"
                 }
             }
             

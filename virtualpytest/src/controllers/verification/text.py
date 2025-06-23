@@ -72,19 +72,18 @@ class TextVerificationController(VerificationControllerInterface):
         Initialize the Text Verification controller.
         
         Args:
-            av_controller: Reference to AV controller for screenshot capture
-            **kwargs: Optional parameters:
-                - ocr_language: Language for OCR (default: 'eng')
+            av_controller: AV controller for capturing images (dependency injection)
         """
-        if not av_controller:
-            raise ValueError("av_controller is required for screenshot capture")
-            
-        # Initialize base controller without device name dependency
-        super().__init__("TextVerification")
+        super().__init__("Text Verification", "text")
         
-        # AV controller reference for screenshot capture only
+        # Dependency injection
         self.av_controller = av_controller
-        self.ocr_language = kwargs.get('ocr_language', 'eng')
+        
+        # Validate required dependency
+        if not self.av_controller:
+            raise ValueError("av_controller is required for TextVerificationController")
+            
+        print(f"[@controller:TextVerification] Initialized with AV controller")
         
         # Temporary files for analysis
         self.temp_image_path = Path("/tmp/text_verification")
@@ -93,8 +92,6 @@ class TextVerificationController(VerificationControllerInterface):
         # Controller is always ready
         self.is_connected = True
         self.verification_session_id = f"text_verify_{int(time.time())}"
-        print(f"[@controller:TextVerification] Initialized - Using AV controller: {self.av_controller.device_name}")
-        print(f"[@controller:TextVerification] OCR language: {self.ocr_language}")
 
     def connect(self) -> bool:
         """Connect to the text verification controller."""
@@ -111,8 +108,7 @@ class TextVerificationController(VerificationControllerInterface):
         return {
             "connected": self.is_connected,
             "av_controller": self.av_controller.device_name if self.av_controller else None,
-            "controller_type": "text",
-            "ocr_language": self.ocr_language
+            "controller_type": "text"
         }
 
     def _save_cropped_source_image(self, source_image_path: str, area: dict, model: str, verification_index: int) -> str:
@@ -202,7 +198,7 @@ class TextVerificationController(VerificationControllerInterface):
                 return ""
             
             # Use pytesseract directly (same as auto-detect)
-            extracted_text = pytesseract.image_to_string(image, lang=self.ocr_language)
+            extracted_text = pytesseract.image_to_string(image, lang='eng')
             
             print(f"[@controller:TextVerification] Extracted text: '{extracted_text.strip()}'")
             return extracted_text.strip()

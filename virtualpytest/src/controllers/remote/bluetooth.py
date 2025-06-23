@@ -95,61 +95,31 @@ class BluetoothRemoteController(RemoteControllerInterface):
         except Exception as e:
             raise RuntimeError(f"Error loading Bluetooth remote config from file: {e}")
     
-    def __init__(self, device_name: str = "Bluetooth Remote", device_type: str = "bluetooth", **kwargs):
+    def __init__(self, device_mac: str, device_ip: str, **kwargs):
         """
         Initialize the Bluetooth remote controller.
         
         Args:
-            device_name: Name of the Bluetooth device
-            device_type: Type identifier for the device
-            **kwargs: Additional parameters including:
-                # Bluetooth Device Parameters (required)
-                - device_mac: MAC address of the Bluetooth device (required)
-                - device_ip: IP address for network communication (required)
-                - device_port: Port for network communication (default: 5555)
-                
-                # Connection Parameters
-                - connection_timeout: Connection timeout in seconds (default: 10)
-                - scan_timeout: Bluetooth scan timeout in seconds (default: 10)
-                - pairing_timeout: Pairing timeout in seconds (default: 30)
-                
-                # Multi-device Parameters (required)
-                - device_id: Device ID for multi-device hosts (required)
-                - device_config: Device configuration with paths and settings (required)
+            device_mac: MAC address of the Bluetooth device (required)
+            device_ip: IP address for network communication (required)
         """
-        super().__init__(device_name, device_type)
+        super().__init__("Bluetooth Remote", "bluetooth")
         
         # Bluetooth device parameters
-        self.device_mac = kwargs.get('device_mac')
-        self.device_ip = kwargs.get('device_ip')
-        self.device_port = kwargs.get('device_port', 5555)
-        
-        # Connection settings
-        self.connection_timeout = kwargs.get('connection_timeout', 10)
-        self.scan_timeout = kwargs.get('scan_timeout', 10)
-        self.pairing_timeout = kwargs.get('pairing_timeout', 30)
-        
-        # Multi-device support (required)
-        self.device_id = kwargs.get('device_id')
-        self.device_config = kwargs.get('device_config')
+        self.device_mac = device_mac
+        self.device_ip = device_ip
         
         # Validate required parameters
         if not self.device_mac:
             raise ValueError("device_mac is required for BluetoothRemoteController")
         if not self.device_ip:
             raise ValueError("device_ip is required for BluetoothRemoteController")
-        if not self.device_id:
-            raise ValueError("device_id is required for BluetoothRemoteController")
-        if not self.device_config:
-            raise ValueError("device_config is required for BluetoothRemoteController")
             
         # Bluetooth connection state
         self.bluetooth_socket = None
         self.paired_devices = []
         
-        print(f"[@controller:BluetoothRemote] Initialized for device_id: {self.device_id}")
-        print(f"[@controller:BluetoothRemote] Device config: {self.device_config}")
-        print(f"[@controller:BluetoothRemote] MAC: {self.device_mac}, IP: {self.device_ip}:{self.device_port}")
+        print(f"[@controller:BluetoothRemote] Initialized for MAC: {self.device_mac}, IP: {self.device_ip}")
         
     def connect(self) -> bool:
         """Connect to Bluetooth device."""
@@ -166,17 +136,14 @@ class BluetoothRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Scanning for device {self.device_mac}")
             
             # Simulate pairing process
-            if not self.is_paired:
-                print(f"Remote[{self.device_type.upper()}]: Pairing with device using PIN {self.pairing_pin}")
-                time.sleep(2)  # Simulate pairing time
-                self.is_paired = True
-                print(f"Remote[{self.device_type.upper()}]: Pairing successful")
+            print(f"Remote[{self.device_type.upper()}]: Pairing with device")
+            time.sleep(2)  # Simulate pairing time
+            print(f"Remote[{self.device_type.upper()}]: Pairing successful")
             
             # Simulate HID connection
-            print(f"Remote[{self.device_type.upper()}]: Connecting using HID profile: {self.hid_profile}")
+            print(f"Remote[{self.device_type.upper()}]: Connecting using HID profile")
             self.bt_socket = {
                 'address': self.device_mac,
-                'profile': self.hid_profile,
                 'connected': True
             }
             
@@ -550,9 +517,7 @@ class BluetoothRemoteController(RemoteControllerInterface):
             ]
         }
 
-    def get_device_capture_path(self) -> str:
-        """Get device-specific capture path for screenshots."""
-        return self.device_config['video_capture_path']
+
 
 
 # Backward compatibility alias

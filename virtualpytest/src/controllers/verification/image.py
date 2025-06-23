@@ -368,21 +368,18 @@ class ImageVerificationController(VerificationControllerInterface):
         Initialize the Image Verification controller.
         
         Args:
-            av_controller: Reference to AV controller for screenshot capture
-            **kwargs: Additional parameters (ignored for compatibility)
+            av_controller: AV controller for capturing images (dependency injection)
         """
-        if not av_controller:
-            raise ValueError("av_controller is required for screenshot capture")
-            
-        # Initialize base controller without device name dependency
-        super().__init__("ImageVerification")
+        super().__init__("Image Verification", "image")
         
-        # AV controller reference for screenshot capture only
+        # Dependency injection
         self.av_controller = av_controller
         
-        # Controller is always ready
-        self.is_connected = True
-        print(f"[@controller:ImageVerification] Initialized - Using AV controller: {self.av_controller.device_name}")
+        # Validate required dependency
+        if not self.av_controller:
+            raise ValueError("av_controller is required for ImageVerificationController")
+            
+        print(f"[@controller:ImageVerification] Initialized with AV controller")
 
     def connect(self) -> bool:
         """Connect to the image verification controller."""

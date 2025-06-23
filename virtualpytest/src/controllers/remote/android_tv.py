@@ -44,57 +44,33 @@ class AndroidTVRemoteController(RemoteControllerInterface):
         except Exception as e:
             raise RuntimeError(f"Error loading Android TV remote config from file: {e}")
     
-    def __init__(self, device_name: str = "Android TV", device_type: str = "android_tv", **kwargs):
+    def __init__(self, device_ip: str, device_port: int = 5555, **kwargs):
         """
         Initialize the Android TV remote controller.
         
         Args:
-            device_name: Name of the Android TV device
-            device_type: Type identifier for the device
-            **kwargs: Additional parameters including:
-                # ADB Device Parameters (required)
-                - device_ip: IP address of the Android TV device (required)
-                - device_port: ADB port on the device (default: 5555)
-                
-                # Connection Parameters
-                - connection_timeout: Connection timeout in seconds (default: 10)
-                
-                # Multi-device Parameters (required)
-                - device_id: Device ID for multi-device hosts (required)
-                - device_config: Device configuration with paths and settings (required)
+            device_ip: Android TV device IP address (required)
+            device_port: ADB port (default: 5555)
         """
-        super().__init__(device_name, device_type)
+        super().__init__("Android TV", "android_tv")
         
-        # ADB device parameters
-        self.device_ip = kwargs.get('device_ip')
-        self.device_port = kwargs.get('device_port', 5555)
-        
-        # Connection settings
-        self.connection_timeout = kwargs.get('connection_timeout', 10)
-        
-        # Multi-device support (required)
-        self.device_id = kwargs.get('device_id')
-        self.device_config = kwargs.get('device_config')
+        # Android TV device parameters
+        self.device_ip = device_ip
+        self.device_port = device_port
         
         # Validate required parameters
         if not self.device_ip:
             raise ValueError("device_ip is required for AndroidTVRemoteController")
-        if not self.device_id:
-            raise ValueError("device_id is required for AndroidTVRemoteController")
-        if not self.device_config:
-            raise ValueError("device_config is required for AndroidTVRemoteController")
             
-        self.adb_device = f"{self.device_ip}:{self.device_port}"
+        self.android_device_id = f"{self.device_ip}:{self.device_port}"
         self.adb_utils = None
-        self.device_resolution = None
         
-        print(f"[@controller:AndroidTVRemote] Initialized for device_id: {self.device_id}")
-        print(f"[@controller:AndroidTVRemote] Device config: {self.device_config}")
+        print(f"[@controller:AndroidTVRemote] Initialized for {self.android_device_id}")
         
     def connect(self) -> bool:
         """Connect to the Android TV device via ADB."""
         try:
-            print(f"Remote[{self.device_type.upper()}]: Connecting to Android device {self.adb_device}")
+            print(f"Remote[{self.device_type.upper()}]: Connecting to Android device {self.android_device_id}")
             
             if not ADB_AVAILABLE:
                 print(f"Remote[{self.device_type.upper()}]: ERROR - ADB utilities not available")
@@ -104,15 +80,15 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             self.adb_utils = ADBUtils()
             
             # Step 2: Connect to Android device via ADB
-            if not self.adb_utils.connect_device(self.adb_device):
-                print(f"Remote[{self.device_type.upper()}]: Failed to connect to Android device {self.adb_device}")
+            if not self.adb_utils.connect_device(self.android_device_id):
+                print(f"Remote[{self.device_type.upper()}]: Failed to connect to Android device {self.android_device_id}")
                 self.disconnect()
                 return False
                 
-            print(f"Remote[{self.device_type.upper()}]: Successfully connected to Android device {self.adb_device}")
+            print(f"Remote[{self.device_type.upper()}]: Successfully connected to Android device {self.android_device_id}")
             
             # Step 3: Get device resolution
-            self.device_resolution = self.adb_utils.get_device_resolution(self.adb_device)
+            self.device_resolution = self.adb_utils.get_device_resolution(self.android_device_id)
             if self.device_resolution:
                 print(f"Remote[{self.device_type.upper()}]: Device resolution: {self.device_resolution['width']}x{self.device_resolution['height']}")
             
@@ -154,7 +130,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Pressing key '{key}'")
             
-            success = self.adb_utils.execute_key_command(self.adb_device, key)
+            success = self.adb_utils.execute_key_command(self.android_device_id, key)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully pressed key '{key}'")
@@ -182,7 +158,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Sending text: '{text}'")
             
             # Use ADB text input command directly
-            success = self.adb_utils.input_text(self.adb_device, text)
+            success = self.adb_utils.input_text(self.android_device_id, text)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully sent text: '{text}'")
@@ -256,7 +232,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             
         try:
             launch_command = [
-                "adb", "-s", self.adb_device, "shell", "monkey", 
+                "adb", "-s", self.android_device_id, "shell", "monkey", 
                 "-p", package_name, "-c", "android.intent.category.LAUNCHER", "1"
             ]
             print(f"Remote[{self.device_type.upper()}]: Launching app: {package_name}")
@@ -295,7 +271,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             
         try:
             close_command = [
-                "adb", "-s", self.adb_device, "shell", "am", "force-stop", package_name
+                "adb", "-s", self.android_device_id, "shell", "am", "force-stop", package_name
             ]
             print(f"Remote[{self.device_type.upper()}]: Closing app: {package_name}")
             
@@ -342,7 +318,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             return False
             
         try:
-            tap_command = ["adb", "-s", self.adb_device, "shell", "input", "tap", str(x), str(y)]
+            tap_command = ["adb", "-s", self.android_device_id, "shell", "input", "tap", str(x), str(y)]
             print(f"Remote[{self.device_type.upper()}]: Tapping at coordinates ({x}, {y})")
             
             result = subprocess.run(
@@ -374,7 +350,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             
         try:
             # Get list of installed packages (3rd party apps only)
-            packages_command = ["adb", "-s", self.adb_device, "shell", "pm", "list", "packages", "-3"]
+            packages_command = ["adb", "-s", self.android_device_id, "shell", "pm", "list", "packages", "-3"]
             
             result = subprocess.run(
                 packages_command,
@@ -417,7 +393,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Taking screenshot")
             
             # Use ADB to take screenshot and get base64 data
-            success, screenshot_data, error = self.adb_utils.take_screenshot(self.adb_device)
+            success, screenshot_data, error = self.adb_utils.take_screenshot(self.android_device_id)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Screenshot captured successfully")
@@ -442,9 +418,8 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 'device_name': self.device_name,
                 'device_ip': self.device_ip,
                 'device_port': self.device_port,
-                'adb_device': self.adb_device,
+                'adb_device': self.android_device_id,
                 'connected': self.is_connected,
-                'connection_timeout': self.connection_timeout,
                 'device_resolution': self.device_resolution,
                 'supported_keys': list(ADBUtils.ADB_KEYS.keys()) if self.adb_utils else [],
                 'capabilities': [
@@ -480,7 +455,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 device_status = None
                 
                 for line in device_lines:
-                    if self.adb_device in line:
+                    if self.android_device_id in line:
                         device_found = line
                         parts = line.split('\t')
                         if len(parts) >= 2:
@@ -491,21 +466,21 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     base_status.update({
                         'adb_status': 'device_not_found',
                         'adb_connected': False,
-                        'message': f'Device {self.adb_device} not found in ADB devices list',
+                        'message': f'Device {self.android_device_id} not found in ADB devices list',
                         'available_devices': device_lines
                     })
                 elif device_status != 'device':
                     base_status.update({
                         'adb_status': f'device_{device_status}',
                         'adb_connected': False,
-                        'message': f'Device {self.adb_device} status is {device_status}, expected "device"',
+                        'message': f'Device {self.android_device_id} status is {device_status}, expected "device"',
                         'device_found': device_found
                     })
                 else:
                     base_status.update({
                         'adb_status': 'device_connected',
                         'adb_connected': True,
-                        'message': f'Device {self.adb_device} is connected and ready',
+                        'message': f'Device {self.android_device_id} is connected and ready',
                         'device_status': device_status
                     })
             else:

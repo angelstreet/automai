@@ -20,30 +20,19 @@ from ..base_controller import AVControllerInterface
 class HDMIStreamController(AVControllerInterface):
     """HDMI Stream controller that references continuously captured screenshots by timestamp."""
     
-    def __init__(self, device_name: str = "HDMI Stream Device", video_device: str = "/dev/video0", 
-                 resolution: str = "1920x1080", fps: int = 30, stream_path: str = "/stream/video",
-                 capture_path: str = None, service_name: str = "stream", **kwargs):
+    def __init__(self, stream_path: str, capture_path: str, **kwargs):
         """
         Initialize the HDMI Stream controller.
         
         Args:
-            device_name: Name of the device for logging
-            video_device: Video device path (e.g., /dev/video0, /dev/video2)
-            resolution: Video resolution (default: 1920x1080)
-            fps: Frames per second (default: 30)
-            stream_path: Stream path for URLs (e.g., /stream/video, /host/stream/capture1)
-            capture_path: Local capture path (e.g., /var/www/html/stream/capture1)
-            service_name: systemd service name for stream (default: 'stream')
+            stream_path: Stream path for URLs (e.g., "/host/stream/capture1")
+            capture_path: Local capture path (e.g., "/var/www/html/stream/capture1")
         """
-        super().__init__(device_name, "HDMI")
+        super().__init__("HDMI Stream Device", "HDMI")
         
-        # Video configuration
-        self.video_device = video_device
-        self.resolution = resolution
-        self.fps = fps
+        # Only the essential parameters
         self.stream_path = stream_path
         self.capture_path = capture_path
-        self.service_name = service_name
         
         # Video capture state (timestamp-based, no FFmpeg)
         self.is_capturing_video = False
@@ -52,11 +41,8 @@ class HDMIStreamController(AVControllerInterface):
         self.capture_session_id = None
         
         print(f"HDMI[{self.device_name}]: Initialized controller")
-        print(f"HDMI[{self.device_name}]: Video device: {self.video_device}")
-        print(f"HDMI[{self.device_name}]: Resolution: {self.resolution}@{self.fps}fps")
         print(f"HDMI[{self.device_name}]: Stream path: {self.stream_path}")
         print(f"HDMI[{self.device_name}]: Capture path: {self.capture_path}")
-        print(f"HDMI[{self.device_name}]: Service: {self.service_name}")
         
     def _get_host_info(self) -> Optional[Dict[str, Any]]:
         """

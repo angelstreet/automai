@@ -21,34 +21,25 @@ from appium_utils import AppiumUtils, AppiumElement
 class AppiumVerificationController:
     """Appium verification controller that uses Appium WebDriver to verify UI elements across platforms."""
     
-    def __init__(self, device_ip: str, device_port: str, platform_name: str, **kwargs):
+    def __init__(self, av_controller, **kwargs):
         """
         Initialize the Appium Verification controller.
         
         Args:
-            device_ip: Device IP address for network connection
-            device_port: Device port for network connection
-            platform_name: Platform name ('iOS', 'Android', etc.)
-            **kwargs: Additional parameters including:
-                - appium_url: Appium server URL (default: "http://localhost:4723")
-                - app_package: App package/bundle ID to connect to
-                - automation_name: Automation engine ('XCUITest' for iOS, 'UIAutomator2' for Android)
+            av_controller: AV controller for capturing screenshots (dependency injection)
         """
-        self.device_ip = device_ip
-        self.device_port = device_port
-        self.platform_name = platform_name.lower()
-        self.appium_url = kwargs.get('appium_url', 'http://localhost:4723')
-        self.app_package = kwargs.get('app_package', '')
-        self.automation_name = kwargs.get('automation_name', self._get_default_automation_name())
+        # Dependency injection
+        self.av_controller = av_controller
         
+        # Validate required dependency
+        if not self.av_controller:
+            raise ValueError("av_controller is required for AppiumVerificationController")
+            
         self.appium_utils = AppiumUtils()
-        self.device_id = f"appium_{device_ip}_{device_port}"  # Internal device identifier
+        self.device_id = f"appium_verification"  # Internal device identifier
         self.is_connected = False
         
-        print(f"[@controller:AppiumVerification] Initialized for device {device_ip}:{device_port} ({platform_name})")
-        
-        # Attempt to connect to device
-        self._connect_device()
+        print(f"[@controller:AppiumVerification] Initialized with AV controller")
     
     def _get_default_automation_name(self) -> str:
         """Get default automation name based on platform."""

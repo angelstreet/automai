@@ -46,80 +46,31 @@ class AppiumRemoteController(RemoteControllerInterface):
         except Exception as e:
             raise RuntimeError(f"Error loading Appium remote config from file: {e}")
     
-    def __init__(self, device_name: str = "Appium Remote", device_type: str = "appium", **kwargs):
+    def __init__(self, device_ip: str, device_port: int = 4723, appium_server_url: str = None, **kwargs):
         """
         Initialize the Appium remote controller.
         
         Args:
-            device_name: Name of the device
-            device_type: Type identifier for the device
-            **kwargs: Additional parameters including:
-                # Appium Server Parameters
-                - appium_server_url: URL of the Appium server (default: http://localhost:4723)
-                
-                # Device Parameters (required)
-                - device_ip: IP address of the target device (required)
-                - device_port: Port for device communication (default: 5555)
-                - platform_name: Platform name (iOS, Android, etc.) (required)
-                - platform_version: Platform version (required)
-                - device_name_cap: Device name for Appium capabilities (required)
-                - app_package: App package name (for Android)
-                - app_activity: App activity name (for Android)
-                - bundle_id: Bundle ID (for iOS)
-                - udid: Device UDID (for iOS)
-                
-                # Connection Parameters
-                - connection_timeout: Connection timeout in seconds (default: 30)
-                - implicit_wait: Implicit wait timeout in seconds (default: 10)
-                
-                # Multi-device Parameters (required)
-                - device_id: Device ID for multi-device hosts (required)
-                - device_config: Device configuration with paths and settings (required)
+            device_ip: Device IP address (required)
+            device_port: Appium server port (default: 4723)
+            appium_server_url: Full Appium server URL (optional, constructed from ip:port if not provided)
         """
-        super().__init__(device_name, device_type)
+        super().__init__("Appium Remote", "appium")
         
-        # Appium server configuration
-        self.appium_server_url = kwargs.get('appium_server_url', 'http://localhost:4723')
-        
-        # Device parameters
-        self.device_ip = kwargs.get('device_ip')
-        self.device_port = kwargs.get('device_port', 5555)
-        self.platform_name = kwargs.get('platform_name')
-        self.platform_version = kwargs.get('platform_version')  
-        self.device_name_cap = kwargs.get('device_name_cap')
-        self.app_package = kwargs.get('app_package')
-        self.app_activity = kwargs.get('app_activity')
-        self.bundle_id = kwargs.get('bundle_id')
-        self.udid = kwargs.get('udid')
-        
-        # Connection settings
-        self.connection_timeout = kwargs.get('connection_timeout', 30)
-        self.implicit_wait = kwargs.get('implicit_wait', 10)
-        
-        # Multi-device support (required)
-        self.device_id = kwargs.get('device_id')
-        self.device_config = kwargs.get('device_config')
+        # Appium connection parameters
+        self.device_ip = device_ip
+        self.device_port = device_port
+        self.appium_server_url = appium_server_url or f"http://{device_ip}:{device_port}/wd/hub"
         
         # Validate required parameters
         if not self.device_ip:
             raise ValueError("device_ip is required for AppiumRemoteController")
-        if not self.platform_name:
-            raise ValueError("platform_name is required for AppiumRemoteController")
-        if not self.platform_version:
-            raise ValueError("platform_version is required for AppiumRemoteController")
-        if not self.device_name_cap:
-            raise ValueError("device_name_cap is required for AppiumRemoteController")
-        if not self.device_id:
-            raise ValueError("device_id is required for AppiumRemoteController")
-        if not self.device_config:
-            raise ValueError("device_config is required for AppiumRemoteController")
             
-        # Driver instance
+        # Appium driver
         self.driver = None
         
-        print(f"[@controller:AppiumRemote] Initialized for device_id: {self.device_id}")
-        print(f"[@controller:AppiumRemote] Device config: {self.device_config}")
-        print(f"[@controller:AppiumRemote] Platform: {self.platform_name} {self.platform_version}")
+        print(f"[@controller:AppiumRemote] Initialized for {self.device_ip}:{self.device_port}")
+        print(f"[@controller:AppiumRemote] Server URL: {self.appium_server_url}")
         
     def connect(self) -> bool:
         """Connect to device via Appium WebDriver."""
