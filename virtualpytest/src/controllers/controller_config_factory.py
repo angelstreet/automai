@@ -141,7 +141,9 @@ def _create_controller_config(controller_type: str, implementation: str, device_
                 'params': {
                     'device_ip': device_config['android_ip'],
                     'device_port': device_config['android_port'],
-                    'connection_timeout': 10
+                    'connection_timeout': 10,
+                    'device_id': device_config['device_id'],
+                    'device_config': device_config
                 }
             }
         
@@ -155,7 +157,9 @@ def _create_controller_config(controller_type: str, implementation: str, device_
                 'params': {
                     'device_ip': device_config['android_ip'],
                     'device_port': device_config['android_port'],
-                    'connection_timeout': 10
+                    'connection_timeout': 10,
+                    'device_id': device_config['device_id'],
+                    'device_config': device_config
                 }
             }
         
@@ -172,7 +176,9 @@ def _create_controller_config(controller_type: str, implementation: str, device_
                     'platform_name': 'iOS',
                     'appium_url': f"http://{device_config['appium_ip']}:4723",
                     'automation_name': 'XCUITest',
-                    'connection_timeout': 10
+                    'connection_timeout': 10,
+                    'device_id': device_config['device_id'],
+                    'device_config': device_config
                 }
             }
         
@@ -186,7 +192,9 @@ def _create_controller_config(controller_type: str, implementation: str, device_
                 'params': {
                     'device_path': device_config['ir_device'],
                     'protocol': 'NEC',
-                    'frequency': 38000
+                    'frequency': 38000,
+                    'device_id': device_config['device_id'],
+                    'device_config': device_config
                 }
             }
         
@@ -198,7 +206,9 @@ def _create_controller_config(controller_type: str, implementation: str, device_
                 'type': 'remote',
                 'class': BluetoothRemoteController,
                 'params': {
-                    'device_address': device_config['bluetooth_device']
+                    'device_address': device_config['bluetooth_device'],
+                    'device_id': device_config['device_id'],
+                    'device_config': device_config
                 }
             }
     

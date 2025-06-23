@@ -80,6 +80,7 @@ def _get_devices_config_from_environment() -> List[Dict[str, Any]]:
 def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
     """
     Create a device with all its controllers from configuration.
+    Handles controller dependencies by creating them in the right order.
     
     Args:
         device_config: Device configuration dictionary
@@ -99,17 +100,64 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
     # Create controllers using the factory
     controller_configs = create_controller_configs_from_device_info(device_config)
     
-    for controller_config in controller_configs:
+    # Separate controllers by type to handle dependencies
+    av_controllers = [c for c in controller_configs if c['type'] == 'av']
+    remote_controllers = [c for c in controller_configs if c['type'] == 'remote']
+    verification_controllers = [c for c in controller_configs if c['type'] == 'verification']
+    power_controllers = [c for c in controller_configs if c['type'] == 'power']
+    
+    # Step 1: Create AV controllers first (no dependencies)
+    av_controller = None
+    for controller_config in av_controllers:
         controller_type = controller_config['type']
         controller_class = controller_config['class']
         controller_params = controller_config['params']
         
         print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {controller_class.__name__}")
         
-        # Create controller instance
         controller = controller_class(**controller_params)
+        device.add_controller(controller_type, controller)
+        av_controller = controller  # Keep reference for verification controllers
+    
+    # Step 2: Create remote controllers (no dependencies)
+    for controller_config in remote_controllers:
+        controller_type = controller_config['type']
+        controller_class = controller_config['class']
+        controller_params = controller_config['params']
         
-        # Add to device
+        print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {controller_class.__name__}")
+        
+        controller = controller_class(**controller_params)
+        device.add_controller(controller_type, controller)
+    
+    # Step 3: Create verification controllers (depend on AV controller)
+    for controller_config in verification_controllers:
+        controller_type = controller_config['type']
+        controller_class = controller_config['class']
+        controller_params = controller_config['params']
+        
+        print(f"[@controller_manager:_create_device_with_controllers] Creating verification controller: {controller_class.__name__}")
+        
+        # Add av_controller dependency for verification controllers that need it
+        # ADB verification controller doesn't need av_controller (uses direct ADB communication)
+        if controller_class.__name__ in ['ImageVerificationController', 'TextVerificationController', 'AudioVerificationController', 'VideoVerificationController']:
+            if av_controller:
+                controller_params['av_controller'] = av_controller
+            else:
+                print(f"[@controller_manager:_create_device_with_controllers] WARNING: {controller_class.__name__} needs AV controller but none available")
+        
+        controller = controller_class(**controller_params)
+        device.add_controller(controller_type, controller)
+    
+    # Step 4: Create power controllers (no dependencies)
+    for controller_config in power_controllers:
+        controller_type = controller_config['type']
+        controller_class = controller_config['class']
+        controller_params = controller_config['params']
+        
+        print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {controller_class.__name__}")
+        
+        controller = controller_class(**controller_params)
         device.add_controller(controller_type, controller)
     
     print(f"[@controller_manager:_create_device_with_controllers] Device {device_id} created with capabilities: {device.get_capabilities()}")
