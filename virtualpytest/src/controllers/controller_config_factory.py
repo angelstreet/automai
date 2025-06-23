@@ -9,18 +9,18 @@ from typing import Dict, List, Any
 
 # Import all controller classes
 from .audiovideo.hdmi_stream import HDMIStreamController
-from .remote.android_mobile import AndroidMobileController
-from .remote.android_tv import AndroidTVController
+from .remote.android_mobile import AndroidMobileRemoteController
+from .remote.android_tv import AndroidTVRemoteController
 from .remote.appium_remote import AppiumRemoteController
-from .remote.infrared import InfraredController
-from .remote.bluetooth import BluetoothController
-from .verification.image_verification import ImageVerificationController
-from .verification.text_verification import TextVerificationController
-from .verification.audio_verification import AudioVerificationController
-from .verification.video_verification import VideoVerificationController
-from .verification.adb_verification import ADBVerificationController
+from .remote.infrared import IRRemoteController
+from .remote.bluetooth import BluetoothRemoteController
+from .verification.image import ImageVerificationController
+from .verification.text import TextVerificationController
+from .verification.audio import AudioVerificationController
+from .verification.video import VideoVerificationController
+from .verification.adb import ADBVerificationController
 from .power.usb_power import USBPowerController
-from .network.network_controller import NetworkController
+# from .network.network_controller import NetworkController  # Not implemented yet
 
 
 # Device Model to Controller Mapping
@@ -29,29 +29,29 @@ DEVICE_MODEL_CONTROLLERS = {
         'remote': ['android_mobile'],
         'verification': ['image', 'text', 'adb'],
         'av': ['hdmi_stream'],
-        'power': ['usb'],
-        'network': ['network']
+        'power': []
+        # 'network': ['network']  # Not implemented yet
     },
     'android_tv': {
         'remote': ['android_tv'],
         'verification': ['image', 'text'],
         'av': ['hdmi_stream'],
-        'power': ['usb'],
-        'network': ['network']
+        'power': []
+        # 'network': ['network']  # Not implemented yet
     },
     'ios_mobile': {
         'remote': ['appium'],
         'verification': ['image', 'text'],
         'av': ['hdmi_stream'],
-        'power': ['usb'],
-        'network': ['network']
+        'power': []
+        # 'network': ['network']  # Not implemented yet
     },
     'stb': {
-        'remote': ['infrared', 'bluetooth'],
-        'verification': ['image', 'audio', 'text', 'video'],
+        'remote': [],
+        'verification': ['image',  'text'],
         'av': ['hdmi_stream'],
-        'power': ['usb'],
-        'network': ['network']
+        'power': []
+        # 'network': ['network']  # Not implemented yet
     },
 }
 
@@ -137,7 +137,7 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             
             return {
                 'type': 'remote',
-                'class': AndroidMobileController,
+                'class': AndroidMobileRemoteController,
                 'params': {
                     'device_ip': device_config['android_ip'],
                     'device_port': device_config['android_port'],
@@ -151,7 +151,7 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             
             return {
                 'type': 'remote',
-                'class': AndroidTVController,
+                'class': AndroidTVRemoteController,
                 'params': {
                     'device_ip': device_config['android_ip'],
                     'device_port': device_config['android_port'],
@@ -182,7 +182,7 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             
             return {
                 'type': 'remote',
-                'class': InfraredController,
+                'class': IRRemoteController,
                 'params': {
                     'device_path': device_config['ir_device'],
                     'protocol': 'NEC',
@@ -196,7 +196,7 @@ def _create_controller_config(controller_type: str, implementation: str, device_
             
             return {
                 'type': 'remote',
-                'class': BluetoothController,
+                'class': BluetoothRemoteController,
                 'params': {
                     'device_address': device_config['bluetooth_device']
                 }
