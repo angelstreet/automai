@@ -4,66 +4,134 @@ Actions Database Operations - Clean and Simple
 This module provides functions for managing action definitions in the database.
 """
 
+import json
 from datetime import datetime
 from typing import Dict, List, Optional
 
-from src.utils.supabase_utils import get_supabase_client
+from .client import get_supabase
 
-def get_supabase():
-    """Get the Supabase client instance."""
-    return get_supabase_client()
+def find_existing_action(team_id: str, device_model: str, action_type: str, command: str, parameters: Dict = None) -> Dict:
+    """
+    Find existing action with the same parameters to avoid duplicates.
+    
+    Args:
+        team_id: Team ID for RLS
+        device_model: Device model (e.g., 'android_mobile')
+        action_type: Action type ('remote', 'av', 'power', etc.)
+        command: The action command
+        parameters: JSONB parameters (optional)
+        
+    Returns:
+        Dict: {'success': bool, 'action': Dict or None, 'error': str}
+    """
+    try:
+        supabase = get_supabase()
+        
+        # Build query conditions
+        query = supabase.table('actions').select('*').eq('team_id', team_id).eq('device_model', device_model).eq('action_type', action_type).eq('command', command)
+        
+        # Add parameters filter if provided
+        if parameters:
+            query = query.eq('parameters', json.dumps(parameters, sort_keys=True))
+        
+        result = query.execute()
+        
+        if result.data and len(result.data) > 0:
+            # Found existing action
+            existing_action = result.data[0]
+            print(f"[@db:actions:find_existing_action] Found existing action: {existing_action['id']}")
+            return {
+                'success': True,
+                'action': existing_action
+            }
+        else:
+            # No existing action found
+            print(f"[@db:actions:find_existing_action] No existing action found for: {command} ({action_type})")
+            return {
+                'success': True,
+                'action': None
+            }
+            
+    except Exception as e:
+        print(f"[@db:actions:find_existing_action] Error finding existing action: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
 
-def save_action(name: str, device_model: str, action_type: str, command: str, team_id: str, parameters: Dict = None, wait_time: int = None, requires_input: bool = False) -> Dict:
+def save_action(name: str, device_model: str, action_type: str, command: str, team_id: str, parameters: Dict = None, wait_time: int = 500, requires_input: bool = False) -> Dict:
     """
     Save action definition to database.
     
     Args:
         name: Action name/identifier
         device_model: Device model (e.g., 'android_mobile')
-        action_type: Action type ('adb', 'ui', 'gesture', etc.)
+        action_type: Action type ('remote', 'av', 'power', etc.)
         command: The action command
         team_id: Team ID for RLS
-        parameters: Additional parameters (optional)
-        wait_time: Wait time in milliseconds (optional)
-        requires_input: Whether action requires user input (optional)
+        parameters: JSONB parameters (optional)
+        wait_time: Wait time after execution in ms
+        requires_input: Whether action requires user input
         
     Returns:
-        Dict: {'success': bool, 'action_id': str, 'error': str}
+        Dict: {'success': bool, 'action_id': str, 'action': Dict, 'reused': bool, 'error': str}
     """
     try:
+        # First, check if an action with the same parameters already exists
+        existing_result = find_existing_action(
+            team_id=team_id,
+            device_model=device_model,
+            action_type=action_type,
+            command=command,
+            parameters=parameters
+        )
+        
+        if not existing_result['success']:
+            return existing_result
+        
+        if existing_result['action']:
+            # Reuse existing action
+            existing_action = existing_result['action']
+            print(f"[@db:actions:save_action] Reusing existing action: {existing_action['id']}")
+            return {
+                'success': True,
+                'action_id': existing_action['id'],
+                'action': existing_action,
+                'reused': True
+            }
+        
+        # No existing action found, create a new one
         supabase = get_supabase()
         
-        # Prepare action data
+        # Prepare action data - only store essential fields
         action_data = {
             'name': name,
             'device_model': device_model,
             'action_type': action_type,
             'command': command,
             'team_id': team_id,
-            'parameters': parameters,  # Store as JSONB directly
+            'parameters': parameters or {},  # Store as JSONB directly
             'wait_time': wait_time,
             'requires_input': requires_input,
             'updated_at': datetime.now().isoformat()
         }
         
-        print(f"[@db:actions:save_action] Saving action: {name} ({action_type}) for model: {device_model}")
+        print(f"[@db:actions:save_action] Creating new action: {name} ({action_type}) for model: {device_model}")
         
-        # Use upsert to handle duplicates (INSERT or UPDATE)
-        result = supabase.table('actions').upsert(
-            action_data,
-            on_conflict='team_id,name,device_model,action_type'
-        ).execute()
+        # Use insert since we checked for duplicates already
+        result = supabase.table('actions').insert(action_data).execute()
         
         if result.data:
             saved_action = result.data[0]
-            print(f"[@db:actions:save_action] Successfully saved action: {saved_action['id']}")
+            print(f"[@db:actions:save_action] Successfully created action: {saved_action['id']}")
             return {
                 'success': True,
                 'action_id': saved_action['id'],
-                'action': saved_action
+                'action': saved_action,
+                'reused': False
             }
         else:
-            print(f"[@db:actions:save_action] No data returned from upsert")
+            print(f"[@db:actions:save_action] No data returned from insert")
             return {
                 'success': False,
                 'error': 'No data returned from database'
@@ -195,6 +263,176 @@ def delete_action(team_id: str, action_id: str = None, name: str = None, device_
         
     except Exception as e:
         print(f"[@db:actions:delete_action] Error deleting action: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def get_actions(team_id: str, action_type: str = None, device_model: str = None, name: str = None) -> Dict:
+    """
+    Get actions with optional filtering.
+    
+    Args:
+        team_id: Team ID for RLS
+        action_type: Filter by action type (optional)
+        device_model: Filter by device model (optional)
+        name: Filter by name (partial match, optional)
+        
+    Returns:
+        Dict: {'success': bool, 'actions': List[Dict], 'error': str}
+    """
+    try:
+        supabase = get_supabase()
+        
+        # Start with base query
+        query = supabase.table('actions').select('*').eq('team_id', team_id)
+        
+        # Add filters
+        if action_type:
+            query = query.eq('action_type', action_type)
+        if device_model:
+            query = query.eq('device_model', device_model)
+        if name:
+            query = query.ilike('name', f'%{name}%')
+        
+        # Execute query
+        result = query.execute()
+        
+        if result.data:
+            print(f"[@db:actions:get_actions] Found {len(result.data)} actions")
+            return {
+                'success': True,
+                'actions': result.data
+            }
+        else:
+            print(f"[@db:actions:get_actions] No actions found")
+            return {
+                'success': True,
+                'actions': []
+            }
+            
+    except Exception as e:
+        print(f"[@db:actions:get_actions] Error getting actions: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def get_all_actions(team_id: str) -> Dict:
+    """
+    Get all actions for a team.
+    
+    Args:
+        team_id: Team ID for RLS
+        
+    Returns:
+        Dict: {'success': bool, 'actions': List[Dict], 'error': str}
+    """
+    try:
+        supabase = get_supabase()
+        
+        # Get all actions for team
+        result = supabase.table('actions').select('*').eq('team_id', team_id).execute()
+        
+        if result.data:
+            print(f"[@db:actions:get_all_actions] Found {len(result.data)} actions")
+            return {
+                'success': True,
+                'actions': result.data
+            }
+        else:
+            print(f"[@db:actions:get_all_actions] No actions found")
+            return {
+                'success': True,
+                'actions': []
+            }
+            
+    except Exception as e:
+        print(f"[@db:actions:get_all_actions] Error getting all actions: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def delete_action(team_id: str, action_id: str = None, name: str = None, device_model: str = None, action_type: str = None) -> Dict:
+    """
+    Delete action by ID or by identifiers.
+    
+    Args:
+        team_id: Team ID for RLS
+        action_id: Action ID (optional)
+        name: Action name (optional)
+        device_model: Device model (optional)
+        action_type: Action type (optional)
+        
+    Returns:
+        Dict: {'success': bool, 'error': str}
+    """
+    try:
+        supabase = get_supabase()
+        
+        if action_id:
+            # Delete by ID
+            result = supabase.table('actions').delete().eq('team_id', team_id).eq('id', action_id).execute()
+        elif name and device_model and action_type:
+            # Delete by identifiers
+            result = supabase.table('actions').delete().eq('team_id', team_id).eq('name', name).eq('device_model', device_model).eq('action_type', action_type).execute()
+        else:
+            return {
+                'success': False,
+                'error': 'Must provide either action_id or name/device_model/action_type'
+            }
+        
+        print(f"[@db:actions:delete_action] Action deleted successfully")
+        return {
+            'success': True
+        }
+        
+    except Exception as e:
+        print(f"[@db:actions:delete_action] Error deleting action: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def load_actions_by_ids(action_ids: List[str], team_id: str) -> Dict:
+    """
+    Load action definitions by their database IDs.
+    
+    Args:
+        action_ids: List of action database IDs
+        team_id: Team ID for RLS
+        
+    Returns:
+        Dict: {'success': bool, 'actions': List[Dict], 'error': str}
+    """
+    try:
+        if not action_ids:
+            return {
+                'success': True,
+                'actions': []
+            }
+        
+        supabase = get_supabase()
+        
+        # Load actions by IDs with team filter for RLS
+        result = supabase.table('actions').select('*').in_('id', action_ids).eq('team_id', team_id).execute()
+        
+        if result.data:
+            print(f"[@db:actions:load_actions_by_ids] Loaded {len(result.data)} actions from database")
+            return {
+                'success': True,
+                'actions': result.data
+            }
+        else:
+            print(f"[@db:actions:load_actions_by_ids] No actions found for IDs: {action_ids}")
+            return {
+                'success': True,
+                'actions': []
+            }
+            
+    except Exception as e:
+        print(f"[@db:actions:load_actions_by_ids] Error loading actions: {str(e)}")
         return {
             'success': False,
             'error': str(e)

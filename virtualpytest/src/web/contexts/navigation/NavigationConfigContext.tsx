@@ -290,7 +290,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
           // Update state with loaded data
           let nodes = treeData.nodes || [];
-          const edges = treeData.edges || [];
+          let edges = treeData.edges || [];
 
           // Load verification definitions from database using stored verification IDs
           try {
@@ -303,6 +303,13 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
             nodes.forEach((node: UINavigationNode) => {
               const verificationIds = node.data?.verification_ids || [];
               verificationIds.forEach((id: string) => allVerificationIds.add(id));
+            });
+
+            // Collect all action IDs from all edges
+            const allActionIds = new Set<string>();
+            edges.forEach((edge: any) => {
+              const actionIds = edge.data?.action_ids || [];
+              actionIds.forEach((id: string) => allActionIds.add(id));
             });
 
             if (allVerificationIds.size > 0) {
@@ -388,6 +395,94 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
                 `[@context:NavigationConfigProvider:loadFromConfig] No verification IDs found in tree nodes`,
               );
             }
+
+            // Load action definitions from database using stored action IDs
+            if (allActionIds.size > 0) {
+              console.log(
+                `[@context:NavigationConfigProvider:loadFromConfig] Found ${allActionIds.size} action IDs to load`,
+              );
+
+              // Load actions by their IDs
+              const actionsResponse = await fetch(`/server/actions/load-by-ids`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  action_ids: Array.from(allActionIds),
+                }),
+              });
+
+              if (actionsResponse.ok) {
+                const actionsData = await actionsResponse.json();
+
+                if (actionsData.success && actionsData.actions.length > 0) {
+                  console.log(
+                    `[@context:NavigationConfigProvider:loadFromConfig] Loaded ${actionsData.actions.length} action definitions from database`,
+                  );
+
+                  // Create a map of action ID to action data
+                  const actionsById = new Map<string, any>();
+                  for (const action of actionsData.actions) {
+                    // Convert database action to edge action format
+                    const edgeAction = {
+                      id: action.command,
+                      command: action.command,
+                      label: action.name,
+                      params: action.parameters || {},
+                      waitTime: action.wait_time || 500,
+                      requiresInput: action.requires_input || false,
+                      // Add database metadata
+                      _db_id: action.id,
+                      _db_name: action.name,
+                      _db_action_type: action.action_type,
+                    };
+                    actionsById.set(action.id, edgeAction);
+                  }
+
+                  // Merge action definitions with edges based on their stored IDs
+                  edges = edges.map((edge: any) => {
+                    const actionIds = edge.data?.action_ids || [];
+                    if (actionIds.length > 0) {
+                      const edgeActions = actionIds
+                        .map((id: string) => actionsById.get(id))
+                        .filter(Boolean);
+
+                      if (edgeActions.length > 0) {
+                        console.log(
+                          `[@context:NavigationConfigProvider:loadFromConfig] Adding ${edgeActions.length} actions to edge: ${edge.id}`,
+                        );
+
+                        return {
+                          ...edge,
+                          data: {
+                            ...edge.data,
+                            actions: edgeActions,
+                          },
+                        };
+                      }
+                    }
+                    return edge;
+                  });
+
+                  console.log(
+                    `[@context:NavigationConfigProvider:loadFromConfig] Successfully merged action definitions with edges`,
+                  );
+                } else {
+                  console.log(
+                    `[@context:NavigationConfigProvider:loadFromConfig] No action definitions found in database`,
+                  );
+                }
+              } else {
+                console.warn(
+                  `[@context:NavigationConfigProvider:loadFromConfig] Failed to load action definitions: ${actionsResponse.status}`,
+                );
+              }
+            } else {
+              console.log(
+                `[@context:NavigationConfigProvider:loadFromConfig] No action IDs found in tree edges`,
+              );
+            }
           } catch (verificationError) {
             console.error(
               `[@context:NavigationConfigProvider:loadFromConfig] Error loading verification definitions:`,
@@ -471,7 +566,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(true);
         state.setError(null);
 
-        // Prepare tree data for saving - clean up nodes to only include verification_ids in database
+        // Prepare tree data for saving - clean up nodes and edges to only include IDs in database
         const treeDataForSaving = {
           nodes: state.nodes.map((node: UINavigationNode) => ({
             ...node,
@@ -483,7 +578,16 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
               verifications: undefined,
             },
           })),
-          edges: state.edges,
+          edges: state.edges.map((edge: any) => ({
+            ...edge,
+            data: {
+              ...edge.data,
+              // Only include action_ids for database persistence
+              action_ids: edge.data?.action_ids || [],
+              // Remove the full action objects from database storage
+              actions: undefined,
+            },
+          })),
         };
 
         console.log(

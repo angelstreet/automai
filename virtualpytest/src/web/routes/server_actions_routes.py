@@ -6,13 +6,17 @@ using the database instead of JSON files.
 """
 
 from flask import Blueprint, request, jsonify
-from src.lib.supabase.actions_db import (
-    save_action, 
-    get_actions, 
-    delete_action, 
-    get_all_actions
-)
-from src.utils.app_utils import DEFAULT_TEAM_ID
+import os
+import sys
+
+# Add the parent directory to the path so we can import from src
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+from lib.supabase.actions_db import save_action, get_actions, delete_action, get_all_actions, load_actions_by_ids
+
+# Default team ID for testing
+DEFAULT_TEAM_ID = 'f47ac10b-58cc-4372-a567-0e02b2c3d479'
+
 from src.web.utils.routeUtils import proxy_to_host
 import time
 import requests
@@ -217,11 +221,14 @@ def save_action_endpoint():
     {
         "name": "action_name",
         "device_model": "android_mobile",
-        "action_type": "adb" | "ui" | "gesture",
-        "command": "input tap 100 200",
-        "parameters": {...}, // Optional
-        "wait_time": 500, // Optional, defaults to 500
-        "requires_input": false // Optional, defaults to false
+        "action_type": "remote" | "av" | "power" | "ui",
+        "command": "action_command",
+        "parameters": {
+            "key": "value",        // Action-specific parameters
+            // ... other action-specific parameters
+        },
+        "wait_time": 500,          // Optional wait time in ms
+        "requires_input": false    // Optional requires input flag
     }
     """
     try:
@@ -237,33 +244,35 @@ def save_action_endpoint():
                 }), 400
         
         # Validate action_type
-        valid_types = ['adb', 'ui', 'gesture', 'navigation', 'system']
+        valid_types = ['remote', 'av', 'power', 'ui']
         if data['action_type'] not in valid_types:
             return jsonify({
                 'success': False,
-                'error': f'Action type must be one of: {", ".join(valid_types)}'
+                'error': f'action_type must be one of: {", ".join(valid_types)}'
             }), 400
         
         # Use default team ID
         team_id = DEFAULT_TEAM_ID
         
-        # Save to database
+        # Save to database using actions table
         result = save_action(
             name=data['name'],
             device_model=data['device_model'],
             action_type=data['action_type'],
             command=data['command'],
             team_id=team_id,
-            parameters=data.get('parameters'),
+            parameters=data.get('parameters', {}),
             wait_time=data.get('wait_time', 500),
             requires_input=data.get('requires_input', False)
         )
         
         if result['success']:
+            message = 'Action reused from existing' if result.get('reused') else 'Action saved successfully'
             return jsonify({
                 'success': True,
-                'message': 'Action saved successfully',
-                'action_id': result.get('action_id')
+                'message': message,
+                'action_id': result.get('action_id'),
+                'reused': result.get('reused', False)
             })
         else:
             return jsonify({
@@ -278,19 +287,73 @@ def save_action_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
+@server_actions_bp.route('/server/actions/load-by-ids', methods=['POST'])
+def load_actions_by_ids_endpoint():
+    """
+    Load action definitions by their database IDs.
+    
+    Expected JSON payload:
+    {
+        "action_ids": ["uuid1", "uuid2", ...]
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if 'action_ids' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required field: action_ids'
+            }), 400
+        
+        if not isinstance(data['action_ids'], list):
+            return jsonify({
+                'success': False,
+                'error': 'action_ids must be an array'
+            }), 400
+        
+        # Use default team ID
+        team_id = DEFAULT_TEAM_ID
+        
+        # Load actions from database
+        result = load_actions_by_ids(
+            action_ids=data['action_ids'],
+            team_id=team_id
+        )
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'actions': result['actions'],
+                'count': len(result['actions'])
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error')
+            }), 500
+            
+    except Exception as e:
+        print(f"[@server_actions_routes:load_actions_by_ids_endpoint] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
+
 @server_actions_bp.route('/server/actions/list', methods=['GET'])
 def list_actions_endpoint():
     """
     List actions with optional filtering.
     
     Query parameters:
-    - action_type: Filter by type (adb, ui, gesture, etc.)
+    - type: Filter by action type (remote, av, power, ui)
     - device_model: Filter by device model
     - name: Filter by name (partial match)
     """
     try:
         # Get query parameters
-        action_type = request.args.get('action_type')
+        action_type = request.args.get('type')
         device_model = request.args.get('device_model')
         name = request.args.get('name')
         
@@ -338,7 +401,7 @@ def delete_action_endpoint():
     {
         "name": "action_name",
         "device_model": "android_mobile", 
-        "action_type": "adb"
+        "action_type": "remote" | "av" | "power" | "ui"
     }
     """
     try:
@@ -412,18 +475,27 @@ def get_all_actions_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
-# Health check endpoint
 @server_actions_bp.route('/server/actions/health', methods=['GET'])
 def health_check():
-    """Health check endpoint for actions API."""
-    return jsonify({
-        'success': True,
-        'message': 'Actions API is healthy',
-        'endpoints': [
-            '/server/actions/batch/execute',  # NEW: Batch execution endpoint
-            '/server/actions/save',
-            '/server/actions/list', 
-            '/server/actions/delete',
-            '/server/actions/all'
-        ]
-    }) 
+    """
+    Health check endpoint for actions service.
+    """
+    try:
+        return jsonify({
+            'success': True,
+            'message': 'Actions service is healthy',
+            'endpoints': [
+                '/server/actions/save',
+                '/server/actions/load-by-ids',
+                '/server/actions/list',
+                '/server/actions/all',
+                '/server/actions/delete',
+                '/server/actions/health'
+            ]
+        })
+    except Exception as e:
+        print(f"[@server_actions_routes:health_check] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500 
