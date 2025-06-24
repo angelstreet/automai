@@ -9,179 +9,218 @@ interface HostWithAVStatus extends Host {
 
 interface UseRecReturn {
   hosts: HostWithAVStatus[];
+  avDevices: Array<{ host: Host; device: any }>; // Add avDevices to return type
   isLoading: boolean;
   error: string | null;
   refreshHosts: () => Promise<void>;
   takeScreenshot: (host: Host, deviceId?: string) => Promise<string | null>;
-  checkAVStatus: (host: Host) => Promise<boolean>;
+  checkAVStatus: (host: Host, deviceId?: string) => Promise<boolean>;
 }
 
 export const useRec = (): UseRecReturn => {
   const [hosts, setHosts] = useState<HostWithAVStatus[]>([]);
+  const [avDevices, setAvDevices] = useState<Array<{ host: Host; device: any }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const fetchInProgressRef = useRef(false);
+  const checkTimeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  // Get hosts from HostManager context instead of direct fetch
-  const { availableHosts, fetchHosts: fetchHostsFromContext } = useHostManager();
+  // Use the new simplified HostManager functions (Phase 3.1)
+  const { getDevicesByCapability, getAllHosts } = useHostManager();
 
-  // Check AV status for a specific host
-  const checkAVStatus = useCallback(async (host: Host): Promise<boolean> => {
-    try {
-      console.log(`[@hook:useRec] Checking AV status for host: ${host.host_name}`);
+  // Get AV-capable devices using the new function
+  const getAVDevices = useCallback(() => {
+    console.log('[@hook:useRec] Getting AV devices using getDevicesByCapability');
+    const avDevices = getDevicesByCapability('av');
+    console.log(`[@hook:useRec] Found ${avDevices.length} AV-capable devices`);
+    return avDevices;
+  }, [getDevicesByCapability]);
 
-      const response = await fetch('/server/av/get-status', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ host }),
-      });
+  // Check AV status for a specific device
+  const checkAVStatus = useCallback(
+    async (host: Host, deviceId: string = 'device1'): Promise<boolean> => {
+      try {
+        console.log(`[@hook:useRec] Checking AV status for ${host.host_name}:${deviceId}`);
 
-      if (!response.ok) {
-        console.log(
-          `[@hook:useRec] AV status check failed for ${host.host_name}: ${response.status}`,
+        // Use server endpoint with proper device_id handling (Phase 3.1)
+        const response = await fetch('/server/av/get-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: host,
+            device_id: deviceId,
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log(
+            `[@hook:useRec] AV status for ${host.host_name}:${deviceId}:`,
+            result.success,
+          );
+          return result.success === true;
+        } else {
+          console.warn(
+            `[@hook:useRec] AV status check failed for ${host.host_name}:${deviceId}:`,
+            response.status,
+          );
+          return false;
+        }
+      } catch (error) {
+        console.error(
+          `[@hook:useRec] Error checking AV status for ${host.host_name}:${deviceId}:`,
+          error,
         );
         return false;
       }
+    },
+    [],
+  );
 
-      const data = await response.json();
-
-      // Trust the server route response - if it says success, it's available
-      const isAvailable = data.success;
-
-      console.log(
-        `[@hook:useRec] AV status for ${host.host_name}: ${isAvailable ? 'available' : 'unavailable'}`,
-      );
-      return isAvailable;
-    } catch (err: any) {
-      console.error(`[@hook:useRec] AV status check error for ${host.host_name}:`, err);
-      return false;
-    }
-  }, []);
-
-  // Fetch all connected hosts and filter for AV capabilities
-  const fetchHosts = useCallback(async () => {
-    // Prevent multiple simultaneous fetch requests
-    if (fetchInProgressRef.current) {
-      console.log('[@hook:useRec] Fetch already in progress, skipping');
-      return;
-    }
-
-    fetchInProgressRef.current = true;
-    setIsLoading(true);
-
-    try {
-      console.log('[@hook:useRec] Fetching connected hosts with AV capabilities');
-
-      // First fetch hosts from context
-      await fetchHostsFromContext();
-
-      // Then filter for AV capabilities
-      console.log(`[@hook:useRec] Received ${availableHosts.length} hosts from context`);
-
-      // Filter hosts that have devices with AV capabilities and are online
-      const avHosts = availableHosts.filter((host: Host) => {
-        const hasDevicesWithAV =
-          host.devices?.some((device: any) => device.capabilities?.av === 'hdmi_stream') || false;
-
-        // Host must be online and have at least one device with AV capability
-        return (
-          host.status === 'online' && host.devices && host.devices.length > 0 && hasDevicesWithAV
-        );
-      });
-
-      console.log(
-        `[@hook:useRec] Found ${avHosts.length} hosts with AV-capable devices out of ${availableHosts.length} total hosts`,
-      );
-
-      // Check AV status for each host and add status property
-      const hostsWithStatus: HostWithAVStatus[] = await Promise.all(
-        avHosts.map(async (host: Host) => {
-          const avStatus = await checkAVStatus(host);
-          return {
-            ...host,
-            avStatus: avStatus ? 'online' : 'offline',
-          };
-        }),
-      );
-
-      console.log(`[@hook:useRec] Processed ${hostsWithStatus.length} hosts with AV status`);
-
-      setHosts(hostsWithStatus);
-      setError(null);
-    } catch (err: any) {
-      console.error('[@hook:useRec] Error fetching hosts:', err);
-      setError(err.message || 'Failed to fetch hosts');
-      setHosts([]);
-    } finally {
-      setIsLoading(false);
-      fetchInProgressRef.current = false;
-    }
-  }, [availableHosts, fetchHostsFromContext, checkAVStatus]);
-
-  // Take screenshot for a specific host and device
+  // Take screenshot for a specific device
   const takeScreenshot = useCallback(
-    async (host: Host, deviceId?: string): Promise<string | null> => {
+    async (host: Host, deviceId: string = 'device1'): Promise<string | null> => {
       try {
-        const deviceInfo = deviceId ? ` device: ${deviceId}` : '';
-        console.log(`[@hook:useRec] Taking screenshot for host: ${host.host_name}${deviceInfo}`);
+        console.log(`[@hook:useRec] Taking screenshot for ${host.host_name}:${deviceId}`);
 
-        const payload = { host };
-        if (deviceId) {
-          (payload as any).device_id = deviceId;
-        }
-
+        // Use server endpoint with proper device_id handling (Phase 3.1)
         const response = await fetch('/server/av/take-screenshot', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            host: host,
+            device_id: deviceId,
+          }),
         });
 
-        if (!response.ok) {
-          throw new Error(`Screenshot failed: ${response.status}`);
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.screenshot_url) {
+            console.log(
+              `[@hook:useRec] Screenshot taken for ${host.host_name}:${deviceId}:`,
+              result.screenshot_url,
+            );
+            return result.screenshot_url;
+          }
         }
 
-        const result = await response.json();
-
-        if (result.success && result.screenshot_url) {
-          console.log(
-            `[@hook:useRec] Screenshot taken for ${host.host_name}${deviceInfo}: ${result.screenshot_url}`,
-          );
-          return result.screenshot_url;
-        } else {
-          console.error(
-            `[@hook:useRec] Screenshot failed for ${host.host_name}${deviceInfo}:`,
-            result.error,
-          );
-          return null;
-        }
-      } catch (err: any) {
-        console.error(`[@hook:useRec] Error taking screenshot for ${host.host_name}:`, err);
+        console.warn(`[@hook:useRec] Screenshot failed for ${host.host_name}:${deviceId}`);
+        return null;
+      } catch (error) {
+        console.error(
+          `[@hook:useRec] Error taking screenshot for ${host.host_name}:${deviceId}:`,
+          error,
+        );
         return null;
       }
     },
     [],
   );
 
-  // Refresh hosts function
-  const refreshHosts = useCallback(async () => {
-    await fetchHosts();
-  }, [fetchHosts]);
+  // Refresh hosts data
+  const refreshHosts = useCallback(async (): Promise<void> => {
+    console.log('[@hook:useRec] Refreshing AV hosts');
+    setIsLoading(true);
+    setError(null);
 
-  // Initial fetch - with ref to prevent React 18 double effects in development
-  const initializedRef = useRef(false);
-  useEffect(() => {
-    if (!initializedRef.current) {
-      initializedRef.current = true;
-      fetchHosts();
+    try {
+      // Get AV devices directly using new function (Phase 3.1)
+      const avDevicesData = getAVDevices();
+      setAvDevices(avDevicesData);
+
+      if (avDevicesData.length === 0) {
+        console.log('[@hook:useRec] No AV devices found');
+        setHosts([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Create unique hosts list from AV devices
+      const uniqueHosts = new Map<string, Host>();
+      avDevicesData.forEach(({ host }) => {
+        uniqueHosts.set(host.host_name, host);
+      });
+
+      // Convert to HostWithAVStatus array and check status for online hosts
+      const hostsToCheck = Array.from(uniqueHosts.values()).map((host) => ({
+        ...host,
+        avStatus: host.status === 'online' ? ('checking' as const) : ('offline' as const),
+      }));
+
+      setHosts(hostsToCheck);
+
+      // Check AV status for online hosts (with device_id from their AV devices)
+      for (const { host, device } of avDevicesData) {
+        if (host.status === 'online') {
+          // Clear any existing timeout for this host
+          const timeoutKey = `${host.host_name}:${device.device_id || 'device1'}`;
+          const existingTimeout = checkTimeoutsRef.current.get(timeoutKey);
+          if (existingTimeout) {
+            clearTimeout(existingTimeout);
+          }
+
+          // Set timeout to check status
+          const timeout = setTimeout(async () => {
+            try {
+              const status = await checkAVStatus(host, device.device_id || 'device1');
+              setHosts((prevHosts) =>
+                prevHosts.map((h) =>
+                  h.host_name === host.host_name
+                    ? { ...h, avStatus: status ? 'online' : 'offline' }
+                    : h,
+                ),
+              );
+            } catch (error) {
+              console.error(`[@hook:useRec] Error checking status for ${host.host_name}:`, error);
+              setHosts((prevHosts) =>
+                prevHosts.map((h) =>
+                  h.host_name === host.host_name ? { ...h, avStatus: 'offline' } : h,
+                ),
+              );
+            } finally {
+              checkTimeoutsRef.current.delete(timeoutKey);
+            }
+          }, 100);
+
+          checkTimeoutsRef.current.set(timeoutKey, timeout);
+        }
+      }
+    } catch (error) {
+      console.error('[@hook:useRec] Error refreshing hosts:', error);
+      setError(error instanceof Error ? error.message : 'Failed to refresh hosts');
+    } finally {
+      setIsLoading(false);
     }
-  }, [fetchHosts]);
+  }, [getAVDevices, checkAVStatus]);
+
+  // Initialize on mount
+  useEffect(() => {
+    console.log('[@hook:useRec] Initializing useRec hook');
+    refreshHosts();
+
+    // Cleanup timeouts on unmount
+    const timeouts = checkTimeoutsRef.current;
+    return () => {
+      timeouts.forEach((timeout) => clearTimeout(timeout));
+      timeouts.clear();
+    };
+  }, [refreshHosts]);
+
+  // Auto-refresh when available hosts change
+  useEffect(() => {
+    const allHosts = getAllHosts();
+    console.log(`[@hook:useRec] Host count changed: ${allHosts.length} hosts available`);
+    if (allHosts.length > 0) {
+      refreshHosts();
+    }
+  }, [getAllHosts, refreshHosts]);
 
   return {
     hosts,
+    avDevices,
     isLoading,
     error,
     refreshHosts,

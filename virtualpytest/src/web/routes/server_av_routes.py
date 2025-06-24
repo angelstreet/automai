@@ -9,23 +9,39 @@ These endpoints run on the server and forward requests to the appropriate host.
 
 from flask import Blueprint, request, jsonify, Response
 import requests
-from src.web.utils.routeUtils import proxy_to_host, get_host_from_request
+from src.web.utils.routeUtils import proxy_to_host, proxy_to_host_with_params, get_host_from_request
 
 # Create blueprint
 av_bp = Blueprint('server_av', __name__, url_prefix='/server/av')
 
 @av_bp.route('/restart-stream', methods=['POST'])
 def restart_stream():
-    """Proxy restart stream request to selected host"""
+    """Proxy restart stream request to selected host with device_id"""
     try:
         print("[@route:server_av:restart_stream] Proxying restart stream request")
         
-        # Get request data
+        # Extract request data
         request_data = request.get_json() or {}
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/restart-stream', 'POST', request_data)
-        
+        host = request_data.get('host')
+        device_id = request_data.get('device_id', 'device1')
+
+        # Validate host
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+
+        print(f"[@route:server_av:restart_stream] Host: {host.get('host_name')}, Device: {device_id}")
+
+        # Add device_id to query params for host route
+        query_params = {'device_id': device_id}
+
+        # Proxy to host with device_id
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/av/restart-stream',
+            'POST',
+            request_data,
+            query_params
+        )
+
         return jsonify(response_data), status_code
         
     except Exception as e:
@@ -36,12 +52,30 @@ def restart_stream():
 
 @av_bp.route('/get-stream-url', methods=['GET', 'POST'])
 def get_stream_url():
-    """Proxy get stream URL request to selected host"""
+    """Proxy get stream URL request to selected host with device_id"""
     try:
         print("[@route:server_av:get_stream_url] Proxying get stream URL request")
         
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/get-stream-url', 'GET')
+        # Extract request data
+        if request.method == 'POST':
+            request_data = request.get_json() or {}
+            device_id = request_data.get('device_id', 'device1')
+        else:
+            device_id = request.args.get('device_id', 'device1')
+            request_data = {}
+
+        print(f"[@route:server_av:get_stream_url] Device: {device_id}")
+
+        # Add device_id to query params for host route
+        query_params = {'device_id': device_id}
+
+        # Proxy to host with device_id
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/av/get-stream-url',
+            'GET',
+            request_data,
+            query_params
+        )
         
         return jsonify(response_data), status_code
         
@@ -158,15 +192,32 @@ def proxy_image_options():
 
 @av_bp.route('/get-status', methods=['GET', 'POST'])
 def get_status():
-    """Proxy get status request to selected host"""
+    """Proxy get status request to selected host with device_id"""
     try:
-        print("[@route:server_av:status] Proxying get status request")
+        print("[@route:server_av:get_status] Proxying get status request")
         
-        # Get request data if POST
-        request_data = request.get_json() if request.method == 'POST' else {}
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/status', 'GET', request_data)
+        # Extract request data
+        if request.method == 'POST':
+            request_data = request.get_json() or {}
+            device_id = request_data.get('device_id', 'device1')
+            host = request_data.get('host')
+        else:
+            device_id = request.args.get('device_id', 'device1')
+            request_data = {}
+            host = None
+
+        print(f"[@route:server_av:get_status] Device: {device_id}")
+
+        # Add device_id to query params for host route
+        query_params = {'device_id': device_id}
+
+        # Proxy to host with device_id
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/av/status',
+            'GET',
+            request_data,
+            query_params
+        )
         
         return jsonify(response_data), status_code
         
@@ -178,15 +229,31 @@ def get_status():
 
 @av_bp.route('/take-screenshot', methods=['POST'])
 def take_screenshot():
-    """Proxy take screenshot request to selected host (temporary nginx storage)"""
+    """Proxy take screenshot request to selected host with device_id"""
     try:
         print("[@route:server_av:take_screenshot] Proxying take screenshot request")
         
-        # Get request data
+        # Extract request data
         request_data = request.get_json() or {}
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/take-screenshot', 'POST', request_data)
+        host = request_data.get('host')
+        device_id = request_data.get('device_id', 'device1')
+
+        # Validate host
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+
+        print(f"[@route:server_av:take_screenshot] Host: {host.get('host_name')}, Device: {device_id}")
+
+        # Add device_id to query params for host route
+        query_params = {'device_id': device_id}
+
+        # Proxy to host with device_id
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/av/take-screenshot',
+            'POST',
+            request_data,
+            query_params
+        )
         
         return jsonify(response_data), status_code
         
@@ -198,15 +265,31 @@ def take_screenshot():
 
 @av_bp.route('/save-screenshot', methods=['POST'])
 def save_screenshot():
-    """Proxy save screenshot request to selected host (uploads to R2)"""
+    """Proxy save screenshot request to selected host with device_id"""
     try:
         print("[@route:server_av:save_screenshot] Proxying save screenshot request")
         
-        # Get request data
+        # Extract request data
         request_data = request.get_json() or {}
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/save-screenshot', 'POST', request_data)
+        host = request_data.get('host')
+        device_id = request_data.get('device_id', 'device1')
+
+        # Validate host
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+
+        print(f"[@route:server_av:save_screenshot] Host: {host.get('host_name')}, Device: {device_id}")
+
+        # Add device_id to query params for host route
+        query_params = {'device_id': device_id}
+
+        # Proxy to host with device_id
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/av/save-screenshot',
+            'POST',
+            request_data,
+            query_params
+        )
         
         return jsonify(response_data), status_code
         
@@ -218,15 +301,31 @@ def save_screenshot():
 
 @av_bp.route('/start-capture', methods=['POST'])
 def start_video_capture():
-    """Proxy start video capture request to selected host"""
+    """Proxy start video capture request to selected host with device_id"""
     try:
         print("[@route:server_av:start_capture] Proxying start video capture request")
         
-        # Get request data
+        # Extract request data
         request_data = request.get_json() or {}
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/start-capture', 'POST', request_data)
+        host = request_data.get('host')
+        device_id = request_data.get('device_id', 'device1')
+
+        # Validate host
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+
+        print(f"[@route:server_av:start_capture] Host: {host.get('host_name')}, Device: {device_id}")
+
+        # Add device_id to query params for host route
+        query_params = {'device_id': device_id}
+
+        # Proxy to host with device_id
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/av/start-capture',
+            'POST',
+            request_data,
+            query_params
+        )
         
         return jsonify(response_data), status_code
         
@@ -238,15 +337,31 @@ def start_video_capture():
 
 @av_bp.route('/stop-capture', methods=['POST'])
 def stop_video_capture():
-    """Proxy stop video capture request to selected host"""
+    """Proxy stop video capture request to selected host with device_id"""
     try:
         print("[@route:server_av:stop_capture] Proxying stop video capture request")
         
-        # Get request data
+        # Extract request data
         request_data = request.get_json() or {}
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/stop-capture', 'POST', request_data)
+        host = request_data.get('host')
+        device_id = request_data.get('device_id', 'device1')
+
+        # Validate host
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+
+        print(f"[@route:server_av:stop_capture] Host: {host.get('host_name')}, Device: {device_id}")
+
+        # Add device_id to query params for host route
+        query_params = {'device_id': device_id}
+
+        # Proxy to host with device_id
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/av/stop-capture',
+            'POST',
+            request_data,
+            query_params
+        )
         
         return jsonify(response_data), status_code
         
@@ -258,15 +373,31 @@ def stop_video_capture():
 
 @av_bp.route('/take-control', methods=['POST'])
 def take_control():
-    """Proxy take control request to selected host"""
+    """Proxy take control request to selected host with device_id"""
     try:
         print("[@route:server_av:take_control] Proxying take control request")
         
-        # Get request data
+        # Extract request data
         request_data = request.get_json() or {}
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/take-control', 'POST', request_data)
+        host = request_data.get('host')
+        device_id = request_data.get('device_id', 'device1')
+
+        # Validate host
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+
+        print(f"[@route:server_av:take_control] Host: {host.get('host_name')}, Device: {device_id}")
+
+        # Add device_id to query params for host route
+        query_params = {'device_id': device_id}
+
+        # Proxy to host with device_id
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/av/take-control',
+            'POST',
+            request_data,
+            query_params
+        )
         
         return jsonify(response_data), status_code
         
@@ -278,15 +409,31 @@ def take_control():
 
 @av_bp.route('/connect', methods=['POST'])
 def connect():
-    """Proxy connect request to selected host"""
+    """Proxy connect request to selected host with device_id"""
     try:
         print("[@route:server_av:connect] Proxying connect request")
         
-        # Get request data
+        # Extract request data
         request_data = request.get_json() or {}
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/connect', 'POST', request_data)
+        host = request_data.get('host')
+        device_id = request_data.get('device_id', 'device1')
+
+        # Validate host
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+
+        print(f"[@route:server_av:connect] Host: {host.get('host_name')}, Device: {device_id}")
+
+        # Add device_id to query params for host route
+        query_params = {'device_id': device_id}
+
+        # Proxy to host with device_id
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/av/connect',
+            'POST',
+            request_data,
+            query_params
+        )
         
         return jsonify(response_data), status_code
         
@@ -298,15 +445,31 @@ def connect():
 
 @av_bp.route('/disconnect', methods=['POST'])
 def disconnect():
-    """Proxy disconnect request to selected host"""
+    """Proxy disconnect request to selected host with device_id"""
     try:
         print("[@route:server_av:disconnect] Proxying disconnect request")
         
-        # Get request data
+        # Extract request data
         request_data = request.get_json() or {}
-        
-        # Proxy to host
-        response_data, status_code = proxy_to_host('/host/av/disconnect', 'POST', request_data)
+        host = request_data.get('host')
+        device_id = request_data.get('device_id', 'device1')
+
+        # Validate host
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+
+        print(f"[@route:server_av:disconnect] Host: {host.get('host_name')}, Device: {device_id}")
+
+        # Add device_id to query params for host route
+        query_params = {'device_id': device_id}
+
+        # Proxy to host with device_id
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/av/disconnect',
+            'POST',
+            request_data,
+            query_params
+        )
         
         return jsonify(response_data), status_code
         

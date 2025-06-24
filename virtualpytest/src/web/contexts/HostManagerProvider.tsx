@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useRegistration } from '../hooks/useRegistration';
 import { useUserSession } from '../hooks/useUserSession';
 import { Host } from '../types/common/Host_Types';
+
 import { HostManagerContext } from './HostManagerContext';
 
 interface HostManagerProviderProps {
@@ -50,6 +51,81 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
   // Get registration context for host management
   const { availableHosts, getHostByName, fetchHosts } = useRegistration();
+
+  // ========================================
+  // NEW: DIRECT DATA ACCESS FUNCTIONS (Phase 1.2)
+  // ========================================
+
+  // Get all hosts without filtering (raw data from server)
+  const getAllHosts = useCallback((): Host[] => {
+    console.log(
+      `[@context:HostManagerProvider] getAllHosts() called, returning ${availableHosts.length} hosts`,
+    );
+    return availableHosts;
+  }, [availableHosts]);
+
+  // Get hosts filtered by device models
+  const getHostsByModel = useCallback(
+    (models: string[]): Host[] => {
+      console.log(`[@context:HostManagerProvider] getHostsByModel() called with models:`, models);
+      const filtered = availableHosts.filter((host) =>
+        host.devices?.some((device) => models.includes(device.model)),
+      );
+      console.log(
+        `[@context:HostManagerProvider] getHostsByModel() returning ${filtered.length}/${availableHosts.length} hosts`,
+      );
+      return filtered;
+    },
+    [availableHosts],
+  );
+
+  // Get all devices from all available hosts
+  const getAllDevices = useCallback((): any[] => {
+    const allDevices = availableHosts.flatMap((host) =>
+      (host.devices || []).map((device) => ({ ...device, hostName: host.host_name })),
+    );
+    console.log(
+      `[@context:HostManagerProvider] getAllDevices() returning ${allDevices.length} devices from ${availableHosts.length} hosts`,
+    );
+    return allDevices;
+  }, [availableHosts]);
+
+  // Get all devices from specific host
+  const getDevicesFromHost = useCallback(
+    (hostName: string): any[] => {
+      const host = availableHosts.find((h) => h.host_name === hostName);
+      const devices = host?.devices || [];
+      console.log(
+        `[@context:HostManagerProvider] getDevicesFromHost(${hostName}) returning ${devices.length} devices`,
+      );
+      return devices;
+    },
+    [availableHosts],
+  );
+
+  // Get devices with specific capability, returning {host, device} pairs
+  const getDevicesByCapability = useCallback(
+    (capability: string): { host: Host; device: any }[] => {
+      const matchingDevices: { host: Host; device: any }[] = [];
+
+      availableHosts.forEach((host) => {
+        if (host.devices) {
+          host.devices.forEach((device) => {
+            // Check if device has the specified capability (using type assertion for dynamic property access)
+            if ((device as any)[capability]) {
+              matchingDevices.push({ host, device });
+            }
+          });
+        }
+      });
+
+      console.log(
+        `[@context:HostManagerProvider] getDevicesByCapability(${capability}) returning ${matchingDevices.length} device-host pairs`,
+      );
+      return matchingDevices;
+    },
+    [availableHosts],
+  );
 
   // ========================================
   // DEVICE CONTROL HANDLERS
@@ -459,6 +535,27 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       availableHosts: filteredAvailableHosts,
       getHostByName,
       fetchHosts,
+
+      // NEW: Direct data access functions (Phase 1.2)
+      getAllHosts,
+      getHostsByModel,
+      getAllDevices,
+      getDevicesFromHost,
+      getDevicesByCapability,
+
+      // Panel and control actions
+      setSelectedHost,
+      setIsControlActive,
+      setIsRemotePanelOpen,
+      setShowRemotePanel,
+      setShowAVPanel,
+      setIsVerificationActive: (active: boolean) => _setIsVerificationActive(active),
+
+      // Lock management
+      reclaimLocks: async () => {
+        await reclaimUserLocks();
+        return true;
+      },
 
       // Device control methods
       takeControl,

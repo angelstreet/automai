@@ -17,7 +17,7 @@ import {
   Paper,
   Chip,
 } from '@mui/material';
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 import { RecHostPreview } from '../components/rec/RecHostPreview';
 import { HostManagerProvider } from '../contexts/HostManagerProvider';
@@ -27,7 +27,7 @@ type ViewMode = 'grid' | 'table';
 
 // Inner component that uses the useRec hook
 const RecContent: React.FC = () => {
-  const { hosts, isLoading, error, refreshHosts, takeScreenshot } = useRec();
+  const { avDevices, isLoading, error, refreshHosts, takeScreenshot } = useRec();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [autoRefresh, _setAutoRefresh] = useState(true); // Renamed to _setAutoRefresh to indicate it's not used
 
@@ -57,25 +57,10 @@ const RecContent: React.FC = () => {
     await refreshHosts();
   }, [refreshHosts]);
 
-  // Memoize AV devices calculation to prevent repetitive logging
-  const avDevices = useMemo(() => {
-    const devices: Array<{ host: any; device: any }> = [];
-
-    hosts.forEach((host) => {
-      if (host.devices && host.devices.length > 0) {
-        // Filter devices that have AV capability (hdmi_stream)
-        host.devices.forEach((device) => {
-          if (device.capabilities?.av === 'hdmi_stream') {
-            devices.push({ host, device });
-          }
-        });
-      }
-    });
-
-    // Only log when the count actually changes
-    console.log(`[@page:Rec] Found ${devices.length} devices with AV capability`);
-    return devices;
-  }, [hosts]);
+  // Log AV devices count
+  useEffect(() => {
+    console.log(`[@page:Rec] Found ${avDevices.length} devices with AV capability`);
+  }, [avDevices.length]);
 
   // Render grid view - now shows individual devices
   const renderGridView = () => {

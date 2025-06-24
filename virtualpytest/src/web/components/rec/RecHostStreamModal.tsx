@@ -10,6 +10,7 @@ import { RemotePanel } from '../controller/remote/RemotePanel';
 
 interface RecHostStreamModalProps {
   host: Host | null;
+  device?: any; // Optional device for device-specific operations
   isOpen: boolean;
   onClose: () => void;
   showRemoteByDefault?: boolean;
@@ -18,6 +19,7 @@ interface RecHostStreamModalProps {
 
 export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
   host,
+  device,
   isOpen,
   onClose,
   showRemoteByDefault = false,
@@ -98,6 +100,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
         },
         body: JSON.stringify({
           host: host,
+          device_id: device?.device_id || 'device1',
         }),
       });
 

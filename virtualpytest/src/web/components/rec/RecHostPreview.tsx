@@ -319,6 +319,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       {/* Stream Modal */}
       <RecHostStreamModal
         host={host}
+        device={device}
         isOpen={isStreamModalOpen}
         onClose={handleCloseStreamModal}
         showRemoteByDefault={false}

@@ -20,6 +20,13 @@ export interface HostManagerContextType {
   getHostByName: (name: string) => Host | null;
   fetchHosts: () => void;
 
+  // NEW: Direct data access functions (Phase 1.1)
+  getAllHosts: () => Host[];
+  getHostsByModel: (models: string[]) => Host[];
+  getAllDevices: () => any[];
+  getDevicesFromHost: (hostName: string) => any[];
+  getDevicesByCapability: (capability: string) => { host: Host; device: any }[];
+
   // Device control functions
   takeControl: (
     hostName: string,
@@ -52,10 +59,21 @@ export interface HostManagerContextType {
   handleToggleRemotePanel: () => void;
   handleConnectionChange: (connected: boolean) => void;
   handleDisconnectComplete: () => void;
+
+  // Panel and control actions
+  setSelectedHost: (host: Host | null) => void;
+  setIsControlActive: (active: boolean) => void;
+  setIsRemotePanelOpen: (open: boolean) => void;
+  setShowRemotePanel: (show: boolean) => void;
+  setShowAVPanel: (show: boolean) => void;
+  setIsVerificationActive: (active: boolean) => void;
+
+  // Lock management
+  reclaimLocks: () => Promise<boolean>;
 }
 
 // ========================================
 // CONTEXT
 // ========================================
 
-export const HostManagerContext = createContext<HostManagerContextType | null>(null);
+export const HostManagerContext = createContext<HostManagerContextType | undefined>(undefined);
