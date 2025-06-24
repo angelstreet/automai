@@ -110,11 +110,11 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
 
       console.log(`[@hook:useAndroidMobile] Executing tap at (${x}, ${y})`);
       try {
-        const response = await fetch('/server/remote/tap', {
+        const response = await fetch('/server/remote/tap-coordinates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            host_name: stableHostData.host_name,
+            host: stableHostData,
             device_id: deviceId,
             x,
             y,
@@ -139,18 +139,18 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
     }
 
     try {
-      const response = await fetch('/server/android/screenshot', {
+      const response = await fetch('/server/remote/take-screenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          host_name: stableHostData.host_name,
+          host: stableHostData,
           device_id: deviceId,
         }),
       });
 
       const result = await response.json();
-      if (result.success && result.screenshot_path) {
-        setAndroidScreenshot(result.screenshot_path);
+      if (result.success && result.screenshot) {
+        setAndroidScreenshot(result.screenshot);
       }
     } catch (error) {
       console.error('[@hook:useAndroidMobile] Screenshot error:', error);
@@ -165,11 +165,11 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
 
     setIsDumpingUI(true);
     try {
-      const response = await fetch('/server/android/elements', {
+      const response = await fetch('/server/remote/dump-ui', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          host_name: stableHostData.host_name,
+          host: stableHostData,
           device_id: deviceId,
         }),
       });
@@ -193,11 +193,11 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
 
     setIsRefreshingApps(true);
     try {
-      const response = await fetch('/server/android/apps', {
+      const response = await fetch('/server/remote/get-apps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          host_name: stableHostData.host_name,
+          host: stableHostData,
           device_id: deviceId,
         }),
       });
@@ -222,10 +222,34 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
     setIsDisconnecting(false);
   }, []);
 
-  const handleOverlayElementClick = useCallback(async (element: AndroidElement) => {
-    console.log(`[@hook:useAndroidMobile] Element clicked: ${element.id}`);
-    // Add element click logic here
-  }, []);
+  const handleOverlayElementClick = useCallback(
+    async (element: AndroidElement) => {
+      if (!stableHostData) {
+        console.warn('[@hook:useAndroidMobile] No host data available for element click');
+        return;
+      }
+
+      console.log(`[@hook:useAndroidMobile] Element clicked: ${element.id}`);
+      try {
+        const response = await fetch('/server/remote/execute-command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            host: stableHostData,
+            device_id: deviceId,
+            command: 'click_element_by_id',
+            params: { element_id: element.id },
+          }),
+        });
+
+        const result = await response.json();
+        console.log('[@hook:useAndroidMobile] Element click result:', result);
+      } catch (error) {
+        console.error('[@hook:useAndroidMobile] Element click error:', error);
+      }
+    },
+    [stableHostData, deviceId],
+  );
 
   const handleRemoteCommand = useCallback(
     async (command: string) => {
@@ -240,7 +264,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            host_name: stableHostData.host_name,
+            host: stableHostData,
             device_id: deviceId,
             command: 'press_key',
             params: { key: command },

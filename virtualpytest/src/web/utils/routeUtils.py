@@ -12,29 +12,20 @@ import json
 def get_host_from_request():
     """
     Get host information from request data.
-    Frontend can provide:
-    - GET: host_name in query params (simple)
-    - POST: full host object in body (efficient - has host_url)
+    Frontend must provide full host object in request body.
     
     Returns:
         Tuple of (host_info, error_message)
     """
     try:
-        if request.method == 'GET':
-            host_name = request.args.get('host_name')
-            if not host_name:
-                return None, 'host_name parameter required'
-            # Simple host info for buildHostUrl
-            return {'host_name': host_name}, None
-        else:
-            data = request.get_json() or {}
-            host_object = data.get('host')
+        data = request.get_json() or {}
+        host_object = data.get('host')
+        
+        if not host_object:
+            return None, 'host object required in request body'
             
-            if not host_object:
-                return None, 'host object required in request body'
-                
-            # Full host object with host_url - most efficient
-            return host_object, None
+        # Full host object with host_url - most efficient
+        return host_object, None
                 
     except Exception as e:
         return None, f'Error getting host from request: {str(e)}'
