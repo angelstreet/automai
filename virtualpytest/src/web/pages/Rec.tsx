@@ -27,21 +27,40 @@ type ViewMode = 'grid' | 'table';
 // REC page - directly uses the global HostManagerProvider from App.tsx
 // No local HostManagerProvider needed since we only need AV capability filtering
 const Rec: React.FC = () => {
-  const { avDevices, isLoading, error, refreshHosts, takeScreenshot } = useRec();
+  const { avDevices, isLoading, error, refreshHosts } = useRec();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [autoRefresh, _setAutoRefresh] = useState(true); // Renamed to _setAutoRefresh to indicate it's not used
 
-  // Auto-refresh hosts every 30 seconds
-  useEffect(() => {
-    if (autoRefresh) {
-      const interval = setInterval(() => {
-        console.log('[@page:Rec] Auto-refreshing hosts list');
-        refreshHosts();
-      }, 30000);
+  // Handle take screenshot - now each component handles this independently
+  const handleTakeScreenshot = useCallback(async (host: any, deviceId?: string) => {
+    try {
+      console.log(`[@page:Rec] Taking screenshot for ${host.host_name}:${deviceId || 'device1'}`);
 
-      return () => clearInterval(interval);
+      const response = await fetch('/server/av/take-screenshot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host: host,
+          device_id: deviceId || 'device1',
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.screenshot_url) {
+          console.log(`[@page:Rec] Screenshot taken: ${result.screenshot_url}`);
+          return result.screenshot_url;
+        }
+      }
+
+      console.warn(`[@page:Rec] Screenshot failed for ${host.host_name}`);
+      return null;
+    } catch (error) {
+      console.error(`[@page:Rec] Error taking screenshot:`, error);
+      return null;
     }
-  }, [autoRefresh, refreshHosts]);
+  }, []);
 
   // Handle view mode change
   const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, newViewMode: ViewMode) => {
