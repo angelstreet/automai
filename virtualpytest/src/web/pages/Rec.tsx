@@ -20,13 +20,13 @@ import {
 import React, { useState, useEffect, useCallback } from 'react';
 
 import { RecHostPreview } from '../components/rec/RecHostPreview';
-import { HostManagerProvider } from '../contexts/HostManagerProvider';
 import { useRec } from '../hooks/pages/useRec';
 
 type ViewMode = 'grid' | 'table';
 
-// Inner component that uses the useRec hook
-const RecContent: React.FC = () => {
+// REC page - directly uses the global HostManagerProvider from App.tsx
+// No local HostManagerProvider needed since we only need AV capability filtering
+const Rec: React.FC = () => {
   const { avDevices, isLoading, error, refreshHosts, takeScreenshot } = useRec();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [autoRefresh, _setAutoRefresh] = useState(true); // Renamed to _setAutoRefresh to indicate it's not used
@@ -100,7 +100,7 @@ const RecContent: React.FC = () => {
                   {host.host_name} - {device.name}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {device.model} • {device.device_ip}:{device.device_port}
+                  {device.model} • {device.device_ip || 'N/A'}:{device.device_port || 'N/A'}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', gap: 1 }}>
@@ -111,9 +111,9 @@ const RecContent: React.FC = () => {
                   variant="outlined"
                 />
                 <Chip
-                  label={`AV: ${host.avStatus}`}
+                  label={`AV: ${device.capabilities.av || 'unknown'}`}
                   size="small"
-                  color={host.avStatus === 'online' ? 'success' : 'error'}
+                  color={host.status === 'online' ? 'success' : 'error'}
                   variant="outlined"
                 />
                 <Button
@@ -199,22 +199,6 @@ const RecContent: React.FC = () => {
         renderTableView()
       )}
     </Box>
-  );
-};
-
-// Main Rec component that wraps RecContent with HostManagerProvider
-const Rec: React.FC = () => {
-  // Define the userInterface with models for AV devices
-  // We need to specify the actual device models that support AV capabilities
-  // These might be 'android_tv', 'roku', 'apple_tv', etc.
-  const userInterface = {
-    models: [], // Empty array to show all devices, since we filter by capabilities in useRec
-  };
-
-  return (
-    <HostManagerProvider userInterface={userInterface}>
-      <RecContent />
-    </HostManagerProvider>
   );
 };
 
