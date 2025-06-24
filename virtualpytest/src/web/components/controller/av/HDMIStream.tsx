@@ -14,6 +14,7 @@ import React from 'react';
 
 import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
 import { useHdmiStream } from '../../../hooks/controller';
+import { useStream } from '../../../hooks/useStream';
 import { Host } from '../../../types/common/Host_Types';
 import { buildCaptureUrl } from '../../../utils/buildUrlUtils';
 import { VerificationEditor } from '../verification';
@@ -25,6 +26,8 @@ import { VideoCapture } from './VideoCapture';
 
 interface HDMIStreamProps {
   host: Host;
+  device_id: string;
+  device_model?: string;
   onCollapsedChange?: (isCollapsed: boolean) => void;
   onMinimizedChange?: (isMinimized: boolean) => void;
   onCaptureModeChange?: (mode: 'stream' | 'screenshot' | 'video') => void;
@@ -34,16 +37,21 @@ interface HDMIStreamProps {
 export const HDMIStream = React.memo(
   function HDMIStream({
     host,
+    device_id,
+    device_model,
     onCollapsedChange,
     onMinimizedChange,
     onCaptureModeChange,
     sx = {},
   }: HDMIStreamProps) {
-    console.log('[@component:HDMIStream] Component rendering with host:', host.host_name);
+    console.log(
+      '[@component:HDMIStream] Component rendering with host:',
+      host.host_name,
+      'device_id:',
+      device_id,
+    );
 
-    // Stream URL fetching state
-    const [streamUrl, setStreamUrl] = useState<string>('');
-    const [isStreamActive, setIsStreamActive] = useState<boolean>(false);
+    // Stream state
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
     const [isMinimized, setIsMinimized] = useState<boolean>(false);
     const [isScreenshotLoading, setIsScreenshotLoading] = useState<boolean>(false);
@@ -51,20 +59,31 @@ export const HDMIStream = React.memo(
     // AV config state
     const [avConfig, setAvConfig] = useState<any>(null);
 
+    // Use new stream hook - auto-fetches when host/device_id changes
+    const { streamUrl, isLoadingUrl, urlError } = useStream({ host, device_id });
+    const isStreamActive = !!streamUrl && !isLoadingUrl;
+
+    // Get device model from device or use override
+    const effectiveDeviceModel = useMemo(() => {
+      if (device_model) return device_model;
+      const device = host.devices?.find((d) => d.device_id === device_id);
+      return device?.model || 'unknown';
+    }, [device_model, host.devices, device_id]);
+
     // Load AV config
     useEffect(() => {
       const loadConfig = async () => {
-        const config = await loadAVConfig('hdmi_stream', host.device_model);
+        const config = await loadAVConfig('hdmi_stream', effectiveDeviceModel);
         setAvConfig(config);
       };
 
       loadConfig();
-    }, [host.device_model]);
+    }, [effectiveDeviceModel]);
 
     // Get configurable layout from AV config - memoized to prevent infinite loops
     const panelLayout = useMemo(() => {
-      return getConfigurableAVPanelLayout(host.device_model, avConfig);
-    }, [host.device_model, avConfig]);
+      return getConfigurableAVPanelLayout(effectiveDeviceModel, avConfig);
+    }, [effectiveDeviceModel, avConfig]);
 
     // Use the existing hook with our fetched stream data
     const {
@@ -90,54 +109,16 @@ export const HDMIStream = React.memo(
       handleTakeScreenshot: hookTakeScreenshot,
     } = useHdmiStream({
       host,
-      streamUrl,
+      streamUrl: streamUrl || '', // Handle null by providing empty string fallback
       isStreamActive,
     });
 
-    // Fetch stream URL from server
-    const fetchStreamUrl = useCallback(async () => {
-      if (!host) return;
-
-      try {
-        console.log(`[@component:HDMIStream] Fetching stream URL for host: ${host.host_name}`);
-
-        const response = await fetch('/server/av/get-stream-url', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            host: host,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success && result.stream_url) {
-          console.log(`[@component:HDMIStream] Stream URL received: ${result.stream_url}`);
-          // Set both URL and active state together to prevent double initialization
-          if (result.stream_url !== streamUrl) {
-            setStreamUrl(result.stream_url);
-            setIsStreamActive(true);
-          } else if (!isStreamActive) {
-            setIsStreamActive(true);
-          }
-        } else {
-          console.error(`[@component:HDMIStream] Failed to get stream URL:`, result.error);
-          setStreamUrl('');
-          setIsStreamActive(false);
-        }
-      } catch (error) {
-        console.error(`[@component:HDMIStream] Error getting stream URL:`, error);
-        setStreamUrl('');
-        setIsStreamActive(false);
-      }
-    }, [host.host_name, host.device_model, host.device_ip]); // Only depend on specific host properties that matter
-
-    // Initialize stream URL on mount and when host changes
+    // Show URL error if stream fetch failed
     useEffect(() => {
-      fetchStreamUrl();
-    }, [fetchStreamUrl]);
+      if (urlError) {
+        console.error(`[@component:HDMIStream] Stream URL error: ${urlError}`);
+      }
+    }, [urlError]);
 
     // Enhanced screenshot handler that updates capture mode
     const handleTakeScreenshot = useCallback(async () => {
@@ -217,13 +198,13 @@ export const HDMIStream = React.memo(
         setIsExpanded(false);
         onMinimizedChange?.(false);
         console.log(
-          `[@component:HDMIStream] Restored from minimized to collapsed for ${host.device_model}`,
+          `[@component:HDMIStream] Restored from minimized to collapsed for ${effectiveDeviceModel}`,
         );
       } else {
         // Minimize the panel
         setIsMinimized(true);
         onMinimizedChange?.(true);
-        console.log(`[@component:HDMIStream] Minimized panel for ${host.device_model}`);
+        console.log(`[@component:HDMIStream] Minimized panel for ${effectiveDeviceModel}`);
       }
     };
 
@@ -233,7 +214,7 @@ export const HDMIStream = React.memo(
         setIsMinimized(false);
         setIsExpanded(false);
         console.log(
-          `[@component:HDMIStream] Restored from minimized to collapsed for ${host.device_model}`,
+          `[@component:HDMIStream] Restored from minimized to collapsed for ${effectiveDeviceModel}`,
         );
       } else {
         // Normal expand/collapse logic
@@ -241,7 +222,7 @@ export const HDMIStream = React.memo(
         setIsExpanded(newExpanded);
         onCollapsedChange?.(!newExpanded);
         console.log(
-          `[@component:HDMIStream] Toggling panel state to ${newExpanded ? 'expanded' : 'collapsed'} for ${host.device_model}`,
+          `[@component:HDMIStream] Toggling panel state to ${newExpanded ? 'expanded' : 'collapsed'} for ${effectiveDeviceModel}`,
         );
       }
     };
@@ -465,10 +446,10 @@ export const HDMIStream = React.memo(
                 {/* Stream viewer - always rendered in background */}
                 <StreamViewer
                   key="stream-viewer"
-                  streamUrl={streamUrl}
+                  streamUrl={streamUrl || undefined}
                   isStreamActive={isStreamActive}
                   isCapturing={isCaptureActive}
-                  model={host.device_model}
+                  model={effectiveDeviceModel}
                   isExpanded={isExpanded}
                   sx={{
                     position: 'absolute',
@@ -489,7 +470,7 @@ export const HDMIStream = React.memo(
                     onImageLoad={handleImageLoad}
                     selectedArea={selectedArea}
                     onAreaSelected={handleAreaSelected}
-                    model={host.device_model}
+                    model={effectiveDeviceModel}
                     selectedHost={host}
                     sx={{
                       position: 'absolute',
@@ -513,7 +494,7 @@ export const HDMIStream = React.memo(
                     onAreaSelected={handleAreaSelected}
                     isCapturing={isCaptureActive}
                     videoFramePath={currentVideoFramePath} // Pass current frame URL
-                    model={host.device_model}
+                    model={effectiveDeviceModel}
                     sx={{
                       position: 'absolute',
                       top: 0,

@@ -8,6 +8,7 @@ import {
   AndroidApp,
   RemoteType,
 } from '../../types/controller/Remote_Types';
+import { useDeviceControl } from '../useDeviceControl';
 import { useHostManager } from '../useHostManager';
 
 import { getRemoteConfig } from './useRemoteConfigs';
@@ -25,12 +26,18 @@ const initialSession: RemoteSession = {
 };
 
 export function useRemoteConnection(remoteType: RemoteType) {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Get selected host from host manager context
   const { selectedHost } = useHostManager();
+
+  // NEW: Use device control hook (replaces all duplicate control logic)
+  const { isControlActive, isControlLoading, controlError, handleToggleControl, clearError } =
+    useDeviceControl({
+      host: selectedHost,
+      sessionId: 'remote-connection-session',
+      autoCleanup: true, // Auto-release on unmount
+    });
 
   // Original interface state
   const [session, setSession] = useState<RemoteSession>(initialSession);
@@ -95,78 +102,39 @@ export function useRemoteConnection(remoteType: RemoteType) {
     }
   }, [deviceConfig, remoteType]);
 
-  const handleTakeControl = useCallback(async () => {
-    if (!deviceConfig || !selectedHost) {
-      console.error('[@hook:useRemoteConnection] No device config or selected host available');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      console.log(
-        '[@hook:useRemoteConnection] Starting take control process for:',
-        selectedHost.host_name,
-      );
-
-      // Simplified validation - device_ip is optional now
-      if (connectionForm.device_ip && !connectionForm.device_ip.trim()) {
-        const errorMsg = 'Device IP is required';
-        console.error('[@hook:useRemoteConnection]', errorMsg);
-        setError(errorMsg);
-        return;
-      }
-
-      console.log('[@hook:useRemoteConnection] Control already taken by navigation editor');
-
-      // Control is already taken by navigation editor, just set connected state
-      console.log(`[@hook:useRemoteConnection] Successfully connected to ${deviceConfig.name}`);
+  // Sync session state with device control state
+  useEffect(() => {
+    if (isControlActive) {
       setSession({
         connected: true,
-        connectionInfo: connectionForm.device_ip || 'Connected via navigation editor',
+        connectionInfo: connectionForm.device_ip || 'Connected via device control',
       });
-      setError(null);
-      console.log('[@hook:useRemoteConnection] Remote is ready');
-    } catch (err: any) {
-      const errorMsg = err.message || 'Connection failed - network or server error';
-      console.error('[@hook:useRemoteConnection] Exception during connection:', err);
-      setError(errorMsg);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [connectionForm, deviceConfig, selectedHost]);
-
-  const handleReleaseControl = useCallback(async () => {
-    if (!deviceConfig || !selectedHost) {
-      console.error('[@hook:useRemoteConnection] No device config or selected host available');
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      console.log('[@hook:useRemoteConnection] Releasing control...');
-
-      // Control is managed by navigation editor, no status check needed
-      console.log('[@hook:useRemoteConnection] Control released by navigation editor');
-
-      console.log('[@hook:useRemoteConnection] Control released successfully');
-    } catch (err: any) {
-      console.error('[@hook:useRemoteConnection] Release control error:', err);
-    } finally {
-      // Always reset session state and clear data
+    } else {
       setSession(initialSession);
       setAndroidScreenshot(null);
       setAndroidElements([]);
       setAndroidApps([]);
-      setIsLoading(false);
-      console.log(
-        '[@hook:useRemoteConnection] Session state reset, connect button should be re-enabled',
-      );
     }
-  }, [deviceConfig, selectedHost]);
+  }, [isControlActive, connectionForm.device_ip]);
+
+  // Show control errors
+  useEffect(() => {
+    if (controlError) {
+      setError(controlError);
+      clearError();
+    }
+  }, [controlError, clearError]);
+
+  // NEW: Simplified control handlers using useDeviceControl
+  const handleTakeControl = useCallback(async () => {
+    setError(null);
+    await handleToggleControl();
+  }, [handleToggleControl]);
+
+  const handleReleaseControl = useCallback(async () => {
+    setError(null);
+    await handleToggleControl();
+  }, [handleToggleControl]);
 
   const handleScreenshot = useCallback(async () => {
     if (!selectedHost) {
@@ -398,7 +366,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     session,
     connectionForm,
     setConnectionForm,
-    isLoading,
+    isLoading: isControlLoading,
     error,
     remoteConfig,
     androidScreenshot,
@@ -407,7 +375,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
     androidElements,
     androidApps,
 
-    // Core methods
+    // Core methods (now using useDeviceControl)
     handleTakeControl,
     handleReleaseControl,
     handleScreenshot,

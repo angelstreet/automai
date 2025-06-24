@@ -1,7 +1,7 @@
 import { AppBar, Toolbar, Typography, Box } from '@mui/material';
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 
-import { useHostManager } from '../../hooks/useHostManager';
+import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useToast } from '../../hooks/useToast';
 import {
   ValidationPreviewClient,
@@ -26,7 +26,6 @@ export const NavigationEditorHeader: React.FC<{
   treeId: string;
   selectedHost: any; // Full host object
   selectedDeviceId?: string | null; // Selected device ID
-  isControlActive: boolean;
   isRemotePanelOpen: boolean;
   // Host data (filtered by interface models)
   availableHosts: any[];
@@ -57,7 +56,6 @@ export const NavigationEditorHeader: React.FC<{
   treeId,
   selectedHost,
   selectedDeviceId,
-  isControlActive,
   isRemotePanelOpen,
   // Host data (filtered by interface models)
   availableHosts,
@@ -74,98 +72,29 @@ export const NavigationEditorHeader: React.FC<{
   onUpdateNode,
   onUpdateEdge,
 }) => {
-  // Get device control functions
-  const { takeControl, releaseControl, isDeviceLocked: isDeviceLockedByHost } = useHostManager();
-
   // Get toast notifications
-  const { showError, showSuccess, showWarning } = useToast();
+  const { showError } = useToast();
 
-  // Local state for control loading
-  const [isControlLoading, setIsControlLoading] = useState(false);
+  // NEW: Use device control hook (replaces all duplicate control logic)
+  const { isControlActive, isControlLoading, controlError, handleToggleControl, clearError } =
+    useDeviceControl({
+      host: selectedHost,
+      sessionId: 'navigation-editor-session',
+      autoCleanup: true, // Auto-release on unmount
+    });
 
-  // Create adapter function to match expected signature (hostName -> boolean)
-  const isDeviceLocked = (hostName: string): boolean => {
-    const host = availableHosts.find((h) => h.host_name === hostName) || null;
-    return isDeviceLockedByHost(host);
-  };
+  // Sync control state with parent component
+  React.useEffect(() => {
+    onControlStateChange(isControlActive);
+  }, [isControlActive, onControlStateChange]);
 
-  // Handle take control using hook's business logic
-  const handleTakeControl = useCallback(async () => {
-    if (!selectedHost) {
-      console.warn('[@component:NavigationEditorHeader] No device selected for take control');
-      showWarning('Please select a device first');
-      return;
+  // Show control errors
+  React.useEffect(() => {
+    if (controlError) {
+      showError(controlError);
+      clearError();
     }
-
-    console.log(
-      `[@component:NavigationEditorHeader] ${isControlActive ? 'Releasing' : 'Taking'} control of device: ${selectedHost.host_name}`,
-    );
-    setIsControlLoading(true);
-
-    try {
-      if (isControlActive) {
-        // Release control using hook
-        const result = await releaseControl(selectedHost.host_name, 'navigation-editor-session');
-
-        if (result.success) {
-          console.log(
-            `[@component:NavigationEditorHeader] Successfully released control of device: ${selectedHost.host_name}`,
-          );
-          onControlStateChange(false);
-
-          // Host data is automatically updated via HostManagerContext
-        } else {
-          console.error(`[@component:NavigationEditorHeader] Failed to release control:`, result);
-          showError(result.error || 'Failed to release control of device');
-          onControlStateChange(false);
-        }
-      } else {
-        // Take control using hook
-        const result = await takeControl(selectedHost.host_name, 'navigation-editor-session');
-
-        if (result.success) {
-          console.log(
-            `[@component:NavigationEditorHeader] Successfully took control of device: ${selectedHost.host_name}`,
-          );
-          onControlStateChange(true);
-
-          // Host data is automatically updated via HostManagerContext
-        } else {
-          console.error(`[@component:NavigationEditorHeader] Failed to take control:`, result);
-
-          // Handle specific error types with appropriate toast duration
-          if (
-            result.errorType === 'stream_service_error' ||
-            result.errorType === 'adb_connection_error'
-          ) {
-            showError(result.error || 'Service error occurred', { duration: 6000 });
-          } else {
-            showError(result.error || 'Failed to take control of device');
-          }
-
-          onControlStateChange(false);
-        }
-      }
-    } catch (error: any) {
-      console.error(
-        '[@component:NavigationEditorHeader] Exception during control operation:',
-        error,
-      );
-      showError(`Unexpected error: ${error.message || 'Failed to communicate with server'}`);
-      onControlStateChange(false);
-    } finally {
-      setIsControlLoading(false);
-    }
-  }, [
-    selectedHost,
-    isControlActive,
-    takeControl,
-    releaseControl,
-    onControlStateChange,
-    showError,
-    showSuccess,
-    showWarning,
-  ]);
+  }, [controlError, showError, clearError]);
 
   return (
     <>
@@ -239,9 +168,9 @@ export const NavigationEditorHeader: React.FC<{
               isControlLoading={isControlLoading}
               isRemotePanelOpen={isRemotePanelOpen}
               availableHosts={availableHosts}
-              isDeviceLocked={isDeviceLocked}
+              isDeviceLocked={() => false} // Simplified - useDeviceControl handles lock logic
               onDeviceSelect={onDeviceSelect}
-              onTakeControl={handleTakeControl}
+              onTakeControl={handleToggleControl}
               onToggleRemotePanel={onToggleRemotePanel}
             />
           </Box>

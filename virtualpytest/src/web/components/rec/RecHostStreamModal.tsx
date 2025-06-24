@@ -2,10 +2,11 @@ import { Close as CloseIcon, Tv as TvIcon } from '@mui/icons-material';
 import { Box, IconButton, Typography, Button, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
-import { useHostManager } from '../../hooks/useHostManager';
+import { useDeviceControl } from '../../hooks/useDeviceControl';
+import { useStream } from '../../hooks/useStream';
 import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
-import { StreamViewer } from '../controller/av/StreamViewer';
+import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
 import { RemotePanel } from '../controller/remote/RemotePanel';
 
 interface RecHostStreamModalProps {
@@ -14,7 +15,6 @@ interface RecHostStreamModalProps {
   isOpen: boolean;
   onClose: () => void;
   showRemoteByDefault?: boolean;
-  initialControlActive?: boolean;
 }
 
 export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
@@ -23,26 +23,26 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
   isOpen,
   onClose,
   showRemoteByDefault = false,
-  initialControlActive = false,
 }) => {
   // Local state
-  const [streamUrl, setStreamUrl] = useState<string>('');
-  const [isStreamActive, setIsStreamActive] = useState<boolean>(false);
   const [showRemote, setShowRemote] = useState<boolean>(showRemoteByDefault);
-  const [isControlLoading, setIsControlLoading] = useState<boolean>(false);
-  const [isControlActive, setIsControlActive] = useState<boolean>(initialControlActive);
 
   // Hooks
-  const { takeControl, releaseControl, isDeviceLocked } = useHostManager();
   const { showError, showWarning } = useToast();
 
-  // Check if host has remote capabilities
-  const hasRemoteCapabilities = useMemo(() => {
-    if (!host) return false;
-    // Check for any remote controller (remote_android_mobile, remote_android_tv, etc.)
-    if (!host.controller_configs) return false;
-    return Object.keys(host.controller_configs).some((key) => key.startsWith('remote_'));
-  }, [host]);
+  // NEW: Use device control hook (replaces all duplicate control logic)
+  const { isControlActive, isControlLoading, controlError, handleToggleControl, clearError } =
+    useDeviceControl({
+      host,
+      sessionId: 'rec-stream-modal-session',
+      autoCleanup: true, // Auto-release on unmount
+    });
+
+  // Use new stream hook - auto-fetches when host/device_id changes
+  const { streamUrl, isLoadingUrl, urlError } = useStream({
+    host,
+    device_id: device?.device_id || 'device1',
+  });
 
   // Calculate stream container dimensions for overlay alignment
   const streamContainerDimensions = useMemo(() => {
@@ -56,10 +56,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
     const headerHeight = 64; // Approximate header height with padding
 
     // Stream area dimensions
-    const streamAreaWidth =
-      showRemote && hasRemoteCapabilities && isControlActive
-        ? modalWidth * 0.75 // 75% when remote is shown
-        : modalWidth; // 100% when remote is hidden
+    const streamAreaWidth = showRemote && isControlActive ? modalWidth * 0.75 : modalWidth;
     const streamAreaHeight = modalHeight - headerHeight;
 
     // Modal position (centered)
@@ -82,118 +79,10 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
       dimensions,
     );
     return dimensions;
-  }, [isOpen, host, showRemote, hasRemoteCapabilities, isControlActive]);
-
-  // Fetch stream URL from server
-  const fetchStreamUrl = useCallback(async () => {
-    if (!host) return;
-
-    try {
-      console.log(
-        `[@component:RecHostStreamModal] Fetching stream URL for host: ${host.host_name}`,
-      );
-
-      const response = await fetch('/server/av/get-stream-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host: host,
-          device_id: device?.device_id || 'device1',
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success && result.stream_url) {
-        console.log(`[@component:RecHostStreamModal] Stream URL received: ${result.stream_url}`);
-        setStreamUrl(result.stream_url);
-        setIsStreamActive(true);
-      } else {
-        console.error(`[@component:RecHostStreamModal] Failed to get stream URL:`, result.error);
-        showError(`Failed to get stream URL: ${result.error || 'Unknown error'}`);
-        setStreamUrl('');
-        setIsStreamActive(false);
-      }
-    } catch (error: any) {
-      console.error(`[@component:RecHostStreamModal] Error getting stream URL:`, error);
-      showError(`Network error: ${error.message || 'Failed to communicate with server'}`);
-      setStreamUrl('');
-      setIsStreamActive(false);
-    }
-  }, [host, device?.device_id, showError]);
-
-  // Handle device control
-  const handleTakeControl = useCallback(async () => {
-    if (!host) {
-      console.warn('[@component:RecHostStreamModal] No host selected for take control');
-      showWarning('No host selected');
-      return;
-    }
-
-    console.log(
-      `[@component:RecHostStreamModal] ${isControlActive ? 'Releasing' : 'Taking'} control of device: ${host.host_name}`,
-    );
-    setIsControlLoading(true);
-
-    try {
-      if (isControlActive) {
-        // Release control
-        const result = await releaseControl(host.host_name, 'rec-preview-session');
-
-        if (result.success) {
-          console.log(
-            `[@component:RecHostStreamModal] Successfully released control of device: ${host.host_name}`,
-          );
-          setIsControlActive(false);
-          setShowRemote(false); // Hide remote when control is released
-        } else {
-          console.error(`[@component:RecHostStreamModal] Failed to release control:`, result);
-          showError(result.error || 'Failed to release control of device');
-          setIsControlActive(false);
-        }
-      } else {
-        // Take control
-        const result = await takeControl(host.host_name, 'rec-preview-session');
-
-        if (result.success) {
-          console.log(
-            `[@component:RecHostStreamModal] Successfully took control of device: ${host.host_name}`,
-          );
-          setIsControlActive(true);
-        } else {
-          console.error(`[@component:RecHostStreamModal] Failed to take control:`, result);
-
-          // Handle specific error types with appropriate toast duration
-          if (
-            result.errorType === 'stream_service_error' ||
-            result.errorType === 'adb_connection_error'
-          ) {
-            showError(result.error || 'Service error occurred', { duration: 6000 });
-          } else {
-            showError(result.error || 'Failed to take control of device');
-          }
-
-          setIsControlActive(false);
-        }
-      }
-    } catch (error: any) {
-      console.error('[@component:RecHostStreamModal] Exception during control operation:', error);
-      showError(`Unexpected error: ${error.message || 'Failed to communicate with server'}`);
-      setIsControlActive(false);
-    } finally {
-      setIsControlLoading(false);
-    }
-  }, [host, isControlActive, takeControl, releaseControl, showError, showWarning]);
+  }, [isOpen, host, showRemote, isControlActive]);
 
   // Handle remote toggle
   const handleToggleRemote = useCallback(() => {
-    if (!hasRemoteCapabilities) {
-      showWarning('This device does not support remote control');
-      return;
-    }
-
     if (!isControlActive) {
       showWarning('Please take control of the device first');
       return;
@@ -201,40 +90,16 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
 
     setShowRemote((prev) => !prev);
     console.log(`[@component:RecHostStreamModal] Remote panel toggled: ${!showRemote}`);
-  }, [hasRemoteCapabilities, isControlActive, showRemote, showWarning]);
+  }, [isControlActive, showRemote, showWarning]);
 
   // Handle modal close
   const handleClose = useCallback(async () => {
     console.log('[@component:RecHostStreamModal] Closing modal');
 
-    // Release control if active
-    if (isControlActive && host) {
-      try {
-        console.log(
-          `[@component:RecHostStreamModal] Releasing control on close for: ${host.host_name}`,
-        );
-        await releaseControl(host.host_name, 'rec-preview-session');
-      } catch (error) {
-        console.error('[@component:RecHostStreamModal] Error releasing control on close:', error);
-      }
-    }
-
-    // Reset state
-    setIsControlActive(false);
+    // Reset state (useDeviceControl handles cleanup automatically)
     setShowRemote(false);
-    setStreamUrl('');
-    setIsStreamActive(false);
-
     onClose();
-  }, [isControlActive, host, releaseControl, onClose]);
-
-  // Initialize when modal opens
-  useEffect(() => {
-    if (isOpen && host) {
-      console.log(`[@component:RecHostStreamModal] Modal opened for host: ${host.host_name}`);
-      fetchStreamUrl();
-    }
-  }, [isOpen, host, fetchStreamUrl]);
+  }, [onClose]);
 
   // Handle escape key
   useEffect(() => {
@@ -253,24 +118,22 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
     };
   }, [isOpen, handleClose]);
 
-  // Cleanup on unmount
+  // Show control errors
   useEffect(() => {
-    return () => {
-      if (isControlActive && host) {
-        console.log(
-          `[@component:RecHostStreamModal] Cleanup: releasing control for: ${host.host_name}`,
-        );
-        releaseControl(host.host_name, 'rec-preview-session').catch((error) => {
-          console.error('[@component:RecHostStreamModal] Error during cleanup:', error);
-        });
-      }
-    };
-  }, [host, isControlActive, releaseControl]);
+    if (controlError) {
+      showError(controlError);
+      clearError();
+    }
+  }, [controlError, showError, clearError]);
+
+  // Show URL error if stream fetch failed
+  useEffect(() => {
+    if (urlError) {
+      showError(`Stream URL error: ${urlError}`);
+    }
+  }, [urlError, showError]);
 
   if (!isOpen || !host) return null;
-
-  // Check if device is locked by another user
-  const deviceLocked = isDeviceLocked(host);
 
   return (
     <Box
@@ -317,8 +180,8 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
             <Button
               variant={isControlActive ? 'contained' : 'outlined'}
               size="small"
-              onClick={handleTakeControl}
-              disabled={isControlLoading || deviceLocked}
+              onClick={handleToggleControl}
+              disabled={isControlLoading}
               startIcon={isControlLoading ? <CircularProgress size={16} /> : <TvIcon />}
               color={isControlActive ? 'success' : 'primary'}
               sx={{
@@ -329,11 +192,9 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
               title={
                 isControlLoading
                   ? 'Processing...'
-                  : deviceLocked
-                    ? 'Device is locked by another user'
-                    : isControlActive
-                      ? 'Release Control'
-                      : 'Take Control'
+                  : isControlActive
+                    ? 'Release Control'
+                    : 'Take Control'
               }
             >
               {isControlLoading
@@ -344,28 +205,26 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
             </Button>
 
             {/* Remote Toggle Button */}
-            {hasRemoteCapabilities && (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handleToggleRemote}
-                disabled={!isControlActive}
-                sx={{
-                  fontSize: '0.75rem',
-                  minWidth: 100,
-                  color: 'inherit',
-                }}
-                title={
-                  !isControlActive
-                    ? 'Take control first to use remote'
-                    : showRemote
-                      ? 'Hide Remote'
-                      : 'Show Remote'
-                }
-              >
-                {showRemote ? 'Hide Remote' : 'Show Remote'}
-              </Button>
-            )}
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleToggleRemote}
+              disabled={!isControlActive}
+              sx={{
+                fontSize: '0.75rem',
+                minWidth: 100,
+                color: 'inherit',
+              }}
+              title={
+                !isControlActive
+                  ? 'Take control first to use remote'
+                  : showRemote
+                    ? 'Hide Remote'
+                    : 'Show Remote'
+              }
+            >
+              {showRemote ? 'Hide Remote' : 'Show Remote'}
+            </Button>
 
             {/* Close Button */}
             <IconButton
@@ -390,15 +249,15 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
           {/* Stream Viewer */}
           <Box
             sx={{
-              width: showRemote && hasRemoteCapabilities && isControlActive ? '75%' : '100%',
+              width: showRemote && isControlActive ? '75%' : '100%',
               position: 'relative',
               overflow: 'hidden',
             }}
           >
-            {streamUrl && isStreamActive ? (
-              <StreamViewer
+            {streamUrl ? (
+              <HLSVideoPlayer
                 streamUrl={streamUrl}
-                isStreamActive={isStreamActive}
+                isStreamActive={true}
                 isCapturing={false}
                 model={device?.model || 'unknown'}
                 isExpanded={true}
@@ -417,13 +276,19 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
                   color: 'white',
                 }}
               >
-                <Typography>Loading stream...</Typography>
+                <Typography>
+                  {isLoadingUrl
+                    ? 'Loading stream...'
+                    : urlError
+                      ? 'Stream error'
+                      : 'No stream available'}
+                </Typography>
               </Box>
             )}
           </Box>
 
           {/* Remote Control Panel */}
-          {showRemote && hasRemoteCapabilities && isControlActive && (
+          {showRemote && isControlActive && (
             <Box
               sx={{
                 width: '25%',
@@ -436,8 +301,8 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
               <RemotePanel
                 host={host}
                 onReleaseControl={() => {
-                  setIsControlActive(false);
                   setShowRemote(false);
+                  // Control release handled by useDeviceControl
                 }}
                 initialCollapsed={false}
                 deviceResolution={{ width: 1920, height: 1080 }}

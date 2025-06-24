@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { useDeviceControl } from '../useDeviceControl';
 import { useHostManager } from '../useHostManager';
 
 export interface NavigationHookResult {
@@ -15,7 +16,7 @@ export interface NavigationHookResult {
   filteredHosts: any[];
   isLoadingHosts: boolean;
 
-  // Device selection and control (migrated to use HostManager)
+  // Device selection and control (migrated to use HostManager and useDeviceControl)
   selectedHost: any | null;
   selectedDeviceId: string | null;
   isControlActive: boolean;
@@ -52,13 +53,17 @@ export const useNavigation = (): NavigationHookResult => {
     getAllHosts,
     selectedHost,
     selectedDeviceId,
-    isControlActive,
     isRemotePanelOpen,
     handleDeviceSelect,
     handleToggleRemotePanel,
-    takeControl,
-    releaseControl,
   } = useHostManager();
+
+  // NEW: Use device control hook (replaces duplicate control logic)
+  const { isControlActive, handleToggleControl } = useDeviceControl({
+    host: selectedHost,
+    sessionId: 'navigation-session',
+    autoCleanup: true, // Auto-release on unmount
+  });
 
   // Interface state
   const [interfaceModels, setInterfaceModels] = useState<string[]>([]);
@@ -151,30 +156,10 @@ export const useNavigation = (): NavigationHookResult => {
     return filtered;
   }, [availableHosts, interfaceModels]);
 
-  // Handle take control - delegate to HostManager
+  // Handle take control - now uses useDeviceControl
   const handleTakeControl = useCallback(async () => {
-    if (!selectedHost) {
-      console.log('[@hook:useNavigation] Cannot take control: no host selected');
-      return;
-    }
-
-    const wasControlActive = isControlActive;
-    const controlAction = wasControlActive ? 'release' : 'take';
-
-    console.log(
-      `[@hook:useNavigation] ${controlAction} control of device: ${selectedHost.host_name}`,
-    );
-
-    try {
-      if (wasControlActive) {
-        await releaseControl(selectedHost.host_name, 'navigation-session');
-      } else {
-        await takeControl(selectedHost.host_name, 'navigation-session');
-      }
-    } catch (error) {
-      console.error(`[@hook:useNavigation] Error during control operation:`, error);
-    }
-  }, [selectedHost, isControlActive, takeControl, releaseControl]);
+    await handleToggleControl();
+  }, [handleToggleControl]);
 
   // Screenshot functionality - updated to use selected device from HostManager
   const handleTakeScreenshot = useCallback(
@@ -302,7 +287,7 @@ export const useNavigation = (): NavigationHookResult => {
     filteredHosts,
     isLoadingHosts: false,
 
-    // Device selection and control (migrated to use HostManager)
+    // Device selection and control (migrated to use HostManager and useDeviceControl)
     selectedHost,
     selectedDeviceId,
     isControlActive,

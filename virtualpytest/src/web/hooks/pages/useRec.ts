@@ -10,6 +10,13 @@ interface UseRecReturn {
   refreshHosts: () => Promise<void>;
 }
 
+/**
+ * Hook for managing recording/AV device discovery and display
+ *
+ * Simplified to only handle device discovery:
+ * - Stream URL fetching: Use useStream hook
+ * - Device control: Use HostManager takeControl/releaseControl directly
+ */
 export const useRec = (): UseRecReturn => {
   const [avDevices, setAvDevices] = useState<Array<{ host: Host; device: Device }>>([]);
   const [isLoading, setIsLoading] = useState(true);
