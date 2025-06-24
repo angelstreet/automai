@@ -1,6 +1,6 @@
 import { useContext, useCallback } from 'react';
-import { RegistrationContext } from '../contexts/RegistrationContextDefinition';
 
+import { RegistrationContext } from '../contexts/RegistrationContextDefinition';
 import { Host } from '../types/common/Host_Types';
 
 /**

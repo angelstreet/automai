@@ -1,52 +1,26 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
 import { useRegistration } from '../hooks/useRegistration';
 import { Host } from '../types/common/Host_Types';
 
-// ========================================
-// TYPES
-// ========================================
+import { HostManagerContext } from './HostManagerContext';
 
-interface DeviceControlContextType {
-  // Panel and UI state
-  selectedHost: Host | null;
-  isControlActive: boolean;
-  isRemotePanelOpen: boolean;
-  showRemotePanel: boolean;
-  showAVPanel: boolean;
-  isVerificationActive: boolean;
-
-  // Host data (filtered by interface models)
-  availableHosts: Host[];
-  getHostByName: (name: string) => Host | undefined;
-  fetchHosts: () => void;
-
-  // Panel and UI handlers
-  handleDeviceSelect: (host: Host | null) => void;
-  handleControlStateChange: (active: boolean) => void;
-  handleToggleRemotePanel: () => void;
-  handleConnectionChange: (connected: boolean) => void;
-  handleDisconnectComplete: () => void;
-}
-
-interface DeviceControlProviderProps {
+interface HostManagerProviderProps {
   children: React.ReactNode;
   userInterface?: {
     models?: string[];
   };
 }
 
-// ========================================
-// CONTEXT
-// ========================================
-
-const DeviceControlContext = createContext<DeviceControlContextType | null>(null);
-
-export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
+/**
+ * Provider component for host management
+ * This component provides access to host data and device control functionality
+ */
+export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   children,
   userInterface,
 }) => {
-  console.log('[@context:DeviceControlProvider] Initializing device control context');
+  console.log('[@context:HostManagerProvider] Initializing host manager context');
 
   // ========================================
   // STATE
@@ -75,7 +49,7 @@ export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
 
   // Handle device selection
   const handleDeviceSelect = useCallback((host: Host | null) => {
-    console.log(`[@context:DeviceControlProvider] Device selected:`, host?.host_name || 'null');
+    console.log(`[@context:HostManagerProvider] Device selected:`, host?.host_name || 'null');
 
     if (!host) {
       setSelectedHost(null);
@@ -83,14 +57,16 @@ export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
     }
 
     setSelectedHost(host);
+    // Fix device_name property access
+    const deviceName = host.devices && host.devices.length > 0 ? host.devices[0].name : 'unknown';
     console.log(
-      `[@context:DeviceControlProvider] Host selected: ${host.host_name} (device: ${host.device_name})`,
+      `[@context:HostManagerProvider] Host selected: ${host.host_name} (device: ${deviceName})`,
     );
   }, []);
 
   // Handle control state changes (called from header after successful device control)
   const handleControlStateChange = useCallback((active: boolean) => {
-    console.log(`[@context:DeviceControlProvider] Control state changed to: ${active}`);
+    console.log(`[@context:HostManagerProvider] Control state changed to: ${active}`);
     setIsControlActive(active);
 
     if (active) {
@@ -98,13 +74,13 @@ export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
       setShowRemotePanel(true);
       setShowAVPanel(true);
       setIsRemotePanelOpen(true);
-      console.log(`[@context:DeviceControlProvider] Panels shown after control activation`);
+      console.log(`[@context:HostManagerProvider] Panels shown after control activation`);
     } else {
       // Hide panels when control is inactive
       setShowRemotePanel(false);
       setShowAVPanel(false);
       setIsRemotePanelOpen(false);
-      console.log(`[@context:DeviceControlProvider] Panels hidden after control deactivation`);
+      console.log(`[@context:HostManagerProvider] Panels hidden after control deactivation`);
     }
   }, []);
 
@@ -113,19 +89,19 @@ export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
     const newState = !isRemotePanelOpen;
     setIsRemotePanelOpen(newState);
     console.log(
-      `[@context:DeviceControlProvider] Remote panel toggled: ${newState ? 'open' : 'closed'}`,
+      `[@context:HostManagerProvider] Remote panel toggled: ${newState ? 'open' : 'closed'}`,
     );
   }, [isRemotePanelOpen]);
 
   // Handle connection change (for panels)
   const handleConnectionChange = useCallback((connected: boolean) => {
-    console.log(`[@context:DeviceControlProvider] Connection state changed: ${connected}`);
+    console.log(`[@context:HostManagerProvider] Connection state changed: ${connected}`);
     // Could update UI state based on connection status
   }, []);
 
   // Handle disconnect complete (for panels)
   const handleDisconnectComplete = useCallback(() => {
-    console.log(`[@context:DeviceControlProvider] Disconnect complete`);
+    console.log(`[@context:HostManagerProvider] Disconnect complete`);
     setIsControlActive(false);
     setShowRemotePanel(false);
     setShowAVPanel(false);
@@ -139,10 +115,10 @@ export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
   // Ensure hosts are fetched when component mounts
   useEffect(() => {
     console.log(
-      `[@context:DeviceControlProvider] Component mounted, checking hosts. Current count: ${availableHosts.length}`,
+      `[@context:HostManagerProvider] Component mounted, checking hosts. Current count: ${availableHosts.length}`,
     );
     if (availableHosts.length === 0) {
-      console.log(`[@context:DeviceControlProvider] No hosts available, triggering fetch...`);
+      console.log(`[@context:HostManagerProvider] No hosts available, triggering fetch...`);
       fetchHosts();
     }
   }, [availableHosts.length, fetchHosts]);
@@ -150,27 +126,31 @@ export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
   // Update filtered hosts when availableHosts changes
   useEffect(() => {
     console.log(
-      `[@context:DeviceControlProvider] Filtering hosts - availableHosts: ${availableHosts.length}, interface models:`,
+      `[@context:HostManagerProvider] Filtering hosts - availableHosts: ${availableHosts.length}, interface models:`,
       stableUserInterface?.models,
     );
 
     if (stableUserInterface?.models && availableHosts.length > 0) {
       console.log(
-        `[@context:DeviceControlProvider] Available hosts for filtering:`,
-        availableHosts.map((h) => ({ host_name: h.host_name, device_model: h.device_model })),
+        `[@context:HostManagerProvider] Available hosts for filtering:`,
+        availableHosts.map((h) => ({
+          host_name: h.host_name,
+          device_models: h.devices?.map((d) => d.model) || [],
+        })),
       );
 
+      // Fix model filtering to check device models
       const compatibleHosts = availableHosts.filter((host) =>
-        stableUserInterface.models!.includes(host.device_model),
+        host.devices?.some((device) => stableUserInterface.models!.includes(device.model)),
       );
 
       console.log(
-        `[@context:DeviceControlProvider] Filtered result: ${compatibleHosts.length}/${availableHosts.length} hosts`,
+        `[@context:HostManagerProvider] Filtered result: ${compatibleHosts.length}/${availableHosts.length} hosts`,
       );
       setFilteredAvailableHosts(compatibleHosts);
     } else {
       console.log(
-        `[@context:DeviceControlProvider] No filtering - showing all ${availableHosts.length} hosts`,
+        `[@context:HostManagerProvider] No filtering - showing all ${availableHosts.length} hosts`,
       );
       setFilteredAvailableHosts(availableHosts);
     }
@@ -203,7 +183,7 @@ export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
       handleDisconnectComplete,
     }),
     [
-      // Only include state values that actually change
+      // Include all dependencies
       selectedHost,
       isControlActive,
       isRemotePanelOpen,
@@ -211,32 +191,23 @@ export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
       showAVPanel,
       isVerificationActive,
       filteredAvailableHosts,
-      // Remove stable functions from dependencies to prevent unnecessary re-renders
-      // getHostByName,
-      // fetchHosts,
-      // handleDeviceSelect,
-      // handleControlStateChange,
-      // handleToggleRemotePanel,
-      // handleConnectionChange,
-      // handleDisconnectComplete,
+      getHostByName,
+      fetchHosts,
+      handleDeviceSelect,
+      handleControlStateChange,
+      handleToggleRemotePanel,
+      handleConnectionChange,
+      handleDisconnectComplete,
     ],
   );
 
-  return (
-    <DeviceControlContext.Provider value={contextValue}>{children}</DeviceControlContext.Provider>
-  );
+  return <HostManagerContext.Provider value={contextValue}>{children}</HostManagerContext.Provider>;
 };
 
-DeviceControlProvider.displayName = 'DeviceControlProvider';
+HostManagerProvider.displayName = 'HostManagerProvider';
 
-// ========================================
-// HOOK
-// ========================================
-
-export const useDeviceControl = (): DeviceControlContextType => {
-  const context = useContext(DeviceControlContext);
-  if (!context) {
-    throw new Error('useDeviceControl must be used within a DeviceControlProvider');
-  }
-  return context;
-};
+/**
+ * @deprecated Use HostManagerProvider instead
+ * Provided for backward compatibility
+ */
+export const DeviceControlProvider = HostManagerProvider;

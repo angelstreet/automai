@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-import { useDeviceControl } from '../../contexts/DeviceControlContext';
 import { Host } from '../../types/common/Host_Types';
+import { useHostManager } from '../useHostManager';
 
 interface HostWithAVStatus extends Host {
   avStatus: 'online' | 'offline' | 'checking';
@@ -22,8 +22,8 @@ export const useRec = (): UseRecReturn => {
   const [error, setError] = useState<string | null>(null);
   const fetchInProgressRef = useRef(false);
 
-  // Get hosts from DeviceControl context instead of direct fetch
-  const { availableHosts, fetchHosts: fetchHostsFromContext } = useDeviceControl();
+  // Get hosts from HostManager context instead of direct fetch
+  const { availableHosts, fetchHosts: fetchHostsFromContext } = useHostManager();
 
   // Check AV status for a specific host
   const checkAVStatus = useCallback(async (host: Host): Promise<boolean> => {

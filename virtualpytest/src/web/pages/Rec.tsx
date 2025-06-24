@@ -21,7 +21,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { RecHostPreview } from '../components/rec/RecHostPreview';
 import { useRec } from '../hooks/pages/useRec';
-import { DeviceControlProvider } from '../contexts/DeviceControlContext';
+import { HostManagerProvider } from '../contexts/DeviceControlContext';
 
 type ViewMode = 'grid' | 'table';
 
@@ -271,12 +271,12 @@ const RecContent: React.FC = () => {
   );
 };
 
-// Wrapper component that provides DeviceControlContext
+// Wrapper component that provides HostManagerContext
 const Rec: React.FC = () => {
   return (
-    <DeviceControlProvider>
+    <HostManagerProvider>
       <RecContent />
-    </DeviceControlProvider>
+    </HostManagerProvider>
   );
 };
 
