@@ -15,6 +15,7 @@ import {
   Phone as PhoneIcon,
   Tv as TvIcon,
   CheckCircle as SuccessIcon,
+  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -41,6 +42,9 @@ import {
   ToggleButtonGroup,
   CircularProgress,
   Paper,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import React, { useState, useEffect, useCallback } from 'react';
 
@@ -289,11 +293,6 @@ const Dashboard: React.FC = () => {
             />
           </Box>
         </Box>
-
-        {/* Platform */}
-        <Typography variant="caption" color="textSecondary" sx={{ ml: 'auto' }}>
-          {systemStats.platform} ({systemStats.architecture})
-        </Typography>
       </Box>
     );
   };
@@ -332,52 +331,79 @@ const Dashboard: React.FC = () => {
 
               {/* System Stats - Compact */}
               <Box sx={{ mb: 1.5 }}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 'bold' }}>
-                  System Stats
-                </Typography>
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  sx={{ mb: 0.5 }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                    System Stats
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    {host.system_stats?.platform} ({host.system_stats?.architecture})
+                  </Typography>
+                </Box>
                 <SystemStatsDisplay stats={host.system_stats} />
               </Box>
 
-              {/* Devices - Compact List */}
-              <Box sx={{ mb: 1.5 }}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 'bold' }}>
-                  Devices ({host.device_count})
-                </Typography>
-                <Box sx={{ maxHeight: '200px', overflowY: 'auto' }}>
-                  {host.devices.map((device) => (
-                    <Box
-                      key={device.device_id}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        py: 0.5,
-                        px: 1,
-                        borderRadius: 1,
-                        '&:hover': { backgroundColor: 'grey.100' },
-                      }}
-                    >
-                      {getDeviceIcon(device.device_model)}
-                      <Typography variant="body2" sx={{ minWidth: '80px', fontWeight: 500 }}>
-                        {device.device_name}
-                      </Typography>
-                      <Chip
-                        label={device.device_model}
-                        size="small"
-                        variant="outlined"
-                        sx={{ fontSize: '0.65rem', height: '20px' }}
-                      />
-                      <Typography
-                        variant="caption"
-                        color="textSecondary"
-                        sx={{ ml: 'auto', fontFamily: 'monospace' }}
+              {/* Devices - Collapsible Accordion */}
+              <Accordion
+                sx={{
+                  mb: 1.5,
+                  boxShadow: 'none',
+                  border: '1px solid #e0e0e0',
+                  '&:before': { display: 'none' },
+                }}
+              >
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon />}
+                  sx={{ minHeight: '36px', '& .MuiAccordionSummary-content': { margin: '6px 0' } }}
+                >
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                    Devices ({host.device_count})
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0, pb: 1 }}>
+                  <Box sx={{ maxHeight: '150px', overflowY: 'auto' }}>
+                    {host.devices.map((device) => (
+                      <Box
+                        key={device.device_id}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          py: 0.3,
+                          px: 0.5,
+                          borderRadius: 1,
+                          '&:hover': { backgroundColor: 'grey.100' },
+                        }}
                       >
-                        {device.device_ip}:{device.device_port}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
+                        {getDeviceIcon(device.model)}
+                        <Typography
+                          variant="body2"
+                          sx={{ minWidth: '70px', fontWeight: 500, fontSize: '0.8rem' }}
+                        >
+                          {device.name}
+                        </Typography>
+                        <Chip
+                          label={device.model}
+                          size="small"
+                          variant="outlined"
+                          sx={{ fontSize: '0.6rem', height: '18px' }}
+                        />
+                        <Typography
+                          variant="caption"
+                          color="textSecondary"
+                          sx={{ ml: 'auto', fontFamily: 'monospace', fontSize: '0.7rem' }}
+                        >
+                          {device.device_ip}:{device.device_port}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
 
               <Typography color="textSecondary" variant="caption" display="block">
                 Last seen: {formatLastSeen(host.last_seen)}
@@ -436,9 +462,9 @@ const Dashboard: React.FC = () => {
                 <Box>
                   {host.devices.map((device, index) => (
                     <Box key={device.device_id} display="flex" alignItems="center" gap={1} mb={0.5}>
-                      {getDeviceIcon(device.device_model)}
+                      {getDeviceIcon(device.model)}
                       <Typography variant="body2" fontFamily="monospace">
-                        {device.device_name} ({device.device_ip}:{device.device_port})
+                        {device.name} ({device.device_ip}:{device.device_port})
                       </Typography>
                     </Box>
                   ))}
