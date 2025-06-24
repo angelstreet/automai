@@ -22,11 +22,17 @@ export const useRec = (): UseRecReturn => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Use the simplified HostManager function
-  const { getDevicesByCapability } = useHostManager();
+  // Use the simplified HostManager function and loading state
+  const { getDevicesByCapability, isLoading: isHostManagerLoading } = useHostManager();
 
-  // Get AV-capable devices
+  // Get AV-capable devices - only when HostManager is ready
   const refreshHosts = useCallback(async (): Promise<void> => {
+    // Don't fetch if HostManager is still loading
+    if (isHostManagerLoading) {
+      console.log('[@hook:useRec] HostManager still loading, skipping refresh');
+      return;
+    }
+
     console.log('[@hook:useRec] Refreshing AV devices');
     setIsLoading(true);
     setError(null);
@@ -41,11 +47,21 @@ export const useRec = (): UseRecReturn => {
     } finally {
       setIsLoading(false);
     }
-  }, [getDevicesByCapability]);
+  }, [getDevicesByCapability, isHostManagerLoading]);
+
+  // Trigger refresh when HostManager finishes loading
+  useEffect(() => {
+    if (!isHostManagerLoading) {
+      console.log('[@hook:useRec] HostManager ready, refreshing AV devices');
+      refreshHosts();
+    }
+  }, [isHostManagerLoading, refreshHosts]);
 
   // Initialize on mount and set up auto-refresh
   useEffect(() => {
     console.log('[@hook:useRec] Initializing useRec hook');
+
+    // Initial refresh (will be skipped if HostManager is loading)
     refreshHosts();
 
     // Auto-refresh every 30 seconds

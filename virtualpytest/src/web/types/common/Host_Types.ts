@@ -10,8 +10,9 @@
  *
  * NO DATA TRANSFORMATION should occur between these layers.
  */
-
+import type { Actions } from '../controller/ActionTypes';
 import { SystemStats } from '../pages/Dashboard_Types';
+import type { Verifications } from '../verification/VerificationTypes';
 
 /**
  * Controller object interfaces
@@ -21,10 +22,6 @@ export interface ControllerObject {
   implementation: string;
   status?: any;
 }
-
-// Import action types from the centralized ActionTypes
-import type { Actions } from '../controller/ActionTypes';
-import type { Verifications } from '../verification/VerificationTypes';
 
 /**
  * Canonical Host Type - Used consistently across all layers
@@ -41,11 +38,11 @@ export interface DeviceCapabilities {
 
 export interface Device {
   device_id: string; // Device identifier (device1, device2, etc.)
-  name: string; // Device display name (updated field name)
-  model: string; // Device model for controller configuration (updated field name)
+  device_name: string; // Device display name (matches server format)
+  device_model: string; // Device model for controller configuration (matches server format)
   device_ip?: string; // Device IP address (for ADB/device control)
   device_port?: string; // Device port (for ADB/device control)
-  capabilities: DeviceCapabilities; // New detailed capability format
+  device_capabilities: DeviceCapabilities; // New detailed capability format (matches server format)
   capability_list?: string[]; // Flat list for backward compatibility
   controller_types?: string[]; // Device-specific controller types
 

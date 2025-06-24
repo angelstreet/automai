@@ -186,7 +186,7 @@ const RecHostStreamModalContent: React.FC<{
           }}
         >
           <Typography variant="h6" component="h2">
-            {device?.name || host.host_name} - Live Stream
+            {device?.device_name || host.host_name} - Live Stream
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -273,7 +273,7 @@ const RecHostStreamModalContent: React.FC<{
                 streamUrl={streamUrl}
                 isStreamActive={true}
                 isCapturing={false}
-                model={device?.model || 'unknown'}
+                model={device?.device_model || 'unknown'}
                 isExpanded={true}
                 sx={{
                   width: '100%',

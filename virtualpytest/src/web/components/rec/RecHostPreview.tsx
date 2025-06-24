@@ -66,10 +66,20 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
     }
   }, [host, device]);
 
-  // Auto-take screenshot on mount
+  // Auto-take screenshot on mount - but only when device data is stable
   useEffect(() => {
-    handleTakeScreenshot();
-  }, [handleTakeScreenshot]);
+    // Wait a bit to ensure device data is stable before taking screenshot
+    const timer = setTimeout(() => {
+      if (host && device) {
+        console.log(
+          `[@component:RecHostPreview] Device data stable, taking screenshot for: ${host.host_name}`,
+        );
+        handleTakeScreenshot();
+      }
+    }, 500); // Small delay to prevent racing with data loading
+
+    return () => clearTimeout(timer);
+  }, [host, device, handleTakeScreenshot]);
 
   // Handle opening stream modal - control will be handled by the modal itself
   const handleOpenStreamModal = useCallback(() => {
@@ -103,12 +113,26 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
     }
   };
 
-  // Clean display values - will throw if required properties are missing
+  // Clean display values with better logging
   const displayName = device ? `${host.host_name}` : host.host_name;
 
-  const displayInfo = device ? `${device.name} (${device.model})` : host.host_name;
+  const displayInfo = device
+    ? `${device.device_name || 'Unknown Device'} (${device.device_model || 'Unknown Model'})`
+    : host.host_name;
 
   const displayUrl = device?.device_ip || host.host_url;
+
+  // Debug log device data
+  useEffect(() => {
+    if (device) {
+      console.log(`[@component:RecHostPreview] Device data for ${host.host_name}:`, {
+        device_name: device.device_name,
+        device_model: device.device_model,
+        device_id: device.device_id,
+        device_capabilities: device.device_capabilities,
+      });
+    }
+  }, [host.host_name, device]);
 
   return (
     <Card
@@ -182,7 +206,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
             <ScreenshotCapture
               screenshotPath={screenshotUrl}
               isCapturing={isLoading}
-              model={device?.model}
+              model={device?.device_model}
               sx={{
                 width: '100%',
                 height: '100%',

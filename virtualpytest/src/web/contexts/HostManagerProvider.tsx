@@ -74,6 +74,16 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
           `[@context:HostManagerProvider] Successfully received ${rawHosts.length} hosts from server`,
         );
 
+        // DEBUG: Log first host's device structure to verify correct format
+        if (rawHosts.length > 0 && rawHosts[0].devices?.length > 0) {
+          console.log('[@context:HostManagerProvider] Sample device data structure:', {
+            device_id: rawHosts[0].devices[0].device_id,
+            device_name: rawHosts[0].devices[0].device_name,
+            device_model: rawHosts[0].devices[0].device_model,
+            device_capabilities: rawHosts[0].devices[0].device_capabilities,
+          });
+        }
+
         return { hosts: rawHosts, error: null };
       } else {
         throw new Error(result.error || 'Server returned success: false');
@@ -125,7 +135,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     (models: string[]): Host[] => {
       console.log(`[@context:HostManagerProvider] getHostsByModel() called with models:`, models);
       const filtered = availableHosts.filter((host) =>
-        host.devices?.some((device) => models.includes(device.model)),
+        host.devices?.some((device) => models.includes(device.device_model)),
       );
       console.log(
         `[@context:HostManagerProvider] getHostsByModel() returning ${filtered.length}/${availableHosts.length} hosts`,
@@ -167,8 +177,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       availableHosts.forEach((host) => {
         if (host.devices) {
           host.devices.forEach((device) => {
-            // Check if device has the specified capability in device.capabilities object
-            if (device.capabilities && (device.capabilities as any)[capability]) {
+            // Check if device has the specified capability in device.device_capabilities object
+            if (device.device_capabilities && (device.device_capabilities as any)[capability]) {
               matchingDevices.push({ host, device });
             }
           });
@@ -176,7 +186,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       });
 
       console.log(
-        `[@context:HostManagerProvider] getDevicesByCapability(${capability}) returning ${matchingDevices.length} device-host pairs`,
+        `[@context:HostManagerProvider] getDevicesByCapability(${capability}) found ${matchingDevices.length} devices with capability`,
       );
       return matchingDevices;
     },
@@ -465,7 +475,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     setSelectedHost(host);
     setSelectedDeviceId(deviceId);
     console.log(
-      `[@context:HostManagerProvider] Device selected: ${device.name} (${device.model}) on host ${host.host_name}`,
+      `[@context:HostManagerProvider] Device selected: ${device.device_name} (${device.device_model}) on host ${host.host_name}`,
     );
   }, []);
 
@@ -558,13 +568,13 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
         `[@context:HostManagerProvider] Available hosts for filtering:`,
         availableHosts.map((h) => ({
           host_name: h.host_name,
-          device_models: h.devices?.map((d) => d.model) || [],
+          device_models: h.devices?.map((d) => d.device_model) || [],
         })),
       );
 
       // Fix model filtering to check device models
       const compatibleHosts = availableHosts.filter((host) =>
-        host.devices?.some((device) => stableUserInterface.models!.includes(device.model)),
+        host.devices?.some((device) => stableUserInterface.models!.includes(device.device_model)),
       );
 
       console.log(
