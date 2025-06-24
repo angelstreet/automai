@@ -20,6 +20,32 @@ export interface HostManagerContextType {
   getHostByName: (name: string) => Host | null;
   fetchHosts: () => void;
 
+  // Device control functions
+  takeControl: (
+    hostName: string,
+    sessionId?: string,
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+    errorType?: string;
+    details?: any;
+  }>;
+
+  releaseControl: (
+    hostName: string,
+    sessionId?: string,
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+    errorType?: string;
+    details?: any;
+  }>;
+
+  // Status checking methods
+  isDeviceLocked: (host: Host | null) => boolean;
+  canLockDevice: (host: Host | null) => boolean;
+  hasActiveLock: (hostName: string) => boolean;
+
   // Panel and UI handlers
   handleDeviceSelect: (host: Host | null) => void;
   handleControlStateChange: (active: boolean) => void;

@@ -1,7 +1,7 @@
 import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 import React, { useState, useCallback } from 'react';
 
-import { useDeviceControl } from '../../hooks/useDeviceControl';
+import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
 import {
   ValidationPreviewClient,
@@ -76,7 +76,7 @@ export const NavigationEditorHeader: React.FC<{
   // Note: Now using filtered hosts passed as props instead of calling useRegistration directly
 
   // Get device control functions
-  const { takeControl, releaseControl, isDeviceLocked: isDeviceLockedByHost } = useDeviceControl();
+  const { takeControl, releaseControl, isDeviceLocked: isDeviceLockedByHost } = useHostManager();
 
   // Get toast notifications
   const { showError, showSuccess, showWarning } = useToast();

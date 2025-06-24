@@ -16,10 +16,26 @@ export * from './pages/useDevice';
 export * from './pages/useUserInterface';
 export * from './pages/useRec';
 
-export { useDeviceControl } from './useDeviceControl';
 export { useUserSession } from './useUserSession';
 export { useToast } from './useToast';
 export { useRegistration } from './useRegistration';
 export { useVerification } from './verification/useVerification';
 export { useVerificationEditor } from './verification/useVerificationEditor';
 export { useStreamCoordinates } from './useStreamCoordinates';
+
+// Navigation hooks
+export { useNavigationActions } from './navigation/useNavigationActionsHook';
+export { useNavigationEditor } from './navigation/useNavigationEditorHook';
+export { useNavigationEditorNew } from './navigation/useNavigationEditorHookNew';
+export { useNavigationPlayer } from './navigation/useNavigationPlayerHook';
+
+// Component hooks
+export { useLocalStorage } from './useLocalStorage';
+export { useMediaQuery } from './useMediaQuery';
+export { useTheme } from './useTheme';
+export { useHostManager } from './useHostManager';
+
+// Page hooks
+export { useHome } from './pages/useHome';
+export { useRec } from './pages/useRec';
+export { useRegistration } from './useRegistration';

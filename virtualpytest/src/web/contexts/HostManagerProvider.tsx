@@ -1,6 +1,7 @@
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useRegistration } from '../hooks/useRegistration';
+import { useUserSession } from '../hooks/useUserSession';
 import { Host } from '../types/common/Host_Types';
 import { HostManagerContext } from './HostManagerContext';
 
@@ -36,6 +37,14 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // Filtered hosts based on interface models
   const [filteredAvailableHosts, setFilteredAvailableHosts] = useState<Host[]>([]);
 
+  // Track active locks by host name -> user ID
+  const [activeLocks, setActiveLocks] = useState<Map<string, string>>(new Map());
+  const reclaimInProgressRef = useRef(false);
+  const initializedRef = useRef(false);
+
+  // Use shared user session for consistent identification
+  const { userId, sessionId: browserSessionId, isOurLock } = useUserSession();
+
   // Memoize userInterface to prevent unnecessary re-renders
   const stableUserInterface = useMemo(() => userInterface, [userInterface]);
 
@@ -43,7 +52,258 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   const { availableHosts, getHostByName, fetchHosts } = useRegistration();
 
   // ========================================
-  // HANDLERS
+  // DEVICE CONTROL HANDLERS
+  // ========================================
+
+  // Automatically reclaim locks for devices that belong to this user
+  const reclaimUserLocks = useCallback(async () => {
+    // Prevent multiple simultaneous reclaim operations
+    if (reclaimInProgressRef.current) {
+      console.log('[@context:HostManagerProvider] Reclaim already in progress, skipping');
+      return;
+    }
+
+    reclaimInProgressRef.current = true;
+
+    try {
+      console.log(
+        `[@context:HostManagerProvider] Checking for locks to reclaim for user: ${userId}`,
+      );
+
+      // Get list of all locked devices from server
+      const response = await fetch('/server/control/locked-devices', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.locked_devices) {
+          const userLockedDevices = Object.entries(result.locked_devices).filter(
+            ([_, lockInfo]: [string, any]) => isOurLock(lockInfo),
+          );
+
+          if (userLockedDevices.length > 0) {
+            console.log(
+              `[@context:HostManagerProvider] Found ${userLockedDevices.length} devices locked by current user, reclaiming...`,
+            );
+
+            // Reclaim each device lock
+            for (const [deviceId, lockInfo] of userLockedDevices) {
+              const hostName = (lockInfo as any).hostName || deviceId;
+              console.log(`[@context:HostManagerProvider] Reclaiming lock for device: ${hostName}`);
+              setActiveLocks((prev) => new Map(prev).set(hostName, userId));
+            }
+          } else {
+            console.log(`[@context:HostManagerProvider] No devices locked by current user found`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`[@context:HostManagerProvider] Error reclaiming user locks:`, error);
+    } finally {
+      reclaimInProgressRef.current = false;
+    }
+  }, [userId, isOurLock]);
+
+  // Take control via server control endpoint with comprehensive error handling
+  const takeControl = useCallback(
+    async (
+      hostName: string,
+      sessionId?: string,
+    ): Promise<{
+      success: boolean;
+      error?: string;
+      errorType?:
+        | 'stream_service_error'
+        | 'adb_connection_error'
+        | 'device_locked'
+        | 'device_not_found'
+        | 'network_error'
+        | 'generic_error';
+      details?: any;
+    }> => {
+      try {
+        const effectiveSessionId = sessionId || browserSessionId;
+        console.log(`[@context:HostManagerProvider] Taking control of device: ${hostName}`);
+        console.log(`[@context:HostManagerProvider] Using user ID for lock: ${userId}`);
+
+        const response = await fetch('/server/control/take-control', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host_name: hostName,
+            session_id: effectiveSessionId,
+            user_id: userId,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          console.log(
+            `[@context:HostManagerProvider] Successfully took control of device: ${hostName}`,
+          );
+          setActiveLocks((prev) => new Map(prev).set(hostName, userId));
+          return { success: true };
+        } else {
+          // Handle specific error cases
+          console.error(`[@context:HostManagerProvider] Failed to take control:`, result);
+
+          let errorType: any = 'generic_error';
+          let errorMessage = result.error || 'Failed to take control of device';
+
+          if (result.error_type === 'stream_service_error') {
+            errorType = 'stream_service_error';
+            errorMessage = `AV Stream Error: ${result.error}`;
+          } else if (result.error_type === 'adb_connection_error') {
+            errorType = 'adb_connection_error';
+            errorMessage = `Remote Connection Error: ${result.error}`;
+          } else if (result.status === 'device_locked') {
+            errorType = 'device_locked';
+            errorMessage = `Device is locked by ${result.locked_by || 'another user'}`;
+          } else if (result.status === 'device_not_found') {
+            errorType = 'device_not_found';
+            errorMessage = `Device ${hostName} not found or offline`;
+          } else if (response.status === 409 && result.locked_by_same_user) {
+            console.log(
+              `[@context:HostManagerProvider] Device ${hostName} locked by same user, reclaiming lock`,
+            );
+            setActiveLocks((prev) => new Map(prev).set(hostName, userId));
+            return { success: true };
+          }
+
+          return {
+            success: false,
+            error: errorMessage,
+            errorType,
+            details: result,
+          };
+        }
+      } catch (error: any) {
+        console.error(
+          `[@context:HostManagerProvider] Exception taking control of device ${hostName}:`,
+          error,
+        );
+        return {
+          success: false,
+          error: `Network error: ${error.message || 'Failed to communicate with server'}`,
+          errorType: 'network_error',
+          details: error,
+        };
+      }
+    },
+    [browserSessionId, userId],
+  );
+
+  // Release control via server control endpoint
+  const releaseControl = useCallback(
+    async (
+      hostName: string,
+      sessionId?: string,
+    ): Promise<{
+      success: boolean;
+      error?: string;
+      errorType?: 'network_error' | 'generic_error';
+      details?: any;
+    }> => {
+      try {
+        const effectiveSessionId = sessionId || browserSessionId;
+
+        console.log(`[@context:HostManagerProvider] Releasing control of device: ${hostName}`);
+        console.log(`[@context:HostManagerProvider] Using user ID for unlock: ${userId}`);
+
+        const response = await fetch('/server/control/release-control', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host_name: hostName,
+            session_id: effectiveSessionId,
+            user_id: userId,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to release control of device: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          console.log(
+            `[@context:HostManagerProvider] Successfully released control of device: ${hostName}`,
+          );
+          setActiveLocks((prev) => {
+            const newMap = new Map(prev);
+            newMap.delete(hostName);
+            return newMap;
+          });
+          return { success: true };
+        } else {
+          console.error(
+            `[@context:HostManagerProvider] Server failed to release control of device: ${result.error}`,
+          );
+          return {
+            success: false,
+            error: result.error || 'Failed to release control of device',
+            errorType: 'generic_error',
+            details: result,
+          };
+        }
+      } catch (error: any) {
+        console.error(
+          `[@context:HostManagerProvider] Exception releasing control of device ${hostName}:`,
+          error,
+        );
+        return {
+          success: false,
+          error: `Network error: ${error.message || 'Failed to communicate with server'}`,
+          errorType: 'network_error',
+          details: error,
+        };
+      }
+    },
+    [browserSessionId, userId],
+  );
+
+  // Check if we have an active lock for a device
+  const hasActiveLock = useCallback(
+    (hostName: string): boolean => {
+      return activeLocks.has(hostName);
+    },
+    [activeLocks],
+  );
+
+  // Check if device is locked (based on host data and local active locks)
+  const isDeviceLocked = useCallback(
+    (host: Host | null): boolean => {
+      if (!host) return false;
+
+      // If we have an active lock for this device, it's not locked for us
+      if (hasActiveLock(host.host_name)) {
+        return false;
+      }
+
+      // Otherwise, check the server-provided lock status
+      return host.isLocked || false;
+    },
+    [hasActiveLock],
+  );
+
+  // Check if device can be locked (based on host data)
+  const canLockDevice = useCallback((host: Host | null): boolean => {
+    if (!host) return false;
+    return host.status === 'online' && !host.isLocked;
+  }, []);
+
+  // ========================================
+  // UI HANDLERS
   // ========================================
 
   // Handle device selection
@@ -111,6 +371,32 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // EFFECTS
   // ========================================
 
+  // Initialize lock reclaim on mount - only once to prevent React 18 double effects
+  useEffect(() => {
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      reclaimUserLocks();
+    }
+  }, [reclaimUserLocks]);
+
+  // Clean up locks on unmount
+  useEffect(() => {
+    return () => {
+      // Clean up any active locks when component unmounts
+      activeLocks.forEach(async (_lockUserId, hostName) => {
+        try {
+          console.log(`[@context:HostManagerProvider] Cleaning up lock for ${hostName} on unmount`);
+          await releaseControl(hostName);
+        } catch (error) {
+          console.error(
+            `[@context:HostManagerProvider] Error cleaning up lock for ${hostName}:`,
+            error,
+          );
+        }
+      });
+    };
+  }, [releaseControl, activeLocks]);
+
   // Ensure hosts are fetched when component mounts
   useEffect(() => {
     console.log(
@@ -174,6 +460,13 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       getHostByName,
       fetchHosts,
 
+      // Device control methods
+      takeControl,
+      releaseControl,
+      isDeviceLocked,
+      canLockDevice,
+      hasActiveLock,
+
       // Panel and UI handlers
       handleDeviceSelect,
       handleControlStateChange,
@@ -192,6 +485,11 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       filteredAvailableHosts,
       getHostByName,
       fetchHosts,
+      takeControl,
+      releaseControl,
+      isDeviceLocked,
+      canLockDevice,
+      hasActiveLock,
       handleDeviceSelect,
       handleControlStateChange,
       handleToggleRemotePanel,

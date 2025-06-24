@@ -13,9 +13,3 @@ export const useHostManager = (): HostManagerContextType => {
   }
   return context;
 };
-
-/**
- * @deprecated Use useHostManager instead
- * Provided for backward compatibility
- */
-export const useDeviceControl = useHostManager;

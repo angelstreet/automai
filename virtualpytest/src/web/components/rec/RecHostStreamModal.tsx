@@ -2,7 +2,7 @@ import { Close as CloseIcon, Tv as TvIcon } from '@mui/icons-material';
 import { Box, IconButton, Typography, Button, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
-import { useDeviceControl } from '../../hooks/useDeviceControl';
+import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
 import { Host } from '../../types/common/Host_Types';
 import { StreamViewer } from '../controller/av/StreamViewer';
@@ -31,7 +31,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
   const [isControlActive, setIsControlActive] = useState<boolean>(initialControlActive);
 
   // Hooks
-  const { takeControl, releaseControl, isDeviceLocked } = useDeviceControl();
+  const { takeControl, releaseControl, isDeviceLocked } = useHostManager();
   const { showError, showWarning } = useToast();
 
   // Check if host has remote capabilities

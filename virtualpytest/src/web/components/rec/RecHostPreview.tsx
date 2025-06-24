@@ -10,7 +10,7 @@ import {
 } from '@mui/material';
 import React, { useState, useCallback, useEffect } from 'react';
 
-import { useDeviceControl } from '../../hooks/useDeviceControl';
+import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
 import { Host } from '../../types/common/Host_Types';
 import { ScreenshotCapture } from '../controller/av/ScreenshotCapture';
@@ -36,7 +36,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
 
   // Hooks for device control and notifications
-  const { takeControl } = useDeviceControl();
+  const { takeControl } = useHostManager();
   const { showError } = useToast();
 
   // Take screenshot function

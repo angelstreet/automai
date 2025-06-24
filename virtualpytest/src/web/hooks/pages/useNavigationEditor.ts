@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addEdge, Connection, MarkerType } from 'reactflow';
 
-import { useDeviceControl, useNavigationConfig, useNodeEdgeManagement } from '../../contexts';
+import { useHostManager, useNavigationConfig, useNodeEdgeManagement } from '../../contexts';
 import { useNavigationState } from '../navigation/useNavigationState';
 import {
   UINavigationNode,
@@ -10,6 +10,7 @@ import {
   ConnectionResult,
 } from '../../types/pages/Navigation_Types';
 import { useConnectionRules } from '../navigation/useConnectionRules';
+import { useToast } from '../useToast';
 
 export const useNavigationEditor = () => {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export const useNavigationEditor = () => {
   const navigationState = useNavigationState();
   const configHook = useNavigationConfig();
   const nodeEdgeHook = useNodeEdgeManagement();
-  const deviceControl = useDeviceControl();
+  const hostManager = useHostManager();
 
   // Connection rules hook
   const { validateConnection, getRulesSummary } = useConnectionRules();
@@ -705,24 +706,24 @@ export const useNavigationEditor = () => {
       // ========================================
 
       // Panel state
-      selectedHost: deviceControl.selectedHost,
-      isControlActive: deviceControl.isControlActive,
-      isRemotePanelOpen: deviceControl.isRemotePanelOpen,
-      showRemotePanel: deviceControl.showRemotePanel,
-      showAVPanel: deviceControl.showAVPanel,
-      isVerificationActive: deviceControl.isVerificationActive,
+      selectedHost: hostManager.selectedHost,
+      isControlActive: hostManager.isControlActive,
+      isRemotePanelOpen: hostManager.isRemotePanelOpen,
+      showRemotePanel: hostManager.showRemotePanel,
+      showAVPanel: hostManager.showAVPanel,
+      isVerificationActive: hostManager.isVerificationActive,
 
       // Panel handlers
-      handleDeviceSelect: deviceControl.handleDeviceSelect,
-      handleControlStateChange: deviceControl.handleControlStateChange,
-      handleToggleRemotePanel: deviceControl.handleToggleRemotePanel,
-      handleConnectionChange: deviceControl.handleConnectionChange,
-      handleDisconnectComplete: deviceControl.handleDisconnectComplete,
+      handleDeviceSelect: hostManager.handleDeviceSelect,
+      handleControlStateChange: hostManager.handleControlStateChange,
+      handleToggleRemotePanel: hostManager.handleToggleRemotePanel,
+      handleConnectionChange: hostManager.handleConnectionChange,
+      handleDisconnectComplete: hostManager.handleDisconnectComplete,
 
       // Host data (filtered by interface models)
-      availableHosts: deviceControl.availableHosts,
-      getHostByName: deviceControl.getHostByName,
-      fetchHosts: deviceControl.fetchHosts,
+      availableHosts: hostManager.availableHosts,
+      getHostByName: hostManager.getHostByName,
+      fetchHosts: hostManager.fetchHosts,
 
       // Load available trees
       loadAvailableTrees,
@@ -763,13 +764,13 @@ export const useNavigationEditor = () => {
       configHook.lockInfo,
       configHook.showReadOnlyOverlay,
       configHook.sessionId,
-      deviceControl.selectedHost,
-      deviceControl.isControlActive,
-      deviceControl.isRemotePanelOpen,
-      deviceControl.showRemotePanel,
-      deviceControl.showAVPanel,
-      deviceControl.isVerificationActive,
-      deviceControl.availableHosts,
+      hostManager.selectedHost,
+      hostManager.isControlActive,
+      hostManager.isRemotePanelOpen,
+      hostManager.showRemotePanel,
+      hostManager.showAVPanel,
+      hostManager.isVerificationActive,
+      hostManager.availableHosts,
       // Exclude stable functions from dependencies to prevent unnecessary re-renders
     ],
   );
