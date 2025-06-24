@@ -17,7 +17,7 @@ import platform
 from typing import Dict, Any, Optional
 
 from ..controllers.system.system_info import get_host_system_stats
-from ..controllers.controller_manager import get_host, reset_host
+from ..controllers.controller_manager import get_host
 from ..utils.app_utils import buildServerUrl
 
 # Disable SSL warnings for self-signed certificates
@@ -219,7 +219,7 @@ def cleanup_on_exit():
     print("🧹 [HOST] Cleaning up...")
     stop_ping_thread()
     unregister_from_server()
-    reset_host()  # Reset the global host instance
+    # Host instance will be cleaned up automatically when process exits
 
 
 def setup_host_signal_handlers():
