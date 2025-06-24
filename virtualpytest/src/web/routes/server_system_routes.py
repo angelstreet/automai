@@ -62,9 +62,9 @@ def register_host():
         devices_with_controllers = []
         
         for device in devices:
-            device_name = device.get('name')
-            device_model = device.get('model') 
-            device_capabilities = device.get('capabilities', {})  # Use host-sent detailed capabilities
+            device_name = device.get('device_name')
+            device_model = device.get('device_model') 
+            device_capabilities = device.get('device_capabilities', {})  # Use host-sent detailed capabilities
             
             print(f"[@route:register_host] Processing device: {device_name} ({device_model})")
             print(f"[@route:register_host] Host-sent capabilities: {device_capabilities}")
