@@ -35,7 +35,7 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
-import { useRegistration } from '../../hooks/useRegistration';
+import { useHostManager } from '../../hooks/useHostManager';
 import { useValidationUI, useValidationColors } from '../../hooks/validation';
 
 interface ValidationPreviewClientProps {
@@ -66,7 +66,7 @@ interface OptimalPathData {
 export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
   const validation = useValidationUI(treeId);
   const { resetForNewValidation } = useValidationColors();
-  const { selectedHost } = useRegistration();
+  const { selectedHost } = useHostManager();
   const [showDetails, setShowDetails] = useState(false);
   const [optimalPath, setOptimalPath] = useState<OptimalPathData | null>(null);
   const [loadingOptimalPath] = useState(false);

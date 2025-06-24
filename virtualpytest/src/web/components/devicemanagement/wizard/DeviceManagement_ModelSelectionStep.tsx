@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
-import { useRegistration } from '../../../hooks/useRegistration';
+import { useHostManager } from '../../../hooks/useHostManager';
 import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
 
 interface ModelSelectionStepProps {
@@ -28,7 +28,7 @@ export const ModelSelectionStep: React.FC<ModelSelectionStepProps> = ({
   onModelSelected,
   errors = {},
 }) => {
-  const {} = useRegistration();
+  const {} = useHostManager();
   const [deviceModels, setDeviceModels] = useState<DeviceModel[]>([]);
   const [loadingModels, setLoadingModels] = useState(false);
   const [modelsError, setModelsError] = useState<string | null>(null);

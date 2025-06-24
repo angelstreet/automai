@@ -1,7 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import React from 'react';
 
-import { useRegistration } from '../../hooks/useRegistration';
+import { useHostManager } from '../../hooks/useHostManager';
 
 interface VerificationTextComparisonDisplayProps {
   searchedText: string;
@@ -33,7 +33,7 @@ export const VerificationTextComparisonDisplay: React.FC<
   onSourceImageClick,
 }) => {
   // Use registration context to get selected host
-  const { selectedHost } = useRegistration();
+  const { selectedHost } = useHostManager();
 
   // Process image URLs with HTTP to HTTPS proxy logic (same as ScreenshotCapture)
   const processImageUrl = (url: string): string => {

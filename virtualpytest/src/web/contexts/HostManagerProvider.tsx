@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 
-import { useRegistration } from '../hooks/useRegistration';
 import { useUserSession } from '../hooks/useUserSession';
 import { Host } from '../types/common/Host_Types';
 
@@ -27,6 +26,11 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // STATE
   // ========================================
 
+  // Host data state (simplified architecture - no more RegistrationContext)
+  const [availableHosts, setAvailableHosts] = useState<Host[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   // Panel and UI state
   const [selectedHost, setSelectedHost] = useState<Host | null>(null);
   const [isControlActive, setIsControlActive] = useState(false);
@@ -49,8 +53,51 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // Memoize userInterface to prevent unnecessary re-renders
   const stableUserInterface = useMemo(() => userInterface, [userInterface]);
 
-  // Get registration context for host management
-  const { availableHosts, getHostByName, fetchHosts } = useRegistration();
+  // Host loading logic (simplified architecture - no more RegistrationContext)
+  const loadHosts = useCallback(async (): Promise<{ hosts: Host[]; error: string | null }> => {
+    try {
+      console.log('[@context:HostManagerProvider] Starting to fetch hosts from server');
+
+      const fullUrl = '/server/system/getAllHosts';
+      const response = await fetch(fullUrl);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        const rawHosts = result.hosts || [];
+        console.log(
+          `[@context:HostManagerProvider] Successfully received ${rawHosts.length} hosts from server`,
+        );
+
+        return { hosts: rawHosts, error: null };
+      } else {
+        throw new Error(result.error || 'Server returned success: false');
+      }
+    } catch (err: any) {
+      console.error('[@context:HostManagerProvider] Error fetching hosts:', err);
+      return { hosts: [], error: err.message || 'Failed to fetch hosts' };
+    }
+  }, []);
+
+  // Auto-load hosts on mount
+  useEffect(() => {
+    const loadHostsOnMount = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      const result = await loadHosts();
+
+      setAvailableHosts(result.hosts);
+      setError(result.error);
+      setIsLoading(false);
+    };
+
+    loadHostsOnMount();
+  }, [loadHosts]);
 
   // ========================================
   // NEW: DIRECT DATA ACCESS FUNCTIONS (Phase 1.2)
@@ -63,6 +110,14 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     );
     return availableHosts;
   }, [availableHosts]);
+
+  // Get host by name
+  const getHostByName = useCallback(
+    (hostName: string): Host | null => {
+      return availableHosts.find((h) => h.host_name === hostName) || null;
+    },
+    [availableHosts],
+  );
 
   // Get hosts filtered by device models
   const getHostsByModel = useCallback(
@@ -473,16 +528,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     };
   }, [releaseControl, activeLocks]);
 
-  // Ensure hosts are fetched when component mounts
-  useEffect(() => {
-    console.log(
-      `[@context:HostManagerProvider] Component mounted, checking hosts. Current count: ${availableHosts.length}`,
-    );
-    if (availableHosts.length === 0) {
-      console.log(`[@context:HostManagerProvider] No hosts available, triggering fetch...`);
-      fetchHosts();
-    }
-  }, [availableHosts.length, fetchHosts]);
+  // Note: Hosts are now automatically available from RegistrationContext
+  // No manual fetching needed - data should be automatically loaded
 
   // Update filtered hosts when availableHosts changes
   useEffect(() => {
@@ -534,7 +581,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       // Host data (filtered by interface models)
       availableHosts: filteredAvailableHosts,
       getHostByName,
-      fetchHosts,
+      isLoading,
+      error,
 
       // NEW: Direct data access functions (Phase 1.2)
       getAllHosts,
@@ -581,7 +629,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       isVerificationActive,
       filteredAvailableHosts,
       getHostByName,
-      fetchHosts,
+      isLoading,
+      error,
       getAllHosts,
       getHostsByModel,
       getAllDevices,

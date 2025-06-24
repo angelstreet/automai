@@ -723,7 +723,6 @@ export const useNavigationEditor = () => {
       // Host data (filtered by interface models)
       availableHosts: hostManager.availableHosts,
       getHostByName: hostManager.getHostByName,
-      fetchHosts: hostManager.fetchHosts,
 
       // Load available trees
       loadAvailableTrees,

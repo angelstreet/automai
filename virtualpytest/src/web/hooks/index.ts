@@ -18,7 +18,6 @@ export * from './pages/useRec';
 
 export { useUserSession } from './useUserSession';
 export { useToast } from './useToast';
-export { useRegistration } from './useRegistration';
 export { useVerification } from './verification/useVerification';
 export { useVerificationEditor } from './verification/useVerificationEditor';
 export { useStreamCoordinates } from './useStreamCoordinates';
@@ -38,4 +37,3 @@ export { useHostManager } from './useHostManager';
 // Page hooks
 export { useHome } from './pages/useHome';
 export { useRec } from './pages/useRec';
-export { useRegistration } from './useRegistration';

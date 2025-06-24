@@ -9,15 +9,12 @@ export {
   type NodeEdgeManagementState,
 } from './navigation';
 
-// Host Manager Context
+// Host Manager Context (simplified architecture - no more RegistrationContext)
 export { HostManagerProvider } from './HostManagerProvider';
-export { HostManagerContext, type HostManagerContextType } from './HostManagerContext';
+export { HostManagerContext } from './HostManagerContext';
+export type { HostManagerContextType } from './HostManagerContext';
 export { useHostManager } from '../hooks/useHostManager';
 
 // Other Contexts
 export { CustomThemeProvider as ThemeProvider, useTheme } from './ThemeContext';
 export { ToastProvider, useToastContext as useToast } from './ToastContext';
-export { RegistrationProvider } from './RegistrationContext';
-
-// Re-export useRegistration from hooks (not from context)
-export { useRegistration } from '../hooks/useRegistration';

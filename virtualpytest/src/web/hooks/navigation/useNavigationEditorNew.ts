@@ -184,7 +184,6 @@ export const useNavigationEditorNew = () => {
       // Host data
       availableHosts: actionsHook.availableHosts,
       getHostByName: actionsHook.getHostByName,
-      fetchHosts: actionsHook.fetchHosts,
     }),
     [nodesHook, uiHook, flowHook, actionsHook, nodeEdgeHook],
   );

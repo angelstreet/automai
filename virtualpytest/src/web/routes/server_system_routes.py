@@ -16,7 +16,6 @@ from typing import TypedDict, Optional, List, Any
 # Import using consistent src. prefix (project root is already in sys.path from app startup)
 from src.controllers.controller_config_factory import create_controller_configs_from_device_info
 
-# Import URL builders from app_utils following the pattern like useRegistration
 from src.utils.app_utils import (
     get_host_registry
 )

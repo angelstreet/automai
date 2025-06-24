@@ -8,7 +8,7 @@ import {
   AndroidApp,
   RemoteType,
 } from '../../types/controller/Remote_Types';
-import { useRegistration } from '../useRegistration';
+import { useHostManager } from '../useHostManager';
 
 import { getRemoteConfig } from './useRemoteConfigs';
 
@@ -25,13 +25,16 @@ const initialSession: RemoteSession = {
 };
 
 export function useRemoteConnection(remoteType: RemoteType) {
-  const { selectedHost } = useRegistration();
+  const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Get selected host from host manager context
+  const { selectedHost } = useHostManager();
 
   // Original interface state
   const [session, setSession] = useState<RemoteSession>(initialSession);
   const [connectionForm, setConnectionForm] = useState<ConnectionForm>(initialConnectionForm);
-  const [connectionLoading, setConnectionLoading] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [remoteConfig, setRemoteConfig] = useState<RemoteConfig | null>(null);
   const [androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
 
@@ -98,8 +101,8 @@ export function useRemoteConnection(remoteType: RemoteType) {
       return;
     }
 
-    setConnectionLoading(true);
-    setConnectionError(null);
+    setIsLoading(true);
+    setError(null);
 
     try {
       console.log(
@@ -111,7 +114,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       if (connectionForm.device_ip && !connectionForm.device_ip.trim()) {
         const errorMsg = 'Device IP is required';
         console.error('[@hook:useRemoteConnection]', errorMsg);
-        setConnectionError(errorMsg);
+        setError(errorMsg);
         return;
       }
 
@@ -123,14 +126,14 @@ export function useRemoteConnection(remoteType: RemoteType) {
         connected: true,
         connectionInfo: connectionForm.device_ip || 'Connected via navigation editor',
       });
-      setConnectionError(null);
+      setError(null);
       console.log('[@hook:useRemoteConnection] Remote is ready');
     } catch (err: any) {
       const errorMsg = err.message || 'Connection failed - network or server error';
       console.error('[@hook:useRemoteConnection] Exception during connection:', err);
-      setConnectionError(errorMsg);
+      setError(errorMsg);
     } finally {
-      setConnectionLoading(false);
+      setIsLoading(false);
     }
   }, [connectionForm, deviceConfig, selectedHost]);
 
@@ -140,8 +143,8 @@ export function useRemoteConnection(remoteType: RemoteType) {
       return;
     }
 
-    setConnectionLoading(true);
-    setConnectionError(null);
+    setIsLoading(true);
+    setError(null);
 
     try {
       console.log('[@hook:useRemoteConnection] Releasing control...');
@@ -158,7 +161,7 @@ export function useRemoteConnection(remoteType: RemoteType) {
       setAndroidScreenshot(null);
       setAndroidElements([]);
       setAndroidApps([]);
-      setConnectionLoading(false);
+      setIsLoading(false);
       console.log(
         '[@hook:useRemoteConnection] Session state reset, connect button should be re-enabled',
       );
@@ -395,8 +398,8 @@ export function useRemoteConnection(remoteType: RemoteType) {
     session,
     connectionForm,
     setConnectionForm,
-    connectionLoading,
-    connectionError,
+    isLoading,
+    error,
     remoteConfig,
     androidScreenshot,
 

@@ -204,7 +204,6 @@ export const useNavigationActionsHook = () => {
         handleConnectionChange: hostManagerHook.handleConnectionChange,
         handleDisconnectComplete: hostManagerHook.handleDisconnectComplete,
         getHostByName: hostManagerHook.getHostByName,
-        fetchHosts: hostManagerHook.fetchHosts,
       }),
 
       // Fallback host manager functions when HostManager context is not available
@@ -227,7 +226,6 @@ export const useNavigationActionsHook = () => {
         handleDisconnectComplete: () =>
           console.warn('[@hook:useNavigationActionsHook] HostManager not available'),
         getHostByName: () => null,
-        fetchHosts: () => Promise.resolve([]),
       }),
 
       // Placeholder functions for NodeEdge management (will be provided by NodeEdgeManagementProvider)

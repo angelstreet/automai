@@ -242,7 +242,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       handleDisconnectComplete,
       availableHosts,
       getHostByName,
-      fetchHosts,
     } = useHostManager();
 
     // Track the last loaded tree ID to prevent unnecessary reloads
@@ -526,7 +525,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           isRemotePanelOpen={isRemotePanelOpen}
           availableHosts={availableHosts}
           getHostByName={getHostByName}
-          fetchHosts={fetchHosts}
           onAddNewNode={handleAddNewNodeWrapper}
           onFitView={fitView}
           onSaveToConfig={() =>

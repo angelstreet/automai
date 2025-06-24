@@ -30,7 +30,7 @@ export const NavigationEditorHeader: React.FC<{
   // Host data (filtered by interface models)
   availableHosts: any[];
   getHostByName: (hostName: string) => any;
-  fetchHosts: () => void;
+
   onAddNewNode: () => void;
   onFitView: () => void;
   onSaveToConfig: () => void;
@@ -59,7 +59,6 @@ export const NavigationEditorHeader: React.FC<{
   isRemotePanelOpen,
   // Host data (filtered by interface models)
   availableHosts,
-  fetchHosts,
   onAddNewNode,
   onFitView,
   onSaveToConfig,
@@ -73,8 +72,6 @@ export const NavigationEditorHeader: React.FC<{
   onUpdateNode,
   onUpdateEdge,
 }) => {
-  // Note: Now using filtered hosts passed as props instead of calling useRegistration directly
-
   // Get device control functions
   const { takeControl, releaseControl, isDeviceLocked: isDeviceLockedByHost } = useHostManager();
 
@@ -114,19 +111,7 @@ export const NavigationEditorHeader: React.FC<{
           );
           onControlStateChange(false);
 
-          // Refresh host data to update lock status using event-based pattern
-          console.log(
-            `[@component:NavigationEditorHeader] Dispatching host refresh event after control release`,
-          );
-          try {
-            await fetchHosts();
-            console.log(`[@component:NavigationEditorHeader] Host data refreshed successfully`);
-          } catch (refreshError: any) {
-            console.warn(
-              `[@component:NavigationEditorHeader] Failed to refresh host data:`,
-              refreshError,
-            );
-          }
+          // Host data is automatically updated via HostManagerContext
         } else {
           console.error(`[@component:NavigationEditorHeader] Failed to release control:`, result);
           showError(result.error || 'Failed to release control of device');
@@ -142,19 +127,7 @@ export const NavigationEditorHeader: React.FC<{
           );
           onControlStateChange(true);
 
-          // Refresh host data to update lock status using event-based pattern
-          console.log(
-            `[@component:NavigationEditorHeader] Dispatching host refresh event after taking control`,
-          );
-          try {
-            await fetchHosts();
-            console.log(`[@component:NavigationEditorHeader] Host data refreshed successfully`);
-          } catch (refreshError: any) {
-            console.warn(
-              `[@component:NavigationEditorHeader] Failed to refresh host data:`,
-              refreshError,
-            );
-          }
+          // Host data is automatically updated via HostManagerContext
         } else {
           console.error(`[@component:NavigationEditorHeader] Failed to take control:`, result);
 
@@ -190,7 +163,6 @@ export const NavigationEditorHeader: React.FC<{
     showError,
     showSuccess,
     showWarning,
-    fetchHosts,
   ]);
 
   return (

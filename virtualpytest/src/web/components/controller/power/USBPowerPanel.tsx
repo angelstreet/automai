@@ -8,19 +8,20 @@ import {
 } from '@mui/icons-material';
 import {
   Box,
-  Button,
-  Typography,
-  CircularProgress,
-  Alert,
   Card,
   CardContent,
+  Typography,
+  Button,
+  Alert,
+  CircularProgress,
   Chip,
 } from '@mui/material';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
-import { useRegistration } from '../../../hooks/useRegistration';
+import { useHostManager } from '../../../hooks/useHostManager';
 
 interface PowerPanelProps {
+  hostName: string;
   /** Custom styling */
   sx?: any;
 }
@@ -31,9 +32,8 @@ interface PowerStatus {
   error?: string;
 }
 
-export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
-  // Use registration context for centralized URL management
-  const {} = useRegistration();
+export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) => {
+  const {} = useHostManager();
 
   // UI state
   const [isConnecting, setIsConnecting] = useState(false);
@@ -388,4 +388,4 @@ export function USBPowerPanel({ sx = {} }: PowerPanelProps) {
       )}
     </Box>
   );
-}
+};

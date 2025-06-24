@@ -48,13 +48,14 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect, useCallback } from 'react';
 
-import { useRegistration } from '../hooks/useRegistration';
+import { useHostManager } from '../hooks/useHostManager';
 import { TestCase, Campaign, Tree } from '../types';
 import { Host } from '../types/common/Host_Types';
 import { DashboardStats, RecentActivity, ViewMode } from '../types/pages/Dashboard_Types';
 
 const Dashboard: React.FC = () => {
-  const { availableHosts, fetchHosts, isLoading: hostsLoading } = useRegistration();
+  const { getAllHosts } = useHostManager();
+  const availableHosts = getAllHosts();
   const [stats, setStats] = useState<DashboardStats>({
     testCases: 0,
     campaigns: 0,
@@ -130,18 +131,13 @@ const Dashboard: React.FC = () => {
     }
   }, []);
 
-  // Use useCallback to prevent fetchHosts from changing on every render
-  const memoizedFetchHosts = useCallback(() => {
-    fetchHosts();
-  }, [fetchHosts]);
-
   useEffect(() => {
     fetchDashboardData();
-    memoizedFetchHosts();
-    // Set up auto-refresh for hosts every 30 seconds
-    const interval = setInterval(memoizedFetchHosts, 30000);
+    // Hosts are automatically updated via HostManagerContext
+    // Set up auto-refresh for dashboard data every 30 seconds
+    const interval = setInterval(fetchDashboardData, 30000);
     return () => clearInterval(interval);
-  }, [fetchDashboardData, memoizedFetchHosts]);
+  }, [fetchDashboardData]);
 
   const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, newViewMode: ViewMode) => {
     if (newViewMode !== null) {
@@ -741,21 +737,15 @@ const Dashboard: React.FC = () => {
                 </Tooltip>
               </ToggleButton>
             </ToggleButtonGroup>
-            <Tooltip title="Refresh Devices">
+            <Tooltip title="Hosts automatically refresh">
               <span>
-                <IconButton onClick={memoizedFetchHosts} disabled={hostsLoading} size="small">
+                <IconButton disabled size="small">
                   <RefreshIcon />
                 </IconButton>
               </span>
             </Tooltip>
           </Box>
         </Box>
-
-        {hostsLoading && (
-          <Box display="flex" justifyContent="center" py={2}>
-            <CircularProgress size={24} />
-          </Box>
-        )}
 
         {availableHosts.length > 0 ? (
           viewMode === 'grid' ? (

@@ -18,7 +18,8 @@ export interface HostManagerContextType {
   // Host data (filtered by interface models)
   availableHosts: Host[];
   getHostByName: (name: string) => Host | null;
-  fetchHosts: () => void;
+  isLoading: boolean;
+  error: string | null;
 
   // NEW: Direct data access functions (Phase 1.1)
   getAllHosts: () => Host[];

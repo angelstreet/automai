@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { useRegistration } from '../useRegistration';
+import { useHostManager } from '../useHostManager';
 
 export interface NavigationHookResult {
   // Interface data
@@ -46,8 +46,8 @@ export const useNavigation = (): NavigationHookResult => {
   // Extract interface name from URL
   const { interfaceName } = useParams<{ interfaceName: string }>();
 
-  // Get hosts from registration context
-  const { availableHosts, fetchHosts } = useRegistration();
+  // Get hosts from host manager context
+  const { getAllHosts } = useHostManager();
 
   // Interface state
   const [interfaceModels, setInterfaceModels] = useState<string[]>([]);
@@ -97,10 +97,8 @@ export const useNavigation = (): NavigationHookResult => {
     }
   }, [interfaceName]);
 
-  // Fetch hosts on mount
-  useEffect(() => {
-    fetchHosts();
-  }, [fetchHosts]);
+  // Get current hosts (automatically updated)
+  const availableHosts = getAllHosts();
 
   // Filter hosts based on interface models
   const filteredHosts = useMemo(() => {
@@ -117,12 +115,13 @@ export const useNavigation = (): NavigationHookResult => {
       `[@hook:useNavigation] Available hosts device models:`,
       availableHosts.map((host) => ({
         host_name: host.host_name,
-        device_model: host.device_model,
-        device_name: host.device_name,
+        device_models: host.devices?.map((d) => d.model) || [],
       })),
     );
 
-    const filtered = availableHosts.filter((host) => interfaceModels.includes(host.device_model));
+    const filtered = availableHosts.filter((host) =>
+      host.devices?.some((device) => interfaceModels.includes(device.model)),
+    );
 
     console.log(
       `[@hook:useNavigation] Filtered hosts: ${filtered.length}/${availableHosts.length} hosts match models: ${interfaceModels.join(', ')}`,
@@ -130,15 +129,15 @@ export const useNavigation = (): NavigationHookResult => {
 
     // Debug logging: Show which hosts were filtered out and why
     const filteredOut = availableHosts.filter(
-      (host) => !interfaceModels.includes(host.device_model),
+      (host) => !host.devices?.some((device) => interfaceModels.includes(device.model)),
     );
     if (filteredOut.length > 0) {
       console.log(
         `[@hook:useNavigation] Hosts filtered out:`,
         filteredOut.map((host) => ({
           host_name: host.host_name,
-          device_model: host.device_model,
-          reason: `device_model "${host.device_model}" not in interface models [${interfaceModels.join(', ')}]`,
+          device_models: host.devices?.map((d) => d.model) || [],
+          reason: `No device models match interface models [${interfaceModels.join(', ')}]`,
         })),
       );
     }
