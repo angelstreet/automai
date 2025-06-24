@@ -27,7 +27,7 @@ export const STATUS_CONFIG = {
     color: 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400',
     icon: 'AlertTriangle',
   },
-  
+
   // New job system statuses
   running: {
     color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',

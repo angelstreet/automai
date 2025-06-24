@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
+import { invalidateWorkspaceCache } from '@/app/actions/workspaceAction';
 import hostDb from '@/lib/db/hostDb';
 import jobConfigurationDb from '@/lib/db/jobsConfigurationDb';
 import repositoryDb from '@/lib/db/repositoryDb';
@@ -27,7 +28,6 @@ import type {
   ResourceLimit,
 } from '@/types/context/teamContextType';
 import { User } from '@/types/service/userServiceType';
-import { invalidateWorkspaceCache } from '@/app/actions/workspaceAction';
 
 // Add ActionResult type
 export type ActionResult<T> = {

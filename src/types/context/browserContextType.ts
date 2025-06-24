@@ -18,7 +18,9 @@ export interface BrowserAutomationActions {
   setSessionId: (sessionId: string | null) => void;
 }
 
-export interface BrowserAutomationContextType extends BrowserAutomationData, BrowserAutomationActions {}
+export interface BrowserAutomationContextType
+  extends BrowserAutomationData,
+    BrowserAutomationActions {}
 
 export interface BrowserServerStatus {
   initialized: boolean;
@@ -42,4 +44,4 @@ export interface BrowserInitResult {
 export interface BrowserCleanupResult {
   message: string;
   logs: string;
-} 
+}

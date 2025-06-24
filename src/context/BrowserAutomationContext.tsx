@@ -48,4 +48,4 @@ export function BrowserAutomationProvider({ children }: { children: React.ReactN
       {children}
     </BrowserAutomationContext.Provider>
   );
-} 
+}

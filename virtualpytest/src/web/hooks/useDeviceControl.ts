@@ -10,6 +10,7 @@ import { useHostManager } from './useHostManager';
 
 interface UseDeviceControlProps {
   host: Host | null;
+  device_id?: string;
   sessionId?: string;
   autoCleanup?: boolean; // Auto-release control on unmount
 }
@@ -35,6 +36,7 @@ interface UseDeviceControlReturn {
 
 export const useDeviceControl = ({
   host,
+  device_id,
   sessionId,
   autoCleanup = true,
 }: UseDeviceControlProps): UseDeviceControlReturn => {
@@ -66,14 +68,18 @@ export const useDeviceControl = ({
     setControlError(null);
 
     try {
-      console.log(`[useDeviceControl] Taking control of device: ${host.host_name}`);
+      console.log(
+        `[useDeviceControl] Taking control of device: ${host.host_name}, device_id: ${device_id}`,
+      );
 
-      const result = await takeControl(host.host_name, sessionId);
+      const result = await takeControl(host, device_id, sessionId);
 
       if (result.success) {
         setIsControlActive(true);
         needsCleanupRef.current = true;
-        console.log(`[useDeviceControl] Successfully took control of: ${host.host_name}`);
+        console.log(
+          `[useDeviceControl] Successfully took control of: ${host.host_name}, device: ${device_id}`,
+        );
         return true;
       } else {
         // Handle specific error types with user-friendly messages
@@ -103,7 +109,7 @@ export const useDeviceControl = ({
     } finally {
       setIsControlLoading(false);
     }
-  }, [host, sessionId, takeControl]);
+  }, [host, device_id, sessionId, takeControl]);
 
   const handleReleaseControl = useCallback(async (): Promise<boolean> => {
     if (!host) {
@@ -115,14 +121,18 @@ export const useDeviceControl = ({
     setControlError(null);
 
     try {
-      console.log(`[useDeviceControl] Releasing control of device: ${host.host_name}`);
+      console.log(
+        `[useDeviceControl] Releasing control of device: ${host.host_name}, device_id: ${device_id}`,
+      );
 
-      const result = await releaseControl(host.host_name, sessionId);
+      const result = await releaseControl(host, device_id, sessionId);
 
       if (result.success) {
         setIsControlActive(false);
         needsCleanupRef.current = false;
-        console.log(`[useDeviceControl] Successfully released control of: ${host.host_name}`);
+        console.log(
+          `[useDeviceControl] Successfully released control of: ${host.host_name}, device: ${device_id}`,
+        );
         return true;
       } else {
         const errorMessage = result.error || 'Failed to release control';
@@ -138,7 +148,7 @@ export const useDeviceControl = ({
     } finally {
       setIsControlLoading(false);
     }
-  }, [host, sessionId, releaseControl]);
+  }, [host, device_id, sessionId, releaseControl]);
 
   const handleToggleControl = useCallback(async (): Promise<void> => {
     if (isControlActive) {
@@ -172,14 +182,16 @@ export const useDeviceControl = ({
   useEffect(() => {
     return () => {
       if (autoCleanup && needsCleanupRef.current && host) {
-        console.log(`[useDeviceControl] Auto-cleanup: releasing control of ${host.host_name}`);
+        console.log(
+          `[useDeviceControl] Auto-cleanup: releasing control of ${host.host_name}, device: ${device_id}`,
+        );
         // Don't await - this is cleanup
-        releaseControl(host.host_name, sessionId).catch((error) => {
+        releaseControl(host, device_id, sessionId).catch((error) => {
           console.error(`[useDeviceControl] Cleanup error:`, error);
         });
       }
     };
-  }, [autoCleanup, host, sessionId, releaseControl]);
+  }, [autoCleanup, host, device_id, sessionId, releaseControl]);
 
   // ========================================
   // RETURN

@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
+
 import { FeaturePageContainer } from '@/components/layout/FeaturePageContainer';
 
 import { SettingsContent, SettingsSkeleton } from './_components';

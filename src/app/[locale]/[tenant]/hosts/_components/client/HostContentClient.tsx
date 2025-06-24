@@ -3,7 +3,7 @@
 import { Server, PlusCircle } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
 
-import { getActiveWorkspace, getWorkspacesContainingItem } from '@/app/actions/workspaceAction';
+import { getActiveWorkspace } from '@/app/actions/workspaceAction';
 import { Button } from '@/components/shadcn/button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useHost } from '@/hooks/useHost';
@@ -23,10 +23,7 @@ interface HostContentClientProps {
  * Client component for displaying and managing hosts
  * Supports both grid and table views with React Query for state management
  */
-export default function HostContentClient({ 
-  initialHosts, 
-  viewMode 
-}: HostContentClientProps) {
+export default function HostContentClient({ initialHosts, viewMode }: HostContentClientProps) {
   // Initialize React Query with initial data from server
   const {
     hosts: queryHosts,

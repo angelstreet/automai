@@ -253,7 +253,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // Take control via server control endpoint with comprehensive error handling
   const takeControl = useCallback(
     async (
-      hostName: string,
+      host: Host,
+      device_id?: string,
       sessionId?: string,
     ): Promise<{
       success: boolean;
@@ -269,7 +270,9 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     }> => {
       try {
         const effectiveSessionId = sessionId || browserSessionId;
-        console.log(`[@context:HostManagerProvider] Taking control of device: ${hostName}`);
+        console.log(
+          `[@context:HostManagerProvider] Taking control of device: ${host.host_name}, device_id: ${device_id}`,
+        );
         console.log(`[@context:HostManagerProvider] Using user ID for lock: ${userId}`);
 
         const response = await fetch('/server/control/take-control', {
@@ -278,7 +281,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            host_name: hostName,
+            host: host,
+            device_id: device_id,
             session_id: effectiveSessionId,
             user_id: userId,
           }),
@@ -288,9 +292,9 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
         if (response.ok && result.success) {
           console.log(
-            `[@context:HostManagerProvider] Successfully took control of device: ${hostName}`,
+            `[@context:HostManagerProvider] Successfully took control of device: ${host.host_name}`,
           );
-          setActiveLocks((prev) => new Map(prev).set(hostName, userId));
+          setActiveLocks((prev) => new Map(prev).set(host.host_name, userId));
           return { success: true };
         } else {
           // Handle specific error cases
@@ -310,12 +314,12 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
             errorMessage = `Device is locked by ${result.locked_by || 'another user'}`;
           } else if (result.status === 'device_not_found') {
             errorType = 'device_not_found';
-            errorMessage = `Device ${hostName} not found or offline`;
+            errorMessage = `Device ${host.host_name} not found or offline`;
           } else if (response.status === 409 && result.locked_by_same_user) {
             console.log(
-              `[@context:HostManagerProvider] Device ${hostName} locked by same user, reclaiming lock`,
+              `[@context:HostManagerProvider] Device ${host.host_name} locked by same user, reclaiming lock`,
             );
-            setActiveLocks((prev) => new Map(prev).set(hostName, userId));
+            setActiveLocks((prev) => new Map(prev).set(host.host_name, userId));
             return { success: true };
           }
 
@@ -328,7 +332,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
         }
       } catch (error: any) {
         console.error(
-          `[@context:HostManagerProvider] Exception taking control of device ${hostName}:`,
+          `[@context:HostManagerProvider] Exception taking control of device ${host.host_name}:`,
           error,
         );
         return {
@@ -345,7 +349,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // Release control via server control endpoint
   const releaseControl = useCallback(
     async (
-      hostName: string,
+      host: Host,
+      device_id?: string,
       sessionId?: string,
     ): Promise<{
       success: boolean;
@@ -356,7 +361,9 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       try {
         const effectiveSessionId = sessionId || browserSessionId;
 
-        console.log(`[@context:HostManagerProvider] Releasing control of device: ${hostName}`);
+        console.log(
+          `[@context:HostManagerProvider] Releasing control of device: ${host.host_name}, device_id: ${device_id}`,
+        );
         console.log(`[@context:HostManagerProvider] Using user ID for unlock: ${userId}`);
 
         const response = await fetch('/server/control/release-control', {
@@ -365,7 +372,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            host_name: hostName,
+            host: host,
+            device_id: device_id,
             session_id: effectiveSessionId,
             user_id: userId,
           }),
@@ -379,11 +387,11 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
         if (result.success) {
           console.log(
-            `[@context:HostManagerProvider] Successfully released control of device: ${hostName}`,
+            `[@context:HostManagerProvider] Successfully released control of device: ${host.host_name}`,
           );
           setActiveLocks((prev) => {
             const newMap = new Map(prev);
-            newMap.delete(hostName);
+            newMap.delete(host.host_name);
             return newMap;
           });
           return { success: true };

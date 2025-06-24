@@ -1,4 +1,4 @@
-import { GitBranch, Server, Rocket, Code } from 'lucide-react';
+import { Server, Rocket, Code } from 'lucide-react';
 
 import { Badge } from '@/components/shadcn/badge';
 import { Card, CardContent } from '@/components/shadcn/card';

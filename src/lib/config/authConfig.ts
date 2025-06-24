@@ -54,20 +54,20 @@ export const AUTH_CONFIG = {
       callbackUrl: `${process.env.NEXTAUTH_URL}/api/auth/callback/gitlab`,
     },
   },
-  
+
   // Session configuration
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
     updateAge: 24 * 60 * 60, // 24 hours
   },
-  
+
   // JWT configuration
   jwt: {
     secret: process.env.NEXTAUTH_SECRET,
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  
+
   // Password validation rules
   password: {
     minLength: 8,
@@ -75,7 +75,7 @@ export const AUTH_CONFIG = {
     requireNumber: true,
     requireSpecialChar: true,
   },
-  
+
   // Authentication pages
   pages: {
     signIn: '/login',
@@ -84,14 +84,14 @@ export const AUTH_CONFIG = {
     verifyRequest: '/verify-request',
     newUser: '/new-user',
   },
-  
+
   // User roles and permissions
   roles: {
     ADMIN: 'admin',
     USER: 'user',
     VIEWER: 'viewer',
   },
-  
+
   // Default role for new users
   defaultRole: 'user',
 };
@@ -101,8 +101,8 @@ export const AUTH_CONFIG = {
  */
 export function getEnabledProviders(): AuthProviderType[] {
   return Object.keys(AUTH_CONFIG.providers)
-    .filter(key => AUTH_CONFIG.providers[key as AuthProviderType].enabled)
-    .map(key => key as AuthProviderType);
+    .filter((key) => AUTH_CONFIG.providers[key as AuthProviderType].enabled)
+    .map((key) => key as AuthProviderType);
 }
 
 /**
@@ -110,35 +110,35 @@ export function getEnabledProviders(): AuthProviderType[] {
  */
 export function validatePassword(password: string): { valid: boolean; message?: string } {
   const { minLength, requireCapital, requireNumber, requireSpecialChar } = AUTH_CONFIG.password;
-  
+
   if (password.length < minLength) {
     return {
       valid: false,
       message: `Password must be at least ${minLength} characters`,
     };
   }
-  
+
   if (requireCapital && !/[A-Z]/.test(password)) {
     return {
       valid: false,
       message: 'Password must contain at least one capital letter',
     };
   }
-  
+
   if (requireNumber && !/[0-9]/.test(password)) {
     return {
       valid: false,
       message: 'Password must contain at least one number',
     };
   }
-  
+
   if (requireSpecialChar && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) {
     return {
       valid: false,
       message: 'Password must contain at least one special character',
     };
   }
-  
+
   return { valid: true };
 }
 

@@ -1,14 +1,12 @@
 'use client';
 
-import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
 
-import { Button } from '@/components/shadcn/button';
-import { Input } from '@/components/shadcn/input';
 import { Alert, AlertDescription } from '@/components/shadcn/alert';
-import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/shadcn/button';
 
 export default function InviteSignUpPage() {
   const router = useRouter();
@@ -16,9 +14,7 @@ export default function InviteSignUpPage() {
   const searchParams = useSearchParams();
   const { locale, token } = params as { locale: string; token: string };
   const t = useTranslations('auth');
-  const c = useTranslations('common');
 
-  const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);

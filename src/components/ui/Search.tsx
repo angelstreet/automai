@@ -2,9 +2,9 @@
 
 import { IconSearch } from '@tabler/icons-react';
 
+import { useSearch } from '@/hooks';
 import { cn } from '@/lib/utils';
 
-import { useSearch } from '@/hooks';
 import { Button } from '../shadcn/button';
 
 interface Props {

@@ -80,7 +80,7 @@ export async function getWorkspacesForCurrentUser(): Promise<DbResponse<Workspac
         `[@db:workspaceDb:getWorkspacesForCurrentUser] ERROR getting user teams: ${teamsError.message}`,
       );
     } else if (userTeams && userTeams.length > 0) {
-      const teamIds = userTeams.map(t => t.team_id);
+      const teamIds = userTeams.map((t) => t.team_id);
       console.log(
         `[@db:workspaceDb:getWorkspacesForCurrentUser] User is member of ${teamIds.length} teams: ${teamIds.join(', ')}`,
       );

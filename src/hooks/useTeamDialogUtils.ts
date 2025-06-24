@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+
 import { useToast } from '@/components/shadcn/use-toast';
 
 /**
@@ -20,24 +21,24 @@ export function useDialogState() {
   const executeOperation = async <T>(
     operation: () => Promise<T>,
     successMessage?: string,
-    onSuccess?: (result: T) => void
+    onSuccess?: (result: T) => void,
   ) => {
     setIsLoading(true);
-    
+
     try {
       const result = await operation();
-      
+
       if (successMessage) {
         toast({
           title: 'Success',
           description: successMessage,
         });
       }
-      
+
       if (onSuccess) {
         onSuccess(result);
       }
-      
+
       return result;
     } catch (error) {
       toast({

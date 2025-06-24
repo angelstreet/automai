@@ -9,4 +9,4 @@ export interface SearchContextType {
   setIsSearchOpen: (isOpen: boolean) => void;
   open: boolean;
   setOpen: (isOpen: boolean) => void;
-} 
+}

@@ -1,8 +1,9 @@
 'use server';
 
-import simpleGit from 'simple-git';
-import path from 'path';
 import fs from 'fs/promises';
+import path from 'path';
+
+import simpleGit from 'simple-git';
 
 interface GitStatusResult {
   success: boolean;

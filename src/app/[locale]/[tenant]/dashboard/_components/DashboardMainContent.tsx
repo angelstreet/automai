@@ -8,8 +8,8 @@ import {
   CardTitle,
 } from '@/components/shadcn/card';
 
-import { DashboardOverviewClient } from './client/DashboardOverviewClient';
 import { DashboardRecentSales } from './DashboardRecentSales';
+import { DashboardOverviewClient } from './client/DashboardOverviewClient';
 
 export function DashboardMainContent() {
   // Static demo data

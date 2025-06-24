@@ -1,7 +1,7 @@
 /**
  * Host database table definitions
  */
-import { BaseRow, Json } from './db-common';
+import { BaseRow } from './db-common';
 
 /**
  * Hosts table schema

@@ -54,6 +54,7 @@ const RecHostStreamModalContent: React.FC<{
   const { isControlActive, isControlLoading, controlError, handleToggleControl, clearError } =
     useDeviceControl({
       host,
+      device_id: device?.device_id || 'device1',
       sessionId: 'rec-stream-modal-session',
       autoCleanup: true, // Auto-release on unmount
     });

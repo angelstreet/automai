@@ -1,4 +1,4 @@
-import { ProfileContentClient  } from './client/ProfileContentClient';
+import { ProfileContentClient } from './client/ProfileContentClient';
 
 /**
  * Server component wrapper for ProfileContent

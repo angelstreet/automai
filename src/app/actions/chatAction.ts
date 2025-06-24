@@ -4,9 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { cache } from 'react';
 
 import { getUser } from '@/app/actions/userAction';
-import { getUserActiveTeam } from '@/app/actions/teamAction';
-import chatDb from '@/lib/db/chatDb';
 import { createOpenRouterClient } from '@/lib/apis/openrouter';
+import chatDb from '@/lib/db/chatDb';
 import type {
   ChatConversation,
   ChatMessage,

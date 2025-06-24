@@ -7,7 +7,6 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/shadcn/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/shadcn/dialog';
 import { useHost } from '@/hooks/useHost';
-import { useHostViewStore } from '@/store/hostViewStore';
 
 import { DeviceFormDialogClient, DeviceFormData } from './DeviceFormDialogClient';
 import { HostsEvents } from './HostEventListener';
@@ -19,10 +18,10 @@ interface HostActionsClientProps {
   onViewModeToggle: () => void;
 }
 
-export default function HostActionsClient({ 
-  hostCount, 
-  viewMode, 
-  onViewModeToggle 
+export default function HostActionsClient({
+  hostCount,
+  viewMode,
+  onViewModeToggle,
 }: HostActionsClientProps) {
   const t = useTranslations('hosts');
   const c = useTranslations('common');

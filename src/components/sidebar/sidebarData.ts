@@ -1,17 +1,4 @@
 import { Role } from '@/types/service/userServiceType';
-import {
-  LayoutDashboard,
-  Code2,
-  Rocket,
-  BarChart3,
-  Settings,
-  Users,
-  Building,
-  Factory,
-  Server,
-  GitBranch,
-  ExternalLink,
-} from 'lucide-react';
 
 export type SidebarData = {
   user: {

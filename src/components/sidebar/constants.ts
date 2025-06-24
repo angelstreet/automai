@@ -19,7 +19,7 @@ import {
   Code,
   Wrench,
   ExternalLink,
-  Pyramid
+  Pyramid,
 } from 'lucide-react';
 
 import { Role } from '@/types/service/userServiceType';

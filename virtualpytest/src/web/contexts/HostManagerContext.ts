@@ -31,7 +31,8 @@ export interface HostManagerContextType {
 
   // Device control functions
   takeControl: (
-    hostName: string,
+    host: Host,
+    device_id?: string,
     sessionId?: string,
   ) => Promise<{
     success: boolean;
@@ -41,7 +42,8 @@ export interface HostManagerContextType {
   }>;
 
   releaseControl: (
-    hostName: string,
+    host: Host,
+    device_id?: string,
     sessionId?: string,
   ) => Promise<{
     success: boolean;

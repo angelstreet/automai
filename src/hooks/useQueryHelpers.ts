@@ -5,7 +5,7 @@ import type { QueryKey, UseMutationOptions, UseQueryOptions } from '@tanstack/re
 export function useFetchQuery<T>(
   queryKey: QueryKey,
   fetchFn: () => Promise<T>,
-  options?: UseQueryOptions<T>
+  options?: UseQueryOptions<T>,
 ) {
   return useQuery({
     queryKey,
@@ -18,19 +18,19 @@ export function useFetchQuery<T>(
 export function useDataMutation<TData, TVariables>(
   mutationFn: (variables: TVariables) => Promise<TData>,
   invalidateQueries: QueryKey[],
-  options?: UseMutationOptions<TData, Error, TVariables>
+  options?: UseMutationOptions<TData, Error, TVariables>,
 ) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn,
     ...options,
     onSuccess: (data, variables, context) => {
       // Invalidate related queries
-      invalidateQueries.forEach(queryKey => {
+      invalidateQueries.forEach((queryKey) => {
         queryClient.invalidateQueries({ queryKey });
       });
-      
+
       // Call original onSuccess if provided
       if (options?.onSuccess) {
         options.onSuccess(data, variables, context);

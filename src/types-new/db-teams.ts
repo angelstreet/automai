@@ -42,7 +42,7 @@ export interface TenantsTable {
       isOneToOne: false;
       referencedRelation: 'subscription_tiers';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -91,7 +91,7 @@ export interface TeamsTable {
       isOneToOne: false;
       referencedRelation: 'profiles';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -134,7 +134,7 @@ export interface TeamMembersTable {
       isOneToOne: false;
       referencedRelation: 'profiles';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -201,7 +201,7 @@ export interface ResourceLimitsTable {
       isOneToOne: false;
       referencedRelation: 'subscription_tiers';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -265,7 +265,7 @@ export interface PermissionMatrixTable {
       isOneToOne: false;
       referencedRelation: 'profiles';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 

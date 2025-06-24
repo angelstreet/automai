@@ -4,7 +4,6 @@ import { cache } from 'react';
 
 import { ActivityItem, Task, Stats, ChatMessage } from '@/types/context/dashboardContextType';
 
-
 /**
  * Get dashboard statistics
  * @returns Dashboard statistics

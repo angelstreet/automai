@@ -133,10 +133,10 @@ export function TerminalEmulator({
       } else if (data === '\x03') {
         // Ctrl+C
         terminal.write('^C\r\n');
-        
+
         // Stop any active polling when user interrupts
         stopOutputPolling();
-        
+
         await executeCommand('', terminal, true); // Send Ctrl+C and get new prompt
         currentInput.current = '';
       } else if (data.charCodeAt(0) >= 32) {
@@ -151,7 +151,9 @@ export function TerminalEmulator({
         console.log(`[@component:TerminalEmulator] Sending to persistent shell: "${command}"`);
 
         // Import terminal action - send raw command to persistent shell
-        const { sendTerminalData, pollTerminalOutput } = await import('@/app/actions/terminalsAction');
+        const { sendTerminalData, pollTerminalOutput } = await import(
+          '@/app/actions/terminalsAction'
+        );
         const result = await sendTerminalData(sessionId, command);
 
         console.log(`[@component:TerminalEmulator] Shell response:`, {
@@ -171,8 +173,15 @@ export function TerminalEmulator({
           }
 
           // For commands that might be long-running, start polling for additional output
-          if (command.trim() && !command.includes('cd ') && !command.includes('ls ') && !command.includes('pwd')) {
-            console.log(`[@component:TerminalEmulator] Starting output polling for potentially long-running command`);
+          if (
+            command.trim() &&
+            !command.includes('cd ') &&
+            !command.includes('ls ') &&
+            !command.includes('pwd')
+          ) {
+            console.log(
+              `[@component:TerminalEmulator] Starting output polling for potentially long-running command`,
+            );
             startOutputPolling(terminal, pollTerminalOutput);
           }
         } else if (!result.success) {
@@ -206,10 +215,12 @@ export function TerminalEmulator({
       pollingInterval = setInterval(async () => {
         try {
           pollCount++;
-          
+
           // Stop polling after max attempts
           if (pollCount > MAX_POLLS) {
-            console.log(`[@component:TerminalEmulator] Stopping output polling after ${MAX_POLLS} attempts`);
+            console.log(
+              `[@component:TerminalEmulator] Stopping output polling after ${MAX_POLLS} attempts`,
+            );
             if (pollingInterval) {
               clearInterval(pollingInterval);
               pollingInterval = null;
@@ -218,9 +229,11 @@ export function TerminalEmulator({
           }
 
           const pollResult = await pollFunction(sessionId, 500);
-          
+
           if (pollResult.success && pollResult.data?.hasOutput && pollResult.data.stdout) {
-            console.log(`[@component:TerminalEmulator] Received additional output (poll ${pollCount})`);
+            console.log(
+              `[@component:TerminalEmulator] Received additional output (poll ${pollCount})`,
+            );
             terminal.write(pollResult.data.stdout);
           } else if (!pollResult.success) {
             console.error(`[@component:TerminalEmulator] Polling failed:`, pollResult.error);
@@ -228,10 +241,12 @@ export function TerminalEmulator({
           }
 
           // If we get output that looks like a shell prompt, stop polling
-          if (pollResult.data?.stdout && 
-              (pollResult.data.stdout.includes('$ ') || 
-               pollResult.data.stdout.includes('> ') || 
-               pollResult.data.stdout.includes('# '))) {
+          if (
+            pollResult.data?.stdout &&
+            (pollResult.data.stdout.includes('$ ') ||
+              pollResult.data.stdout.includes('> ') ||
+              pollResult.data.stdout.includes('# '))
+          ) {
             console.log(`[@component:TerminalEmulator] Detected shell prompt, stopping polling`);
             if (pollingInterval) {
               clearInterval(pollingInterval);

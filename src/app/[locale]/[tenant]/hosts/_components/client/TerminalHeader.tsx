@@ -1,6 +1,6 @@
 'use client';
 
-import { Monitor, Server, User, Key } from 'lucide-react';
+import { Server, User, Key } from 'lucide-react';
 
 import { Host } from '@/types/component/hostComponentType';
 

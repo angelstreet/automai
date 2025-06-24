@@ -65,15 +65,15 @@ export function formatNumber(value: number): string {
   if (value >= 1000000000) {
     return `${(value / 1000000000).toFixed(1)}B`;
   }
-  
+
   if (value >= 1000000) {
     return `${(value / 1000000).toFixed(1)}M`;
   }
-  
+
   if (value >= 1000) {
     return `${(value / 1000).toFixed(1)}K`;
   }
-  
+
   return value.toString();
 }
 
@@ -83,11 +83,11 @@ export function formatNumber(value: number): string {
 export function generateTimeSeriesData(
   data: { timestamp: string | Date; value: number }[],
   label: string,
-  color?: string
+  color?: string,
 ): ChartDataset {
   return {
     label,
-    data: data.map(point => ({
+    data: data.map((point) => ({
       x: typeof point.timestamp === 'string' ? new Date(point.timestamp) : point.timestamp,
       y: point.value,
     })),
@@ -121,17 +121,17 @@ export function generateRandomChartData(
   min: number = 0,
   max: number = 100,
   label: string = 'Random Data',
-  color?: string
+  color?: string,
 ): ChartDataset {
   const data: ChartDataPoint[] = [];
-  
+
   for (let i = 0; i < count; i++) {
     data.push({
       x: i,
       y: Math.floor(Math.random() * (max - min + 1)) + min,
     });
   }
-  
+
   return {
     label,
     data,
@@ -145,14 +145,14 @@ export function generateRandomChartData(
 export function generatePieChartData(
   labels: string[],
   values: number[],
-  colors?: string[]
+  colors?: string[],
 ): { labels: string[]; data: number[]; colors: string[] } {
   if (labels.length !== values.length) {
     throw new Error('Labels and values arrays must have the same length');
   }
-  
+
   const generatedColors = colors || labels.map(() => getRandomColor());
-  
+
   return {
     labels,
     data: values,
@@ -165,34 +165,34 @@ export function generatePieChartData(
  */
 export function groupTimeSeriesByPeriod(
   data: { timestamp: string | Date; value: number }[],
-  period: 'hour' | 'day' | 'week' | 'month'
+  period: 'hour' | 'day' | 'week' | 'month',
 ): { timestamp: Date; value: number }[] {
   // Convert string timestamps to Date objects
-  const dates = data.map(point => ({
+  const dates = data.map((point) => ({
     timestamp: typeof point.timestamp === 'string' ? new Date(point.timestamp) : point.timestamp,
     value: point.value,
   }));
-  
+
   // Group by the specified period
   const groupedData: Record<string, number[]> = {};
-  
-  dates.forEach(point => {
+
+  dates.forEach((point) => {
     let key: string;
-    
+
     switch (period) {
       case 'hour':
         key = new Date(
           point.timestamp.getFullYear(),
           point.timestamp.getMonth(),
           point.timestamp.getDate(),
-          point.timestamp.getHours()
+          point.timestamp.getHours(),
         ).toISOString();
         break;
       case 'day':
         key = new Date(
           point.timestamp.getFullYear(),
           point.timestamp.getMonth(),
-          point.timestamp.getDate()
+          point.timestamp.getDate(),
         ).toISOString();
         break;
       case 'week':
@@ -202,32 +202,30 @@ export function groupTimeSeriesByPeriod(
         key = new Date(
           point.timestamp.getFullYear(),
           point.timestamp.getMonth(),
-          diff
+          diff,
         ).toISOString();
         break;
       case 'month':
-        key = new Date(
-          point.timestamp.getFullYear(),
-          point.timestamp.getMonth(),
-          1
-        ).toISOString();
+        key = new Date(point.timestamp.getFullYear(), point.timestamp.getMonth(), 1).toISOString();
         break;
       default:
         key = point.timestamp.toISOString();
     }
-    
+
     if (!groupedData[key]) {
       groupedData[key] = [];
     }
-    
+
     groupedData[key].push(point.value);
   });
-  
+
   // Calculate the average for each group
-  return Object.entries(groupedData).map(([key, values]) => ({
-    timestamp: new Date(key),
-    value: values.reduce((sum, value) => sum + value, 0) / values.length,
-  })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  return Object.entries(groupedData)
+    .map(([key, values]) => ({
+      timestamp: new Date(key),
+      value: values.reduce((sum, value) => sum + value, 0) / values.length,
+    }))
+    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 }
 
 // Export chart utility functions

@@ -102,7 +102,7 @@ export interface IdentitiesTable {
       isOneToOne: false;
       referencedRelation: 'users';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -148,7 +148,7 @@ export interface SessionsTable {
       isOneToOne: false;
       referencedRelation: 'users';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -194,7 +194,7 @@ export interface RefreshTokensTable {
       isOneToOne: false;
       referencedRelation: 'sessions';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -240,6 +240,6 @@ export interface ProfilesTable {
       isOneToOne: false;
       referencedRelation: 'tenants';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }

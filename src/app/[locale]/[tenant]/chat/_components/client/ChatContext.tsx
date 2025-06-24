@@ -2,8 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-import { MODEL_SELECTION } from '../../constants';
 import { getConversationById } from '@/app/actions/chatAction';
+
+import { MODEL_SELECTION } from '../../constants';
 
 // Model colors - consistent assignment
 const MODEL_COLORS = ['bg-red-500', 'bg-green-500', 'bg-blue-500'] as const;
@@ -65,17 +66,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
       try {
         setIsLoadingConversation(true);
-        console.log(`[@context:ChatProvider] Loading models for conversation: ${activeConversationId}`);
-        
+        console.log(
+          `[@context:ChatProvider] Loading models for conversation: ${activeConversationId}`,
+        );
+
         const result = await getConversationById(activeConversationId);
-        
+
         if (result.success && result.data) {
           const conversationModelIds = result.data.model_ids || [];
-          console.log(`[@context:ChatProvider] Found ${conversationModelIds.length} models in conversation:`, conversationModelIds);
-          
+          console.log(
+            `[@context:ChatProvider] Found ${conversationModelIds.length} models in conversation:`,
+            conversationModelIds,
+          );
+
           // Update conversation models
           setConversationModels(conversationModelIds);
-          
+
           // Update selected models to show the conversation's models
           if (conversationModelIds.length > 0) {
             setSelectedModels(conversationModelIds);

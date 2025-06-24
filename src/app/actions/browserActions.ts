@@ -1,6 +1,6 @@
 'use server';
 
-import { initTerminal, closeTerminal } from '@/app/actions/terminalsAction';
+import { closeTerminal } from '@/app/actions/terminalsAction';
 import { getUser } from '@/app/actions/userAction';
 import { reserveHost, releaseHost, forceReleaseHost } from '@/lib/db/hostDb';
 

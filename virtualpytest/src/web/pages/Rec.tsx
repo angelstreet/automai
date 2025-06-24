@@ -20,10 +20,10 @@ const Rec: React.FC = () => {
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography variant="h5" component="h1" gutterBottom>
-          AV Devices
+          Remote Eye Conrtroller
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          View and control connected AV devices
+          View and control connected devices
         </Typography>
       </Box>
 

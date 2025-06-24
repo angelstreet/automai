@@ -10,7 +10,7 @@ import { BaseRow } from './db-common';
 export interface GitProvidersTable {
   Row: BaseRow & {
     profile_id: string;
-    type: string; 
+    type: string;
     name: string;
     display_name: string | null;
     server_url: string | null;
@@ -77,7 +77,7 @@ export interface GitProvidersTable {
       isOneToOne: false;
       referencedRelation: 'tenants';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -170,7 +170,7 @@ export interface RepositoriesTable {
       isOneToOne: false;
       referencedRelation: 'tenants';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -222,7 +222,7 @@ export interface RepositoryFilesTable {
       isOneToOne: false;
       referencedRelation: 'repositories';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }
 
@@ -259,6 +259,6 @@ export interface ProfileRepositoryPinsTable {
       isOneToOne: false;
       referencedRelation: 'repositories';
       referencedColumns: ['id'];
-    }
+    },
   ];
 }

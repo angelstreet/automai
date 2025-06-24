@@ -227,7 +227,7 @@ export default function ModelSelector({ className = '' }: ModelSelectorProps) {
         <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 border border-border rounded-md shadow-xl z-50 max-h-80 overflow-hidden backdrop-blur-none">
           {/* Solid backdrop to prevent any transparency */}
           <div className="absolute inset-0 bg-white dark:bg-gray-900 -z-10"></div>
-          
+
           {/* Search Input */}
           <div className="relative p-3 border-b border-border bg-white dark:bg-gray-900">
             <form autoComplete="off" onSubmit={(e) => e.preventDefault()}>

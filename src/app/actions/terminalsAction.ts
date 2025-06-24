@@ -174,7 +174,7 @@ export async function pollTerminalOutput(sessionId: string, timeoutMs: number = 
     if (result.success) {
       console.debug(
         `[@action:terminalsAction:pollTerminalOutput] Poll successful for session ${sessionId}`,
-        { hasOutput: result.data?.hasOutput }
+        { hasOutput: result.data?.hasOutput },
       );
       return {
         success: true,

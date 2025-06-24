@@ -3,9 +3,9 @@
 import { Check, ChevronDown, Home, Plus, Trash, Users, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import { DeploymentEvents } from '@/app/[locale]/[tenant]/deployment/_components/client/DeploymentEventListener';
 import { HostsEvents } from '@/app/[locale]/[tenant]/hosts/_components/client/HostEventListener';
 import { RepositoryEvents } from '@/app/[locale]/[tenant]/repositories/_components/client/RepositoryEventListener';
-import { DeploymentEvents } from '@/app/[locale]/[tenant]/deployment/_components/client/DeploymentEventListener';
 import {
   addWorkspace,
   getActiveWorkspace,

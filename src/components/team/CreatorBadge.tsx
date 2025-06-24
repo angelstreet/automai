@@ -1,9 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
+
 import { Badge } from '@/components/shadcn/badge';
 import { useUser } from '@/hooks';
-import { Avatar } from '@/components/shadcn/avatar';
-import { AvatarFallback } from '@/components/ui/avatar';
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/shadcn/hover-card';
 
 interface CreatorBadgeProps {
   creatorId: string | null | undefined;

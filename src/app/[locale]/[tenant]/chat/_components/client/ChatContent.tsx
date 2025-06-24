@@ -218,7 +218,7 @@ export default function ChatContent() {
             .filter((message) => {
               // Always show user messages
               if (message.role === 'user') return true;
-              
+
               // For AI messages, show ALL historical messages when loading a conversation
               // Only apply filtering to temporary messages (new messages being sent)
               if (message.id.startsWith('temp-')) {
