@@ -17,7 +17,7 @@ import {
   Paper,
   Chip,
 } from '@mui/material';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { RecHostPreview } from '../components/rec/RecHostPreview';
 import { useRec } from '../hooks/pages/useRec';
@@ -55,29 +55,28 @@ const Rec: React.FC = () => {
     await refreshHosts();
   }, [refreshHosts]);
 
-  // Get all devices with AV capability from all hosts
-  const getAVDevices = () => {
-    const avDevices: Array<{ host: any; device: any }> = [];
+  // Memoize AV devices calculation to prevent repetitive logging
+  const avDevices = useMemo(() => {
+    const devices: Array<{ host: any; device: any }> = [];
 
     hosts.forEach((host) => {
       if (host.devices && host.devices.length > 0) {
         // Filter devices that have AV capability (hdmi_stream)
         host.devices.forEach((device) => {
           if (device.capabilities?.av === 'hdmi_stream') {
-            avDevices.push({ host, device });
+            devices.push({ host, device });
           }
         });
       }
     });
 
-    console.log(`[@page:Rec] Found ${avDevices.length} devices with AV capability`);
-    return avDevices;
-  };
+    // Only log when the count actually changes
+    console.log(`[@page:Rec] Found ${devices.length} devices with AV capability`);
+    return devices;
+  }, [hosts]);
 
   // Render grid view - now shows individual devices
   const renderGridView = () => {
-    const avDevices = getAVDevices();
-
     return (
       <Grid container spacing={2}>
         {avDevices.map(({ host, device }) => (
@@ -87,7 +86,7 @@ const Rec: React.FC = () => {
               device={device}
               takeScreenshot={takeScreenshot}
               autoRefresh={autoRefresh}
-              refreshInterval={10000}
+              refreshInterval={15000} // Increase interval to reduce load
             />
           </Grid>
         ))}
@@ -97,8 +96,6 @@ const Rec: React.FC = () => {
 
   // Render table view (simplified for now)
   const renderTableView = () => {
-    const avDevices = getAVDevices();
-
     return (
       <Paper sx={{ p: 2 }}>
         <Typography variant="h6" gutterBottom>
@@ -182,7 +179,7 @@ const Rec: React.FC = () => {
             {/* Auto-refresh indicator */}
             <Chip
               icon={<ComputerIcon />}
-              label={`${hosts.length} hosts - ${getAVDevices().length} AV devices`}
+              label={`${hosts.length} hosts - ${avDevices.length} AV devices`}
               color="primary"
               variant="outlined"
             />
@@ -235,7 +232,7 @@ const Rec: React.FC = () => {
       )}
 
       {/* No devices message */}
-      {!isLoading && getAVDevices().length === 0 && !error && (
+      {!isLoading && avDevices.length === 0 && !error && (
         <Box
           sx={{
             display: 'flex',
@@ -260,7 +257,7 @@ const Rec: React.FC = () => {
       )}
 
       {/* Content */}
-      {getAVDevices().length > 0 && (
+      {avDevices.length > 0 && (
         <Box>{viewMode === 'grid' ? renderGridView() : renderTableView()}</Box>
       )}
     </Box>

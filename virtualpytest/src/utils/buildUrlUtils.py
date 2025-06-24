@@ -438,4 +438,107 @@ def get_device_by_id(host_info: dict, device_id: str) -> dict:
         if device.get('device_id') == device_id:
             return device
     
-    return None 
+    return None
+
+def buildScreenshotUrlFromPath(host_info: dict, screenshot_path: str, device_id: str = None) -> str:
+    """
+    Build URL for screenshot from a local file path by extracting timestamp
+    
+    Args:
+        host_info: Host information from registry
+        screenshot_path: Local file path to screenshot (e.g., '/path/screenshot_20250117134500.jpg')
+        device_id: Optional device ID for multi-device hosts
+        
+    Returns:
+        Complete URL to screenshot capture
+        
+    Raises:
+        ValueError: If timestamp cannot be extracted from path
+        
+    Example:
+        buildScreenshotUrlFromPath(host_info, '/tmp/screenshot_20250117134500.jpg')
+        -> 'https://host:444/host/stream/captures/capture_20250117134500.jpg'
+    """
+    import re
+    
+    # Extract timestamp from screenshot path
+    timestamp_match = re.search(r'screenshot_(\d{14})\.jpg', screenshot_path)
+    if not timestamp_match:
+        raise ValueError(f'Failed to extract timestamp from screenshot path: {screenshot_path}')
+    
+    timestamp = timestamp_match.group(1)
+    
+    # Use existing buildCaptureUrl function
+    return buildCaptureUrl(host_info, timestamp, device_id)
+
+def buildStreamUrlForDevice(host_info: dict, device_id: str) -> str:
+    """
+    Build stream URL for a specific device
+    
+    Args:
+        host_info: Host information from registry
+        device_id: Device ID (e.g., 'device1', 'device2')
+        
+    Returns:
+        Complete URL to HLS stream for the device
+        
+    Example:
+        buildStreamUrlForDevice(host_info, 'device1')
+        -> 'https://host:444/host/stream/capture1/output.m3u8'
+    """
+    return buildStreamUrl(host_info, device_id)
+
+def resolveScreenshotFilePath(filename: str) -> str:
+    """
+    Resolve local file path for a screenshot filename
+    
+    Args:
+        filename: Screenshot filename (e.g., 'screenshot_20250117134500.jpg')
+        
+    Returns:
+        Local file path to screenshot
+        
+    Raises:
+        ValueError: If filename is invalid or unsafe
+        
+    Example:
+        resolveScreenshotFilePath('screenshot_20250117134500.jpg')
+        -> '/tmp/screenshots/screenshot_20250117134500.jpg'
+    """
+    # Security validation - ensure the path is safe
+    if '..' in filename or filename.startswith('/'):
+        raise ValueError(f'Invalid filename: {filename}')
+    
+    # Extract the base filename without query parameters
+    base_filename = filename.split('?')[0]
+    
+    # Use host's tmp directory for screenshots
+    screenshot_path = f"/tmp/screenshots/{base_filename}"
+    
+    return screenshot_path
+
+def resolveImageFilePath(image_path: str) -> str:
+    """
+    Resolve and validate local file path for an image
+    
+    Args:
+        image_path: Image path from request
+        
+    Returns:
+        Validated local file path to image
+        
+    Raises:
+        ValueError: If path is invalid, unsafe, or not allowed
+        
+    Example:
+        resolveImageFilePath('/tmp/verification_results/source_image_0.png')
+        -> '/tmp/verification_results/source_image_0.png'
+    """
+    if not image_path:
+        raise ValueError('No image path specified')
+    
+    # Security check - allow /tmp/ paths and other safe paths
+    if not (image_path.startswith('/tmp/') or image_path.startswith('/home/pi/virtualpytest/')):
+        raise ValueError(f'Invalid image path: {image_path}')
+    
+    return image_path 

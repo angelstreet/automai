@@ -49,6 +49,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const consecutiveFailuresRef = useRef(0);
+  const maxConsecutiveFailures = 3; // Stop auto-refresh after 3 consecutive failures
 
   // Hooks for device control and notifications
   const { takeControl } = useDeviceControl();
@@ -60,6 +62,15 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     if (host.avStatus === 'offline') {
       setError('AV Controller Offline');
       setIsInitialLoading(false);
+      consecutiveFailuresRef.current++;
+      return;
+    }
+
+    // Don't auto-refresh if we've had too many consecutive failures
+    if (consecutiveFailuresRef.current >= maxConsecutiveFailures && !isInitialLoading) {
+      console.log(
+        `[@component:RecHostPreview] Skipping auto-refresh for ${host.host_name} due to consecutive failures`,
+      );
       return;
     }
 
@@ -72,16 +83,19 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         setScreenshotUrl(url);
         setLastUpdate(new Date());
         setIsInitialLoading(false);
+        consecutiveFailuresRef.current = 0; // Reset failure count on success
       } else {
         setError('Failed to capture screenshot');
         setIsInitialLoading(false);
+        consecutiveFailuresRef.current++;
       }
     } catch (err: any) {
       console.error(`[@component:RecHostPreview] Screenshot error for ${host.host_name}:`, err);
       setError(err.message || 'Screenshot failed');
       setIsInitialLoading(false);
+      consecutiveFailuresRef.current++;
     }
-  }, [takeScreenshot, host, device]);
+  }, [takeScreenshot, host, device, isInitialLoading, maxConsecutiveFailures]);
 
   // Auto-refresh effect
   useEffect(() => {
@@ -271,6 +285,12 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               <ErrorIcon sx={{ mb: 1 }} />
               <Typography variant="caption" align="center">
                 {error}
+                {consecutiveFailuresRef.current >= maxConsecutiveFailures && (
+                  <>
+                    <br />
+                    Auto-refresh paused
+                  </>
+                )}
               </Typography>
             </Box>
           ) : screenshotUrl ? (
@@ -315,14 +335,27 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               gap: 0.5,
             }}
           >
-            <Tooltip title="Refresh">
+            <Tooltip
+              title={
+                consecutiveFailuresRef.current >= maxConsecutiveFailures
+                  ? 'Retry (Auto-refresh paused)'
+                  : 'Refresh'
+              }
+            >
               <IconButton
                 size="small"
-                onClick={handleTakeScreenshot}
+                onClick={() => {
+                  consecutiveFailuresRef.current = 0; // Reset failure count on manual refresh
+                  handleTakeScreenshot();
+                }}
                 disabled={false}
                 sx={{
                   backgroundColor: 'rgba(255, 255, 255, 0.8)',
                   '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
+                  ...(consecutiveFailuresRef.current >= maxConsecutiveFailures && {
+                    backgroundColor: 'rgba(255, 193, 7, 0.8)', // Warning color for retry
+                    '&:hover': { backgroundColor: 'rgba(255, 193, 7, 0.9)' },
+                  }),
                 }}
               >
                 <RefreshIcon fontSize="small" />

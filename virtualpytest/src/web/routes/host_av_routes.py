@@ -12,7 +12,6 @@ These endpoints run on the host and use the host's own stored device object.
 from flask import Blueprint, request, jsonify, current_app, send_file
 from src.utils.host_utils import get_controller, get_device_by_id
 import os
-import shutil
 
 # Create blueprint
 av_bp = Blueprint('host_av', __name__, url_prefix='/host/av')
@@ -263,7 +262,7 @@ def take_control():
 
 @av_bp.route('/get-stream-url', methods=['GET'])
 def get_stream_url():
-    """Get stream URL from AV controller using new architecture"""
+    """Get stream URL from AV controller using host URL building"""
     try:
         # Get device_id from query params (defaults to device1)
         device_id = request.args.get('device_id', 'device1')
@@ -289,20 +288,20 @@ def get_stream_url():
         
         print(f"[@route:host_av:stream_url] Using AV controller: {type(av_controller).__name__}")
         
-        # Get stream URL from controller
-        stream_url = av_controller.get_stream_url()
+        # Use URL building utilities
+        from src.utils.buildUrlUtils import buildStreamUrlForDevice
+        from src.controllers.controller_manager import get_host
         
-        if stream_url:
-            return jsonify({
-                'success': True,
-                'stream_url': stream_url,
-                'device_id': device_id
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'No stream URL available from AV controller'
-            }), 500
+        host = get_host()
+        stream_url = buildStreamUrlForDevice(host.to_dict(), device_id)
+        
+        print(f"[@route:host_av:stream_url] Built stream URL: {stream_url}")
+        
+        return jsonify({
+            'success': True,
+            'stream_url': stream_url,
+            'device_id': device_id
+        })
             
     except Exception as e:
         return jsonify({
@@ -339,52 +338,36 @@ def take_screenshot():
         
         print(f"[@route:host_av:take_screenshot] Using AV controller: {type(av_controller).__name__}")
         
-        # Take screenshot using controller
-        # For HDMI controller, this returns a URL to the captured screenshot
-        screenshot_result = av_controller.take_screenshot()
+        # Take screenshot using controller - returns local file path
+        screenshot_path = av_controller.take_screenshot()
         
-        if screenshot_result:
-            print(f"[@route:host_av:take_screenshot] Screenshot URL from controller: {screenshot_result}")
-            
-            # For HDMI controller, the result is already a URL we can return directly
-            # For other controllers, we might need to handle file paths differently
-            if screenshot_result.startswith('http'):
-                # It's already a URL, return it directly
-                return jsonify({
-                    'success': True,
-                    'screenshot_url': screenshot_result,
-                    'device_id': device_id
-                })
-            else:
-                # It's a file path, we need to copy it to nginx folder
-                temp_filename = f"screenshot_{device_id}.jpg"
-                
-                # Ensure nginx directory exists
-                nginx_dir = "/var/www/html/captures/tmp"
-                os.makedirs(nginx_dir, exist_ok=True)
-                
-                # Copy file to nginx folder
-                nginx_path = f"{nginx_dir}/{temp_filename}"
-                if os.path.exists(screenshot_result):
-                    shutil.copy2(screenshot_result, nginx_path)
-                    print(f"[@route:host_av:take_screenshot] Copied screenshot from {screenshot_result} to {nginx_path}")
-                else:
-                    print(f"[@route:host_av:take_screenshot] Warning: Source file not found at {screenshot_result}")
-                
-                # Get device to build nginx URL
-                device = get_device_by_id(device_id)
-                host_ip = device.get_host_ip() if device else 'localhost'
-                nginx_url = f"https://{host_ip}/captures/tmp/{temp_filename}"
-                
-                return jsonify({
-                    'success': True,
-                    'screenshot_url': nginx_url,
-                    'device_id': device_id
-                })
-        else:
+        if not screenshot_path:
             return jsonify({
                 'success': False,
                 'error': 'Failed to take temporary screenshot'
+            }), 500
+        
+        print(f"[@route:host_av:take_screenshot] Screenshot path from controller: {screenshot_path}")
+        
+        # Use URL building utilities
+        from src.utils.buildUrlUtils import buildScreenshotUrlFromPath
+        from src.controllers.controller_manager import get_host
+        
+        try:
+            host = get_host()
+            screenshot_url = buildScreenshotUrlFromPath(host.to_dict(), screenshot_path, device_id)
+            
+            print(f"[@route:host_av:take_screenshot] Built screenshot URL: {screenshot_url}")
+            
+            return jsonify({
+                'success': True,
+                'screenshot_url': screenshot_url,
+                'device_id': device_id
+            })
+        except ValueError as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
             }), 500
             
     except Exception as e:
@@ -528,16 +511,14 @@ def serve_screenshot(filename):
     try:
         print(f"[@route:host_av:serve_screenshot] Screenshot request for: {filename}")
         
-        # Ensure the path is safe
-        if '..' in filename or filename.startswith('/'):
-            print(f"[@route:host_av:serve_screenshot] Invalid filename requested: {filename}")
-            return jsonify({'success': False, 'error': 'Invalid filename'}), 400
+        # Use URL building utilities to resolve screenshot path
+        from src.utils.buildUrlUtils import resolveScreenshotFilePath
         
-        # Extract the base filename without query parameters
-        base_filename = filename.split('?')[0]
-        
-        # Use host's tmp directory for screenshots
-        screenshot_path = f"/tmp/screenshots/{base_filename}"
+        try:
+            screenshot_path = resolveScreenshotFilePath(filename)
+        except ValueError as e:
+            print(f"[@route:host_av:serve_screenshot] Invalid filename: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 400
         
         # Check if the file exists
         if not os.path.exists(screenshot_path):
@@ -578,33 +559,34 @@ def serve_image_by_path():
     try:
         image_path = request.args.get('path')
         
-        if not image_path:
-            return jsonify({'success': False, 'error': 'No path specified'}), 400
+        # Use URL building utilities to resolve and validate image path
+        from src.utils.buildUrlUtils import resolveImageFilePath
         
-        # Security check - allow /tmp/ paths and other safe paths
-        if not (image_path.startswith('/tmp/') or image_path.startswith('/home/pi/virtualpytest/')):
-            print(f"[@route:host_av:serve_image_by_path] Invalid image path: {image_path}")
-            return jsonify({'success': False, 'error': 'Invalid image path'}), 403
+        try:
+            validated_path = resolveImageFilePath(image_path)
+        except ValueError as e:
+            print(f"[@route:host_av:serve_image_by_path] Invalid image path: {str(e)}")
+            return jsonify({'success': False, 'error': str(e)}), 400
         
-        if not os.path.exists(image_path):
-            print(f"[@route:host_av:serve_image_by_path] Image not found: {image_path}")
+        if not os.path.exists(validated_path):
+            print(f"[@route:host_av:serve_image_by_path] Image not found: {validated_path}")
             return jsonify({'success': False, 'error': 'Image not found'}), 404
         
         # Check file size
-        file_size = os.path.getsize(image_path)
+        file_size = os.path.getsize(validated_path)
         if file_size == 0:
-            print(f"[@route:host_av:serve_image_by_path] Image file is empty: {image_path}")
+            print(f"[@route:host_av:serve_image_by_path] Image file is empty: {validated_path}")
             return jsonify({'success': False, 'error': 'Image file is empty'}), 500
         
-        print(f"[@route:host_av:serve_image_by_path] Serving image: {image_path} ({file_size} bytes)")
+        print(f"[@route:host_av:serve_image_by_path] Serving image: {validated_path} ({file_size} bytes)")
         
         # Determine mimetype based on extension
         mimetype = 'image/jpeg'  # Default
-        if image_path.lower().endswith('.png'):
+        if validated_path.lower().endswith('.png'):
             mimetype = 'image/png'
         
         # Serve the file with CORS headers
-        response = send_file(image_path, mimetype=mimetype)
+        response = send_file(validated_path, mimetype=mimetype)
         response.headers.add('Access-Control-Allow-Origin', '*')
         response.headers.add('Cache-Control', 'no-cache, no-store, must-revalidate')
         response.headers.add('Pragma', 'no-cache')

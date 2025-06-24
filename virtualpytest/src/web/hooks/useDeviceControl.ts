@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 
 import { Host } from '../types/common/Host_Types';
 
@@ -15,9 +15,19 @@ export const useDeviceControl = () => {
 
   // Track active locks by host name -> user ID
   const [activeLocks, setActiveLocks] = useState<Map<string, string>>(new Map());
+  const reclaimInProgressRef = useRef(false);
+  const initializedRef = useRef(false);
 
   // Automatically reclaim locks for devices that belong to this user
   const reclaimUserLocks = useCallback(async () => {
+    // Prevent multiple simultaneous reclaim operations
+    if (reclaimInProgressRef.current) {
+      console.log('[@hook:useDeviceControl] Reclaim already in progress, skipping');
+      return;
+    }
+
+    reclaimInProgressRef.current = true;
+
     try {
       console.log(`[@hook:useDeviceControl] Checking for locks to reclaim for user: ${userId}`);
 
@@ -54,12 +64,17 @@ export const useDeviceControl = () => {
       }
     } catch (error) {
       console.error(`[@hook:useDeviceControl] Error reclaiming user locks:`, error);
+    } finally {
+      reclaimInProgressRef.current = false;
     }
   }, [userId, isOurLock]);
 
-  // Initialize lock reclaim on mount
+  // Initialize lock reclaim on mount - only once to prevent React 18 double effects
   useEffect(() => {
-    reclaimUserLocks();
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      reclaimUserLocks();
+    }
   }, [reclaimUserLocks]);
 
   // Clean up locks on unmount

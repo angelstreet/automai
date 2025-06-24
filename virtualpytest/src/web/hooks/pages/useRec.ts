@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 
@@ -19,6 +19,7 @@ export const useRec = (): UseRecReturn => {
   const [hosts, setHosts] = useState<HostWithAVStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fetchInProgressRef = useRef(false);
 
   // Check AV status for a specific host
   const checkAVStatus = useCallback(async (host: Host): Promise<boolean> => {
@@ -57,6 +58,14 @@ export const useRec = (): UseRecReturn => {
 
   // Fetch all connected hosts and filter for AV capabilities
   const fetchHosts = useCallback(async () => {
+    // Prevent multiple simultaneous fetch requests
+    if (fetchInProgressRef.current) {
+      console.log('[@hook:useRec] Fetch already in progress, skipping');
+      return;
+    }
+
+    fetchInProgressRef.current = true;
+
     try {
       console.log('[@hook:useRec] Fetching connected hosts with AV capabilities');
 
@@ -67,30 +76,16 @@ export const useRec = (): UseRecReturn => {
 
       const data = await response.json();
 
-      console.log('[@hook:useRec] Raw response from server:', data);
-
       if (!data.success || !data.hosts) {
         throw new Error(data.error || 'Invalid response format');
       }
 
-      console.log('[@hook:useRec] All hosts received:', data.hosts);
-      console.log('[@hook:useRec] First host details:', data.hosts[0]);
+      console.log(`[@hook:useRec] Received ${data.hosts.length} hosts from server`);
 
       // Filter hosts that have devices with AV capabilities and are online
       const avHosts = data.hosts.filter((host: Host) => {
         const hasDevicesWithAV =
           host.devices?.some((device: any) => device.capabilities?.av === 'hdmi_stream') || false;
-
-        console.log(`[@hook:useRec] Checking host ${host.host_name}:`, {
-          status: host.status,
-          devices: host.devices?.length || 0,
-          hasDevicesWithAV,
-          deviceCapabilities:
-            host.devices?.map((device: any) => ({
-              deviceName: device.device_name,
-              capabilities: device.capabilities || [],
-            })) || [],
-        });
 
         // Host must be online and have at least one device with AV capability
         return (
@@ -101,7 +96,6 @@ export const useRec = (): UseRecReturn => {
       console.log(
         `[@hook:useRec] Found ${avHosts.length} hosts with AV-capable devices out of ${data.hosts.length} total hosts`,
       );
-      console.log('[@hook:useRec] Hosts with AV-capable devices:', avHosts);
 
       // Check AV status for each host and add status property
       const hostsWithStatus: HostWithAVStatus[] = await Promise.all(
@@ -114,7 +108,7 @@ export const useRec = (): UseRecReturn => {
         }),
       );
 
-      console.log(`[@hook:useRec] Hosts with AV status:`, hostsWithStatus);
+      console.log(`[@hook:useRec] Processed ${hostsWithStatus.length} hosts with AV status`);
 
       setHosts(hostsWithStatus);
       setError(null);
@@ -124,6 +118,7 @@ export const useRec = (): UseRecReturn => {
       setHosts([]);
     } finally {
       setIsLoading(false);
+      fetchInProgressRef.current = false;
     }
   }, [checkAVStatus]);
 
@@ -178,9 +173,13 @@ export const useRec = (): UseRecReturn => {
     await fetchHosts();
   }, [fetchHosts]);
 
-  // Initial fetch
+  // Initial fetch - with ref to prevent React 18 double effects in development
+  const initializedRef = useRef(false);
   useEffect(() => {
-    fetchHosts();
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      fetchHosts();
+    }
   }, [fetchHosts]);
 
   return {
