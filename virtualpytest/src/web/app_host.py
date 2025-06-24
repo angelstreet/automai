@@ -124,6 +124,15 @@ def main():
     with app.app_context():
         app.default_team_id = DEFAULT_TEAM_ID
         app.default_user_id = DEFAULT_USER_ID
+        
+        # Set the existing host object for routes to use
+        try:
+            from src.controllers.controller_manager import get_host
+            host = get_host()  # This already has all devices and controllers
+            app.my_host_device = host  # Simply assign the existing host object
+            print(f"[@host:main] ✅ Host device object set: {host.host_name} with {host.get_device_count()} devices")
+        except Exception as e:
+            print(f"[@host:main] ⚠️ Failed to set my_host_device: {e}")
     
     # STEP 3: Register Routes (FAIL FAST)
     print("[@host:main:main] Step 3: Registering routes...")
