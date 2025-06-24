@@ -56,8 +56,11 @@ export const buildReferenceImageUrl = (
   host: any,
   deviceModel: string,
   filename: string,
+  deviceId?: string,
 ): string => {
-  return internalBuildHostUrl(host, `host/stream/resources/${deviceModel}/${filename}`);
+  // Get device-specific capture path as base for resources
+  const capturePath = getDeviceCaptureUrlPath(host, deviceId);
+  return internalBuildHostUrl(host, `host${capturePath}/resources/${deviceModel}/${filename}`);
 };
 
 /**
@@ -149,60 +152,91 @@ export const buildImageUrl = buildHostImageUrl;
  * Mirrors the Python _get_device_stream_path function.
  */
 const getDeviceStreamUrlPath = (host: any, deviceId?: string): string => {
+  if (!host) {
+    throw new Error('Host information is required for device stream path resolution');
+  }
+
   if (!deviceId) {
-    // Default to first device or legacy single-device path
-    return '/stream';
+    // Get first device if no device_id specified
+    const devices = host?.devices || [];
+    if (!devices.length) {
+      throw new Error('No devices configured in host configuration');
+    }
+    deviceId = devices[0]?.device_id;
+    if (!deviceId) {
+      throw new Error('First device has no device_id configured');
+    }
   }
 
   // Get devices configuration from host
   const devices = host?.devices || [];
+  if (!devices.length) {
+    throw new Error(`No devices configured in host configuration for device_id: ${deviceId}`);
+  }
 
   // Find the specific device
   for (const device of devices) {
     if (device?.device_id === deviceId) {
       const streamPath = device?.video_stream_path;
-      if (streamPath) {
-        // Remove '/host' prefix if present and ensure starts with /
-        const cleanPath = streamPath.replace('/host', '').replace(/^\/+/, '/');
-        return cleanPath;
+      if (!streamPath) {
+        throw new Error(`Device ${deviceId} has no video_stream_path configured`);
       }
+
+      // Remove '/host' prefix if present and ensure starts with /
+      const cleanPath = streamPath.replace('/host', '').replace(/^\/+/, '/');
+      return cleanPath;
     }
   }
 
-  // Fallback: try to construct from device_id (device1 -> capture1, device2 -> capture2)
-  if (deviceId.startsWith('device')) {
-    const deviceNum = deviceId.replace('device', '');
-    return `/stream/capture${deviceNum}`;
-  }
-
-  // Final fallback
-  return '/stream';
+  const availableDevices = devices.map((d: any) => d?.device_id).filter(Boolean);
+  throw new Error(
+    `Device ${deviceId} not found in host configuration. Available devices: ${availableDevices.join(', ')}`,
+  );
 };
 
 /**
  * Get device-specific capture URL path from host configuration.
- * Mirrors the Python _get_device_capture_path function.
+ * Uses video_capture_path from device configuration.
  */
 const getDeviceCaptureUrlPath = (host: any, deviceId?: string): string => {
+  if (!host) {
+    throw new Error('Host information is required for device capture path resolution');
+  }
+
   if (!deviceId) {
-    // Default to first device or legacy single-device path
-    return '/stream/captures';
+    // Get first device if no device_id specified
+    const devices = host?.devices || [];
+    if (!devices.length) {
+      throw new Error('No devices configured in host configuration');
+    }
+    deviceId = devices[0]?.device_id;
+    if (!deviceId) {
+      throw new Error('First device has no device_id configured');
+    }
   }
 
   // Get devices configuration from host
   const devices = host?.devices || [];
+  if (!devices.length) {
+    throw new Error(`No devices configured in host configuration for device_id: ${deviceId}`);
+  }
 
   // Find the specific device
   for (const device of devices) {
     if (device?.device_id === deviceId) {
-      const streamPath = device?.video_stream_path;
-      if (streamPath) {
-        // Remove '/host' prefix if present and ensure starts with /
-        const cleanPath = streamPath.replace('/host', '').replace(/^\/+/, '/');
-        return `${cleanPath}/captures`;
+      const capturePath = device?.video_capture_path;
+      if (!capturePath) {
+        throw new Error(`Device ${deviceId} has no video_capture_path configured`);
       }
+
+      // Convert local path to URL path by removing '/var/www/html' prefix
+      const urlPath = capturePath.replace('/var/www/html', '').replace(/^\/+/, '/');
+      return urlPath;
     }
   }
-  // Final fallback
-  return '/stream/capture1';
+
+  const availableDevices = devices.map((d: any) => d?.device_id).filter(Boolean);
+  throw new Error(
+    `Device ${deviceId} not found in host configuration. Available devices: ${availableDevices.join(', ')}`,
+  );
 };
