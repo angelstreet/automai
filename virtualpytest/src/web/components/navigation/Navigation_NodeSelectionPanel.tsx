@@ -21,6 +21,7 @@ import React, { useState, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
+import { useNodeOperations } from '../../hooks/navigation/useNodeOperations';
 
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
 
@@ -65,6 +66,23 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
 
     // Add state to control showing/hiding the NodeGotoPanel
     const [showGotoPanel, setShowGotoPanel] = useState(false);
+
+    // Use the node operations hook
+    const nodeOperations = useNodeOperations({
+      selectedHost,
+      isControlActive,
+      nodeForm: {
+        id: selectedNode.id,
+        label: selectedNode.data.label,
+        type: selectedNode.data.type,
+        description: selectedNode.data.description || '',
+        screenshot: selectedNode.data.screenshot,
+        depth: selectedNode.data.depth || 0,
+        parent: selectedNode.data.parent || [],
+        menu_type: selectedNode.data.menu_type,
+        verifications: selectedNode.data.verifications || [],
+      },
+    });
 
     // Clear the goto panel when the component unmounts or when a new node is selected
     useEffect(() => {
@@ -117,7 +135,13 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       console.log('[@component:NodeSelectionPanel] Screenshot button clicked - DEBUG INFO:', {
         isControlActive,
         selectedHost: selectedHost
-          ? { host_name: selectedHost.host_name, device_model: selectedHost.device_model }
+          ? {
+              host_name: selectedHost.host_name,
+              device_model:
+                selectedHost.devices && selectedHost.devices.length > 0
+                  ? selectedHost.devices[0].model
+                  : 'unknown',
+            }
           : null,
         selectedNodeLabel: selectedNode.data.label,
         onUpdateNode: !!onUpdateNode,
@@ -131,72 +155,25 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         return;
       }
 
-      try {
-        setScreenshotSaveStatus('idle'); // Reset status before starting
+      // Use the hook's takeAndSaveScreenshot method
+      const result = await nodeOperations.takeAndSaveScreenshot(
+        selectedNode.data.label,
+        selectedNode.id,
+        onUpdateNode,
+      );
 
-        const response = await fetch('/server/navigation/save-screenshot', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            host: selectedHost,
-            filename: selectedNode.data.label, // Use node name as filename
-            device_model: selectedHost.device_model || 'android_mobile', // Add device model
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success && result.screenshot_url) {
-          // Update the node with the complete URL from backend
-          if (onUpdateNode) {
-            const timestamp = Date.now();
-            const updatedNodeData = {
-              ...selectedNode.data,
-              screenshot: result.screenshot_url, // Store complete URL from backend
-              screenshot_timestamp: timestamp, // Add timestamp to force image refresh
-            };
-            onUpdateNode(selectedNode.id, updatedNodeData);
-
-            // Simple but effective cache-busting: dispatch event with unique cache-buster
-            const cacheBuster = `${timestamp}_${Math.random().toString(36).substr(2, 9)}`;
-            window.dispatchEvent(
-              new CustomEvent('nodeScreenshotUpdated', {
-                detail: {
-                  nodeId: selectedNode.id,
-                  screenshot: result.screenshot_url,
-                  cacheBuster: cacheBuster,
-                },
-              }),
-            );
-          } else {
-            console.warn(
-              '[@component:NodeSelectionPanel] onUpdateNode callback not provided - screenshot URL not saved to node',
-            );
-          }
-
-          // Set success status and auto-hide after 3 seconds
-          setScreenshotSaveStatus('success');
-          setTimeout(() => setScreenshotSaveStatus('idle'), 3000);
-        } else {
-          console.error(
-            '[@component:NodeSelectionPanel] Screenshot failed:',
-            result.error || 'Unknown error',
-          );
-          setScreenshotSaveStatus('error');
-          setTimeout(() => setScreenshotSaveStatus('idle'), 3000);
-        }
-      } catch (error) {
-        console.error('[@component:NodeSelectionPanel] Screenshot request failed:', error);
+      if (result.success) {
+        // Set success status and auto-hide after 3 seconds
+        setScreenshotSaveStatus('success');
+        setTimeout(() => setScreenshotSaveStatus('idle'), 3000);
+      } else {
+        console.error('[@component:NodeSelectionPanel] Screenshot failed:', result.message);
         setScreenshotSaveStatus('error');
         setTimeout(() => setScreenshotSaveStatus('idle'), 3000);
       }
 
       setShowScreenshotConfirm(false);
     };
-
-    // ❌ REMOVED: updateVerificationResults - confidence tracking moved to database
 
     // Execute all node verifications with direct API call
     const handleRunVerifications = async () => {
@@ -212,124 +189,14 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       setIsRunningVerifications(true);
       setVerificationResult(null);
 
-      try {
-        // Step 1: Take screenshot
-        console.log('[@component:NodeSelectionPanel] Taking screenshot for verification...');
+      // Use the hook's runVerifications method
+      const result = await nodeOperations.runVerifications(
+        selectedNode.data.verifications,
+        selectedNode.id,
+      );
 
-        const screenshotResponse = await fetch('/server/av/take-screenshot', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ host: selectedHost }),
-        });
-
-        const screenshotResult = await screenshotResponse.json();
-
-        if (!screenshotResult.success || !screenshotResult.screenshot_url) {
-          setVerificationResult('❌ Failed to capture screenshot for verification');
-          return;
-        }
-
-        // Extract filename from screenshot URL exactly like the editor does
-        const screenshotUrl = screenshotResult.screenshot_url;
-        let capture_filename = null;
-
-        try {
-          // Extract filename from URL like "http://localhost:5009/images/screenshot/android_mobile.jpg?t=1749217510777"
-          // or "https://host/captures/tmp/screenshot.jpg"
-          const url = new URL(screenshotUrl);
-          const pathname = url.pathname;
-          const filename = pathname.split('/').pop()?.split('?')[0]; // Get filename without query params
-          capture_filename = filename;
-
-          console.log('[@component:NodeSelectionPanel] Extracted filename from URL:', {
-            screenshotUrl,
-            pathname,
-            capture_filename,
-          });
-        } catch (urlError) {
-          // Fallback: extract filename directly from URL string
-          capture_filename = screenshotUrl.split('/').pop()?.split('?')[0];
-          console.log(
-            '[@component:NodeSelectionPanel] Fallback filename extraction:',
-            capture_filename,
-          );
-        }
-
-        if (!capture_filename) {
-          setVerificationResult('❌ Failed to extract filename from screenshot URL');
-          return;
-        }
-
-        console.log('[@component:NodeSelectionPanel] Using capture filename:', capture_filename);
-
-        // Step 2: Prepare verifications exactly like the editor
-        const verifications = selectedNode.data.verifications.map((verification) => ({
-          ...verification,
-          verification_type: verification.verification_type || 'text',
-        }));
-
-        // Step 3: Execute verifications using the same pattern as the editor
-        const verificationResponse = await fetch('/server/verification/batch/execute', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            host: selectedHost, // Send full host object (same as editor)
-            verifications: verifications, // Send verifications directly (same as editor)
-            source_filename: capture_filename, // Use extracted filename (same as editor)
-          }),
-        });
-
-        const verificationResult = await verificationResponse.json();
-
-        console.log(
-          '[@component:NodeSelectionPanel] Verification batch result:',
-          verificationResult,
-        );
-        console.log(
-          '[@component:NodeSelectionPanel] Verification result keys:',
-          Object.keys(verificationResult),
-        );
-        console.log(
-          '[@component:NodeSelectionPanel] Verification results:',
-          verificationResult.results,
-        );
-
-        // Step 4: Process results exactly like the editor does
-        if (verificationResult.results && verificationResult.results.length > 0) {
-          const results = verificationResult.results.map((result: any, index: number) => {
-            if (result.success) {
-              return `✅ Verification ${index + 1}: ${result.message || 'Success'}`;
-            } else {
-              return `❌ Verification ${index + 1}: ${result.error || result.message || 'Failed'}`;
-            }
-          });
-
-          // Show success message with pass/fail count like the editor
-          const passedCount = verificationResult.passed_count || 0;
-          const totalCount = verificationResult.total_count || verificationResult.results.length;
-          const summaryMessage = `Verification completed: ${passedCount}/${totalCount} passed`;
-
-          setVerificationResult([summaryMessage, '', ...results].join('\n'));
-        } else if (verificationResult.success === false && verificationResult.error) {
-          // Only treat as error if there's an actual error and no results (same as editor)
-          const errorMessage =
-            verificationResult.message || verificationResult.error || 'Unknown error occurred';
-          console.log(
-            '[@component:NodeSelectionPanel] Batch execution failed with error:',
-            errorMessage,
-          );
-          setVerificationResult(`❌ Verification failed: ${errorMessage}`);
-        } else {
-          // Fallback case - no results and no clear error (same as editor)
-          console.log('[@component:NodeSelectionPanel] No results received from batch execution');
-          setVerificationResult('❌ No verification results received');
-        }
-      } catch (err: any) {
-        console.error('[@component:NodeSelectionPanel] Error executing verifications:', err);
-        setVerificationResult(`❌ Error running verifications: ${err.message}`);
-      } finally {
-        setIsRunningVerifications(false);
-      }
+      setVerificationResult(result.message);
+      setIsRunningVerifications(false);
     };
 
     const getParentNames = (parentIds: string[]): string => {

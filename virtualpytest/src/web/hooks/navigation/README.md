@@ -13,9 +13,11 @@ The navigation editor follows a **modular hook pattern** where:
 ## Hook Breakdown
 
 ### 🗄️ `useNavigationState`
+
 **Purpose**: Manages all state variables for the navigation editor.
 
 **Responsibilities**:
+
 - Route parameters (treeId, treeName, interfaceId)
 - Navigation state (breadcrumbs, paths)
 - Save operation state (loading, errors, success)
@@ -26,63 +28,99 @@ The navigation editor follows a **modular hook pattern** where:
 - Filtering and progressive loading state
 
 ### 🔗 `useConnectionRules`
+
 **Purpose**: Handles all connection validation and parent inheritance logic.
 
 **Responsibilities**:
+
 - Connection validation between nodes
 - Parent-child relationship establishment
 - Edge type determination
 - Connection rules summary for debugging
 
 **Key Functions**:
+
 - `validateConnection()` - Validates and processes node connections
 - `getRulesSummary()` - Returns documentation of connection rules
 
 ### 📚 `useNavigationHistory`
+
 **Purpose**: Manages undo/redo functionality.
 
 **Responsibilities**:
+
 - Saving states to history
 - Undo/redo operations
 - History navigation
 - State restoration
 
 **Key Functions**:
+
 - `saveToHistory()` - Saves current state
 - `undo()` - Reverts to previous state
 - `redo()` - Advances to next state
 
 ### 💾 `useNavigationCRUD`
+
 **Purpose**: Handles all database operations.
 
 **Responsibilities**:
+
 - Loading trees from database
 - Saving trees to database
 - Creating empty tree structures
 - Data conversion between formats
 
 **Key Functions**:
+
 - `loadFromDatabase()` - Loads tree data
 - `saveToDatabase()` - Saves tree data
 - `createEmptyTree()` - Creates initial tree structure
 
 ### 🎯 `useNodeEdgeManagement`
+
 **Purpose**: Manages node and edge operations.
 
 **Responsibilities**:
+
 - Adding new nodes
 - Editing node/edge properties
 - Deleting nodes/edges
 - Form handling for node/edge dialogs
 
 **Key Functions**:
+
 - `addNewNode()` - Creates new nodes
 - `saveNodeChanges()` - Saves node edits
 - `deleteSelected()` - Removes selected items
 
+## Navigation Hooks
+
+This directory contains hooks for navigation-related functionality.
+
+### Core Hooks
+
+- `useNavigation` - Main navigation hook for basic operations
+- `useNavigationEditor` - Main orchestrator hook for the navigation editor
+- `useConnectionRules` - Hook for managing node connection rules
+
+### Specialized Hooks
+
+- `useNavigationNodesHook` - Hook for managing navigation nodes
+- `useNavigationUIHook` - Hook for managing navigation UI state
+- `useNavigationFlowHook` - Hook for managing navigation flow
+- `useNavigationActionsHook` - Hook for managing navigation actions
+- `useNavigationEditorNew` - New version of the navigation editor hook
+- `useNodeOperations` - Hook for node-specific operations like goto, verifications, and screenshots
+
+### Legacy Hooks
+
+- `useNavigationState` - Legacy hook for navigation state management
+
 ## Usage
 
 ### Standard Usage (Recommended)
+
 ```typescript
 import { useNavigationEditor } from '@/hooks';
 
@@ -93,12 +131,9 @@ function NavigationEditor() {
 ```
 
 ### Direct Module Usage (Advanced)
+
 ```typescript
-import { 
-  useNavigationState, 
-  useConnectionRules,
-  useNavigationCRUD 
-} from '@/hooks/navigation';
+import { useNavigationState, useConnectionRules, useNavigationCRUD } from '@/hooks/navigation';
 
 function CustomNavigationComponent() {
   const state = useNavigationState();
@@ -111,26 +146,31 @@ function CustomNavigationComponent() {
 ## Benefits of This Refactoring
 
 ### ✅ **Maintainability**
+
 - Each hook has a single, clear responsibility
 - Easier to locate and fix bugs
 - Simpler to add new features
 
 ### ✅ **Testability**
+
 - Each hook can be tested independently
 - Easier to mock dependencies
 - More focused test cases
 
 ### ✅ **Reusability**
+
 - Individual hooks can be used in other components
 - Logic can be shared across different navigation contexts
 - Easier to create variants of navigation editor
 
 ### ✅ **Performance**
+
 - Better React optimization opportunities
 - More granular dependency tracking
 - Reduced unnecessary re-renders
 
 ### ✅ **Developer Experience**
+
 - Easier to understand code structure
 - Better IntelliSense and type support
 - Clearer separation of concerns
@@ -150,4 +190,4 @@ The connection rules are now centralized in `useConnectionRules` and include:
 
 **Gradual Adoption**: You can start using individual hooks in new components while keeping existing code unchanged.
 
-**Type Safety**: All hooks maintain full TypeScript support with proper interfaces. 
+**Type Safety**: All hooks maintain full TypeScript support with proper interfaces.

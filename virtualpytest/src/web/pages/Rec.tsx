@@ -21,10 +21,12 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { RecHostPreview } from '../components/rec/RecHostPreview';
 import { useRec } from '../hooks/pages/useRec';
+import { DeviceControlProvider } from '../contexts/DeviceControlContext';
 
 type ViewMode = 'grid' | 'table';
 
-const Rec: React.FC = () => {
+// Inner component that uses the useRec hook
+const RecContent: React.FC = () => {
   const { hosts, isLoading, error, refreshHosts, takeScreenshot } = useRec();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -248,19 +250,33 @@ const Rec: React.FC = () => {
             No AV-capable devices found
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Make sure you have devices connected with AV controller capabilities.
+            Connect devices with AV capabilities or check your network connection.
           </Typography>
-          <Button variant="outlined" startIcon={<RefreshIcon />} onClick={handleManualRefresh}>
-            Refresh Hosts
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={handleManualRefresh}
+            size="large"
+          >
+            Refresh Devices
           </Button>
         </Box>
       )}
 
-      {/* Content */}
-      {avDevices.length > 0 && (
-        <Box>{viewMode === 'grid' ? renderGridView() : renderTableView()}</Box>
+      {/* Device Grid/Table */}
+      {!isLoading && avDevices.length > 0 && (
+        <Box sx={{ mt: 3 }}>{viewMode === 'grid' ? renderGridView() : renderTableView()}</Box>
       )}
     </Box>
+  );
+};
+
+// Wrapper component that provides DeviceControlContext
+const Rec: React.FC = () => {
+  return (
+    <DeviceControlProvider>
+      <RecContent />
+    </DeviceControlProvider>
   );
 };
 

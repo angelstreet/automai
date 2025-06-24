@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
+import { useDeviceControl } from '../../contexts/DeviceControlContext';
 import { Host } from '../../types/common/Host_Types';
 
 interface HostWithAVStatus extends Host {
@@ -20,6 +21,9 @@ export const useRec = (): UseRecReturn => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const fetchInProgressRef = useRef(false);
+
+  // Get hosts from DeviceControl context instead of direct fetch
+  const { availableHosts, fetchHosts: fetchHostsFromContext } = useDeviceControl();
 
   // Check AV status for a specific host
   const checkAVStatus = useCallback(async (host: Host): Promise<boolean> => {
@@ -65,25 +69,19 @@ export const useRec = (): UseRecReturn => {
     }
 
     fetchInProgressRef.current = true;
+    setIsLoading(true);
 
     try {
       console.log('[@hook:useRec] Fetching connected hosts with AV capabilities');
 
-      const response = await fetch('/server/system/getAllHosts');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch hosts: ${response.status}`);
-      }
+      // First fetch hosts from context
+      await fetchHostsFromContext();
 
-      const data = await response.json();
-
-      if (!data.success || !data.hosts) {
-        throw new Error(data.error || 'Invalid response format');
-      }
-
-      console.log(`[@hook:useRec] Received ${data.hosts.length} hosts from server`);
+      // Then filter for AV capabilities
+      console.log(`[@hook:useRec] Received ${availableHosts.length} hosts from context`);
 
       // Filter hosts that have devices with AV capabilities and are online
-      const avHosts = data.hosts.filter((host: Host) => {
+      const avHosts = availableHosts.filter((host: Host) => {
         const hasDevicesWithAV =
           host.devices?.some((device: any) => device.capabilities?.av === 'hdmi_stream') || false;
 
@@ -94,7 +92,7 @@ export const useRec = (): UseRecReturn => {
       });
 
       console.log(
-        `[@hook:useRec] Found ${avHosts.length} hosts with AV-capable devices out of ${data.hosts.length} total hosts`,
+        `[@hook:useRec] Found ${avHosts.length} hosts with AV-capable devices out of ${availableHosts.length} total hosts`,
       );
 
       // Check AV status for each host and add status property
@@ -120,7 +118,7 @@ export const useRec = (): UseRecReturn => {
       setIsLoading(false);
       fetchInProgressRef.current = false;
     }
-  }, [checkAVStatus]);
+  }, [availableHosts, fetchHostsFromContext, checkAVStatus]);
 
   // Take screenshot for a specific host and device
   const takeScreenshot = useCallback(

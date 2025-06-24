@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from 'react';
 
-import { Host } from '../types/common/Host_Types';
 import { useRegistration } from '../hooks/useRegistration';
+import { Host } from '../types/common/Host_Types';
 
 // ========================================
 // TYPES
@@ -42,7 +42,10 @@ interface DeviceControlProviderProps {
 
 const DeviceControlContext = createContext<DeviceControlContextType | null>(null);
 
-export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({ children, userInterface }) => {
+export const DeviceControlProvider: React.FC<DeviceControlProviderProps> = ({
+  children,
+  userInterface,
+}) => {
   console.log('[@context:DeviceControlProvider] Initializing device control context');
 
   // ========================================
