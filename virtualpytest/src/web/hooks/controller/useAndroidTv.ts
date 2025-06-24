@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import { Host } from '../../types/common/Host_Types';
+
 import { androidTvRemoteConfig } from '../../config/remote/androidTvRemote';
+import { Host } from '../../types/common/Host_Types';
 
 interface AndroidTvSession {
   connected: boolean;

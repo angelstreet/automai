@@ -72,6 +72,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         self.last_dump_time = 0
         
         print(f"[@controller:AndroidMobileRemote] Initialized for {self.android_device_id}")
+        self.connect()
     
     def connect(self) -> bool:
         """Connect to Android device via ADB."""
