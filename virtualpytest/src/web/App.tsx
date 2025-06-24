@@ -7,7 +7,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Footer from './components/common/Footer';
 import NavigationBar from './components/common/Navigation_Bar';
 import ThemeToggle from './components/common/ThemeToggle';
-import { RegistrationProvider } from './contexts/RegistrationContext';
+import { HostManagerProvider } from './contexts/HostManagerProvider';
 import { ToastProvider } from './contexts/ToastContext';
 
 // Lazy load all pages for better performance and to avoid loading everything at once
@@ -112,7 +112,7 @@ const LoadingSpinner: React.FC = () => (
 const App: React.FC = () => {
   return (
     <ToastProvider>
-      <RegistrationProvider>
+      <HostManagerProvider>
         <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Router
             future={{
@@ -197,7 +197,7 @@ const App: React.FC = () => {
             <Footer />
           </Router>
         </Box>
-      </RegistrationProvider>
+      </HostManagerProvider>
     </ToastProvider>
   );
 };

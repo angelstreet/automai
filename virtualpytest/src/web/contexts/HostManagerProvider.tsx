@@ -528,8 +528,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     };
   }, [releaseControl, activeLocks]);
 
-  // Note: Hosts are now automatically available from RegistrationContext
-  // No manual fetching needed - data should be automatically loaded
+  // Note: Hosts are now automatically loaded in HostManagerProvider
+  // No manual fetching needed - data loads automatically on mount
 
   // Update filtered hosts when availableHosts changes
   useEffect(() => {
