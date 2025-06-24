@@ -364,8 +364,8 @@ const Dashboard: React.FC = () => {
                     Devices ({host.device_count})
                   </Typography>
                 </AccordionSummary>
-                <AccordionDetails sx={{ pt: 0, pb: 1 }}>
-                  <Box sx={{ maxHeight: '150px', overflowY: 'auto' }}>
+                <AccordionDetails sx={{ pt: 0, pb: 0.5, px: 1 }}>
+                  <Box sx={{ maxHeight: '150px', overflowY: 'auto', overflowX: 'hidden' }}>
                     {host.devices.map((device) => (
                       <Box
                         key={device.device_id}
@@ -373,8 +373,8 @@ const Dashboard: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           gap: 1,
-                          py: 0.3,
-                          px: 0.5,
+                          py: 0.2,
+                          px: 0,
                           borderRadius: 1,
                           '&:hover': { backgroundColor: 'grey.100' },
                         }}
