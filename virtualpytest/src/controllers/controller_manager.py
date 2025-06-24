@@ -145,13 +145,15 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
     
     print(f"[@controller_manager:_create_device_with_controllers] Creating device: {device_id}")
     
-    # Create device with IP/port values
+    # Create device with IP/port values and video paths for URL building
     device = Device(
         device_id, 
         name, 
         model,
         device_config.get('device_ip'),
-        device_config.get('device_port')
+        device_config.get('device_port'),
+        device_config.get('video_stream_path'),
+        device_config.get('video_capture_path')
     )
     
     # Create controllers using the factory (returns dict now)

@@ -19,7 +19,7 @@ class Device:
         verification_controllers = device.get_controllers('verification')
     """
     
-    def __init__(self, device_id: str, name: str, model: str, device_ip: str = None, device_port: str = None):
+    def __init__(self, device_id: str, name: str, model: str, device_ip: str = None, device_port: str = None, video_stream_path: str = None, video_capture_path: str = None):
         """
         Initialize a device.
         
@@ -29,12 +29,18 @@ class Device:
             model: Device model from environment (e.g., 'stb')
             device_ip: Device IP address
             device_port: Device port
+            video_stream_path: Video stream path for URL building (e.g., '/host/stream/capture1')
+            video_capture_path: Video capture path for URL building (e.g., '/var/www/html/stream/capture1')
         """
         self.device_id = device_id
         self.name = name
         self.model = model
         self.device_ip = device_ip
         self.device_port = device_port
+        
+        # Store video paths for URL building purposes
+        self.video_stream_path = video_stream_path
+        self.video_capture_path = video_capture_path
         
         # Controllers organized by type
         self._controllers: Dict[str, List[BaseController]] = {
@@ -126,11 +132,21 @@ class Device:
         
         print(f"[@device:to_dict] Device {self.name} ({self.model}) detailed capabilities: {detailed_capabilities}")
         
-        return {
+        # Base device information
+        device_dict = {
             'device_id': self.device_id,
             'name': self.name,  # Updated field name for consistency
             'model': self.model,  # Updated field name for consistency
             'device_ip': self.device_ip,
             'device_port': self.device_port,
             'capabilities': detailed_capabilities  # New detailed format: {av: 'hdmi_stream', remote: 'android_mobile', verification: ['image', 'text']}
-        } 
+        }
+        
+        # Include video paths needed for URL building (if available)
+        # These are required by buildUrlUtils functions
+        if self.video_stream_path:
+            device_dict['video_stream_path'] = self.video_stream_path
+        if self.video_capture_path:
+            device_dict['video_capture_path'] = self.video_capture_path
+        
+        return device_dict 
