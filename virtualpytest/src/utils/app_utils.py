@@ -117,14 +117,7 @@ def validate_core_environment(mode='server'):
     print(f"✅ Core {mode} environment variables validated")
     return True
 
-def initialize_global_sessions():
-    """Initialize global session storage for controllers"""
-    return {
-        'android_tv_session': {'controller': None, 'connected': False},
-        'ir_remote_session': {'controller': None, 'connected': False},
-        'bluetooth_remote_session': {'controller': None, 'connected': False},
-        'android_mobile_controller': None
-    }
+
 
 # =====================================================
 # LAZY LOADING FUNCTIONS

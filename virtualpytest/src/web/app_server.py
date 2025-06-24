@@ -32,9 +32,6 @@ try:
         kill_process_on_port,
         setup_flask_app,
         validate_core_environment,
-        initialize_global_sessions,
-        initialize_server_globals,
-        cleanup_server_resources,
         DEFAULT_TEAM_ID,
         DEFAULT_USER_ID
     )
@@ -75,20 +72,14 @@ def setup_and_cleanup():
     # Setup Flask app
     app = setup_flask_app("VirtualPyTest-Server")
     
-    # Initialize globals
-    global_sessions = initialize_global_sessions()
-    initialize_server_globals()
-    
     # Store context
     with app.app_context():
-        app.global_sessions = global_sessions
         app.default_team_id = DEFAULT_TEAM_ID
         app.default_user_id = DEFAULT_USER_ID
     
     # Setup cleanup
     def cleanup_on_exit():
         print("🧹 Performing cleanup on exit...")
-        cleanup_server_resources()
     
     atexit.register(cleanup_on_exit)
     

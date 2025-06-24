@@ -39,7 +39,6 @@ try:
         kill_process_on_port,
         setup_flask_app,
         validate_core_environment,
-        initialize_global_sessions,
         DEFAULT_TEAM_ID,
         DEFAULT_USER_ID
     )
@@ -122,9 +121,7 @@ def main():
     app = setup_flask_app("VirtualPyTest-Host")
     
     # Initialize app context
-    global_sessions = initialize_global_sessions()
     with app.app_context():
-        app.global_sessions = global_sessions
         app.default_team_id = DEFAULT_TEAM_ID
         app.default_user_id = DEFAULT_USER_ID
     
