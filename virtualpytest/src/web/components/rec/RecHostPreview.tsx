@@ -4,7 +4,6 @@ import React, { useState, useCallback, useEffect } from 'react';
 
 import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
-import { ScreenshotCapture } from '../controller/av/ScreenshotCapture';
 
 import { RecHostStreamModal } from './RecHostStreamModal';
 
@@ -15,12 +14,56 @@ interface RecHostPreviewProps {
 
 export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) => {
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
+  const [previousScreenshotUrl, setPreviousScreenshotUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Hook for notifications only
   const { showError } = useToast();
+
+  // Handle smooth transition when new image loads
+  const handleImageLoad = useCallback(() => {
+    if (isTransitioning) {
+      // Clear the previous image after a brief delay to allow smooth transition
+      setTimeout(() => {
+        setPreviousScreenshotUrl(null);
+        setIsTransitioning(false);
+      }, 300); // Small delay for smooth transition
+    }
+  }, [isTransitioning]);
+
+  // Process screenshot URL with conditional HTTP to HTTPS proxy (similar to ScreenshotCapture)
+  const getImageUrl = useCallback((screenshotPath: string) => {
+    if (!screenshotPath) return '';
+
+    console.log(`[@component:RecHostPreview] Processing screenshot path: ${screenshotPath}`);
+
+    // Handle data URLs (base64 from remote system) - return as is
+    if (screenshotPath.startsWith('data:')) {
+      console.log('[@component:RecHostPreview] Using data URL from remote system');
+      return screenshotPath;
+    }
+
+    // Handle HTTPS URLs - return as is (no proxy needed)
+    if (screenshotPath.startsWith('https:')) {
+      console.log('[@component:RecHostPreview] Using HTTPS URL directly');
+      return screenshotPath;
+    }
+
+    // Handle HTTP URLs - use proxy to convert to HTTPS
+    if (screenshotPath.startsWith('http:')) {
+      console.log('[@component:RecHostPreview] HTTP URL detected, using proxy');
+      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(screenshotPath)}`;
+      console.log(`[@component:RecHostPreview] Generated proxy URL: ${proxyUrl}`);
+      return proxyUrl;
+    }
+
+    // For relative paths or other formats, use directly (assuming they are accessible)
+    console.log('[@component:RecHostPreview] Using path directly');
+    return screenshotPath;
+  }, []);
 
   // Take screenshot function - now internal
   const handleTakeScreenshot = useCallback(async () => {
@@ -45,6 +88,12 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
         const result = await response.json();
         if (result.success && result.screenshot_url) {
           console.log(`[@component:RecHostPreview] Screenshot taken: ${result.screenshot_url}`);
+
+          // Smooth transition: store previous URL and set new one
+          if (screenshotUrl && screenshotUrl !== result.screenshot_url) {
+            setPreviousScreenshotUrl(screenshotUrl);
+            setIsTransitioning(true);
+          }
           setScreenshotUrl(result.screenshot_url);
         } else {
           setError('Failed to capture screenshot');
@@ -64,7 +113,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
     } finally {
       setIsLoading(false);
     }
-  }, [host, device]);
+  }, [host, device, screenshotUrl]);
 
   // Auto-take screenshot every 5 seconds - but only when device data is stable
   useEffect(() => {
@@ -216,18 +265,65 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
               </Typography>
             </Box>
           ) : screenshotUrl ? (
-            <ScreenshotCapture
-              screenshotPath={screenshotUrl}
-              isCapturing={isLoading}
-              model={device?.device_model}
+            <Box
               sx={{
+                position: 'relative',
                 width: '100%',
                 height: '100%',
-                '& img': {
-                  cursor: 'pointer',
-                },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'transparent',
+                overflow: 'hidden',
               }}
-            />
+            >
+              {/* Previous image - fading out */}
+              {previousScreenshotUrl && isTransitioning && (
+                <Box
+                  component="img"
+                  src={getImageUrl(previousScreenshotUrl)}
+                  alt="Previous screenshot"
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                    opacity: isTransitioning ? 0 : 1,
+                    transition: 'opacity 300ms ease-in-out',
+                    cursor: 'pointer',
+                  }}
+                  draggable={false}
+                />
+              )}
+
+              {/* Current image - fading in */}
+              <Box
+                component="img"
+                src={getImageUrl(screenshotUrl)}
+                alt="Current screenshot"
+                sx={{
+                  position: previousScreenshotUrl && isTransitioning ? 'absolute' : 'relative',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  opacity: 1,
+                  transition: 'opacity 300ms ease-in-out',
+                  cursor: 'pointer',
+                }}
+                draggable={false}
+                onLoad={handleImageLoad}
+                onError={(_e) => {
+                  console.error(
+                    `[@component:RecHostPreview] Failed to load image: ${screenshotUrl}`,
+                  );
+                  setError('Failed to load screenshot');
+                }}
+              />
+            </Box>
           ) : (
             <Box
               sx={{

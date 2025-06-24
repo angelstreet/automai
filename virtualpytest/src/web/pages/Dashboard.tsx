@@ -456,7 +456,7 @@ const Dashboard: React.FC = () => {
               </TableCell>
               <TableCell>
                 <Box>
-                  {host.devices.map((device, index) => (
+                  {host.devices.map((device) => (
                     <Box key={device.device_id} display="flex" alignItems="center" gap={1} mb={0.5}>
                       {getDeviceIcon(device.device_model)}
                       <Typography variant="body2" fontFamily="monospace">

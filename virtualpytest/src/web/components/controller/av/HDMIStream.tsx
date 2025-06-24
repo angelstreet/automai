@@ -9,8 +9,7 @@ import {
   KeyboardArrowUp,
 } from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import React from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 
 import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
 import { useHdmiStream } from '../../../hooks/controller';
