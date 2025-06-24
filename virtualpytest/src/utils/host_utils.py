@@ -17,7 +17,7 @@ import platform
 from typing import Dict, Any, Optional
 
 from ..controllers.system.system_info import get_host_system_stats
-from ..utils.controller_manager import get_host, reset_host
+from ..controllers.controller_manager import get_host, reset_host
 from ..utils.app_utils import buildServerUrl
 
 # Disable SSL warnings for self-signed certificates
@@ -242,8 +242,40 @@ def get_device_by_id(device_id: str):
 
 
 def get_controller(device_id: str, controller_type: str):
-    """Get a controller from a specific device."""
+    """
+    Get a controller from a specific device with proper abstraction.
+    
+    Args:
+        device_id: Device identifier
+        controller_type: Abstract controller type ('av', 'remote', 'verification') 
+                        OR specific verification type ('verification_image', 'verification_adb', 'verification_text')
+    
+    Returns:
+        Controller instance or None if not found
+    """
     host = get_host()
+    
+    # Handle specific verification controller types
+    if controller_type.startswith('verification_'):
+        verification_impl = controller_type.replace('verification_', '')
+        device = host.get_device(device_id)
+        
+        if not device:
+            print(f"[@host_utils:get_controller] Device {device_id} not found")
+            return None
+        
+        # Look for specific verification controller implementation
+        verification_controllers = device.get_controllers('verification')
+        for controller in verification_controllers:
+            # Check if this controller matches the requested implementation
+            if hasattr(controller, 'verification_type') and controller.verification_type == verification_impl:
+                print(f"[@host_utils:get_controller] Found {verification_impl} verification controller for device {device_id}")
+                return controller
+        
+        print(f"[@host_utils:get_controller] No {verification_impl} verification controller found for device {device_id}")
+        return None
+    
+    # Handle abstract controller types (av, remote, verification)
     return host.get_controller(device_id, controller_type)
 
 
@@ -275,29 +307,5 @@ def has_device_capability(device_id: str, capability: str):
     return capability in capabilities
 
 
-# TEMPORARY BACKWARD COMPATIBILITY FUNCTION
-def get_local_controller(controller_type: str, device_id: str = None):
-    """
-    DEPRECATED: Backward compatibility function for old routes.
-    Use get_controller(device_id, controller_type) instead.
-    """
-    print(f"[@host_utils:get_local_controller] DEPRECATED: Use get_controller(device_id, controller_type) instead")
-    
-    # Default to device1 if no device_id provided
-    if not device_id:
-        device_id = 'device1'
-    
-    # Map old controller_type patterns to new ones
-    if controller_type.startswith('verification_'):
-        # verification_image -> verification
-        new_controller_type = 'verification'
-    elif controller_type == 'av':
-        new_controller_type = 'av'
-    elif controller_type == 'remote':
-        new_controller_type = 'remote'
-    elif controller_type == 'power':
-        new_controller_type = 'power'
-    else:
-        new_controller_type = controller_type
-    
-    return get_controller(device_id, new_controller_type) 
+# ✅ PHASE 6 CLEANUP: Removed deprecated function
+# - get_local_controller() - REMOVED (use get_controller() instead) 

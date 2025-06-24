@@ -1118,12 +1118,13 @@ class ImageVerificationController(VerificationControllerInterface):
             
             # Get reference data from database to find R2 URL
             try:
-                from src.controllers.verification_controller import get_verification_controller
-                from src.utils.app_utils import DEFAULT_TEAM_ID
+                # from src.controllers.verification_controller import get_verification_controller
+                # controller = get_verification_controller(temp_host_device)
+                # REMOVED: verification_controller dependency
                 
                 # Create a temporary host device object for database lookup
                 temp_host_device = {'device_model': model or 'default'}
-                controller = get_verification_controller(temp_host_device)
+                # REMOVED: verification_controller dependency
                 
                 # Get all references to find the one we need
                 references_result = controller.get_all_references(DEFAULT_TEAM_ID)

@@ -114,23 +114,23 @@ class Device:
     
     def to_dict(self) -> Dict[str, Any]:
         """
-        Convert device to dictionary for serialization.
+        Convert device to dictionary with detailed capabilities for serialization.
         
         Returns:
-            Dictionary representation of the device
+            Dictionary representation of the device with detailed capability format
         """
-        # Get concrete controller implementations
-        controller_implementations = []
-        for controllers in self._controllers.values():
-            for controller in controllers:
-                controller_implementations.append(type(controller).__name__)
+        from ..controllers.controller_config_factory import get_device_capabilities
+        
+        # Get detailed capabilities from factory
+        detailed_capabilities = get_device_capabilities(self.model)
+        
+        print(f"[@device:to_dict] Device {self.name} ({self.model}) detailed capabilities: {detailed_capabilities}")
         
         return {
             'device_id': self.device_id,
-            'device_name': self.name,
-            'device_model': self.model,
+            'name': self.name,  # Updated field name for consistency
+            'model': self.model,  # Updated field name for consistency
             'device_ip': self.device_ip,
             'device_port': self.device_port,
-            'capabilities': self.get_capabilities(),  # Abstract types: ['av', 'remote', 'verification']
-            'controller_types': controller_implementations  # Concrete classes: ['HDMIStreamController', 'AndroidMobileRemoteController', ...]
+            'capabilities': detailed_capabilities  # New detailed format: {av: 'hdmi_stream', remote: 'android_mobile', verification: ['image', 'text']}
         } 

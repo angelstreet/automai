@@ -78,28 +78,49 @@ def register_host():
         devices_with_controllers = []
         
         for device in devices:
-            print(f"[@route:register_host] Processing device: {device['device_name']} ({device['device_model']})")
+            device_name = device.get('name')
+            device_model = device.get('model') 
+            device_capabilities = device.get('capabilities', {})  # Use host-sent detailed capabilities
             
-            # Build controller configs for this device
-            controller_configs = create_controller_configs_from_device_info(device)
+            print(f"[@route:register_host] Processing device: {device_name} ({device_model})")
+            print(f"[@route:register_host] Host-sent capabilities: {device_capabilities}")
             
-            # Use the capabilities sent by the host (no redundant server-side detection)
-            # Extract controller types and implementation names from the actual controller configs
-            device_capabilities = list(set([config['type'] for config in controller_configs.values()]))
-            device_controller_types = [f"{config['type']}_{config['implementation']}" for config in controller_configs.values()]
+            # Extract capability types for backward compatibility
+            capability_list = []
+            controller_types = []
             
-            # Add device with its controller info
+            if device_capabilities.get('av'):
+                capability_list.append('av')
+                controller_types.append(f"av_{device_capabilities['av']}")
+            
+            if device_capabilities.get('remote'):
+                capability_list.append('remote')
+                controller_types.append(f"remote_{device_capabilities['remote']}")
+            
+            if device_capabilities.get('verification'):
+                capability_list.extend(device_capabilities['verification'])
+                for verification_type in device_capabilities['verification']:
+                    controller_types.append(f"verification_{verification_type}")
+            
+            print(f"[@route:register_host] Processed capability list: {capability_list}")
+            print(f"[@route:register_host] Controller types: {controller_types}")
+            
+            # Add device with processed info
             device_with_controllers = {
-                **device,
-                'controller_configs': controller_configs,
-                'capabilities': device_capabilities,
-                'controller_types': device_controller_types
+                'device_id': device.get('device_id'),
+                'name': device_name,
+                'model': device_model,
+                'device_ip': device.get('device_ip'),
+                'device_port': device.get('device_port'),
+                'capabilities': device_capabilities,  # Detailed format: {av: 'hdmi_stream', remote: 'android_mobile', verification: ['image', 'text']}
+                'capability_list': capability_list,   # Flat list for backward compatibility: ['av', 'remote', 'image', 'text']
+                'controller_types': controller_types  # Implementation types: ['av_hdmi_stream', 'remote_android_mobile', 'verification_image', 'verification_text']
             }
             devices_with_controllers.append(device_with_controllers)
             
             # Collect all capabilities and controller types
-            all_capabilities.update(device_capabilities)
-            all_controller_types.update(device_controller_types)
+            all_capabilities.update(capability_list)
+            all_controller_types.update(controller_types)
         
         print(f"[@route:register_host] Combined capabilities: {list(all_capabilities)}")
         print(f"[@route:register_host] Combined controller types: {list(all_controller_types)}")

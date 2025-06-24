@@ -32,17 +32,20 @@ import type { Actions } from '../controller/ActionTypes';
  * Matches exactly what the host sends during registration and
  * what the server should store and return to the frontend.
  */
+export interface DeviceCapabilities {
+  av?: string; // 'hdmi_stream' | null
+  remote?: string; // 'android_mobile' | 'android_tv' | 'appium' | null
+  verification?: string[]; // ['image', 'text', 'adb', 'appium']
+}
+
 export interface Device {
   device_id: string; // Device identifier (device1, device2, etc.)
-  device_name: string; // Device display name
-  device_model: string; // Device model for controller configuration
-  device_ip: string; // Device IP address (for ADB/device control)
-  device_port: string; // Device port (for ADB/device control)
-  video_device?: string; // Video device path
-  video_stream_path?: string; // Video stream path
-  video_capture_path?: string; // Video capture path
-  controller_configs?: any; // Device-specific controller configurations
-  capabilities?: string[]; // Device-specific capabilities
+  name: string; // Device display name (updated field name)
+  model: string; // Device model for controller configuration (updated field name)
+  device_ip?: string; // Device IP address (for ADB/device control)
+  device_port?: string; // Device port (for ADB/device control)
+  capabilities: DeviceCapabilities; // New detailed capability format
+  capability_list?: string[]; // Flat list for backward compatibility
   controller_types?: string[]; // Device-specific controller types
 }
 

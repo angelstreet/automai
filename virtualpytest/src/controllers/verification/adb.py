@@ -16,30 +16,29 @@ if src_utils_path not in sys.path:
     sys.path.insert(0, src_utils_path)
 
 from adb_utils import ADBUtils, AndroidElement
+from ..base_controller import VerificationControllerInterface
 
 
-class ADBVerificationController:
+class ADBVerificationController(VerificationControllerInterface):
     """ADB verification controller that uses direct ADB commands to verify UI elements."""
     
-    def __init__(self, av_controller, **kwargs):
+    def __init__(self, av_controller=None, **kwargs):
         """
         Initialize the ADB Verification controller.
         
         Args:
-            av_controller: AV controller for capturing screenshots (dependency injection)
+            av_controller: AV controller for capturing screenshots (optional, not used by ADB)
         """
-        # Dependency injection
+        super().__init__("ADB Verification", "adb")
+        
+        # AV controller is optional for ADB verification (ADB doesn't need screenshots)
         self.av_controller = av_controller
         
-        # Validate required dependency
-        if not self.av_controller:
-            raise ValueError("av_controller is required for ADBVerificationController")
-            
         self.device_id = f"adb_verification"  # Internal device identifier
         self.adb_utils = ADBUtils()
         self.is_connected = True  # Assume connected since we're using direct ADB
         
-        print(f"[@controller:ADBVerification] Initialized with AV controller")
+        print(f"[@controller:ADBVerification] Initialized for direct ADB communication")
 
     def getElementLists(self) -> Tuple[bool, List[Dict[str, Any]], str]:
         """

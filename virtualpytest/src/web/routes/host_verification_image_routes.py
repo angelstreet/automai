@@ -495,22 +495,17 @@ def execute_image_verification():
                 'error': 'verification is required'
             }), 400
         
-        # Use centralized VerificationController instead of custom logic
-        from src.controllers.verification_controller import get_verification_controller
+        # Execute verification using specific image verification controller
+        from src.utils.host_utils import get_controller
         
-        verification_controller = get_verification_controller(host_device)
+        verification_controller = get_controller('device1', 'verification_image')
+        if not verification_controller:
+            return jsonify({
+                'success': False,
+                'error': 'Image verification controller not available'
+            }), 500
         
-        # Convert source_filename to source_path if provided (using device-specific path)
-        source_path = None
-        if source_filename:
-            from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
-            device_id = get_current_device_id()
-            captures_path = get_device_local_captures_path(host_device, device_id)
-            source_path = f'{captures_path}/{source_filename}'
-            print(f"[@route:host_verification_image:execute] Using device-specific source path: {source_path} (device_id: {device_id})")
-        
-        result = verification_controller.execute_verification(verification, 
-                                                            source_path=source_path)
+        result = verification_controller.execute_verification(verification)
         
         print(f"[@route:host_verification_image:execute] Verification completed: {result.get('success')}")
         

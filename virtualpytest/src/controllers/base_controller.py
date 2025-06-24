@@ -1,19 +1,17 @@
 """
 VirtualPyTest Controller Base Classes
 
-This module defines abstract base classes for individual controller types.
-Each controller type is completely independent and can be implemented
-separately for different devices, providing maximum flexibility.
+to bMinimal base controller with only basic connection state.
+Controllers implement their own specific functionality.
 """
 
-from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List
 
 
-class BaseController(ABC):
+class BaseController:
     """
-    Base controller interface that all controllers must implement.
-    Provides common connection and status functionality.
+    Minimal base controller with just connection state.
+    Controllers implement their own specific methods as needed.
     """
     
     def __init__(self, controller_type: str, device_name: str = "Unknown Device"):
@@ -30,467 +28,43 @@ class BaseController(ABC):
         """Disconnect from the device/service. Optional - override if needed."""
         self.is_connected = False
         return True
-    
-    @abstractmethod
-    def get_status(self) -> Dict[str, Any]:
-        """Get controller status information. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def take_control(self) -> Dict[str, Any]:
-        """
-        Take control of the device/service and verify it's ready.
-        This method should check the current status, attempt to connect/restart
-        services if needed, and return a comprehensive status report.
-        
-        Returns:
-            Dict containing:
-            - success: bool - Whether take control was successful
-            - status: str - Current status description
-            - error: str - Error message if failed
-            - details: Dict - Additional status details
-        """
-        pass
 
+
+# Simplified interfaces for type hints only
+# Controllers implement their own methods without forced inheritance
 
 class RemoteControllerInterface(BaseController):
-    """
-    Abstract interface for remote control functionality.
-    
-    Defines the interface that remote controllers must implement
-    for device navigation and control. Each device can have its own
-    implementation of this interface.
-    """
+    """Type hint interface for remote controllers."""
     
     def __init__(self, device_name: str = "Unknown Device", device_type: str = "generic"):
         super().__init__("remote", device_name)
         self.device_type = device_type
-    
-    @abstractmethod
-    def press_key(self, key: str) -> bool:
-        """Press a key on the remote. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def input_text(self, text: str) -> bool:
-        """Input text on the device. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def execute_sequence(self, commands: list) -> bool:
-        """Execute a sequence of remote commands. Must be implemented by subclasses."""
-        pass
-    
-    def take_control(self) -> Dict[str, Any]:
-        """
-        Take control of remote device and verify ADB/SSH connectivity.
-        Default implementation - should be overridden by subclasses.
-        
-        For ADB-based controllers, this should:
-        1. Check SSH connection to host
-        2. Check ADB device connectivity
-        3. Reconnect ADB if needed
-        4. Return status
-        """
-        try:
-            # Default implementation just tries to connect
-            if self.connect():
-                return {
-                    'success': True,
-                    'status': 'connected',
-                    'controller_type': 'remote',
-                    'device_name': self.device_name,
-                    'details': {
-                        'connection_method': 'generic',
-                        'is_connected': self.is_connected
-                    }
-                }
-            else:
-                return {
-                    'success': False,
-                    'status': 'connection_failed',
-                    'error': 'Failed to connect to remote device',
-                    'controller_type': 'remote',
-                    'device_name': self.device_name
-                }
-        except Exception as e:
-            return {
-                'success': False,
-                'status': 'error',
-                'error': f'Remote controller error: {str(e)}',
-                'controller_type': 'remote',
-                'device_name': self.device_name
-            }
-    
-    # Optional navigation methods with default implementations
-    def navigate_up(self) -> bool:
-        """Navigate up in the interface."""
-        return self.press_key("UP")
-    
-    def navigate_down(self) -> bool:
-        """Navigate down in the interface."""
-        return self.press_key("DOWN")
-    
-    def navigate_left(self) -> bool:
-        """Navigate left in the interface."""
-        return self.press_key("LEFT")
-    
-    def navigate_right(self) -> bool:
-        """Navigate right in the interface."""
-        return self.press_key("RIGHT")
-    
-    def select(self) -> bool:
-        """Select/confirm current item."""
-        return self.press_key("OK")
-    
-    def back(self) -> bool:
-        """Go back to previous screen."""
-        return self.press_key("BACK")
-    
-    def home(self) -> bool:
-        """Go to home screen."""
-        return self.press_key("HOME")
-    
-    def menu(self) -> bool:
-        """Open menu."""
-        return self.press_key("MENU")
-    
-    # Optional media control methods
-    def power(self) -> bool:
-        """Toggle power."""
-        return self.press_key("POWER")
-    
-    def volume_up(self) -> bool:
-        """Increase volume."""
-        return self.press_key("VOLUME_UP")
-    
-    def volume_down(self) -> bool:
-        """Decrease volume."""
-        return self.press_key("VOLUME_DOWN")
-    
-    def mute(self) -> bool:
-        """Toggle mute."""
-        return self.press_key("MUTE")
-    
-    def play_pause(self) -> bool:
-        """Toggle play/pause."""
-        return self.press_key("PLAY_PAUSE")
-    
-    def fast_forward(self) -> bool:
-        """Fast forward."""
-        return self.press_key("FAST_FORWARD")
-    
-    def rewind(self) -> bool:
-        """Rewind."""
-        return self.press_key("REWIND")
-    
-    # Optional app management methods
-    def launch_app(self, package_name: str) -> bool:
-        """
-        Launch an app by package name.
-        Default implementation - should be overridden by subclasses that support app management.
-        
-        Args:
-            package_name: App package name (e.g., "com.example.app")
-        """
-        raise NotImplementedError("App management not supported by this controller")
-    
-    def close_app(self, package_name: str) -> bool:
-        """
-        Close/stop an app by package name.
-        Default implementation - should be overridden by subclasses that support app management.
-        
-        Args:
-            package_name: App package name (e.g., "com.example.app")
-        """
-        raise NotImplementedError("App management not supported by this controller")
-    
-    def kill_app(self, package_name: str) -> bool:
-        """
-        Kill an app by package name (alias for close_app).
-        Default implementation calls close_app.
-        
-        Args:
-            package_name: App package name (e.g., "com.example.app")
-        """
-        return self.close_app(package_name)
-    
-    @abstractmethod
-    def get_available_actions(self) -> Dict[str, Any]:
-        """Get available actions for this remote controller. Must be implemented by subclasses."""
-        pass
 
 
 class AVControllerInterface(BaseController):
-    """
-    Abstract interface for audio/video capture controllers.
-    
-    Simplified interface focused on core AV capture functionality.
-    Audio analysis and video analysis are handled by verification controllers.
-    """
+    """Type hint interface for AV controllers."""
     
     def __init__(self, device_name: str = "Unknown Device", capture_source: str = "HDMI"):
         super().__init__("av", device_name)
         self.capture_source = capture_source
-        self.is_capturing_video = False
-        self.capture_session_id = None
-    
-    @abstractmethod
-    def start_video_capture(self, duration: float = 60.0, filename: str = None, 
-                           resolution: str = None, fps: int = None) -> bool:
-        """Start video capture with optional parameters. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def stop_video_capture(self) -> bool:
-        """Stop video capture. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def get_stream_url(self) -> str:
-        """Get the stream URL for this AV controller. Must be implemented by subclasses."""
-        pass
-    
-    def take_control(self) -> Dict[str, Any]:
-        """
-        Take control of AV system and verify stream is working.
-        Default implementation - should be overridden by subclasses.
-        
-        For stream-based controllers, this should:
-        1. Check if stream service is running (systemctl status stream)
-        2. Restart stream service if needed (systemctl restart stream)
-        3. Verify stream is accessible
-        4. Return status
-        """
-        try:
-            # Default implementation just tries to connect
-            if self.connect():
-                return {
-                    'success': True,
-                    'status': 'stream_ready',
-                    'controller_type': 'av',
-                    'device_name': self.device_name,
-                    'details': {
-                        'capture_source': self.capture_source,
-                        'is_capturing_video': self.is_capturing_video,
-                        'capabilities': ['video_capture', 'screenshot']
-                    }
-                }
-            else:
-                return {
-                    'success': False,
-                    'status': 'stream_failed',
-                    'error': 'Failed to initialize AV stream',
-                    'controller_type': 'av',
-                    'device_name': self.device_name
-                }
-        except Exception as e:
-            return {
-                'success': False,
-                'status': 'error',
-                'error': f'AV controller error: {str(e)}',
-                'controller_type': 'av',
-                'device_name': self.device_name
-            }
 
 
 class VerificationControllerInterface(BaseController):
-    """
-    Abstract interface for verification and validation functionality.
+    """Type hint interface for verification controllers."""
     
-    Defines the interface that verification controllers must implement
-    for test validation. Each device can have its own implementation
-    of this interface.
-    """
-    
-    def __init__(self, device_name: str = "Unknown Device"):
+    def __init__(self, device_name: str = "Unknown Device", verification_type: str = "verification"):
         super().__init__("verification", device_name)
-        self.verification_session_id = None
-        self.verification_results = []
-    
-    # Common verification logging methods
-    def _log_verification(self, verification_type: str, target: str, result: bool, params: Dict[str, Any]) -> None:
-        """Log verification result for reporting. Common implementation."""
-        log_entry = {
-            "timestamp": __import__('time').time(),
-            "type": verification_type,
-            "target": target,
-            "result": result,
-            "params": params,
-            "session_id": self.verification_session_id
-        }
-        self.verification_results.append(log_entry)
-    
-    def get_verification_results(self) -> List[Dict[str, Any]]:
-        """Get all verification results from current session. Common implementation."""
-        return self.verification_results.copy()
-    
-    def clear_verification_results(self) -> None:
-        """Clear verification results. Common implementation."""
-        self.verification_results.clear()
-    
-    def take_control(self) -> Dict[str, Any]:
-        """
-        Take control of verification system and verify controllers are ready.
-        Default implementation - should be overridden by subclasses.
-        
-        For verification controllers, this should:
-        1. Check if required verification tools are available (OCR, OpenCV, etc.)
-        2. Initialize verification session
-        3. Return status of available verification types
-        """
-        try:
-            # Default implementation just tries to connect
-            if self.connect():
-                return {
-                    'success': True,
-                    'status': 'verification_ready',
-                    'controller_type': 'verification',
-                    'device_name': self.device_name,
-                    'details': {
-                        'verification_types': ['image', 'text', 'adb'],  # Default types
-                        'session_id': self.verification_session_id,
-                        'results_count': len(self.verification_results)
-                    }
-                }
-            else:
-                return {
-                    'success': False,
-                    'status': 'verification_failed',
-                    'error': 'Failed to initialize verification controllers',
-                    'controller_type': 'verification',
-                    'device_name': self.device_name
-                }
-        except Exception as e:
-            return {
-                'success': False,
-                'status': 'error',
-                'error': f'Verification controller error: {str(e)}',
-                'controller_type': 'verification',
-                'device_name': self.device_name
-            }
-    
-    @abstractmethod
-    def get_available_verifications(self) -> Dict[str, Any]:
-        """Get available verifications for this controller. Must be implemented by subclasses."""
-        pass
+        self.verification_type = verification_type
 
 
 class PowerControllerInterface(BaseController):
-    """
-    Abstract interface for power management functionality.
+    """Type hint interface for power controllers."""
     
-    Defines the interface that power controllers must implement
-    for device power control. Each device can have its own
-    implementation of this interface.
-    """
-    
-    def __init__(self, device_name: str = "Unknown Device", power_type: str = "generic"):
+    def __init__(self, device_name: str = "Unknown Device"):
         super().__init__("power", device_name)
-        self.power_type = power_type
-        self.current_power_state = "unknown"
-        self.power_session_id = None
-    
-    @abstractmethod
-    def power_on(self, timeout: float = 30.0) -> bool:
-        """Turn the device on. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def power_off(self, force: bool = False, timeout: float = 30.0) -> bool:
-        """Turn the device off. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def reboot(self, timeout: float = 60.0) -> bool:
-        """Restart the device. Must be implemented by subclasses."""
-        pass
-    
-    @abstractmethod
-    def get_power_status(self) -> Dict[str, Any]:
-        """Get current power status. Must be implemented by subclasses."""
-        pass
-    
-    def take_control(self) -> Dict[str, Any]:
-        """
-        Take control of power system and verify it's ready.
-        Default implementation - should be overridden by subclasses.
-        
-        For power controllers, this should:
-        1. Check if power control hardware is accessible
-        2. Verify current power state
-        3. Return power management status
-        """
-        try:
-            # Default implementation just tries to connect and get status
-            if self.connect():
-                power_status = self.get_power_status()
-                return {
-                    'success': True,
-                    'status': 'power_ready',
-                    'controller_type': 'power',
-                    'device_name': self.device_name,
-                    'details': {
-                        'power_type': self.power_type,
-                        'current_state': power_status.get('power_state', 'unknown'),
-                        'session_id': self.power_session_id
-                    }
-                }
-            else:
-                return {
-                    'success': False,
-                    'status': 'power_failed',
-                    'error': 'Failed to connect to power controller',
-                    'controller_type': 'power',
-                    'device_name': self.device_name
-                }
-        except Exception as e:
-            return {
-                'success': False,
-                'status': 'error',
-                'error': f'Power controller error: {str(e)}',
-                'controller_type': 'power',
-                'device_name': self.device_name
-            }
-
-    # Optional power management methods with default implementations
-    def soft_reboot(self, timeout: float = 60.0) -> bool:
-        """Perform a soft reboot (graceful restart)."""
-        return self.reboot(timeout)
-    
-    def hard_reboot(self, timeout: float = 60.0) -> bool:
-        """Perform a hard reboot (forced restart)."""
-        return self.power_off(force=True, timeout=15.0) and self.power_on(timeout=timeout-15.0)
-    
-    def wait_for_power_state(self, expected_state: str, timeout: float = 30.0) -> bool:
-        """Wait for device to reach expected power state."""
-        import time
-        start_time = time.time()
-        
-        while time.time() - start_time < timeout:
-            status = self.get_power_status()
-            current_state = status.get('power_state', 'unknown')
-            
-            if current_state == expected_state:
-                return True
-                
-            time.sleep(1.0)
-        
-        return False
-    
-    def is_powered_on(self) -> bool:
-        """Check if device is currently powered on."""
-        status = self.get_power_status()
-        return status.get('power_state', 'unknown') == 'on'
-    
-    def is_powered_off(self) -> bool:
-        """Check if device is currently powered off."""
-        status = self.get_power_status()
-        return status.get('power_state', 'unknown') == 'off'
 
 
 # Backward compatibility aliases
 BaseRemoteController = RemoteControllerInterface
 BaseAVController = AVControllerInterface
-BaseVerificationController = VerificationControllerInterface
-BasePowerController = PowerControllerInterface 
+BaseVerificationController = VerificationControllerInterface 

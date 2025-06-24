@@ -18,6 +18,7 @@ from ..controllers.remote.appium_remote import AppiumRemoteController
 from ..controllers.verification.image import ImageVerificationController
 from ..controllers.verification.text import TextVerificationController
 from ..controllers.verification.adb import ADBVerificationController
+from ..controllers.verification.appium import AppiumVerificationController
 
 
 def create_host_from_environment() -> Host:
@@ -120,6 +121,8 @@ def _create_controller_instance(controller_type: str, implementation: str, param
             return TextVerificationController(**params)
         elif implementation == 'adb':
             return ADBVerificationController(**params)
+        elif implementation == 'appium':
+            return AppiumVerificationController(**params)
     
     print(f"[@controller_manager:_create_controller_instance] WARNING: Unknown controller {controller_type}_{implementation}")
     return None

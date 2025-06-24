@@ -61,9 +61,9 @@ const Rec: React.FC = () => {
 
     hosts.forEach((host) => {
       if (host.devices && host.devices.length > 0) {
-        // Filter devices that have AV capability (looking for 'av' capability)
+        // Filter devices that have AV capability (hdmi_stream)
         host.devices.forEach((device) => {
-          if (device.capabilities && device.capabilities.includes('av')) {
+          if (device.capabilities?.av === 'hdmi_stream') {
             avDevices.push({ host, device });
           }
         });

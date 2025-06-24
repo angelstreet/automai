@@ -79,9 +79,7 @@ export const useRec = (): UseRecReturn => {
       // Filter hosts that have devices with AV capabilities and are online
       const avHosts = data.hosts.filter((host: Host) => {
         const hasDevicesWithAV =
-          host.devices?.some(
-            (device: any) => device.capabilities && device.capabilities.includes('av'),
-          ) || false;
+          host.devices?.some((device: any) => device.capabilities?.av === 'hdmi_stream') || false;
 
         console.log(`[@hook:useRec] Checking host ${host.host_name}:`, {
           status: host.status,

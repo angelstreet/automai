@@ -535,11 +535,15 @@ def get_image_references():
                 'error': error or 'Host information required'
             }), 400
         
-        # Use verification controller instead of direct database access
-        from src.controllers.verification_controller import get_image_references
+        # Get image references from database directly
+        from src.lib.supabase.verifications_references_db import get_references
         from src.utils.app_utils import DEFAULT_TEAM_ID
         
-        result = get_image_references(host_info, DEFAULT_TEAM_ID)
+        result = get_references(
+            team_id=DEFAULT_TEAM_ID,
+            device_model=host_info.get('device_model'),
+            reference_type='reference_image'
+        )
         
         return jsonify(result)
             
@@ -564,11 +568,15 @@ def get_text_references():
                 'error': error or 'Host information required'
             }), 400
         
-        # Use verification controller instead of direct database access
-        from src.controllers.verification_controller import get_text_references
+        # Get text references from database directly
+        from src.lib.supabase.verifications_references_db import get_references
         from src.utils.app_utils import DEFAULT_TEAM_ID
         
-        result = get_text_references(host_info, DEFAULT_TEAM_ID)
+        result = get_references(
+            team_id=DEFAULT_TEAM_ID,
+            device_model=host_info.get('device_model'),
+            reference_type='reference_text'
+        )
         
         return jsonify(result)
         
@@ -593,11 +601,14 @@ def get_all_references():
                 'error': error or 'Host information required'
             }), 400
         
-        # Use verification controller instead of direct database access
-        from src.controllers.verification_controller import get_all_references
+        # Get all references from database directly
+        from src.lib.supabase.verifications_references_db import get_references
         from src.utils.app_utils import DEFAULT_TEAM_ID
         
-        result = get_all_references(host_info, DEFAULT_TEAM_ID)
+        result = get_references(
+            team_id=DEFAULT_TEAM_ID,
+            device_model=host_info.get('device_model')
+        )
         
         return jsonify(result)
         
