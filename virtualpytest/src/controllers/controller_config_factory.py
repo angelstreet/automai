@@ -120,8 +120,8 @@ def _get_av_params(implementation: str, device_config: dict) -> dict:
     """Get parameters for AV controllers."""
     if implementation == 'hdmi_stream':
         return {
-            'stream_path': device_config.get('stream_path', '/host/stream/capture1'),
-            'capture_path': device_config.get('capture_path', '/var/www/html/stream/capture1')
+            'stream_path': device_config.get('video_stream_path', '/host/stream/capture1'),
+            'capture_path': device_config.get('video_capture_path', '/var/www/html/stream/capture1')
         }
     return {}
 

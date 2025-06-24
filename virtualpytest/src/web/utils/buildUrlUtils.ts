@@ -203,13 +203,6 @@ const getDeviceCaptureUrlPath = (host: any, deviceId?: string): string => {
       }
     }
   }
-
-  // Fallback: try to construct from device_id (device1 -> capture1, device2 -> capture2)
-  if (deviceId.startsWith('device')) {
-    const deviceNum = deviceId.replace('device', '');
-    return `/stream/capture${deviceNum}/captures`;
-  }
-
   // Final fallback
   return '/stream/capture1';
 };
