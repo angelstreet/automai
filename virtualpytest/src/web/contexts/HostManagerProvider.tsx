@@ -111,8 +111,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       availableHosts.forEach((host) => {
         if (host.devices) {
           host.devices.forEach((device) => {
-            // Check if device has the specified capability (using type assertion for dynamic property access)
-            if ((device as any)[capability]) {
+            // Check if device has the specified capability in device.capabilities object
+            if (device.capabilities && (device.capabilities as any)[capability]) {
               matchingDevices.push({ host, device });
             }
           });
@@ -582,6 +582,12 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       filteredAvailableHosts,
       getHostByName,
       fetchHosts,
+      getAllHosts,
+      getHostsByModel,
+      getAllDevices,
+      getDevicesFromHost,
+      getDevicesByCapability,
+      reclaimUserLocks,
       takeControl,
       releaseControl,
       isDeviceLocked,
