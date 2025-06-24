@@ -9,18 +9,19 @@ import {
   InputLabel,
 } from '@mui/material';
 import React from 'react';
+import { createPortal } from 'react-dom';
 
+import { hdmiStreamMobileConfig, HDMI_STREAM_HEADER_HEIGHT } from '../../../config/av/hdmiStream';
 import { useAndroidMobile } from '../../../hooks/controller/useAndroidMobile';
 import { Host } from '../../../types/common/Host_Types';
-import { AndroidElement } from '../../../types/controller/Remote_Types';
 import { PanelInfo } from '../../../types/controller/Panel_Types';
-import { createPortal } from 'react-dom';
-import { hdmiStreamMobileConfig, HDMI_STREAM_HEADER_HEIGHT } from '../../../config/av/hdmiStream';
+import { AndroidElement } from '../../../types/controller/Remote_Types';
 
 import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 
 interface AndroidMobileRemoteProps {
   host: Host;
+  deviceId: string; // Device ID to select the correct device and make API calls
   onDisconnectComplete?: () => void;
   sx?: any;
   // Simplified panel state props
@@ -46,6 +47,7 @@ interface AndroidMobileRemoteProps {
 export const AndroidMobileRemote = React.memo(
   function AndroidMobileRemote({
     host,
+    deviceId,
     onDisconnectComplete,
     sx = {},
     isCollapsed,
@@ -85,7 +87,7 @@ export const AndroidMobileRemote = React.memo(
 
       // Session info
       session,
-    } = useAndroidMobile(host);
+    } = useAndroidMobile(host, deviceId);
 
     // Panel integration - prepare panelInfo for overlay
     const panelInfo: PanelInfo | undefined = React.useMemo(() => {

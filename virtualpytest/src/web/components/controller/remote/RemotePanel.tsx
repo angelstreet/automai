@@ -5,8 +5,7 @@ import {
   KeyboardArrowUp,
 } from '@mui/icons-material';
 import { Box, IconButton, Tooltip, Typography } from '@mui/material';
-import { useState, useEffect, useMemo } from 'react';
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 import { getConfigurableRemotePanelLayout, loadRemoteConfig } from '../../../config/remote';
 import { Host } from '../../../types/common/Host_Types';
@@ -17,6 +16,8 @@ import { AppiumRemote } from './AppiumRemote';
 
 interface RemotePanelProps {
   host: Host;
+  deviceId: string; // Device ID to select the correct device and controllers
+  deviceModel: string; // Device model for remote config loading
   onReleaseControl?: () => void;
   initialCollapsed?: boolean;
   // Device resolution for overlay scaling
@@ -39,6 +40,8 @@ interface RemotePanelProps {
 export const RemotePanel = React.memo(
   function RemotePanel({
     host,
+    deviceId,
+    deviceModel,
     onReleaseControl,
     initialCollapsed = true,
     deviceResolution,
@@ -48,7 +51,8 @@ export const RemotePanel = React.memo(
     streamContainerDimensions,
   }: RemotePanelProps) {
     console.log(`[@component:RemotePanel] Props debug:`, {
-      hostDeviceModel: host.device_model,
+      deviceId,
+      deviceModel,
       deviceResolution,
       initialCollapsed,
       streamCollapsed,
@@ -62,17 +66,17 @@ export const RemotePanel = React.memo(
     // Load remote config for the device type
     useEffect(() => {
       const loadConfig = async () => {
-        const config = await loadRemoteConfig(host.device_model);
+        const config = await loadRemoteConfig(deviceModel);
         setRemoteConfig(config);
       };
 
       loadConfig();
-    }, [host.device_model]);
+    }, [deviceModel]);
 
     // Get configurable layout from device config - memoized to prevent infinite loops
     const panelLayout = useMemo(() => {
-      return getConfigurableRemotePanelLayout(host.device_model, remoteConfig);
-    }, [host.device_model, remoteConfig]);
+      return getConfigurableRemotePanelLayout(deviceModel, remoteConfig);
+    }, [deviceModel, remoteConfig]);
 
     // Calculate dimensions inline - no state, no useEffects
     const collapsedWidth = panelLayout.collapsed.width;
@@ -104,12 +108,12 @@ export const RemotePanel = React.memo(
         setIsMinimized(false);
         setIsCollapsed(true);
         console.log(
-          `[@component:RemotePanel] Restored from minimized to collapsed for ${host.device_model}`,
+          `[@component:RemotePanel] Restored from minimized to collapsed for ${deviceModel}`,
         );
       } else {
         // Minimize the panel
         setIsMinimized(true);
-        console.log(`[@component:RemotePanel] Minimized panel for ${host.device_model}`);
+        console.log(`[@component:RemotePanel] Minimized panel for ${deviceModel}`);
       }
     };
 
@@ -119,13 +123,13 @@ export const RemotePanel = React.memo(
         setIsMinimized(false);
         setIsCollapsed(true);
         console.log(
-          `[@component:RemotePanel] Restored from minimized to collapsed for ${host.device_model}`,
+          `[@component:RemotePanel] Restored from minimized to collapsed for ${deviceModel}`,
         );
       } else {
         // Normal expand/collapse logic
         setIsCollapsed(!isCollapsed);
         console.log(
-          `[@component:RemotePanel] Toggling panel state to ${!isCollapsed ? 'collapsed' : 'expanded'} for ${host.device_model}`,
+          `[@component:RemotePanel] Toggling panel state to ${!isCollapsed ? 'collapsed' : 'expanded'} for ${deviceModel}`,
         );
       }
     };
@@ -145,11 +149,12 @@ export const RemotePanel = React.memo(
     }, [deviceResolution]);
 
     const renderRemoteComponent = useMemo(() => {
-      switch (host.device_model) {
+      switch (deviceModel) {
         case 'android_mobile':
           return (
             <AndroidMobileRemote
               host={host}
+              deviceId={deviceId}
               onDisconnectComplete={onReleaseControl}
               isCollapsed={isCollapsed}
               panelWidth={currentWidth}
@@ -227,7 +232,6 @@ export const RemotePanel = React.memo(
               streamCollapsed={streamCollapsed}
               streamMinimized={streamMinimized}
               captureMode={captureMode}
-              streamContainerDimensions={streamContainerDimensions}
               sx={{
                 height: '100%',
                 '& .MuiButton-root': {
@@ -248,13 +252,15 @@ export const RemotePanel = React.memo(
               }}
             >
               <Typography variant="body2" color="textSecondary" textAlign="center">
-                Unsupported device: {host.device_model}
+                Unsupported device: {deviceModel}
               </Typography>
             </Box>
           );
       }
     }, [
       host,
+      deviceId,
+      deviceModel,
       onReleaseControl,
       isCollapsed,
       currentWidth,
@@ -311,7 +317,7 @@ export const RemotePanel = React.memo(
                 textAlign: 'center',
               }}
             >
-              {remoteConfig?.remote_info?.name || `${host.device_model} Remote`}
+              {remoteConfig?.remote_info?.name || `${deviceModel} Remote`}
             </Typography>
 
             {/* Right side: Minimize and Expand/Collapse buttons */}
@@ -379,6 +385,8 @@ export const RemotePanel = React.memo(
     // Custom comparison function to prevent unnecessary re-renders
     // Only re-render if meaningful props have changed
     const hostChanged = JSON.stringify(prevProps.host) !== JSON.stringify(nextProps.host);
+    const deviceIdChanged = prevProps.deviceId !== nextProps.deviceId;
+    const deviceModelChanged = prevProps.deviceModel !== nextProps.deviceModel;
     const deviceResolutionChanged =
       JSON.stringify(prevProps.deviceResolution) !== JSON.stringify(nextProps.deviceResolution);
     const initialCollapsedChanged = prevProps.initialCollapsed !== nextProps.initialCollapsed;
@@ -393,6 +401,8 @@ export const RemotePanel = React.memo(
     // Return true if props are equal (don't re-render), false if they changed (re-render)
     const shouldSkipRender =
       !hostChanged &&
+      !deviceIdChanged &&
+      !deviceModelChanged &&
       !deviceResolutionChanged &&
       !initialCollapsedChanged &&
       !streamCollapsedChanged &&
@@ -404,6 +414,8 @@ export const RemotePanel = React.memo(
     if (!shouldSkipRender) {
       console.log(`[@component:RemotePanel] Re-rendering due to prop changes:`, {
         hostChanged,
+        deviceIdChanged,
+        deviceModelChanged,
         deviceResolutionChanged,
         initialCollapsedChanged,
         streamCollapsedChanged,

@@ -315,6 +315,8 @@ const RecHostStreamModalContent: React.FC<{
             >
               <RemotePanel
                 host={host}
+                deviceId={device?.device_id || 'device1'}
+                deviceModel={device?.device_model || 'unknown'}
                 onReleaseControl={() => {
                   setShowRemote(false);
                   // Control release handled by useDeviceControl

@@ -34,7 +34,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
   // Get the specific device from the host
   const device = selectedHost?.devices?.find((d) => d.device_id === deviceId);
 
-  // Memoize the host and device data to prevent unnecessary callback recreations
+  // Just use the selectedHost and device directly - no need for complex memoization
   const stableHostData = useMemo(() => {
     if (!selectedHost || !device) {
       console.log('[@hook:useAndroidMobile] No host or device selected');
@@ -43,16 +43,10 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
 
     return {
       host_name: selectedHost.host_name,
-      device_model: device.model,
+      device_model: device.device_model,
       device_ip: device.device_ip,
-      device_name: device.name,
+      device_name: device.device_name,
       host_url: selectedHost.host_url,
-      // Include other essential host properties but exclude volatile ones
-      capabilities: selectedHost.capabilities,
-      controller_configs: selectedHost.controller_configs,
-      controller_types: selectedHost.controller_types,
-      available_action_types: device.available_action_types,
-      available_verification_types: device.available_verification_types,
     };
   }, [selectedHost, device]);
 
@@ -219,6 +213,73 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
     }
   }, [stableHostData, deviceId]);
 
+  // Additional methods expected by the component
+  const handleDisconnect = useCallback(async () => {
+    console.log('[@hook:useAndroidMobile] Disconnecting...');
+    setIsDisconnecting(true);
+    // Add disconnect logic here if needed
+    setIsConnected(false);
+    setIsDisconnecting(false);
+  }, []);
+
+  const handleOverlayElementClick = useCallback(async (element: AndroidElement) => {
+    console.log(`[@hook:useAndroidMobile] Element clicked: ${element.id}`);
+    // Add element click logic here
+  }, []);
+
+  const handleRemoteCommand = useCallback(
+    async (command: string) => {
+      if (!stableHostData) {
+        console.warn('[@hook:useAndroidMobile] No host data available for remote command');
+        return;
+      }
+
+      console.log(`[@hook:useAndroidMobile] Executing remote command: ${command}`);
+      try {
+        const response = await fetch('/server/remote/execute-command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            host_name: stableHostData.host_name,
+            device_id: deviceId,
+            command: 'press_key',
+            params: { key: command },
+          }),
+        });
+
+        const result = await response.json();
+        console.log('[@hook:useAndroidMobile] Remote command result:', result);
+      } catch (error) {
+        console.error('[@hook:useAndroidMobile] Remote command error:', error);
+      }
+    },
+    [stableHostData, deviceId],
+  );
+
+  const clearElements = useCallback(() => {
+    console.log('[@hook:useAndroidMobile] Clearing elements');
+    setAndroidElements([]);
+    setSelectedElement('');
+    setShowOverlay(false);
+  }, []);
+
+  const handleGetApps = useCallback(async () => {
+    await refreshApps();
+  }, [refreshApps]);
+
+  const handleDumpUIWithLoading = useCallback(async () => {
+    await refreshElements();
+  }, [refreshElements]);
+
+  // Session info
+  const session = useMemo(
+    () => ({
+      connected: isConnected,
+      connectionInfo: isConnected ? 'Connected' : 'Disconnected',
+    }),
+    [isConnected],
+  );
+
   return {
     // Configuration
     layoutConfig,
@@ -243,6 +304,12 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
     refreshScreenshot,
     refreshElements,
     refreshApps,
+    handleDisconnect,
+    handleOverlayElementClick,
+    handleRemoteCommand,
+    clearElements,
+    handleGetApps,
+    handleDumpUIWithLoading,
 
     // Setters
     setShowOverlay,
@@ -250,6 +317,9 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
     setSelectedApp,
     setIsConnected,
     setIsDisconnecting,
+
+    // Session info
+    session,
 
     // Host and device data
     hostData: stableHostData,
