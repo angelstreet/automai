@@ -147,18 +147,17 @@ class HDMIStreamController(AVControllerInterface):
             print(f'[@controller:HDMIStream] Temporary screenshot taken: {temp_screenshot_path}')
             
             # Extract timestamp from temp screenshot path to get the actual image file
-            try:
-                import re
-                timestamp_match = re.search(r'screenshot_(\d{14})\.jpg', temp_screenshot_path)
-                if not timestamp_match:
-                    print(f'[@controller:HDMIStream] Could not extract timestamp from temp path: {temp_screenshot_path}')
-                    return None
-                
-                timestamp = timestamp_match.group(1)
-                print(f'[@controller:HDMIStream] Extracted timestamp: {timestamp}')
-                
-                # The temp_screenshot_path is already the local file path we need
-                local_screenshot_path = temp_screenshot_path
+            import re
+            timestamp_match = re.search(r'screenshot_(\d{14})\.jpg', temp_screenshot_path)
+            if not timestamp_match:
+                print(f'[@controller:HDMIStream] Could not extract timestamp from temp path: {temp_screenshot_path}')
+                return None
+            
+            timestamp = timestamp_match.group(1)
+            print(f'[@controller:HDMIStream] Extracted timestamp: {timestamp}')
+            
+            # The temp_screenshot_path is already the local file path we need
+            local_screenshot_path = temp_screenshot_path
             
             print(f'[@controller:HDMIStream] Local screenshot path: {local_screenshot_path}')
             
@@ -171,17 +170,11 @@ class HDMIStreamController(AVControllerInterface):
             # Return the local file path for the route to handle the upload
             return local_screenshot_path
             
-        except Exception as extract_error:
-            print(f'[@controller:HDMIStream] Error processing screenshot: {extract_error}')
+        except Exception as e:
+            print(f'[@controller:HDMIStream] Error saving screenshot: {e}')
             import traceback
             print(f'[@controller:HDMIStream] Traceback: {traceback.format_exc()}')
             return None
-            
-    except Exception as e:
-        print(f'[@controller:HDMIStream] Error saving screenshot: {e}')
-        import traceback
-        print(f'[@controller:HDMIStream] Traceback: {traceback.format_exc()}')
-        return None
         
     def take_control(self) -> Dict[str, Any]:
         """
