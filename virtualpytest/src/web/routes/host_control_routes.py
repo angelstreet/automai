@@ -54,13 +54,28 @@ def take_control():
                 'error': f'AV controller error: {str(e)}'
             })
         
-        # Step 2: Check remote controller
+        # Step 2: Check and connect remote controller
         remote_status = None
         try:
             remote_controller = get_controller(device_id, 'remote')
             
             if remote_controller:
                 print(f"[@route:take_control] Using remote controller: {type(remote_controller).__name__}")
+                
+                # Connect the remote controller to the actual device
+                if not remote_controller.is_connected:
+                    print(f"[@route:take_control] Connecting remote controller to device...")
+                    connection_success = remote_controller.connect()
+                    if not connection_success:
+                        print(f"[@route:take_control] Failed to connect remote controller")
+                        return jsonify({
+                            'success': False,
+                            'error': 'Failed to connect remote controller to device'
+                        })
+                    print(f"[@route:take_control] Remote controller connected successfully")
+                else:
+                    print(f"[@route:take_control] Remote controller already connected")
+                
                 remote_status = remote_controller.get_status()
                 print(f"[@route:take_control] Remote controller status: {remote_status}")
             else:
