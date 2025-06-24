@@ -28,6 +28,7 @@ import { VideoCapture } from './VideoCapture';
 
 export const ScreenDefinitionEditor: React.FC<ScreenDefinitionEditorProps> = ({
   selectedHost,
+  selectedDeviceId,
   onDisconnectComplete,
 }) => {
   const {
@@ -39,7 +40,7 @@ export const ScreenDefinitionEditor: React.FC<ScreenDefinitionEditorProps> = ({
     verificationEditorLayout,
 
     streamViewerSx,
-  } = useScreenEditor(selectedHost, onDisconnectComplete);
+  } = useScreenEditor(selectedHost, selectedDeviceId, onDisconnectComplete);
 
   const {
     isConnected,

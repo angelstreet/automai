@@ -404,3 +404,212 @@ The original problem where "useRec.ts was receiving 0 hosts from context despite
 - No linter errors (except minor avStatus issue that can be fixed later)
 
 The refactoring successfully transforms the codebase from a complex, host-centric approach to a clean, device-centric architecture while solving the original REC display issue.
+
+# Device Selection Refactoring Guide
+
+## Overview
+This document outlines the migration from the problematic "first device" pattern to proper device selection using `device_id` alongside the existing host object.
+
+## Problem Statement
+The current system incorrectly assumes hosts have only one device and always uses `selectedHost?.devices?.[0]` (first device). This breaks when hosts have multiple devices and prevents users from selecting specific devices.
+
+## Solution Strategy
+Instead of complex device selection objects, we use a **simple approach**:
+- Keep the existing `Host` object as-is
+- Add a `device_id: string` parameter alongside the host
+- Routes already handle `device_id` to find specific devices within the host
+- Host contains all device data, so no additional data fetching needed
+
+## Migration Pattern
+
+### Before (Problematic)
+```typescript
+// ❌ Always uses first device
+const firstDevice = selectedHost?.devices?.[0];
+const actions = firstDevice?.available_action_types;
+
+// ❌ Hook signature
+function useAndroidMobile(host: Host) {
+  const device = host.devices?.[0]; // Wrong!
+}
+```
+
+### After (Correct)
+```typescript
+// ✅ Uses specific device by ID
+const device = selectedHost?.devices?.find(d => d.device_id === deviceId);
+const actions = device?.available_action_types;
+
+// ✅ Hook signature
+function useAndroidMobile(host: Host | null, deviceId: string | null) {
+  const device = host?.devices?.find(d => d.device_id === deviceId);
+}
+```
+
+## Refactoring Steps
+
+### 1. Update Type Definitions
+
+#### Navigation Header Types
+```typescript
+// Replace complex SelectedDeviceInfo with simple approach
+export interface NavigationEditorDeviceControlsProps {
+  selectedHost: Host | null;          // Keep existing host
+  selectedDeviceId: string | null;    // Add device ID
+  // ... rest unchanged
+  onDeviceSelect: (host: Host | null, deviceId: string | null) => void;
+}
+```
+
+### 2. Update Device Selection Component
+
+#### DeviceControls Component
+```typescript
+// Update dropdown to emit both host and device_id
+const handleDeviceChange = (deviceKey: string) => {
+  if (!deviceKey) {
+    onDeviceSelect(null, null);
+    return;
+  }
+  
+  const [hostName, deviceId] = deviceKey.split(':');
+  const host = availableHosts.find(h => h.host_name === hostName);
+  onDeviceSelect(host, deviceId);
+};
+```
+
+### 3. Update Hook Signatures
+
+#### Pattern for all hooks:
+```typescript
+// Before
+export function useHookName(selectedHost: Host) {
+  const device = selectedHost?.devices?.[0]; // ❌
+}
+
+// After  
+export function useHookName(selectedHost: Host | null, deviceId: string | null) {
+  const device = selectedHost?.devices?.find(d => d.device_id === deviceId); // ✅
+}
+```
+
+### 4. Update Component Props
+
+#### Component interfaces:
+```typescript
+interface ComponentProps {
+  selectedHost: Host | null;
+  selectedDeviceId: string | null;
+  // ... other props
+}
+```
+
+## Migration Checklist
+
+### Phase 1: Type Definitions
+- [ ] Update `Navigation_Header_Types.ts`
+- [ ] Update component prop interfaces
+- [ ] Remove complex `SelectedDeviceInfo` type
+
+### Phase 2: Device Selection UI
+- [ ] Update `Navigation_NavigationEditor_DeviceControls.tsx`
+- [ ] Update device dropdown to emit host + device_id
+- [ ] Update parent components to handle new signature
+
+### Phase 3: Core Hooks (Priority Order)
+- [ ] Fix `useAndroidMobile` - Remove linter errors, add device_id param
+- [ ] Fix `useVerification` - Remove linter errors, add device_id param  
+- [ ] Update `useNavigation` - Add device_id support
+- [ ] Update `useNavigationEditor` - Add device_id support
+- [ ] Update `useScreenEditor` - Add device_id support
+- [ ] Update `useRemoteConnection` - Add device_id support
+
+### Phase 4: Verification System
+- [ ] Update `useVerificationEditor` - Add device_id support
+- [ ] Update `useVerificationReferences` - Add device_id support
+
+### Phase 5: Supporting Components
+- [ ] Update all components using selectedHost
+- [ ] Update context providers
+- [ ] Update navigation components
+
+## Implementation Notes
+
+### Device Finding Pattern
+Always use this pattern for finding devices:
+```typescript
+const device = selectedHost?.devices?.find(d => d.device_id === deviceId);
+if (!device) {
+  console.warn(`Device ${deviceId} not found in host ${selectedHost?.host_name}`);
+  return;
+}
+```
+
+### Error Handling
+```typescript
+// Validate both host and device_id are provided
+if (!selectedHost || !deviceId) {
+  console.warn('Both host and device_id are required');
+  return;
+}
+
+// Validate device exists in host
+const device = selectedHost.devices?.find(d => d.device_id === deviceId);
+if (!device) {
+  console.error(`Device ${deviceId} not found in host ${selectedHost.host_name}`);
+  return;
+}
+```
+
+### API Calls
+Routes already handle device_id, so API calls become:
+```typescript
+// API calls with device_id
+const response = await fetch('/server/actions/batch/execute', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    host: selectedHost,           // Full host object
+    device_id: deviceId,          // Specific device ID
+    actions: actions,
+    // ... other params
+  }),
+});
+```
+
+## Benefits
+
+1. **Simple**: Just add device_id parameter, no complex objects
+2. **Backward Compatible**: Host object unchanged, routes already support device_id
+3. **Scalable**: Works with hosts having multiple devices
+4. **Clean**: No data duplication or complex selection objects
+5. **Maintainable**: Clear separation of concerns
+
+## Files to Update
+
+### High Priority
+- `virtualpytest/src/web/types/pages/Navigation_Header_Types.ts`
+- `virtualpytest/src/web/components/navigation/Navigation_NavigationEditor_DeviceControls.tsx`
+- `virtualpytest/src/web/hooks/controller/useAndroidMobile.ts`
+- `virtualpytest/src/web/hooks/verification/useVerification.ts`
+
+### Medium Priority  
+- `virtualpytest/src/web/hooks/pages/useNavigationEditor.ts`
+- `virtualpytest/src/web/hooks/pages/useNavigation.ts`
+- `virtualpytest/src/web/hooks/pages/useScreenEditor.ts`
+- `virtualpytest/src/web/hooks/controller/useRemoteConnection.ts`
+
+### Low Priority
+- `virtualpytest/src/web/hooks/verification/useVerificationEditor.ts`
+- `virtualpytest/src/web/hooks/verification/useVerificationReferences.ts`
+- All components receiving selectedHost props
+
+## Next Steps
+
+1. Start with Phase 1 (Type Definitions)
+2. Update device selection component  
+3. Fix existing partially completed hooks
+4. Migrate remaining hooks in priority order
+5. Test each phase before moving to next
+
+This approach ensures a smooth, incremental migration with minimal breaking changes.

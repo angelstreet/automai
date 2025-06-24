@@ -25,7 +25,8 @@ interface EdgeEditDialogProps {
   onClose: () => void;
   selectedEdge?: UINavigationEdge | null;
   isControlActive?: boolean;
-  selectedHost?: Host; // Make optional so dialog can be rendered without host
+  selectedHost?: Host | null; // The selected host
+  selectedDeviceId?: string | null; // The selected device ID
 }
 
 export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
@@ -37,6 +38,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   selectedEdge,
   isControlActive = false,
   selectedHost,
+  selectedDeviceId,
 }) => {
   // Early return if edgeForm is null or undefined - MUST be before any hooks
   if (!edgeForm) {
@@ -50,10 +52,17 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [localActions, setLocalActions] = useState<EdgeAction[]>([]);
   const [localRetryActions, setLocalRetryActions] = useState<EdgeAction[]>([]);
 
-  // Extract controller actions from host data and flatten the structure
+  // Extract controller actions from selected device data and flatten the structure
   const controllerActions: Actions = useMemo(() => {
-    const rawActions = selectedHost?.available_action_types || {};
-    console.log('[@component:EdgeEditDialog] Raw available_action_types:', rawActions);
+    // Get actions from the selected device
+    const device = selectedHost?.devices?.find((d) => d.device_id === selectedDeviceId);
+    if (!device) {
+      console.log('[@component:EdgeEditDialog] No device selected');
+      return {};
+    }
+
+    const rawActions = device.available_action_types || {};
+    console.log('[@component:EdgeEditDialog] Raw available_action_types from device:', rawActions);
     console.log(
       '[@component:EdgeEditDialog] Available action types keys:',
       Object.keys(rawActions),
@@ -92,7 +101,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     );
 
     return flattenedActions;
-  }, [selectedHost?.available_action_types]);
+  }, [selectedHost?.devices, selectedDeviceId]);
 
   const canRunActions =
     isControlActive && selectedHost && localActions.length > 0 && !isRunningActions;
@@ -155,17 +164,17 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      console.log('[@component:EdgeEditDialog] Dialog opened with host:', {
+      console.log('[@component:EdgeEditDialog] Dialog opened with device:', {
         hostName: selectedHost?.host_name,
-        deviceModel: selectedHost?.device_model,
+        deviceId: selectedDeviceId,
         availableActionsCount: Object.keys(controllerActions).length,
       });
 
       if (Object.keys(controllerActions).length === 0) {
-        console.log('[@component:EdgeEditDialog] No remote actions available in host data');
+        console.log('[@component:EdgeEditDialog] No remote actions available in device data');
       }
     }
-  }, [isOpen, selectedHost, controllerActions]);
+  }, [isOpen, selectedHost, selectedDeviceId, controllerActions]);
 
   const isFormValid = () => {
     return localActions.every(

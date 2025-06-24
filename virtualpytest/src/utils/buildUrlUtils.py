@@ -6,6 +6,42 @@ Eliminates hardcoded URLs and inconsistent building patterns.
 Supports multi-device hosts with device-specific paths.
 """
 
+# =====================================================
+# CORE URL BUILDING FUNCTION (No Dependencies)
+# =====================================================
+
+def buildHostUrl(host_info: dict, endpoint: str) -> str:
+    """
+    Core URL builder - Build URLs for host API endpoints using provided host data
+    
+    Args:
+        host_info: Complete host information (from frontend or direct data)
+        endpoint: The endpoint path to append
+        
+    Returns:
+        Complete URL to the host API endpoint
+        
+    Example:
+        buildHostUrl(host_data, '/host/av/take-screenshot')
+        -> 'https://virtualpytest.com/host/av/take-screenshot'
+    """
+    if not host_info:
+        raise ValueError("host_info is required for buildHostUrl")
+    
+    # Use host_url from provided host data (modern approach)
+    host_base_url = host_info.get('host_url')
+    if not host_base_url:
+        raise ValueError(f"Host missing host_url: {host_info.get('host_name', 'unknown')}")
+    
+    # Clean endpoint
+    clean_endpoint = endpoint.lstrip('/')
+    
+    return f"{host_base_url}/{clean_endpoint}"
+
+# =====================================================
+# SPECIALIZED URL BUILDERS
+# =====================================================
+
 def buildCaptureUrl(host_info: dict, timestamp: str, device_id: str = None) -> str:
     """
     Build URL for live screenshot captures
@@ -25,8 +61,6 @@ def buildCaptureUrl(host_info: dict, timestamp: str, device_id: str = None) -> s
         buildCaptureUrl(host_info, '20250117134500', 'device2')
         -> 'https://host:444/host/stream/capture2/captures/capture_20250117134500.jpg'
     """
-    from .app_utils import buildHostUrl
-    
     # Get device-specific capture path
     capture_path = _get_device_capture_path(host_info, device_id)
     
@@ -48,8 +82,6 @@ def buildCroppedImageUrl(host_info: dict, filename: str, device_id: str = None) 
         buildCroppedImageUrl(host_info, 'cropped_button_20250117134500.jpg')
         -> 'https://host:444/host/stream/captures/cropped/cropped_button_20250117134500.jpg'
     """
-    from .app_utils import buildHostUrl
-    
     # Get device-specific capture path
     capture_path = _get_device_capture_path(host_info, device_id)
     
@@ -71,7 +103,6 @@ def buildReferenceImageUrl(host_info: dict, device_model: str, filename: str) ->
         buildReferenceImageUrl(host_info, 'android_mobile', 'login_button.jpg')
         -> 'https://host:444/host/stream/resources/android_mobile/login_button.jpg'
     """
-    from .app_utils import buildHostUrl
     return buildHostUrl(host_info, f'host/stream/resources/{device_model}/{filename}')
 
 def buildVerificationResultUrl(host_info: dict, results_path: str) -> str:
@@ -89,7 +120,6 @@ def buildVerificationResultUrl(host_info: dict, results_path: str) -> str:
         buildVerificationResultUrl(host_info, '/var/www/html/stream/verification_results/source_image_0.png')
         -> 'https://host:444/host/stream/verification_results/source_image_0.png'
     """
-    from .app_utils import buildHostUrl
     # Convert local path to URL path
     url_path = results_path.replace('/var/www/html/', '')
     # Add host/ prefix like other image URLs (cropping, captures, etc.)
@@ -113,30 +143,10 @@ def buildStreamUrl(host_info: dict, device_id: str = None) -> str:
         buildStreamUrl(host_info, 'device2')
         -> 'https://host:444/host/stream/capture2/output.m3u8'
     """
-    from .app_utils import buildHostUrl
-    
     # Get device-specific stream path
     stream_path = _get_device_stream_path(host_info, device_id)
     
     return buildHostUrl(host_info, f'host{stream_path}/output.m3u8')
-
-def buildHostUrl(host_info: dict, endpoint: str) -> str:
-    """
-    Build URL for host API endpoints (Flask routes)
-    
-    Args:
-        host_info: Host information from registry
-        endpoint: API endpoint path (e.g., '/host/take-control', '/host/navigation/execute/tree/node')
-        
-    Returns:
-        Complete URL to host API endpoint
-        
-    Example:
-        buildHostUrl(host_info, '/host/take-control')
-        -> 'https://host:6119/host/take-control'
-    """
-    from .app_utils import buildHostUrl
-    return buildHostUrl(host_info, endpoint)
 
 def buildHostImageUrl(host_info: dict, image_path: str) -> str:
     """
@@ -153,8 +163,6 @@ def buildHostImageUrl(host_info: dict, image_path: str) -> str:
         buildHostImageUrl(host_info, '/stream/captures/screenshot.jpg')
         -> 'https://host:444/host/stream/captures/screenshot.jpg'
     """
-    from .app_utils import buildHostUrl
-    
     # Handle absolute paths by converting to relative
     if image_path.startswith('/var/www/html/'):
         image_path = image_path.replace('/var/www/html/', '')

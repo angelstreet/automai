@@ -19,6 +19,7 @@ const getDeviceRemoteConfig = (selectedHost: any) => {
 
 export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceControlProps> = ({
   selectedHost,
+  selectedDeviceId,
   isControlActive,
   isRemotePanelOpen,
   verificationResults,
@@ -118,7 +119,8 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
       {selectedHost && hasAVCapabilities && isControlActive && (
         <div ref={screenEditorRef}>
           <ScreenDefinitionEditor
-            selectedHostDevice={selectedHost}
+            selectedHost={selectedHost}
+            selectedDeviceId={selectedDeviceId}
             autoConnect={true}
             onDisconnectComplete={onReleaseControl}
           />

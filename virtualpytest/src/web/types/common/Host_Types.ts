@@ -24,6 +24,7 @@ export interface ControllerObject {
 
 // Import action types from the centralized ActionTypes
 import type { Actions } from '../controller/ActionTypes';
+import type { Verifications } from '../verification/VerificationTypes';
 
 /**
  * Canonical Host Type - Used consistently across all layers
@@ -47,6 +48,10 @@ export interface Device {
   capabilities: DeviceCapabilities; // New detailed capability format
   capability_list?: string[]; // Flat list for backward compatibility
   controller_types?: string[]; // Device-specific controller types
+
+  // === DEVICE-LEVEL VERIFICATION AND ACTIONS ===
+  available_verification_types?: Verifications; // Available verification types from device controllers
+  available_action_types?: Actions; // Available action types from device controllers
 }
 
 export interface Host {
@@ -76,10 +81,6 @@ export interface Host {
   // === ACTUAL CONTROLLER OBJECTS (reflects real host_device structure) ===
   controller_objects?: { [key: string]: ControllerObject }; // Server-side controller registry
   local_controller_objects?: { [key: string]: ControllerObject }; // Host-side controller instances
-
-  // === VERIFICATION AND REMOTE ACTIONS DATA ===
-  available_verification_types?: import('../verification/VerificationTypes').Verifications; // Available verification types from controllers
-  available_action_types?: Actions; // Available action types from controllers
 
   // === DEVICE LOCK MANAGEMENT ===
   isLocked: boolean; // Device lock status

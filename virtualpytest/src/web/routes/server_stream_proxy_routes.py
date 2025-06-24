@@ -1,5 +1,9 @@
 """
 Stream Proxy Routes - Proxy HTTP streams through HTTPS to solve mixed content issues
+
+⚠️ DEPRECATED ROUTE PATTERN: This route uses host_name in URL path and legacy registry lookup.
+Modern approach should use POST requests with full host objects in request body.
+This is kept for backward compatibility only.
 """
 
 from flask import Blueprint, Response, request, current_app
@@ -13,21 +17,26 @@ def proxy_stream(host_name, stream_path):
     """
     Proxy HTTP stream content through HTTPS to solve mixed content issues.
     
+    ⚠️ DEPRECATED: This route uses legacy registry lookup.
+    Modern approach should use POST with host object in request body.
+    
     Args:
         host_name: Name of the host to proxy stream from
         stream_path: Path to the stream resource (e.g., 'output.m3u8', 'segment_123.ts')
     """
     try:
-        # Get host info from registry
+        print(f"⚠️ WARNING: Using deprecated stream proxy route with registry lookup for host: {host_name}")
+        
+        # Get host info from legacy registry (DEPRECATED)
         host_info = get_host_by_name(host_name)
         if not host_info:
-            print(f"[@route:stream_proxy] Host not found: {host_name}")
+            print(f"[@route:stream_proxy] Host not found in legacy registry: {host_name}")
             return "Host not found", 404
         
         # Build the original HTTP URL
         host_base_url = host_info.get('host_url')
         if not host_base_url:
-            print(f"[@route:stream_proxy] Host missing host_url: {host_name}")
+            print(f"[@route:stream_proxy] Host missing host_url in legacy registry: {host_name}")
             return "Host URL not available", 500
         
         # Construct the target URL

@@ -707,6 +707,7 @@ export const useNavigationEditor = () => {
 
       // Panel state
       selectedHost: hostManager.selectedHost,
+      selectedDeviceId: hostManager.selectedDeviceId,
       isControlActive: hostManager.isControlActive,
       isRemotePanelOpen: hostManager.isRemotePanelOpen,
       showRemotePanel: hostManager.showRemotePanel,
@@ -764,6 +765,7 @@ export const useNavigationEditor = () => {
       configHook.showReadOnlyOverlay,
       configHook.sessionId,
       hostManager.selectedHost,
+      hostManager.selectedDeviceId,
       hostManager.isControlActive,
       hostManager.isRemotePanelOpen,
       hostManager.showRemotePanel,

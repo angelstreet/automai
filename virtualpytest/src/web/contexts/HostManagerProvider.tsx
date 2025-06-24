@@ -33,6 +33,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
   // Panel and UI state
   const [selectedHost, setSelectedHost] = useState<Host | null>(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string | null>(null);
   const [isControlActive, setIsControlActive] = useState(false);
   const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
   const [showRemotePanel, setShowRemotePanel] = useState(false);
@@ -438,19 +439,33 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // ========================================
 
   // Handle device selection
-  const handleDeviceSelect = useCallback((host: Host | null) => {
-    console.log(`[@context:HostManagerProvider] Device selected:`, host?.host_name || 'null');
+  const handleDeviceSelect = useCallback((host: Host | null, deviceId: string | null) => {
+    console.log(`[@context:HostManagerProvider] Device selected:`, {
+      hostName: host?.host_name || 'null',
+      deviceId: deviceId || 'null',
+    });
 
-    if (!host) {
+    if (!host || !deviceId) {
       setSelectedHost(null);
+      setSelectedDeviceId(null);
+      return;
+    }
+
+    // Verify device exists in host
+    const device = host.devices?.find((d) => d.device_id === deviceId);
+    if (!device) {
+      console.error(
+        `[@context:HostManagerProvider] Device ${deviceId} not found in host ${host.host_name}`,
+      );
+      setSelectedHost(null);
+      setSelectedDeviceId(null);
       return;
     }
 
     setSelectedHost(host);
-    // Fix device_name property access
-    const deviceName = host.devices && host.devices.length > 0 ? host.devices[0].name : 'unknown';
+    setSelectedDeviceId(deviceId);
     console.log(
-      `[@context:HostManagerProvider] Host selected: ${host.host_name} (device: ${deviceName})`,
+      `[@context:HostManagerProvider] Device selected: ${device.name} (${device.model}) on host ${host.host_name}`,
     );
   }, []);
 
@@ -572,6 +587,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     () => ({
       // Panel and UI state
       selectedHost,
+      selectedDeviceId,
       isControlActive,
       isRemotePanelOpen,
       showRemotePanel,
@@ -593,6 +609,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
       // Panel and control actions
       setSelectedHost,
+      setSelectedDeviceId,
       setIsControlActive,
       setIsRemotePanelOpen,
       setShowRemotePanel,
@@ -622,6 +639,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     [
       // Include all dependencies
       selectedHost,
+      selectedDeviceId,
       isControlActive,
       isRemotePanelOpen,
       showRemotePanel,

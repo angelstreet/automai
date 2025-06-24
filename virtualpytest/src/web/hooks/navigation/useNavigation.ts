@@ -15,11 +15,12 @@ export interface NavigationHookResult {
   filteredHosts: any[];
   isLoadingHosts: boolean;
 
-  // Device selection and control
-  selectedDevice: string | null;
+  // Device selection and control (migrated to use HostManager)
+  selectedHost: any | null;
+  selectedDeviceId: string | null;
   isControlActive: boolean;
   isRemotePanelOpen: boolean;
-  setSelectedDevice: (device: string | null) => void;
+  handleDeviceSelect: (host: any | null, deviceId: string | null) => void;
   handleTakeControl: () => Promise<void>;
   handleToggleRemotePanel: () => void;
 
@@ -46,18 +47,23 @@ export const useNavigation = (): NavigationHookResult => {
   // Extract interface name from URL
   const { interfaceName } = useParams<{ interfaceName: string }>();
 
-  // Get hosts from host manager context
-  const { getAllHosts } = useHostManager();
+  // Get host manager context - now provides device selection
+  const {
+    getAllHosts,
+    selectedHost,
+    selectedDeviceId,
+    isControlActive,
+    isRemotePanelOpen,
+    handleDeviceSelect,
+    handleToggleRemotePanel,
+    takeControl,
+    releaseControl,
+  } = useHostManager();
 
   // Interface state
   const [interfaceModels, setInterfaceModels] = useState<string[]>([]);
   const [isLoadingInterface, setIsLoadingInterface] = useState(false);
   const [interfaceError, setInterfaceError] = useState<string | null>(null);
-
-  // Device selection and control state
-  const [selectedDevice, setSelectedDevice] = useState<string | null>(null);
-  const [isControlActive, setIsControlActive] = useState(false);
-  const [isRemotePanelOpen, setIsRemotePanelOpen] = useState(false);
 
   // Tree state
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -145,64 +151,32 @@ export const useNavigation = (): NavigationHookResult => {
     return filtered;
   }, [availableHosts, interfaceModels]);
 
-  // Handle take control
+  // Handle take control - delegate to HostManager
   const handleTakeControl = useCallback(async () => {
-    if (!selectedDevice) {
-      console.log('[@hook:useNavigation] Cannot take control: no device selected');
+    if (!selectedHost) {
+      console.log('[@hook:useNavigation] Cannot take control: no host selected');
       return;
     }
 
     const wasControlActive = isControlActive;
-    const controlAction = wasControlActive ? 'release-control' : 'take-control';
+    const controlAction = wasControlActive ? 'release' : 'take';
 
     console.log(
-      `[@hook:useNavigation] ${wasControlActive ? 'Releasing' : 'Taking'} control of device: ${selectedDevice}`,
+      `[@hook:useNavigation] ${controlAction} control of device: ${selectedHost.host_name}`,
     );
 
     try {
-      const response = await fetch(`/server/control/${controlAction}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host_name: selectedDevice,
-          session_id: 'default-session',
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setIsControlActive(!wasControlActive);
-          if (!wasControlActive) {
-            setIsRemotePanelOpen(true);
-          } else {
-            setIsRemotePanelOpen(false);
-          }
-          console.log(
-            `[@hook:useNavigation] Successfully ${wasControlActive ? 'released' : 'taken'} control of device: ${selectedDevice}`,
-          );
-        } else {
-          console.error(`[@hook:useNavigation] Failed to ${controlAction}: ${data.error}`);
-        }
+      if (wasControlActive) {
+        await releaseControl(selectedHost.host_name, 'navigation-session');
       } else {
-        console.error(
-          `[@hook:useNavigation] Server error during ${controlAction}: ${response.status} ${response.statusText}`,
-        );
+        await takeControl(selectedHost.host_name, 'navigation-session');
       }
     } catch (error) {
       console.error(`[@hook:useNavigation] Error during control operation:`, error);
     }
-  }, [selectedDevice, isControlActive]);
+  }, [selectedHost, isControlActive, takeControl, releaseControl]);
 
-  // Handle remote panel toggle
-  const handleToggleRemotePanel = useCallback(() => {
-    setIsRemotePanelOpen((prev) => !prev);
-    console.log(`[@hook:useNavigation] Remote panel toggled: ${!isRemotePanelOpen}`);
-  }, [isRemotePanelOpen]);
-
-  // Screenshot functionality
+  // Screenshot functionality - updated to use selected device from HostManager
   const handleTakeScreenshot = useCallback(
     async (
       selectedNode: any,
@@ -212,10 +186,17 @@ export const useNavigation = (): NavigationHookResult => {
       setSelectedNode: any,
       setHasUnsavedChanges: any,
     ) => {
-      if (!selectedDevice || !selectedNode) {
+      if (!selectedHost || !selectedDeviceId || !selectedNode) {
         console.log(
           '[@hook:useNavigation] Cannot take screenshot: no device selected or no node selected',
         );
+        return;
+      }
+
+      // Get the specific device from the selected host
+      const device = selectedHost.devices?.find((d: any) => d.device_id === selectedDeviceId);
+      if (!device) {
+        console.error('[@hook:useNavigation] Device not found in selected host');
         return;
       }
 
@@ -235,17 +216,19 @@ export const useNavigation = (): NavigationHookResult => {
         }
 
         console.log(
-          `[@hook:useNavigation] Taking screenshot for device: ${selectedDevice}, parent: ${parentName}, node: ${nodeName}`,
+          `[@hook:useNavigation] Taking screenshot for device: ${device.model} (${device.name}) on host ${selectedHost.host_name}, parent: ${parentName}, node: ${nodeName}`,
         );
 
-        // Call screenshot API with parent and node name parameters
+        // Call screenshot API with device model and host parameters
         const response = await fetch('/api/virtualpytest/screen-definition/screenshot', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            device_model: selectedDevice,
+            device_model: device.model,
+            host_name: selectedHost.host_name,
+            device_id: selectedDeviceId,
             video_device: '/dev/video0', // Use default video device
             parent_name: parentName,
             node_name: nodeName,
@@ -304,7 +287,7 @@ export const useNavigation = (): NavigationHookResult => {
         console.error('[@hook:useNavigation] Error taking screenshot:', error);
       }
     },
-    [selectedDevice],
+    [selectedHost, selectedDeviceId],
   );
 
   return {
@@ -319,11 +302,12 @@ export const useNavigation = (): NavigationHookResult => {
     filteredHosts,
     isLoadingHosts: false,
 
-    // Device selection and control
-    selectedDevice,
+    // Device selection and control (migrated to use HostManager)
+    selectedHost,
+    selectedDeviceId,
     isControlActive,
     isRemotePanelOpen,
-    setSelectedDevice,
+    handleDeviceSelect,
     handleTakeControl,
     handleToggleRemotePanel,
 

@@ -6,11 +6,16 @@ import { Verifications, Verification } from '../../types/verification/Verificati
 // Define interfaces for verification data structures
 
 interface UseVerificationProps {
-  selectedHost: Host;
+  selectedHost: Host | null;
+  deviceId: string | null;
   captureSourcePath?: string;
 }
 
-export const useVerification = ({ selectedHost, captureSourcePath }: UseVerificationProps) => {
+export const useVerification = ({
+  selectedHost,
+  deviceId,
+  captureSourcePath,
+}: UseVerificationProps) => {
   // State for verification types and verifications
   const [availableVerificationTypes, setAvailableVerificationTypes] = useState<Verifications>({});
   const [verifications, setVerifications] = useState<Verification[]>([]);
@@ -19,70 +24,75 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
   const [testResults, setTestResults] = useState<Verification[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Load verification types from host data and clean parameter definitions
+  // Load verification types from selected device data and clean parameter definitions
   useEffect(() => {
-    if (selectedHost?.available_verification_types) {
-      console.log('[@hook:useVerification] Loading verification types from host data');
+    // Get verification types from the selected device
+    const device = selectedHost?.devices?.find((d) => d.device_id === deviceId);
+    const deviceVerificationTypes = device?.available_verification_types;
+
+    if (deviceVerificationTypes) {
+      console.log('[@hook:useVerification] Loading verification types from device data');
 
       // Clean parameter definitions in available verification types
       const cleanedVerificationTypes: Verifications = {};
-      Object.entries(selectedHost.available_verification_types).forEach(
-        ([controllerType, verifications]) => {
-          if (Array.isArray(verifications)) {
-            cleanedVerificationTypes[controllerType] = verifications.map((verification: any) => {
-              if (!verification.params) return verification;
+      Object.entries(deviceVerificationTypes).forEach(([controllerType, verifications]) => {
+        if (Array.isArray(verifications)) {
+          cleanedVerificationTypes[controllerType] = verifications.map((verification: any) => {
+            if (!verification.params) return verification;
 
-              const cleanParams: any = {};
-              Object.entries(verification.params).forEach(([key, value]: [string, any]) => {
-                if (typeof value === 'object' && value !== null && 'default' in value) {
-                  // Extract default value from parameter definition
-                  cleanParams[key] = value.default;
-                } else {
-                  // Keep actual values as-is
-                  cleanParams[key] = value;
-                }
-              });
-
-              // Add verification_type based on controller type
-              let verification_type: 'text' | 'image' | 'adb' = 'text';
-              if (controllerType.toLowerCase().includes('image')) {
-                verification_type = 'image';
-              } else if (controllerType.toLowerCase().includes('adb')) {
-                verification_type = 'adb';
+            const cleanParams: any = {};
+            Object.entries(verification.params).forEach(([key, value]: [string, any]) => {
+              if (typeof value === 'object' && value !== null && 'default' in value) {
+                // Extract default value from parameter definition
+                cleanParams[key] = value.default;
+              } else {
+                // Keep actual values as-is
+                cleanParams[key] = value;
               }
-
-              return {
-                command: verification.command,
-                params: cleanParams,
-                verification_type,
-              } as Verification;
             });
-          } else {
-            cleanedVerificationTypes[controllerType] = verifications as Verification[];
-          }
-        },
-      );
+
+            // Add verification_type based on controller type
+            let verification_type: 'text' | 'image' | 'adb' = 'text';
+            if (controllerType.toLowerCase().includes('image')) {
+              verification_type = 'image';
+            } else if (controllerType.toLowerCase().includes('adb')) {
+              verification_type = 'adb';
+            }
+
+            return {
+              command: verification.command,
+              params: cleanParams,
+              verification_type,
+            } as Verification;
+          });
+        } else {
+          cleanedVerificationTypes[controllerType] = verifications as Verification[];
+        }
+      });
 
       setAvailableVerificationTypes(cleanedVerificationTypes);
       setError(null); // Clear any previous errors
-    } else if (selectedHost) {
+    } else if (selectedHost && deviceId) {
       console.log(
-        '[@hook:useVerification] No verification types available in host data - using empty object',
+        '[@hook:useVerification] No verification types available in device data - using empty object',
       );
       setAvailableVerificationTypes({});
       // Don't show error for missing verification types - they're optional
     }
-  }, [selectedHost, selectedHost?.available_verification_types]);
+  }, [selectedHost, deviceId]);
 
-  // Effect to check if selectedHost is provided
+  // Effect to check if selectedHost and deviceId are provided
   useEffect(() => {
-    if (!selectedHost || !selectedHost.device_model || selectedHost.device_model.trim() === '') {
-      console.error('[@hook:useVerification] Host device with model is required but not provided');
-      setError('Host device with model is required for verification');
+    const device = selectedHost?.devices?.find((d) => d.device_id === deviceId);
+    if (!selectedHost || !deviceId || !device?.model || device.model.trim() === '') {
+      console.error(
+        '[@hook:useVerification] Host, device ID, and device with model are required but not provided',
+      );
+      setError('Host, device ID, and device with model are required for verification');
     } else {
-      console.log(`[@hook:useVerification] Using model: ${selectedHost.device_model}`);
+      console.log(`[@hook:useVerification] Using model: ${device.model}`);
     }
-  }, [selectedHost]);
+  }, [selectedHost, deviceId]);
 
   // Effect to clear success message after delay
   useEffect(() => {
@@ -197,187 +207,89 @@ export const useVerification = ({ selectedHost, captureSourcePath }: UseVerifica
           // Extract filename from URL like "http://localhost:5009/images/screenshot/android_mobile.jpg?t=1749217510777"
           const url = new URL(captureSourcePath);
           const pathname = url.pathname;
-          const filename = pathname.split('/').pop()?.split('?')[0]; // Get filename without query params
-
-          capture_filename = filename;
-
+          capture_filename = pathname.split('/').pop(); // Get the filename
           console.log('[@hook:useVerification] Using specific capture:', capture_filename);
         }
 
+        console.log('[@hook:useVerification] Submitting batch verification request');
+        console.log(
+          '[@hook:useVerification] Valid verifications count:',
+          validVerifications.length,
+        );
+
+        const device = selectedHost?.devices?.find((d) => d.device_id === deviceId);
+
         const batchPayload = {
           verifications: validVerifications, // Use filtered verifications
-          model: selectedHost.device_model,
+          model: device?.model || 'unknown',
           node_id: 'verification-editor',
           tree_id: 'verification-tree',
           capture_filename: capture_filename, // Send specific capture filename
         };
 
-        console.log('[@hook:useVerification] Batch execution payload:', batchPayload);
+        console.log('[@hook:useVerification] Batch payload:', batchPayload);
 
-        const response = await fetch(`/server/verification/batch/execute`, {
+        const response = await fetch('/server/verification/batch/test', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             host: selectedHost, // Send full host object
-            verifications: validVerifications, // Send verifications directly since params are already clean
-            source_filename: capture_filename, // Include the extracted capture filename
+            device_id: deviceId, // Send device ID
+            ...batchPayload,
           }),
         });
 
-        const batchResult = await response.json();
-
-        console.log('[@hook:useVerification] Raw batch result:', batchResult);
         console.log(
-          '[@hook:useVerification] Response status:',
-          response.status,
-          response.statusText,
+          `[@hook:useVerification] Fetching from: /server/verification/batch/test with host: ${selectedHost?.host_name} and device: ${deviceId}`,
         );
-        console.log('[@hook:useVerification] Batch result keys:', Object.keys(batchResult));
-        console.log('[@hook:useVerification] Batch result.results:', batchResult.results);
-        console.log('[@hook:useVerification] Batch result.success:', batchResult.success);
-        console.log('[@hook:useVerification] Batch result.error:', batchResult.error);
 
-        // Process results if we have them, regardless of overall batch success
-        if (batchResult.results && batchResult.results.length > 0) {
-          console.log(
-            '[@hook:useVerification] Processing batch results:',
-            batchResult.results.length,
-            'results',
-          );
-
-          // Process and set test results
-          const processedResults: Verification[] = batchResult.results.map(
-            (result: any, index: number) => {
-              const verification = validVerifications[index];
-
-              console.log(`[@hook:useVerification] Processing result ${index}:`, result);
-              console.log(
-                `[@hook:useVerification] Corresponding verification ${index}:`,
-                verification,
-              );
-
-              // Results are now flattened by the server batch coordination route
-              const actualSuccess = result.success || false;
-
-              // Use the resultType from server or determine based on success/error
-              let resultType: 'PASS' | 'FAIL' | 'ERROR' = result.resultType || 'FAIL';
-              if (!result.resultType) {
-                if (actualSuccess) {
-                  resultType = 'PASS';
-                } else if (result.error && !result.message) {
-                  resultType = 'ERROR';
-                }
-              }
-
-              const processedResult: Verification = {
-                // Core verification data
-                command: verification.command,
-                params: verification.params,
-                verification_type: verification.verification_type,
-
-                // Result data from server response
-                success: actualSuccess,
-                message: result.message,
-                error: result.error,
-                threshold: result.threshold,
-                resultType: resultType,
-                // Extract image URLs from details object if not at top level
-                sourceImageUrl: result.sourceImageUrl || result.details?.sourceImageUrl,
-                referenceImageUrl: result.referenceImageUrl || result.details?.referenceImageUrl,
-                resultOverlayUrl: result.resultOverlayUrl || result.details?.resultOverlayUrl,
-                // Extract text fields from details object if not at top level
-                extractedText: result.extractedText || result.details?.extracted_text,
-                searchedText:
-                  result.searchedText ||
-                  result.details?.searchedText ||
-                  result.details?.searched_text,
-                imageFilter: result.imageFilter || result.details?.image_filter,
-                detectedLanguage: result.detectedLanguage || result.details?.detected_language,
-                languageConfidence:
-                  result.languageConfidence || result.details?.language_confidence,
-                // Add ADB-specific fields
-                search_term: result.search_term,
-                wait_time: result.wait_time,
-                total_matches: result.total_matches,
-                matches: result.matches,
-              } as Verification;
-
-              console.log(`[@hook:useVerification] Processed result ${index}:`, processedResult);
-              return processedResult;
-            },
-          );
-
-          console.log('[@hook:useVerification] Setting test results:', processedResults);
-          setTestResults(processedResults);
-
-          // Update verifications with results
-          const updatedVerifications = validVerifications.map((verification, index) => {
-            const result = batchResult.results?.[index];
-            if (result) {
-              return {
-                ...verification,
-                lastRunResult: result.success,
-                lastRunResults: [result.success],
-                resultImageUrl: result.sourceImageUrl || result.details?.sourceImageUrl,
-                referenceImageUrl: result.referenceImageUrl || result.details?.referenceImageUrl,
-                resultOverlayUrl: result.resultOverlayUrl || result.details?.resultOverlayUrl,
-                lastRunDetails: result.message || 'Verification completed',
-              };
-            }
-            return verification;
-          });
-
-          setVerifications(updatedVerifications);
-
-          // Show success message with pass/fail count
-          const passedCount = batchResult.passed_count || 0;
-          const totalCount = batchResult.total_count || processedResults.length;
-          setSuccessMessage(`Verification completed: ${passedCount}/${totalCount} passed`);
-        } else if (batchResult.success === false && batchResult.error) {
-          // Only treat as error if there's an actual error and no results
-          const errorMessage = batchResult.message || batchResult.error || 'Unknown error occurred';
-          console.log('[@hook:useVerification] Batch execution failed with error:', errorMessage);
-          setError(`Verification failed: ${errorMessage}`);
-          // Clear test results on actual failure
-          setTestResults([]);
-        } else {
-          // Fallback case - no results and no clear error
-          console.log('[@hook:useVerification] No results received from batch execution');
-          setError('No verification results received');
-          setTestResults([]);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      } catch (error: any) {
-        console.error('[@hook:useVerification] Error running tests:', error);
-        setError(
-          `Error running tests: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        );
-        // Clear test results on error
-        setTestResults([]);
+
+        const result = await response.json();
+        console.log('[@hook:useVerification] Batch test result:', result);
+
+        if (result.success) {
+          // Update results with tested verifications
+          const resultsWithStatus = validVerifications.map((verification, index) => ({
+            ...verification,
+            status: result.results?.[index]?.success ? 'passed' : 'failed',
+            result_message: result.results?.[index]?.message || 'No message',
+            execution_time: result.results?.[index]?.execution_time || 0,
+          }));
+
+          setTestResults(resultsWithStatus);
+          console.log('[@hook:useVerification] Test results set:', resultsWithStatus);
+
+          // Show summary message
+          const passedCount = result.results?.filter((r: any) => r.success).length || 0;
+          const totalCount = result.results?.length || 0;
+          setSuccessMessage(`Verification completed: ${passedCount}/${totalCount} passed`);
+        } else {
+          setError(result.error || 'Verification test failed');
+        }
+      } catch (error) {
+        console.error('[@hook:useVerification] Error during verification test:', error);
+        setError(error instanceof Error ? error.message : 'Unknown error during verification test');
       } finally {
         setLoading(false);
       }
     },
-    [verifications, selectedHost, captureSourcePath],
+    [verifications, selectedHost, deviceId, captureSourcePath],
   );
 
   return {
-    // State
     availableVerificationTypes,
     verifications,
     loading,
     error,
     testResults,
     successMessage,
-    selectedHost,
-
-    // Setters
-    setSuccessMessage,
-
-    // Handlers
     handleVerificationsChange,
     handleTest,
+    selectedHost,
+    deviceId,
   };
 };
 

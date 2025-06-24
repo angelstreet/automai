@@ -45,8 +45,7 @@ def register_host():
         print(f"   Host name: {host_info.get('host_name', 'Not provided')}")
         print(f"   Host URL: {host_info.get('host_url', 'Not provided')}")
         print(f"   Device model: {host_info.get('device_model', 'Not provided')}")
-        print(f"   Verification types: {len(host_info.get('available_verification_types', {}))} controller types")
-        print(f"   Available action types: {len(host_info.get('available_action_types', {}))} controller types")
+        print(f"   Devices: {len(host_info.get('devices', []))} device(s)")
         
         # Check for required fields
         required_fields = ['host_url', 'host_name', 'devices']
@@ -104,7 +103,16 @@ def register_host():
             print(f"[@route:register_host] Processed capability list: {capability_list}")
             print(f"[@route:register_host] Controller types: {controller_types}")
             
-            # Add device with processed info
+            # Check for device-level verification and action types
+            device_verification_types = device.get('available_verification_types', {})
+            device_action_types = device.get('available_action_types', {})
+            
+            if device_verification_types:
+                print(f"[@route:register_host] Device {device_name} has {len(device_verification_types)} verification controller types")
+            if device_action_types:
+                print(f"[@route:register_host] Device {device_name} has {len(device_action_types)} action categories")
+            
+            # Add device with processed info (keep the device data as sent by host)
             device_with_controllers = {
                 'device_id': device.get('device_id'),
                 'name': device_name,
@@ -113,7 +121,9 @@ def register_host():
                 'device_port': device.get('device_port'),
                 'capabilities': device_capabilities,  # Detailed format: {av: 'hdmi_stream', remote: 'android_mobile', verification: ['image', 'text']}
                 'capability_list': capability_list,   # Flat list for backward compatibility: ['av', 'remote', 'image', 'text']
-                'controller_types': controller_types  # Implementation types: ['av_hdmi_stream', 'remote_android_mobile', 'verification_image', 'verification_text']
+                'controller_types': controller_types, # Implementation types: ['av_hdmi_stream', 'remote_android_mobile', 'verification_image', 'verification_text']
+                'available_verification_types': device_verification_types,  # Device-level verification types
+                'available_action_types': device_action_types  # Device-level action types
             }
             devices_with_controllers.append(device_with_controllers)
             
@@ -144,11 +154,9 @@ def register_host():
             'registered_at': datetime.now().isoformat(),
             'system_stats': host_info.get('system_stats', get_system_stats()),
             
-            # === HOST CAPABILITIES (COMBINED FROM ALL DEVICES) ===
-            'capabilities': list(all_capabilities),
-            'controller_types': list(all_controller_types),
-            'available_verification_types': host_info.get('available_verification_types', {}),
-            'available_action_types': host_info.get('available_action_types', {}),
+                    # === HOST CAPABILITIES (COMBINED FROM ALL DEVICES) ===
+        'capabilities': list(all_capabilities),
+        'controller_types': list(all_controller_types),
             
             # === DEVICE LOCK MANAGEMENT ===
             'isLocked': False,
@@ -389,12 +397,21 @@ def client_ping():
         if 'system_stats' in ping_data:
             host_to_update['system_stats'] = ping_data['system_stats']
         
-        # Update verification types and actions if provided
-        if 'available_verification_types' in ping_data:
-            host_to_update['available_verification_types'] = ping_data['available_verification_types']
-        
-        if 'available_action_types' in ping_data:
-            host_to_update['available_action_types'] = ping_data['available_action_types']
+        # Update device-level verification and action types if provided
+        if 'devices' in ping_data:
+            # Update device-level data while preserving existing device structure
+            for updated_device in ping_data['devices']:
+                device_id = updated_device.get('device_id')
+                if device_id:
+                    # Find the corresponding device in host data
+                    for existing_device in host_to_update.get('devices', []):
+                        if existing_device.get('device_id') == device_id:
+                            # Update device-level verification and action types
+                            if 'available_verification_types' in updated_device:
+                                existing_device['available_verification_types'] = updated_device['available_verification_types']
+                            if 'available_action_types' in updated_device:
+                                existing_device['available_action_types'] = updated_device['available_action_types']
+                            break
         
         # Update any other provided fields
         for field in ['host_ip', 'host_port_external']:
@@ -555,8 +572,6 @@ class Host(TypedDict):
     # === HOST CAPABILITIES (COMBINED FROM ALL DEVICES) ===
     capabilities: List[str]
     controller_types: Optional[List[str]]
-    available_verification_types: Any
-    available_action_types: Any
     
     # === DEVICE LOCK MANAGEMENT ===
     isLocked: bool
@@ -586,17 +601,31 @@ def get_available_actions():
             print(f"[@route:server_system_routes:get_available_actions] Host {host_name} not found in connected hosts")
             return jsonify({'success': False, 'error': f'Host {host_name} not found'}), 404
         
-        # Get available actions from host data
-        available_action_types = host_data.get('available_action_types', {})
+        # Get available actions from all devices in the host
+        all_actions = {}
+        devices = host_data.get('devices', [])
         
-        if not available_action_types:
+        for device in devices:
+            device_action_types = device.get('available_action_types', {})
+            device_name = device.get('name', device.get('device_id', 'unknown'))
+            
+            print(f"[@route:server_system_routes:get_available_actions] Device {device_name} has {len(device_action_types)} action categories")
+            
+            # Merge device actions into all_actions
+            for category, actions_list in device_action_types.items():
+                if category not in all_actions:
+                    all_actions[category] = []
+                if isinstance(actions_list, list):
+                    all_actions[category].extend(actions_list)
+        
+        if not all_actions:
             print(f"[@route:server_system_routes:get_available_actions] No actions available for host {host_name}")
             return jsonify({'success': True, 'actions': []})
         
         # Transform actions to the expected format for the frontend
         transformed_actions = []
         
-        for category, actions_list in available_action_types.items():
+        for category, actions_list in all_actions.items():
             if isinstance(actions_list, list):
                 for action in actions_list:
                     if isinstance(action, dict):

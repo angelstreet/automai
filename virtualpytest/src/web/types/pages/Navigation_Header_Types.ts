@@ -17,7 +17,8 @@ export interface NavigationEditorActionButtonsProps {
   hasUnsavedChanges: boolean;
   isLoading: boolean;
   error: string | null;
-  selectedDevice: string | null;
+  selectedHost: Host | null;
+  selectedDeviceId: string | null;
   isControlActive: boolean;
   onAddNewNode: (nodeType: string, position: { x: number; y: number }) => void;
   onFitView: () => void;
@@ -26,13 +27,14 @@ export interface NavigationEditorActionButtonsProps {
 }
 
 export interface NavigationEditorDeviceControlsProps {
-  selectedDevice: string | null;
+  selectedHost: Host | null;
+  selectedDeviceId: string | null;
   isControlActive: boolean;
   isControlLoading: boolean;
   isRemotePanelOpen: boolean;
   availableHosts: Host[];
   isDeviceLocked: (hostName: string) => boolean;
-  onDeviceSelect: (device: string | null) => void;
+  onDeviceSelect: (host: Host | null, deviceId: string | null) => void;
   onTakeControl: () => Promise<void>;
   onToggleRemotePanel: () => void;
 }

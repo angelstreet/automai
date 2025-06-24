@@ -9,6 +9,7 @@ import { Host } from '../types/common/Host_Types';
 export interface HostManagerContextType {
   // Panel and UI state
   selectedHost: Host | null;
+  selectedDeviceId: string | null;
   isControlActive: boolean;
   isRemotePanelOpen: boolean;
   showRemotePanel: boolean;
@@ -55,7 +56,7 @@ export interface HostManagerContextType {
   hasActiveLock: (hostName: string) => boolean;
 
   // Panel and UI handlers
-  handleDeviceSelect: (host: Host | null) => void;
+  handleDeviceSelect: (host: Host | null, deviceId: string | null) => void;
   handleControlStateChange: (active: boolean) => void;
   handleToggleRemotePanel: () => void;
   handleConnectionChange: (connected: boolean) => void;
@@ -63,6 +64,7 @@ export interface HostManagerContextType {
 
   // Panel and control actions
   setSelectedHost: (host: Host | null) => void;
+  setSelectedDeviceId: (deviceId: string | null) => void;
   setIsControlActive: (active: boolean) => void;
   setIsRemotePanelOpen: (open: boolean) => void;
   setShowRemotePanel: (show: boolean) => void;

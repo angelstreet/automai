@@ -192,6 +192,7 @@ export const useNavigationActionsHook = () => {
       // Optional host manager state (when available)
       ...(hostManagerHook && {
         selectedHost: hostManagerHook.selectedHost,
+        selectedDeviceId: hostManagerHook.selectedDeviceId,
         isControlActive: hostManagerHook.isControlActive,
         availableHosts: hostManagerHook.availableHosts,
         isRemotePanelOpen: hostManagerHook.isRemotePanelOpen,
@@ -209,6 +210,7 @@ export const useNavigationActionsHook = () => {
       // Fallback host manager functions when HostManager context is not available
       ...(!hostManagerHook && {
         selectedHost: null,
+        selectedDeviceId: null,
         isControlActive: false,
         availableHosts: [],
         isRemotePanelOpen: false,

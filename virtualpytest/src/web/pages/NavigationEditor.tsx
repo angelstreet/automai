@@ -232,6 +232,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     // Get host manager from context
     const {
       selectedHost,
+      selectedDeviceId,
       isControlActive,
       isRemotePanelOpen,
       showRemotePanel,
@@ -521,6 +522,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           isLocked={isLocked ?? false}
           treeId={treeId}
           selectedHost={selectedHost}
+          selectedDeviceId={selectedDeviceId}
           isControlActive={isControlActive}
           isRemotePanelOpen={isRemotePanelOpen}
           availableHosts={availableHosts}
@@ -717,6 +719,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
             selectedEdge={selectedEdge}
             isControlActive={isControlActive}
             selectedHost={selectedHost}
+            selectedDeviceId={selectedDeviceId}
           />
         )}
 

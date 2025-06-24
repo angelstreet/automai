@@ -197,12 +197,14 @@ def initialize_server_globals():
 
 
 def add_host(host_name, host_info):
-    """Add a host to the connected hosts registry"""
+    """DEPRECATED: Hosts are now managed by HostManagerProvider"""
+    print(f"⚠️ WARNING: add_host() is deprecated. Hosts are managed by HostManagerProvider")
     connected_clients[host_name] = host_info
     print(f"📝 Added host {host_name} to registry")
 
 def remove_host(host_name):
-    """Remove a host from the connected hosts registry"""
+    """DEPRECATED: Hosts are now managed by HostManagerProvider"""
+    print(f"⚠️ WARNING: remove_host() is deprecated. Hosts are managed by HostManagerProvider")
     if host_name in connected_clients:
         del connected_clients[host_name]
         print(f"🗑️ Removed host {host_name} from registry")
@@ -226,27 +228,31 @@ DEFAULT_TEAM_ID = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
 DEFAULT_USER_ID = "eb6cfd93-44ab-4783-bd0c-129b734640f3"
 
 # =====================================================
-# URL BUILDER FUNCTIONS (Standardized - Only 3 Functions)
+# URL BUILDER FUNCTIONS (Clean Implementation - No Registry Dependency)
 # =====================================================
 
 def buildHostUrl(host_info: dict, endpoint: str) -> str:
     """
-    Server URL builder - Build URLs for host API endpoints using host registry data
+    Modern URL builder - Build URLs for host API endpoints using provided host data
     
     Args:
-        host_info: Host information from the registry
+        host_info: Complete host information (from frontend or direct data)
         endpoint: The endpoint path to append
         
     Returns:
         Complete URL to the host API endpoint
+        
+    Example:
+        buildHostUrl(host_data, '/host/av/take-screenshot')
+        -> 'https://virtualpytest.com/host/av/take-screenshot'
     """
     if not host_info:
         raise ValueError("host_info is required for buildHostUrl")
     
-    # Use host_url from registry (contains full base URL like http://host:6109)
+    # Use host_url from provided host data (modern approach)
     host_base_url = host_info.get('host_url')
     if not host_base_url:
-        raise ValueError(f"Host missing host_url in registry: {host_info.get('host_name', 'unknown')}")
+        raise ValueError(f"Host missing host_url: {host_info.get('host_name', 'unknown')}")
     
     # Clean endpoint
     clean_endpoint = endpoint.lstrip('/')
@@ -272,27 +278,33 @@ def buildServerUrl(endpoint: str) -> str:
     return f"{server_url}/{clean_endpoint}"
 
 # =====================================================
-# HOST REGISTRY FUNCTIONS (Single Source of Truth)
+# LEGACY REGISTRY FUNCTIONS (DEPRECATED - DO NOT USE)
 # =====================================================
+# 
+# The following functions are obsolete and should not be used.
+# Modern architecture uses complete host objects from HostManagerProvider.
+# These are kept temporarily for backward compatibility only.
+#
 
 def get_host_registry():
-    """Get the host registry from Flask app context"""
+    """DEPRECATED: Use HostManagerProvider.getAllHosts() instead"""
+    print("⚠️ WARNING: get_host_registry() is deprecated. Use HostManagerProvider.getAllHosts() instead")
     return getattr(current_app, '_connected_clients', {})
 
 def get_host_by_name(host_name):
-    """Get a specific host by name from the registry"""
+    """DEPRECATED: Use HostManagerProvider.getHostByName() instead"""
+    print(f"⚠️ WARNING: get_host_by_name() is deprecated. Use HostManagerProvider.getHostByName('{host_name}') instead")
     host_registry = get_host_registry()
     return host_registry.get(host_name)
 
 def get_host_by_model(device_model):
-    """Get the first available host with the specified device model"""
+    """DEPRECATED: Use HostManagerProvider.getHostsByModel() instead"""
+    print(f"⚠️ WARNING: get_host_by_model() is deprecated. Use HostManagerProvider.getHostsByModel(['{device_model}']) instead")
     host_registry = get_host_registry()
     for host_id, host_info in host_registry.items():
         if host_info.get('model') == device_model or host_info.get('device_model') == device_model:
             return host_info
     return None
-
-
 
 # =====================================================
 # FLASK-SPECIFIC HELPER FUNCTIONS
