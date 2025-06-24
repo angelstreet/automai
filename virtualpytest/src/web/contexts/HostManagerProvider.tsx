@@ -76,11 +76,11 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
         // DEBUG: Log first host's device structure to verify correct format
         if (rawHosts.length > 0 && rawHosts[0].devices?.length > 0) {
-          console.log('[@context:HostManagerProvider] Sample device data structure:', {
+          console.log('[@context:HostManagerProvider] Device data received:', {
             device_id: rawHosts[0].devices[0].device_id,
             device_name: rawHosts[0].devices[0].device_name,
             device_model: rawHosts[0].devices[0].device_model,
-            device_capabilities: rawHosts[0].devices[0].device_capabilities,
+            has_capabilities: !!rawHosts[0].devices[0].device_capabilities,
           });
         }
 

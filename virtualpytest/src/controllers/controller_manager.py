@@ -29,14 +29,28 @@ def create_host_from_environment() -> Host:
         Host instance with all devices and controllers configured
     """
     # Get host info from environment
-    host_ip = os.getenv('HOST_IP', '127.0.0.1')
-    host_port = int(os.getenv('HOST_PORT', '5000'))
     host_name = os.getenv('HOST_NAME', 'unnamed-host')
+    host_port = int(os.getenv('HOST_PORT', '6109'))
+    host_url = os.getenv('HOST_URL')
     
-    print(f"[@controller_manager:create_host_from_environment] Creating host: {host_name} ({host_ip}:{host_port})")
+    # Parse HOST_URL to extract IP if needed, or use fallback
+    host_ip = '127.0.0.1'  # Default fallback
+    if host_url:
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(host_url)
+            if parsed.hostname:
+                host_ip = parsed.hostname
+        except Exception as e:
+            print(f"[@controller_manager:create_host_from_environment] Warning: Could not parse HOST_URL {host_url}: {e}")
     
-    # Create host
-    host = Host(host_ip, host_port, host_name)
+    print(f"[@controller_manager:create_host_from_environment] Creating host: {host_name}")
+    print(f"[@controller_manager:create_host_from_environment]   Host URL: {host_url}")
+    print(f"[@controller_manager:create_host_from_environment]   Host IP: {host_ip}")
+    print(f"[@controller_manager:create_host_from_environment]   Host Port: {host_port}")
+    
+    # Create host with host_url parameter
+    host = Host(host_ip, host_port, host_name, host_url)
     
     # Create devices from environment variables
     devices_config = _get_devices_config_from_environment()

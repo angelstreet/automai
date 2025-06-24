@@ -97,7 +97,7 @@ class HostManager:
             filtered_hosts = []
             for host_data in self._hosts.values():
                 devices = host_data.get('devices', [])
-                if any(device.get('model') in models for device in devices):
+                if any(device.get('device_model') in models for device in devices):
                     filtered_hosts.append(host_data)
             return filtered_hosts
     

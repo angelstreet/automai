@@ -13,7 +13,7 @@ class Host:
     A host that contains multiple devices.
     
     Example usage:
-        host = Host("192.168.1.100", 5000, "test-host")
+        host = Host("192.168.1.100", 5000, "test-host", "https://virtualpytest.com")
         device1 = host.get_device("device1")
         av_controller = host.get_device("device1").get_controller('av')
         
@@ -21,7 +21,7 @@ class Host:
         av_controller = host.get_controller("device1", 'av')
     """
     
-    def __init__(self, host_ip: str, host_port: int, host_name: str):
+    def __init__(self, host_ip: str, host_port: int, host_name: str, host_url: str = None):
         """
         Initialize a host.
         
@@ -29,10 +29,12 @@ class Host:
             host_ip: Host IP address
             host_port: Host port
             host_name: Host name
+            host_url: Complete host URL (e.g., "https://virtualpytest.com")
         """
         self.host_ip = host_ip
         self.host_port = host_port
         self.host_name = host_name
+        self.host_url = host_url
         
         # Devices organized by device_id
         self._devices: Dict[str, Device] = {}
@@ -153,7 +155,7 @@ class Host:
         Returns:
             Dictionary representation of the host
         """
-        return {
+        result = {
             'host_ip': self.host_ip,
             'host_port': self.host_port,
             'host_name': self.host_name,
@@ -161,4 +163,10 @@ class Host:
             'devices': [device.to_dict() for device in self._devices.values()],
             'capabilities': self.get_all_capabilities(),
             'system_info': self.system_info
-        } 
+        }
+        
+        # Include host_url if available
+        if self.host_url:
+            result['host_url'] = self.host_url
+            
+        return result 

@@ -201,11 +201,11 @@ class Device:
         # Base device information
         device_dict = {
             'device_id': self.device_id,
-            'name': self.name,  # Updated field name for consistency
-            'model': self.model,  # Updated field name for consistency
+            'device_name': self.name,  # Updated field name to match frontend expectations
+            'device_model': self.model,  # Updated field name to match frontend expectations
             'device_ip': self.device_ip,
             'device_port': self.device_port,
-            'capabilities': detailed_capabilities,  # New detailed format: {av: 'hdmi_stream', remote: 'android_mobile', verification: ['image', 'text']}
+            'device_capabilities': detailed_capabilities,  # Updated field name to match frontend expectations
             'available_verification_types': available_verification_types,  # Collected from verification controllers
             'available_action_types': available_action_types  # Collected from action controllers
         }
