@@ -70,15 +70,6 @@ export interface Host {
   registered_at: string; // ISO timestamp
   system_stats: SystemStats; // System resource usage
 
-  // === HOST CAPABILITIES ===
-  capabilities: string[]; // Available capabilities (av, remote, verification, power)
-  controller_configs?: any; // Controller-specific configurations
-  controller_types?: string[]; // Available controller types
-
-  // === ACTUAL CONTROLLER OBJECTS (reflects real host_device structure) ===
-  controller_objects?: { [key: string]: ControllerObject }; // Server-side controller registry
-  local_controller_objects?: { [key: string]: ControllerObject }; // Host-side controller instances
-
   // === DEVICE LOCK MANAGEMENT ===
   isLocked: boolean; // Device lock status
   lockedBy?: string; // Session/user who locked it
