@@ -1,4 +1,5 @@
 import { createContext } from 'react';
+
 import { Host } from '../types/common/Host_Types';
 
 // ========================================
@@ -32,6 +33,3 @@ export interface HostManagerContextType {
 // ========================================
 
 export const HostManagerContext = createContext<HostManagerContextType | null>(null);
-
-// For backward compatibility - will be deprecated
-export const DeviceControlContext = HostManagerContext;

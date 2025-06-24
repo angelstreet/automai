@@ -21,7 +21,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { RecHostPreview } from '../components/rec/RecHostPreview';
 import { useRec } from '../hooks/pages/useRec';
-import { HostManagerProvider } from '../contexts/DeviceControlContext';
+import { HostManagerProvider } from '../contexts/HostManagerProvider';
 
 type ViewMode = 'grid' | 'table';
 
@@ -118,10 +118,10 @@ const RecContent: React.FC = () => {
             >
               <Box>
                 <Typography variant="body1" fontWeight="bold">
-                  {host.host_name} - {device.device_name}
+                  {host.host_name} - {device.name}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  {device.device_model} • {device.device_ip}:{device.device_port}
+                  {device.model} • {device.device_ip}:{device.device_port}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', gap: 1 }}>
@@ -137,6 +137,14 @@ const RecContent: React.FC = () => {
                   color={host.avStatus === 'online' ? 'success' : 'error'}
                   variant="outlined"
                 />
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<EyeIcon />}
+                  onClick={() => takeScreenshot(host, device.device_id)}
+                >
+                  Screenshot
+                </Button>
               </Box>
             </Box>
           ))}
@@ -145,133 +153,77 @@ const RecContent: React.FC = () => {
     );
   };
 
-  // Loading state
-  if (isLoading && hosts.length === 0) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '50vh',
-        }}
-      >
-        <CircularProgress sx={{ mb: 2 }} />
-        <Typography variant="h6" color="text.secondary">
-          Loading AV hosts...
-        </Typography>
-      </Box>
-    );
-  }
-
   return (
     <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <EyeIcon color="primary" sx={{ fontSize: 32 }} />
-            <Typography variant="h4" component="h1">
-              Remote Eye Controller
-            </Typography>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            {/* Auto-refresh indicator */}
-            <Chip
-              icon={<ComputerIcon />}
-              label={`${hosts.length} hosts - ${avDevices.length} AV devices`}
-              color="primary"
-              variant="outlined"
-            />
-
-            <Chip
-              label={autoRefresh ? 'Auto-refresh ON' : 'Auto-refresh OFF'}
-              color={autoRefresh ? 'success' : 'default'}
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              sx={{ cursor: 'pointer' }}
-            />
-
-            {/* Manual refresh button */}
-            <Button
-              variant="outlined"
-              startIcon={<RefreshIcon />}
-              onClick={handleManualRefresh}
-              disabled={isLoading}
-            >
-              Refresh
-            </Button>
-
-            {/* View mode toggle */}
-            <ToggleButtonGroup
-              value={viewMode}
-              exclusive
-              onChange={handleViewModeChange}
-              size="small"
-            >
-              <ToggleButton value="grid" aria-label="grid view">
-                <GridViewIcon />
-              </ToggleButton>
-              <ToggleButton value="table" aria-label="table view">
-                <TableViewIcon />
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
+      {/* Header with controls */}
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box>
+          <Typography variant="h5" component="h1" gutterBottom>
+            AV Devices
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            View and control connected AV devices
+          </Typography>
         </Box>
-
-        <Typography variant="body1" color="text.secondary">
-          Real-time monitoring of AV captures from connected hosts. Screenshots refresh
-          automatically every second.
-        </Typography>
-      </Box>
-
-      {/* Error Alert */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => window.location.reload()}>
-          {error}
-        </Alert>
-      )}
-
-      {/* No devices message */}
-      {!isLoading && avDevices.length === 0 && !error && (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '40vh',
-            textAlign: 'center',
-          }}
-        >
-          <ComputerIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No AV-capable devices found
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Connect devices with AV capabilities or check your network connection.
-          </Typography>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={handleManualRefresh}
-            size="large"
+            disabled={isLoading}
           >
-            Refresh Devices
+            Refresh
           </Button>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={handleViewModeChange}
+            aria-label="view mode"
+            size="small"
+          >
+            <ToggleButton value="grid" aria-label="grid view">
+              <GridViewIcon />
+            </ToggleButton>
+            <ToggleButton value="table" aria-label="table view">
+              <TableViewIcon />
+            </ToggleButton>
+          </ToggleButtonGroup>
         </Box>
+      </Box>
+
+      {/* Error state */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
       )}
 
-      {/* Device Grid/Table */}
-      {!isLoading && avDevices.length > 0 && (
-        <Box sx={{ mt: 3 }}>{viewMode === 'grid' ? renderGridView() : renderTableView()}</Box>
+      {/* Loading state */}
+      {isLoading ? (
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '200px',
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      ) : avDevices.length === 0 ? (
+        <Alert severity="info" icon={<ComputerIcon />}>
+          No AV devices found. Make sure your devices are connected and have AV capabilities.
+        </Alert>
+      ) : viewMode === 'grid' ? (
+        renderGridView()
+      ) : (
+        renderTableView()
       )}
     </Box>
   );
 };
 
-// Wrapper component that provides HostManagerContext
+// Main Rec component that wraps RecContent with HostManagerProvider
 const Rec: React.FC = () => {
   return (
     <HostManagerProvider>

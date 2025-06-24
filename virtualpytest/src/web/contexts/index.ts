@@ -9,7 +9,10 @@ export {
   type NodeEdgeManagementState,
 } from './navigation';
 
-export { DeviceControlProvider, useDeviceControl } from './DeviceControlContext';
+// Host Manager Context
+export { HostManagerProvider } from './HostManagerProvider';
+export { HostManagerContext, type HostManagerContextType } from './HostManagerContext';
+export { useHostManager } from '../hooks/useHostManager';
 
 // Other Contexts
 export { CustomThemeProvider as ThemeProvider, useTheme } from './ThemeContext';

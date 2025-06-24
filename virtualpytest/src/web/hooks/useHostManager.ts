@@ -4,7 +4,7 @@ import { HostManagerContext, HostManagerContextType } from '../contexts/HostMana
 
 /**
  * Hook to access the HostManager context
- * This provides access to host data and device control functionality
+ * This component provides access to host data and device control functionality
  */
 export const useHostManager = (): HostManagerContextType => {
   const context = useContext(HostManagerContext);

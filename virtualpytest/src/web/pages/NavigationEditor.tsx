@@ -32,7 +32,7 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
-import { DeviceControlProvider, useDeviceControl } from '../contexts/DeviceControlContext';
+import { HostManagerProvider, useHostManager } from '../contexts/index';
 import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { NodeEdgeManagementProvider } from '../contexts/navigation/NodeEdgeManagementContext';
@@ -229,7 +229,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       userInterfaceFromState: userInterfaceFromState?.id,
     });
 
-    // Get device control from context
+    // Get host manager from context
     const {
       selectedHost,
       isControlActive,
@@ -243,7 +243,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       availableHosts,
       getHostByName,
       fetchHosts,
-    } = useDeviceControl();
+    } = useHostManager();
 
     // Track the last loaded tree ID to prevent unnecessary reloads
     const lastLoadedTreeId = useRef<string | null>(null);
@@ -778,7 +778,7 @@ const NavigationEditorWithAllProviders: React.FC = () => {
   const location = useLocation();
   const userInterfaceFromState = location.state?.userInterface;
 
-  // Memoize userInterface to prevent DeviceControlProvider re-renders
+  // Memoize userInterface to prevent HostManagerProvider re-renders
   const stableUserInterface = useMemo(() => userInterfaceFromState, [userInterfaceFromState]);
 
   // Ensure we have userInterfaceId before rendering
@@ -790,9 +790,9 @@ const NavigationEditorWithAllProviders: React.FC = () => {
     );
     return (
       <NavigationConfigProvider>
-        <DeviceControlProvider userInterface={stableUserInterface}>
+        <HostManagerProvider userInterface={stableUserInterface}>
           <NavigationEditorContent userInterfaceId={userInterfaceId} />
-        </DeviceControlProvider>
+        </HostManagerProvider>
       </NavigationConfigProvider>
     );
   }
@@ -821,17 +821,17 @@ const NavigationEditorWithNodeEdgeManagement: React.FC<{
       '[@component:NavigationEditorWithNodeEdgeManagement] saveToConfig not available, rendering without NodeEdgeManagementProvider',
     );
     return (
-      <DeviceControlProvider userInterface={userInterface}>
+      <HostManagerProvider userInterface={userInterface}>
         <NavigationEditorContent userInterfaceId={userInterfaceId} />
-      </DeviceControlProvider>
+      </HostManagerProvider>
     );
   }
 
   return (
     <NodeEdgeManagementProvider userInterfaceId={userInterfaceId}>
-      <DeviceControlProvider userInterface={userInterface}>
+      <HostManagerProvider userInterface={userInterface}>
         <NavigationEditorContent userInterfaceId={userInterfaceId} />
-      </DeviceControlProvider>
+      </HostManagerProvider>
     </NodeEdgeManagementProvider>
   );
 };

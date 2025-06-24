@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
 import { useRegistration } from '../hooks/useRegistration';
 import { Host } from '../types/common/Host_Types';
-
 import { HostManagerContext } from './HostManagerContext';
 
 interface HostManagerProviderProps {
@@ -205,9 +204,3 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 };
 
 HostManagerProvider.displayName = 'HostManagerProvider';
-
-/**
- * @deprecated Use HostManagerProvider instead
- * Provided for backward compatibility
- */
-export const DeviceControlProvider = HostManagerProvider;

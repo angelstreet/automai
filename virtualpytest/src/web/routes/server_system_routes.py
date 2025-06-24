@@ -279,10 +279,20 @@ def getAllHosts():
             if host_info.get('status') == 'online'
         ]
         
-        print(f"🖥️ [HOSTS] Returning {len(hosts)} online hosts")
+        # Verify that all hosts have the required fields
+        required_fields = ['host_name', 'host_url']
+        for host in hosts:
+            for field in required_fields:
+                if field not in host or not host[field]:
+                    print(f"⚠️ [HOSTS] Host {host.get('host_name', 'unknown')} missing required field: {field}")
+                    # Don't include hosts with missing required fields
+                    hosts.remove(host)
+                    break
+        
+        print(f"🖥️ [HOSTS] Returning {len(hosts)} valid online hosts")
         for host in hosts:
             device_count = host.get('device_count', 0)
-            print(f"   Host: {host['host_name']} - {device_count} device(s)")
+            print(f"   Host: {host['host_name']} ({host['host_url']}) - {device_count} device(s)")
         
         return jsonify({
             'success': True,

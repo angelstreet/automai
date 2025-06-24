@@ -6,8 +6,8 @@ import { useNavigationNodes, useNavigationUI, useNavigationFlow } from '../../co
 // Optional import for NavigationConfig - will be available when wrapped with NavigationConfigProvider
 import { useNavigationConfig } from '../../contexts';
 
-// Optional import for DeviceControl - will be available when wrapped with DeviceControlProvider
-import { useDeviceControl } from '../../contexts/DeviceControlContext';
+// Optional import for HostManager - will be available when wrapped with HostManagerProvider
+import { useHostManager } from '../../contexts/index';
 
 export const useNavigationActionsHook = () => {
   console.log('[@hook:useNavigationActionsHook] Initializing actions hook');
@@ -27,12 +27,12 @@ export const useNavigationActionsHook = () => {
     configHook = null;
   }
 
-  let deviceHook;
+  let hostManagerHook;
   try {
-    deviceHook = useDeviceControl();
+    hostManagerHook = useHostManager();
   } catch (error) {
-    console.log('[@hook:useNavigationActionsHook] DeviceControl context not available');
-    deviceHook = null;
+    console.log('[@hook:useNavigationActionsHook] HostManager context not available');
+    hostManagerHook = null;
   }
 
   // Memoize the combined state to prevent unnecessary re-renders
@@ -189,26 +189,26 @@ export const useNavigationActionsHook = () => {
         },
       }),
 
-      // Optional device state (when available)
-      ...(deviceHook && {
-        selectedHost: deviceHook.selectedHost,
-        isControlActive: deviceHook.isControlActive,
-        availableHosts: deviceHook.availableHosts,
-        isRemotePanelOpen: deviceHook.isRemotePanelOpen,
-        showRemotePanel: deviceHook.showRemotePanel,
-        showAVPanel: deviceHook.showAVPanel,
-        isVerificationActive: deviceHook.isVerificationActive,
-        handleDeviceSelect: deviceHook.handleDeviceSelect,
-        handleControlStateChange: deviceHook.handleControlStateChange,
-        handleToggleRemotePanel: deviceHook.handleToggleRemotePanel,
-        handleConnectionChange: deviceHook.handleConnectionChange,
-        handleDisconnectComplete: deviceHook.handleDisconnectComplete,
-        getHostByName: deviceHook.getHostByName,
-        fetchHosts: deviceHook.fetchHosts,
+      // Optional host manager state (when available)
+      ...(hostManagerHook && {
+        selectedHost: hostManagerHook.selectedHost,
+        isControlActive: hostManagerHook.isControlActive,
+        availableHosts: hostManagerHook.availableHosts,
+        isRemotePanelOpen: hostManagerHook.isRemotePanelOpen,
+        showRemotePanel: hostManagerHook.showRemotePanel,
+        showAVPanel: hostManagerHook.showAVPanel,
+        isVerificationActive: hostManagerHook.isVerificationActive,
+        handleDeviceSelect: hostManagerHook.handleDeviceSelect,
+        handleControlStateChange: hostManagerHook.handleControlStateChange,
+        handleToggleRemotePanel: hostManagerHook.handleToggleRemotePanel,
+        handleConnectionChange: hostManagerHook.handleConnectionChange,
+        handleDisconnectComplete: hostManagerHook.handleDisconnectComplete,
+        getHostByName: hostManagerHook.getHostByName,
+        fetchHosts: hostManagerHook.fetchHosts,
       }),
 
-      // Fallback device functions when DeviceControl context is not available
-      ...(!deviceHook && {
+      // Fallback host manager functions when HostManager context is not available
+      ...(!hostManagerHook && {
         selectedHost: null,
         isControlActive: false,
         availableHosts: [],
@@ -217,15 +217,15 @@ export const useNavigationActionsHook = () => {
         showAVPanel: false,
         isVerificationActive: false,
         handleDeviceSelect: () =>
-          console.warn('[@hook:useNavigationActionsHook] DeviceControl not available'),
+          console.warn('[@hook:useNavigationActionsHook] HostManager not available'),
         handleControlStateChange: () =>
-          console.warn('[@hook:useNavigationActionsHook] DeviceControl not available'),
+          console.warn('[@hook:useNavigationActionsHook] HostManager not available'),
         handleToggleRemotePanel: () =>
-          console.warn('[@hook:useNavigationActionsHook] DeviceControl not available'),
+          console.warn('[@hook:useNavigationActionsHook] HostManager not available'),
         handleConnectionChange: () =>
-          console.warn('[@hook:useNavigationActionsHook] DeviceControl not available'),
+          console.warn('[@hook:useNavigationActionsHook] HostManager not available'),
         handleDisconnectComplete: () =>
-          console.warn('[@hook:useNavigationActionsHook] DeviceControl not available'),
+          console.warn('[@hook:useNavigationActionsHook] HostManager not available'),
         getHostByName: () => null,
         fetchHosts: () => Promise.resolve([]),
       }),
@@ -266,7 +266,7 @@ export const useNavigationActionsHook = () => {
     flowContext.userInterface,
     flowContext.reactFlowInstance,
     configHook,
-    deviceHook,
+    hostManagerHook,
   ]);
 
   return combinedState;
