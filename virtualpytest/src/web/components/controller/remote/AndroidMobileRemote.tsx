@@ -59,6 +59,8 @@ export const AndroidMobileRemote = React.memo(
     captureMode = 'stream',
     streamContainerDimensions,
   }: AndroidMobileRemoteProps) {
+    const hookResult = useAndroidMobile(host, deviceId);
+
     const {
       // State
       androidElements,
@@ -87,7 +89,17 @@ export const AndroidMobileRemote = React.memo(
 
       // Session info
       session,
-    } = useAndroidMobile(host, deviceId);
+    } = hookResult;
+
+    // Debug logging for elements state
+    React.useEffect(() => {
+      console.log('[@component:AndroidMobileRemote] Elements state changed:', {
+        elementsCount: androidElements.length,
+        elements: androidElements
+          .slice(0, 3)
+          .map((el) => ({ id: el.id, contentDesc: el.contentDesc, text: el.text })),
+      });
+    }, [androidElements]);
 
     // Panel integration - prepare panelInfo for overlay
     const panelInfo: PanelInfo | undefined = React.useMemo(() => {
@@ -408,6 +420,11 @@ export const AndroidMobileRemote = React.memo(
                   }}
                   onChange={(e) => {
                     const elementId = e.target.value as string;
+                    console.log('[@component:AndroidMobileRemote] Dropdown selection changed:', {
+                      elementId,
+                      availableElements: androidElements.length,
+                      elementIds: androidElements.map((el) => el.id),
+                    });
                     const element = androidElements.find((el) => el.id === elementId);
                     if (element) {
                       setSelectedElement(element.id);
@@ -427,23 +444,29 @@ export const AndroidMobileRemote = React.memo(
                     keepMounted: false,
                   }}
                 >
-                  {androidElements.map((element) => (
-                    <MenuItem
-                      key={element.id}
-                      value={element.id}
-                      sx={{
-                        fontSize: '0.75rem',
-                        py: 0.5,
-                        px: 1,
-                        minHeight: 'auto',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {getElementDisplayName(element)}
-                    </MenuItem>
-                  ))}
+                  {androidElements.map((element) => {
+                    console.log('[@component:AndroidMobileRemote] Rendering dropdown item:', {
+                      id: element.id,
+                      displayName: getElementDisplayName(element),
+                    });
+                    return (
+                      <MenuItem
+                        key={element.id}
+                        value={element.id}
+                        sx={{
+                          fontSize: '0.75rem',
+                          py: 0.5,
+                          px: 1,
+                          minHeight: 'auto',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {getElementDisplayName(element)}
+                      </MenuItem>
+                    );
+                  })}
                 </Select>
               </FormControl>
             </Box>
@@ -632,6 +655,9 @@ export const AndroidMobileRemote = React.memo(
     const captureModeChanged = prevProps.captureMode !== nextProps.captureMode;
     const onDisconnectCompleteChanged =
       prevProps.onDisconnectComplete !== nextProps.onDisconnectComplete;
+    const streamContainerDimensionsChanged =
+      JSON.stringify(prevProps.streamContainerDimensions) !==
+      JSON.stringify(nextProps.streamContainerDimensions);
 
     // Return true if props are equal (don't re-render), false if they changed (re-render)
     const shouldSkipRender =
@@ -644,7 +670,8 @@ export const AndroidMobileRemote = React.memo(
       !streamCollapsedChanged &&
       !streamMinimizedChanged &&
       !captureModeChanged &&
-      !onDisconnectCompleteChanged;
+      !onDisconnectCompleteChanged &&
+      !streamContainerDimensionsChanged;
 
     if (!shouldSkipRender) {
       console.log(`[@component:AndroidMobileRemote] Re-rendering due to prop changes:`, {
@@ -658,6 +685,7 @@ export const AndroidMobileRemote = React.memo(
         streamMinimizedChanged,
         captureModeChanged,
         onDisconnectCompleteChanged,
+        streamContainerDimensionsChanged,
       });
     }
 

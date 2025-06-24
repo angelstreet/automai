@@ -25,30 +25,16 @@ interface AndroidMobileLayoutConfig {
 
 export function useAndroidMobile(selectedHost: Host | null, deviceId: string | null) {
   console.log(
-    '[@hook:useAndroidMobile] Initializing Android mobile hook for device:',
+    '[@hook:useAndroidMobile] Hook called for device:',
     deviceId,
-    'in host:',
+    'host:',
     selectedHost?.host_name,
   );
 
-  // Get the specific device from the host
-  const device = selectedHost?.devices?.find((d) => d.device_id === deviceId);
-
-  // Just use the selectedHost and device directly - no need for complex memoization
-  const stableHostData = useMemo(() => {
-    if (!selectedHost || !device) {
-      console.log('[@hook:useAndroidMobile] No host or device selected');
-      return null;
-    }
-
-    return {
-      host_name: selectedHost.host_name,
-      device_model: device.device_model,
-      device_ip: device.device_ip,
-      device_name: device.device_name,
-      host_url: selectedHost.host_url,
-    };
-  }, [selectedHost, device]);
+  // Simple validation - no complex memoization
+  if (!selectedHost || !deviceId) {
+    console.warn('[@hook:useAndroidMobile] Missing host or deviceId');
+  }
 
   // Configuration
   const layoutConfig: AndroidMobileLayoutConfig = useMemo(
@@ -86,24 +72,38 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isRefreshingApps, setIsRefreshingApps] = useState(false);
 
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log('[@hook:useAndroidMobile] androidElements state changed:', {
+      count: androidElements.length,
+      elements: androidElements.slice(0, 3).map((el) => ({
+        id: el.id,
+        contentDesc: el.contentDesc,
+        text: el.text,
+      })),
+      timestamp: new Date().toISOString(),
+    });
+  }, [androidElements]);
+
   const screenshotRef = useRef<HTMLImageElement>(null);
 
-  // Track host and device changes
+  // Debug hook lifecycle
   useEffect(() => {
-    if (stableHostData) {
-      console.log('[@hook:useAndroidMobile] Host and device data changed:', {
-        host_name: stableHostData.host_name,
-        device_model: stableHostData.device_model,
-        device_ip: stableHostData.device_ip,
-        timestamp: Date.now(),
-      });
-    }
-  }, [stableHostData]);
+    console.log(
+      '[@hook:useAndroidMobile] Hook mounted for device:',
+      deviceId,
+      'host:',
+      selectedHost?.host_name,
+    );
+    return () => {
+      console.log('[@hook:useAndroidMobile] Hook unmounting for device:', deviceId);
+    };
+  }, [deviceId, selectedHost?.host_name]);
 
   // Action handlers
   const handleTap = useCallback(
     async (x: number, y: number) => {
-      if (!stableHostData) {
+      if (!selectedHost) {
         console.warn('[@hook:useAndroidMobile] No host data available for tap action');
         return { success: false, error: 'No host data available' };
       }
@@ -114,7 +114,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            host: stableHostData,
+            host: selectedHost,
             device_id: deviceId,
             x,
             y,
@@ -129,11 +129,11 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
         return { success: false, error: 'Network error' };
       }
     },
-    [stableHostData, deviceId],
+    [selectedHost, deviceId],
   );
 
   const refreshScreenshot = useCallback(async () => {
-    if (!stableHostData) {
+    if (!selectedHost) {
       console.warn('[@hook:useAndroidMobile] No host data available for screenshot');
       return;
     }
@@ -143,7 +143,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          host: stableHostData,
+          host: selectedHost,
           device_id: deviceId,
         }),
       });
@@ -155,10 +155,10 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
     } catch (error) {
       console.error('[@hook:useAndroidMobile] Screenshot error:', error);
     }
-  }, [stableHostData, deviceId]);
+  }, [selectedHost, deviceId]);
 
   const refreshElements = useCallback(async () => {
-    if (!stableHostData) {
+    if (!selectedHost) {
       console.warn('[@hook:useAndroidMobile] No host data available for elements');
       return;
     }
@@ -169,24 +169,31 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          host: stableHostData,
+          host: selectedHost,
           device_id: deviceId,
         }),
       });
 
       const result = await response.json();
       if (result.success && result.elements) {
+        console.log(
+          '[@hook:useAndroidMobile] Setting elements:',
+          result.elements.length,
+          'elements',
+        );
         setAndroidElements(result.elements);
+      } else {
+        console.warn('[@hook:useAndroidMobile] No elements in response:', result);
       }
     } catch (error) {
       console.error('[@hook:useAndroidMobile] Elements error:', error);
     } finally {
       setIsDumpingUI(false);
     }
-  }, [stableHostData, deviceId]);
+  }, [selectedHost, deviceId]);
 
   const refreshApps = useCallback(async () => {
-    if (!stableHostData) {
+    if (!selectedHost) {
       console.warn('[@hook:useAndroidMobile] No host data available for apps');
       return;
     }
@@ -197,7 +204,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          host: stableHostData,
+          host: selectedHost,
           device_id: deviceId,
         }),
       });
@@ -211,7 +218,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
     } finally {
       setIsRefreshingApps(false);
     }
-  }, [stableHostData, deviceId]);
+  }, [selectedHost, deviceId]);
 
   // Additional methods expected by the component
   const handleDisconnect = useCallback(async () => {
@@ -224,7 +231,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
 
   const handleOverlayElementClick = useCallback(
     async (element: AndroidElement) => {
-      if (!stableHostData) {
+      if (!selectedHost) {
         console.warn('[@hook:useAndroidMobile] No host data available for element click');
         return;
       }
@@ -235,7 +242,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            host: stableHostData,
+            host: selectedHost,
             device_id: deviceId,
             command: 'click_element_by_id',
             params: { element_id: element.id },
@@ -248,27 +255,40 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
         console.error('[@hook:useAndroidMobile] Element click error:', error);
       }
     },
-    [stableHostData, deviceId],
+    [selectedHost, deviceId],
   );
 
   const handleRemoteCommand = useCallback(
-    async (command: string) => {
-      if (!stableHostData) {
+    async (command: string, params?: any) => {
+      if (!selectedHost) {
         console.warn('[@hook:useAndroidMobile] No host data available for remote command');
         return;
       }
 
-      console.log(`[@hook:useAndroidMobile] Executing remote command: ${command}`);
+      console.log(`[@hook:useAndroidMobile] Executing remote command: ${command}`, params);
       try {
-        const response = await fetch('/server/remote/execute-command', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            host: stableHostData,
+        let requestBody;
+
+        if (command === 'LAUNCH_APP' && params?.package) {
+          requestBody = {
+            host: selectedHost,
+            device_id: deviceId,
+            command: 'launch_app',
+            params: { package: params.package },
+          };
+        } else {
+          requestBody = {
+            host: selectedHost,
             device_id: deviceId,
             command: 'press_key',
             params: { key: command },
-          }),
+          };
+        }
+
+        const response = await fetch('/server/remote/execute-command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody),
         });
 
         const result = await response.json();
@@ -277,7 +297,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
         console.error('[@hook:useAndroidMobile] Remote command error:', error);
       }
     },
-    [stableHostData, deviceId],
+    [selectedHost, deviceId],
   );
 
   const clearElements = useCallback(() => {
@@ -346,7 +366,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
     session,
 
     // Host and device data
-    hostData: stableHostData,
-    deviceData: device,
+    hostData: selectedHost,
+    deviceData: selectedHost?.devices?.find((d) => d.device_id === deviceId),
   };
 }

@@ -66,19 +66,32 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
     }
   }, [host, device]);
 
-  // Auto-take screenshot on mount - but only when device data is stable
+  // Auto-take screenshot every 5 seconds - but only when device data is stable
   useEffect(() => {
-    // Wait a bit to ensure device data is stable before taking screenshot
-    const timer = setTimeout(() => {
-      if (host && device) {
+    if (!host || !device) return;
+
+    // Initial screenshot after device data is stable
+    const initialTimer = setTimeout(() => {
+      console.log(
+        `[@component:RecHostPreview] Device data stable, taking initial screenshot for: ${host.host_name}`,
+      );
+      handleTakeScreenshot();
+    }, 500); // Small delay to prevent racing with data loading
+
+    // Set up interval for periodic screenshots every 5 seconds
+    const screenshotInterval = setInterval(() => {
+      if (host && device && host.status === 'online') {
         console.log(
-          `[@component:RecHostPreview] Device data stable, taking screenshot for: ${host.host_name}`,
+          `[@component:RecHostPreview] Taking periodic screenshot for: ${host.host_name}`,
         );
         handleTakeScreenshot();
       }
-    }, 500); // Small delay to prevent racing with data loading
+    }, 5000); // 5 seconds
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(screenshotInterval);
+    };
   }, [host, device, handleTakeScreenshot]);
 
   // Handle opening stream modal - control will be handled by the modal itself

@@ -148,6 +148,11 @@ export const RemotePanel = React.memo(
       return deviceResolution || { width: 1920, height: 1080 };
     }, [deviceResolution]);
 
+    // Create stable reference for streamContainerDimensions to prevent unnecessary re-renders
+    const stableStreamContainerDimensions = useMemo(() => {
+      return streamContainerDimensions;
+    }, [streamContainerDimensions]);
+
     const renderRemoteComponent = useMemo(() => {
       switch (deviceModel) {
         case 'android_mobile':
@@ -163,7 +168,7 @@ export const RemotePanel = React.memo(
               streamCollapsed={streamCollapsed}
               streamMinimized={streamMinimized}
               captureMode={captureMode}
-              streamContainerDimensions={streamContainerDimensions}
+              streamContainerDimensions={stableStreamContainerDimensions}
               sx={{
                 height: '100%',
                 '& .MuiButton-root': {
@@ -269,7 +274,7 @@ export const RemotePanel = React.memo(
       streamCollapsed,
       streamMinimized,
       captureMode,
-      streamContainerDimensions,
+      stableStreamContainerDimensions,
     ]);
 
     return (
