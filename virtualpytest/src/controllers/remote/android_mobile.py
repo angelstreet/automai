@@ -580,92 +580,41 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             return False, "", error_msg
         
     def get_status(self) -> Dict[str, Any]:
-        """Get controller status - check ADB device connectivity."""
+        """Get controller status by checking ADB device connectivity."""
+        if not self.device_ip:
+            return {'success': False, 'error': 'No device IP provided'}
+            
         try:
-            # Basic status info
-            base_status = {
-                'success': True,
-                'controller_type': self.controller_type,
-                'device_type': self.device_type,
-                'device_name': self.device_name,
-                'device_ip': self.device_ip,
-                'android_device_id': self.android_device_id,
-                'connected': self.is_connected
-            }
+            # Run adb devices to check connectivity
+            import subprocess
+            adb_result = subprocess.run(
+                ['adb', 'devices'], 
+                capture_output=True, 
+                text=True
+            )
             
-            # Check ADB device connectivity if we have device IP
-            if self.device_ip and self.is_connected:
-                import subprocess
-                
-                # Run adb devices to check connectivity
-                adb_result = subprocess.run(
-                    ['adb', 'devices'], 
-                    capture_output=True, 
-                    text=True
-                )
-                
-                if adb_result.returncode != 0:
-                    base_status.update({
-                        'adb_status': 'command_failed',
-                        'adb_connected': False,
-                        'message': 'ADB command failed'
-                    })
-                    return base_status
-                
-                # Parse adb devices output
-                device_lines = [line.strip() for line in adb_result.stdout.split('\n') 
-                              if line.strip() and not line.startswith('List of devices')]
-                
-                device_found = None
-                device_status = None
-                
-                for line in device_lines:
-                    if self.android_device_id in line:
-                        device_found = line
-                        parts = line.split('\t')
-                        if len(parts) >= 2:
-                            device_status = parts[1].strip()
-                        break
-                
-                if not device_found:
-                    base_status.update({
-                        'adb_status': 'device_not_found',
-                        'adb_connected': False,
-                        'message': f'Device {self.android_device_id} not found in ADB devices list',
-                        'available_devices': device_lines
-                    })
-                elif device_status != 'device':
-                    base_status.update({
-                        'adb_status': f'device_{device_status}',
-                        'adb_connected': False,
-                        'message': f'Device {self.android_device_id} status is {device_status}, expected "device"',
-                        'device_found': device_found
-                    })
-                else:
-                    base_status.update({
-                        'adb_status': 'device_connected',
-                        'adb_connected': True,
-                        'message': f'Device {self.android_device_id} is connected and ready',
-                        'device_status': device_status
-                    })
-            else:
-                base_status.update({
-                    'adb_status': 'not_applicable',
-                    'adb_connected': False,
-                    'message': 'No device IP provided or not connected'
-                })
+            if adb_result.returncode != 0:
+                return {'success': False, 'error': 'ADB command failed'}
             
-            return base_status
+            # Parse adb devices output to find our device
+            device_lines = [line.strip() for line in adb_result.stdout.split('\n') 
+                          if line.strip() and not line.startswith('List of devices')]
+            
+            for line in device_lines:
+                if self.android_device_id in line:
+                    parts = line.split('\t')
+                    if len(parts) >= 2:
+                        device_status = parts[1].strip()
+                        if device_status == 'device':
+                            return {'success': True}
+                        else:
+                            return {'success': False, 'error': f'Device status is {device_status}, expected "device"'}
+            
+            # Device not found in ADB devices list
+            return {'success': False, 'error': f'Device {self.android_device_id} not found in ADB devices'}
             
         except Exception as e:
-            return {
-                'success': False,
-                'controller_type': self.controller_type,
-                'device_name': self.device_name,
-                'adb_status': 'error',
-                'adb_connected': False,
-                'error': f'Failed to check ADB device status: {str(e)}'
-            }
+            return {'success': False, 'error': f'Failed to check ADB status: {str(e)}'}
 
     def tap_coordinates(self, x: int, y: int) -> bool:
         """

@@ -78,6 +78,15 @@ def take_control():
                 
                 remote_status = remote_controller.get_status()
                 print(f"[@route:take_control] Remote controller status: {remote_status}")
+                
+                # Check if remote controller status indicates failure
+                if not remote_status.get('success', False):
+                    error_msg = remote_status.get('error', 'Remote controller status check failed')
+                    print(f"[@route:take_control] Remote controller status failed: {error_msg}")
+                    return jsonify({
+                        'success': False,
+                        'error': f'Remote controller not ready: {error_msg}'
+                    })
             else:
                 print(f"[@route:take_control] No remote controller found for device {device_id}")
                     

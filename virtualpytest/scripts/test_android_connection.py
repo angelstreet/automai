@@ -6,20 +6,18 @@ Test script to debug Android Mobile Remote Controller connection
 import sys
 import os
 
-# Add the src directory to the path
+# Add the swe dont rc directory to the path
 current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.join(current_dir, 'virtualpytest', 'src')
+src_dir = os.path.join(current_dir, 'src')
 sys.path.insert(0, src_dir)
 
-# Add utils to path
-utils_path = os.path.join(src_dir, 'utils')
-sys.path.insert(0, utils_path)
+
 
 def test_adb_utils():
     """Test ADB utils directly"""
     try:
         print("=== Testing ADB Utils Directly ===")
-        from adb_utils import ADBUtils
+        from src.adb_utils import ADBUtils
         
         adb = ADBUtils()
         device_id = "192.168.1.29:5555"
