@@ -20,8 +20,8 @@ import {
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { RecHostPreview } from '../components/rec/RecHostPreview';
-import { useRec } from '../hooks/pages/useRec';
 import { HostManagerProvider } from '../contexts/HostManagerProvider';
+import { useRec } from '../hooks/pages/useRec';
 
 type ViewMode = 'grid' | 'table';
 
@@ -29,7 +29,7 @@ type ViewMode = 'grid' | 'table';
 const RecContent: React.FC = () => {
   const { hosts, isLoading, error, refreshHosts, takeScreenshot } = useRec();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh, _setAutoRefresh] = useState(true); // Renamed to _setAutoRefresh to indicate it's not used
 
   // Auto-refresh hosts every 30 seconds
   useEffect(() => {
@@ -83,13 +83,7 @@ const RecContent: React.FC = () => {
       <Grid container spacing={2}>
         {avDevices.map(({ host, device }) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={`${host.host_name}-${device.device_id}`}>
-            <RecHostPreview
-              host={host}
-              device={device}
-              takeScreenshot={takeScreenshot}
-              autoRefresh={autoRefresh}
-              refreshInterval={15000} // Increase interval to reduce load
-            />
+            <RecHostPreview host={host} device={device} takeScreenshot={takeScreenshot} />
           </Grid>
         ))}
       </Grid>
@@ -225,8 +219,15 @@ const RecContent: React.FC = () => {
 
 // Main Rec component that wraps RecContent with HostManagerProvider
 const Rec: React.FC = () => {
+  // Define the userInterface with models for AV devices
+  // We need to specify the actual device models that support AV capabilities
+  // These might be 'android_tv', 'roku', 'apple_tv', etc.
+  const userInterface = {
+    models: [], // Empty array to show all devices, since we filter by capabilities in useRec
+  };
+
   return (
-    <HostManagerProvider>
+    <HostManagerProvider userInterface={userInterface}>
       <RecContent />
     </HostManagerProvider>
   );

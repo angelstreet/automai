@@ -264,6 +264,7 @@ def getAllHosts():
         for host_name, host_info in connected_hosts.items():
             if current_time - host_info.get('last_seen', 0) > 120:  # 2 minutes
                 stale_hosts.append(host_name)
+                print(f"⚠️ [HOSTS] Removing stale host: {host_name}")
         
         # Remove stale hosts
         for host_name in stale_hosts:
@@ -271,32 +272,33 @@ def getAllHosts():
                 del connected_hosts[host_name]
                 set_health_check_threads(get_health_check_threads())
         
-        # Return complete stored objects exactly as-is - no manual processing
-        # Filter to only online hosts for active use
-        hosts = [
-            {k: v for k, v in host_info.items() if k != 'controller_objects'}
-            for host_name, host_info in connected_hosts.items()
-            if host_info.get('status') == 'online'
-        ]
-        
-        # Verify that all hosts have the required fields
+        # Get all hosts directly from registry - they're already properly formatted
+        # Just verify required fields are present
+        valid_hosts = []
         required_fields = ['host_name', 'host_url']
-        for host in hosts:
-            for field in required_fields:
-                if field not in host or not host[field]:
-                    print(f"⚠️ [HOSTS] Host {host.get('host_name', 'unknown')} missing required field: {field}")
-                    # Don't include hosts with missing required fields
-                    hosts.remove(host)
-                    break
         
-        print(f"🖥️ [HOSTS] Returning {len(hosts)} valid online hosts")
-        for host in hosts:
+        for host_name, host_info in connected_hosts.items():
+            # Check required fields
+            is_valid = True
+            for field in required_fields:
+                if field not in host_info or not host_info[field]:
+                    print(f"⚠️ [HOSTS] Host {host_info.get('host_name', 'unknown')} missing required field: {field}")
+                    is_valid = False
+                    break
+            
+            if is_valid:
+                # No need to rebuild the object, just use it directly
+                # controller_objects should already be excluded at registration time
+                valid_hosts.append(host_info)
+        
+        print(f"🖥️ [HOSTS] Returning {len(valid_hosts)} valid hosts")
+        for host in valid_hosts:
             device_count = host.get('device_count', 0)
             print(f"   Host: {host['host_name']} ({host['host_url']}) - {device_count} device(s)")
         
         return jsonify({
             'success': True,
-            'hosts': hosts
+            'hosts': valid_hosts
         }), 200
         
     except Exception as e:
