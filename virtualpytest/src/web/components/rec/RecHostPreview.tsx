@@ -8,7 +8,7 @@ import {
   IconButton,
   CircularProgress,
 } from '@mui/material';
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useToast } from '../../hooks/useToast';
@@ -67,6 +67,11 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       setIsLoading(false);
     }
   }, [takeScreenshot, host, device]);
+
+  // Auto-take screenshot on mount
+  useEffect(() => {
+    handleTakeScreenshot();
+  }, [handleTakeScreenshot]);
 
   // Handle opening stream modal with automatic take control
   const handleOpenStreamModal = useCallback(async () => {
@@ -135,9 +140,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   };
 
   // Clean display values - will throw if required properties are missing
-  const displayName = device ? `${host.host_name} - ${device.device_name}` : host.host_name;
+  const displayName = device ? `${host.host_name} - ${device.name}` : host.host_name;
 
-  const displayInfo = device ? `${device.device_name} (${device.device_model})` : host.host_name;
+  const displayInfo = device ? `${device.name} (${device.model})` : host.host_name;
 
   const displayUrl = device?.device_ip || host.host_url;
 
@@ -213,7 +218,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
             <ScreenshotCapture
               screenshotPath={screenshotUrl}
               isCapturing={isLoading}
-              model={device?.device_model || 'unknown'}
+              model={device?.model}
               sx={{
                 width: '100%',
                 height: '100%',
@@ -241,25 +246,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                   </Typography>
                 </>
               ) : (
-                <>
-                  <Typography variant="caption" color="text.secondary">
-                    No screenshot available
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="primary.main"
-                    sx={{
-                      cursor: 'pointer',
-                      textDecoration: 'underline',
-                      '&:hover': {
-                        color: 'primary.dark',
-                      },
-                    }}
-                    onClick={handleTakeScreenshot}
-                  >
-                    Click to capture
-                  </Typography>
-                </>
+                <Typography variant="caption" color="text.secondary">
+                  No screenshot available
+                </Typography>
               )}
             </Box>
           )}
@@ -321,22 +310,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                 '&:hover': {
                   backgroundColor: 'rgba(0, 0, 0, 0.05)',
                 },
-              }}
-            />
-          )}
-
-          {/* Click overlay for taking screenshot - when no screenshot exists */}
-          {!screenshotUrl && !isLoading && (
-            <Box
-              onClick={handleTakeScreenshot}
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                cursor: 'pointer',
-                backgroundColor: 'transparent',
               }}
             />
           )}
