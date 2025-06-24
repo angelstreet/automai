@@ -30,7 +30,7 @@ const Rec: React.FC = () => {
   const { avDevices, isLoading, error, refreshHosts } = useRec();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
-  // Handle take screenshot - now each component handles this independently
+  // Handle take screenshot - for RecHostPreview components
   const handleTakeScreenshot = useCallback(async (host: any, deviceId?: string) => {
     try {
       console.log(`[@page:Rec] Taking screenshot for ${host.host_name}:${deviceId || 'device1'}`);
@@ -62,6 +62,13 @@ const Rec: React.FC = () => {
     }
   }, []);
 
+  // Handle opening modal for table view - should follow same workflow as grid view
+  const handleOpenModal = useCallback((host: any, device: any) => {
+    console.log(`[@page:Rec] Opening modal for ${host.host_name}:${device.device_id}`);
+    // Table view should open modal like grid view does
+    // For now, this is a placeholder - we need to implement modal opening logic
+  }, []);
+
   // Handle view mode change
   const handleViewModeChange = (_event: React.MouseEvent<HTMLElement>, newViewMode: ViewMode) => {
     if (newViewMode !== null) {
@@ -87,7 +94,7 @@ const Rec: React.FC = () => {
       <Grid container spacing={2}>
         {avDevices.map(({ host, device }) => (
           <Grid item xs={12} sm={6} md={4} lg={3} key={`${host.host_name}-${device.device_id}`}>
-            <RecHostPreview host={host} device={device} takeScreenshot={takeScreenshot} />
+            <RecHostPreview host={host} device={device} takeScreenshot={handleTakeScreenshot} />
           </Grid>
         ))}
       </Grid>
@@ -139,9 +146,9 @@ const Rec: React.FC = () => {
                   size="small"
                   variant="outlined"
                   startIcon={<EyeIcon />}
-                  onClick={() => takeScreenshot(host, device.device_id)}
+                  onClick={() => handleOpenModal(host, device)}
                 >
-                  Screenshot
+                  View
                 </Button>
               </Box>
             </Box>
