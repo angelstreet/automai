@@ -140,7 +140,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   };
 
   // Clean display values - will throw if required properties are missing
-  const displayName = device ? `${host.host_name} - ${device.name}` : host.host_name;
+  const displayName = device ? `${host.host_name}` : host.host_name;
 
   const displayInfo = device ? `${device.name} (${device.model})` : host.host_name;
 
