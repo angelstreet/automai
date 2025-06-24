@@ -1,8 +1,4 @@
-import {
-  Refresh as RefreshIcon,
-  Fullscreen as FullscreenIcon,
-  Error as ErrorIcon,
-} from '@mui/icons-material';
+import { Fullscreen as FullscreenIcon, Error as ErrorIcon } from '@mui/icons-material';
 import {
   Card,
   CardContent,
@@ -10,10 +6,9 @@ import {
   Box,
   Chip,
   IconButton,
-  Tooltip,
   CircularProgress,
 } from '@mui/material';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useToast } from '../../hooks/useToast';
@@ -22,17 +17,11 @@ import { ScreenshotCapture } from '../controller/av/ScreenshotCapture';
 
 import { RecHostStreamModal } from './RecHostStreamModal';
 
-interface HostWithAVStatus extends Host {
-  avStatus: 'online' | 'offline' | 'checking';
-}
-
 interface RecHostPreviewProps {
-  host: HostWithAVStatus;
+  host: Host;
   device?: any; // Optional device for multi-device support
   takeScreenshot: (host: Host, deviceId?: string) => Promise<string | null>;
   onFullscreen?: (host: Host) => void;
-  autoRefresh?: boolean;
-  refreshInterval?: number;
 }
 
 export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
@@ -40,106 +29,53 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   device,
   takeScreenshot,
   onFullscreen,
-  autoRefresh = true,
-  refreshInterval = 10000,
 }) => {
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const consecutiveFailuresRef = useRef(0);
-  const maxConsecutiveFailures = 3; // Stop auto-refresh after 3 consecutive failures
 
   // Hooks for device control and notifications
   const { takeControl } = useDeviceControl();
   const { showError } = useToast();
 
-  // Take screenshot function - only show loading for initial load
+  // Take screenshot function
   const handleTakeScreenshot = useCallback(async () => {
-    // Don't take screenshot if AV is offline
-    if (host.avStatus === 'offline') {
-      setError('AV Controller Offline');
-      setIsInitialLoading(false);
-      consecutiveFailuresRef.current++;
-      return;
-    }
-
-    // Don't auto-refresh if we've had too many consecutive failures
-    if (consecutiveFailuresRef.current >= maxConsecutiveFailures && !isInitialLoading) {
-      console.log(
-        `[@component:RecHostPreview] Skipping auto-refresh for ${host.host_name} due to consecutive failures`,
-      );
-      return;
-    }
+    setIsLoading(true);
+    setError(null);
 
     try {
-      setError(null);
+      console.log(`[@component:RecHostPreview] Taking screenshot for host: ${host.host_name}`);
 
       const url = await takeScreenshot(host, device?.device_id);
 
       if (url) {
         setScreenshotUrl(url);
-        setLastUpdate(new Date());
-        setIsInitialLoading(false);
-        consecutiveFailuresRef.current = 0; // Reset failure count on success
+        console.log(
+          `[@component:RecHostPreview] Screenshot captured successfully for: ${host.host_name}`,
+        );
       } else {
         setError('Failed to capture screenshot');
-        setIsInitialLoading(false);
-        consecutiveFailuresRef.current++;
+        console.warn(
+          `[@component:RecHostPreview] Screenshot capture failed for: ${host.host_name}`,
+        );
       }
     } catch (err: any) {
       console.error(`[@component:RecHostPreview] Screenshot error for ${host.host_name}:`, err);
       setError(err.message || 'Screenshot failed');
-      setIsInitialLoading(false);
-      consecutiveFailuresRef.current++;
+    } finally {
+      setIsLoading(false);
     }
-  }, [takeScreenshot, host, device, isInitialLoading, maxConsecutiveFailures]);
-
-  // Auto-refresh effect
-  useEffect(() => {
-    if (autoRefresh) {
-      // Take initial screenshot
-      handleTakeScreenshot();
-
-      // Set up interval for auto-refresh
-      intervalRef.current = setInterval(() => {
-        handleTakeScreenshot();
-      }, refreshInterval);
-
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-        }
-      };
-    }
-  }, [autoRefresh, refreshInterval, host.host_name, handleTakeScreenshot]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, []);
-
-  const handleFullscreen = () => {
-    if (onFullscreen) {
-      onFullscreen(host);
-    }
-  };
+  }, [takeScreenshot, host, device]);
 
   // Handle opening stream modal with automatic take control
   const handleOpenStreamModal = useCallback(async () => {
     console.log(`[@component:RecHostPreview] Opening stream modal for host: ${host.host_name}`);
 
-    // Don't attempt if host or AV is offline
-    if (host.status !== 'online' || host.avStatus === 'offline') {
-      console.warn(
-        `[@component:RecHostPreview] Cannot take control - host status: ${host.status}, AV status: ${host.avStatus}`,
-      );
+    // Don't attempt if host is offline
+    if (host.status !== 'online') {
+      console.warn(`[@component:RecHostPreview] Cannot take control - host status: ${host.status}`);
+      showError('Host is not online');
       return;
     }
 
@@ -158,7 +94,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       } else {
         console.error(`[@component:RecHostPreview] Failed to take control:`, result);
 
-        // Handle specific error types with appropriate toast duration (same as NavigationEditor)
+        // Handle specific error types with appropriate toast duration
         if (
           result.errorType === 'stream_service_error' ||
           result.errorType === 'adb_connection_error'
@@ -178,7 +114,14 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   const handleCloseStreamModal = useCallback(() => {
     console.log(`[@component:RecHostPreview] Closing stream modal for host: ${host.host_name}`);
     setIsStreamModalOpen(false);
-  }, [host.host_name]);
+  }, [host]);
+
+  // Handle fullscreen
+  const handleFullscreen = useCallback(() => {
+    if (onFullscreen) {
+      onFullscreen(host);
+    }
+  }, [onFullscreen, host]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -191,30 +134,12 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     }
   };
 
-  const getAVStatusColor = (avStatus: string) => {
-    switch (avStatus) {
-      case 'online':
-        return 'success';
-      case 'offline':
-        return 'error';
-      case 'checking':
-        return 'warning';
-      default:
-        return 'default';
-    }
-  };
+  // Clean display values - will throw if required properties are missing
+  const displayName = device ? `${host.host_name} - ${device.device_name}` : host.host_name;
 
-  const formatLastUpdate = (date: Date | null) => {
-    if (!date) return 'Never';
+  const displayInfo = device ? `${device.device_name} (${device.device_model})` : host.host_name;
 
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-
-    if (diff < 1000) return 'Just now';
-    if (diff < 60000) return `${Math.floor(diff / 1000)}s ago`;
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    return date.toLocaleTimeString();
-  };
+  const displayUrl = device?.device_ip || host.host_url;
 
   return (
     <Card
@@ -230,32 +155,29 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     >
       {/* Header */}
       <Box
-        sx={{ p: 1, pb: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+        sx={{
+          p: 1,
+          pb: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
       >
         <Typography variant="subtitle2" noWrap sx={{ flex: 1, mr: 1 }}>
-          {device ? `${host.host_name} - ${device.device_name}` : host.host_name}
+          {displayName}
         </Typography>
-        <Box sx={{ display: 'flex', gap: 0.5 }}>
-          <Chip
-            label={host.status}
-            size="small"
-            color={getStatusColor(host.status) as any}
-            sx={{ fontSize: '0.7rem', height: 20 }}
-          />
-          <Chip
-            label={`AV: ${host.avStatus}`}
-            size="small"
-            color={getAVStatusColor(host.avStatus) as any}
-            sx={{ fontSize: '0.7rem', height: 20 }}
-          />
-        </Box>
+        <Chip
+          label={host.status}
+          size="small"
+          color={getStatusColor(host.status) as any}
+          sx={{ fontSize: '0.7rem', height: 20 }}
+        />
       </Box>
 
       {/* Device info */}
       <Box sx={{ px: 1, pb: 1 }}>
         <Typography variant="caption" color="text.secondary">
-          {device ? `${device.device_name} (${device.device_model})` : host.host_name} •{' '}
-          {device?.device_ip || host.host_url}
+          {displayInfo} • {displayUrl}
         </Typography>
       </Box>
 
@@ -285,24 +207,18 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               <ErrorIcon sx={{ mb: 1 }} />
               <Typography variant="caption" align="center">
                 {error}
-                {consecutiveFailuresRef.current >= maxConsecutiveFailures && (
-                  <>
-                    <br />
-                    Auto-refresh paused
-                  </>
-                )}
               </Typography>
             </Box>
           ) : screenshotUrl ? (
             <ScreenshotCapture
               screenshotPath={screenshotUrl}
-              isCapturing={false}
+              isCapturing={isLoading}
               model={device?.device_model || 'unknown'}
               sx={{
                 width: '100%',
                 height: '100%',
                 '& img': {
-                  cursor: onFullscreen ? 'pointer' : 'default',
+                  cursor: 'pointer',
                 },
               }}
             />
@@ -311,72 +227,65 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               sx={{
                 height: '100%',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
+                gap: 2,
               }}
             >
-              {isInitialLoading ? (
-                <CircularProgress size={24} />
+              {isLoading ? (
+                <>
+                  <CircularProgress size={24} />
+                  <Typography variant="caption" color="text.secondary">
+                    Capturing screenshot...
+                  </Typography>
+                </>
               ) : (
-                <Typography variant="caption" color="text.secondary">
-                  No capture available
-                </Typography>
+                <>
+                  <Typography variant="caption" color="text.secondary">
+                    No screenshot available
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    color="primary.main"
+                    sx={{
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      '&:hover': {
+                        color: 'primary.dark',
+                      },
+                    }}
+                    onClick={handleTakeScreenshot}
+                  >
+                    Click to capture
+                  </Typography>
+                </>
               )}
             </Box>
           )}
 
-          {/* Action buttons */}
-          <Box
-            sx={{
-              position: 'absolute',
-              top: 4,
-              right: 4,
-              display: 'flex',
-              gap: 0.5,
-            }}
-          >
-            <Tooltip
-              title={
-                consecutiveFailuresRef.current >= maxConsecutiveFailures
-                  ? 'Retry (Auto-refresh paused)'
-                  : 'Refresh'
-              }
+          {/* Fullscreen button - only show when there's a screenshot and onFullscreen is provided */}
+          {onFullscreen && screenshotUrl && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 4,
+                right: 4,
+              }}
             >
               <IconButton
                 size="small"
-                onClick={() => {
-                  consecutiveFailuresRef.current = 0; // Reset failure count on manual refresh
-                  handleTakeScreenshot();
-                }}
-                disabled={false}
+                onClick={handleFullscreen}
                 sx={{
                   backgroundColor: 'rgba(255, 255, 255, 0.8)',
                   '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
-                  ...(consecutiveFailuresRef.current >= maxConsecutiveFailures && {
-                    backgroundColor: 'rgba(255, 193, 7, 0.8)', // Warning color for retry
-                    '&:hover': { backgroundColor: 'rgba(255, 193, 7, 0.9)' },
-                  }),
                 }}
+                title="View Fullscreen"
               >
-                <RefreshIcon fontSize="small" />
+                <FullscreenIcon fontSize="small" />
               </IconButton>
-            </Tooltip>
-
-            {onFullscreen && (
-              <Tooltip title="View Fullscreen">
-                <IconButton
-                  size="small"
-                  onClick={handleFullscreen}
-                  sx={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
-                  }}
-                >
-                  <FullscreenIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
+            </Box>
+          )}
 
           {/* Click overlay for fullscreen */}
           {onFullscreen && screenshotUrl && (
@@ -415,15 +324,24 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               }}
             />
           )}
+
+          {/* Click overlay for taking screenshot - when no screenshot exists */}
+          {!screenshotUrl && !isLoading && (
+            <Box
+              onClick={handleTakeScreenshot}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                cursor: 'pointer',
+                backgroundColor: 'transparent',
+              }}
+            />
+          )}
         </Box>
       </CardContent>
-
-      {/* Footer */}
-      <Box sx={{ px: 1, pb: 1 }}>
-        <Typography variant="caption" color="text.secondary">
-          Last update: {formatLastUpdate(lastUpdate)}
-        </Typography>
-      </Box>
 
       {/* Stream Modal */}
       <RecHostStreamModal
