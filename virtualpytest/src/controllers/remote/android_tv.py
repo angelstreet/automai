@@ -509,7 +509,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 # Navigation actions
                 {
                     'id': 'press_key_up',
-                    'label': 'Navigate Up',
+                    'label': 'Up',
                     'command': 'press_key',
                     'action_type': 'remote',
                     'params': {'key': 'UP'},
@@ -518,7 +518,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 },
                 {
                     'id': 'press_key_down',
-                    'label': 'Navigate Down',
+                    'label': 'Down',
                     'command': 'press_key',
                     'action_type': 'remote',
                     'params': {'key': 'DOWN'},
@@ -527,7 +527,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 },
                 {
                     'id': 'press_key_left',
-                    'label': 'Navigate Left',
+                    'label': 'Left',
                     'command': 'press_key',
                     'action_type': 'remote',
                     'params': {'key': 'LEFT'},
@@ -536,7 +536,7 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 },
                 {
                     'id': 'press_key_right',
-                    'label': 'Navigate Right',
+                    'label': 'Right',
                     'command': 'press_key',
                     'action_type': 'remote',
                     'params': {'key': 'RIGHT'},

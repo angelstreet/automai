@@ -15,7 +15,6 @@ import {
   Phone as PhoneIcon,
   Tv as TvIcon,
   CheckCircle as SuccessIcon,
-  ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -42,9 +41,6 @@ import {
   ToggleButtonGroup,
   CircularProgress,
   Paper,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
 } from '@mui/material';
 import React, { useState, useEffect, useCallback } from 'react';
 
@@ -218,108 +214,84 @@ const Dashboard: React.FC = () => {
   }) => {
     if (!systemStats) {
       return (
-        <Box>
-          <Typography variant="caption" color="error">
-            No system stats available
-          </Typography>
-        </Box>
+        <Typography variant="caption" color="error">
+          No system stats available
+        </Typography>
       );
     }
 
     if (systemStats.error) {
       return (
-        <Box>
-          <Typography variant="caption" color="error">
-            {systemStats.error}
-          </Typography>
-        </Box>
+        <Typography variant="caption" color="error">
+          {systemStats.error}
+        </Typography>
       );
     }
 
     return (
-      <Box>
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
+      <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
+        {/* CPU */}
+        <Box display="flex" alignItems="center" gap={0.5}>
           <Typography variant="caption" color="textSecondary">
-            CPU
+            CPU:
           </Typography>
           <Typography variant="caption" fontWeight="bold">
             {systemStats.cpu_percent}%
           </Typography>
-        </Box>
-        <Box
-          sx={{
-            width: '100%',
-            height: 4,
-            backgroundColor: 'grey.300',
-            borderRadius: 1,
-            mb: 1,
-          }}
-        >
-          <Box
-            sx={{
-              width: `${Math.min(systemStats.cpu_percent, 100)}%`,
-              height: '100%',
-              backgroundColor: `${getUsageColor(systemStats.cpu_percent)}.main`,
-              borderRadius: 1,
-            }}
-          />
+          <Box sx={{ width: 30, height: 3, backgroundColor: 'grey.300', borderRadius: 1 }}>
+            <Box
+              sx={{
+                width: `${Math.min(systemStats.cpu_percent, 100)}%`,
+                height: '100%',
+                backgroundColor: `${getUsageColor(systemStats.cpu_percent)}.main`,
+                borderRadius: 1,
+              }}
+            />
+          </Box>
         </Box>
 
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
+        {/* Memory */}
+        <Box display="flex" alignItems="center" gap={0.5}>
           <Typography variant="caption" color="textSecondary">
-            Memory
+            RAM:
           </Typography>
           <Typography variant="caption" fontWeight="bold">
             {systemStats.memory_percent}%
           </Typography>
-        </Box>
-        <Box
-          sx={{
-            width: '100%',
-            height: 4,
-            backgroundColor: 'grey.300',
-            borderRadius: 1,
-            mb: 1,
-          }}
-        >
-          <Box
-            sx={{
-              width: `${Math.min(systemStats.memory_percent, 100)}%`,
-              height: '100%',
-              backgroundColor: `${getUsageColor(systemStats.memory_percent)}.main`,
-              borderRadius: 1,
-            }}
-          />
+          <Box sx={{ width: 30, height: 3, backgroundColor: 'grey.300', borderRadius: 1 }}>
+            <Box
+              sx={{
+                width: `${Math.min(systemStats.memory_percent, 100)}%`,
+                height: '100%',
+                backgroundColor: `${getUsageColor(systemStats.memory_percent)}.main`,
+                borderRadius: 1,
+              }}
+            />
+          </Box>
         </Box>
 
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={0.5}>
+        {/* Disk */}
+        <Box display="flex" alignItems="center" gap={0.5}>
           <Typography variant="caption" color="textSecondary">
-            Disk
+            Disk:
           </Typography>
           <Typography variant="caption" fontWeight="bold">
             {systemStats.disk_percent}%
           </Typography>
-        </Box>
-        <Box
-          sx={{
-            width: '100%',
-            height: 4,
-            backgroundColor: 'grey.300',
-            borderRadius: 1,
-            mb: 1,
-          }}
-        >
-          <Box
-            sx={{
-              width: `${Math.min(systemStats.disk_percent, 100)}%`,
-              height: '100%',
-              backgroundColor: `${getUsageColor(systemStats.disk_percent)}.main`,
-              borderRadius: 1,
-            }}
-          />
+          <Box sx={{ width: 30, height: 3, backgroundColor: 'grey.300', borderRadius: 1 }}>
+            <Box
+              sx={{
+                width: `${Math.min(systemStats.disk_percent, 100)}%`,
+                height: '100%',
+                backgroundColor: `${getUsageColor(systemStats.disk_percent)}.main`,
+                borderRadius: 1,
+              }}
+            />
+          </Box>
         </Box>
 
-        <Typography variant="caption" color="textSecondary">
+        {/* Platform */}
+        <Typography variant="caption" color="textSecondary" sx={{ ml: 'auto' }}>
           {systemStats.platform} ({systemStats.architecture})
         </Typography>
       </Box>
@@ -331,9 +303,9 @@ const Dashboard: React.FC = () => {
       {availableHosts.map((host) => (
         <Grid item xs={12} sm={6} md={4} lg={3} key={host.host_name}>
           <Card variant="outlined" sx={{ height: '100%' }}>
-            <CardContent>
+            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
               {/* Host Header */}
-              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1.5}>
                 <Box display="flex" alignItems="center" gap={1}>
                   <ComputerIcon color="primary" />
                   <Typography variant="h6" component="div" noWrap>
@@ -358,59 +330,54 @@ const Dashboard: React.FC = () => {
                 Host URL: {host.host_url}
               </Typography>
 
-              {/* System Stats Accordion */}
-              <Accordion
-                defaultExpanded
-                sx={{ mb: 2, boxShadow: 'none', border: '1px solid #e0e0e0' }}
-              >
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="subtitle2">System Stats</Typography>
-                </AccordionSummary>
-                <AccordionDetails sx={{ pt: 0 }}>
-                  <SystemStatsDisplay stats={host.system_stats} />
-                </AccordionDetails>
-              </Accordion>
+              {/* System Stats - Compact */}
+              <Box sx={{ mb: 1.5 }}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 'bold' }}>
+                  System Stats
+                </Typography>
+                <SystemStatsDisplay stats={host.system_stats} />
+              </Box>
 
-              {/* Devices Accordion */}
-              <Accordion
-                defaultExpanded
-                sx={{ mb: 2, boxShadow: 'none', border: '1px solid #e0e0e0' }}
-              >
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography variant="subtitle2">Devices ({host.device_count})</Typography>
-                </AccordionSummary>
-                <AccordionDetails sx={{ pt: 0 }}>
+              {/* Devices - Compact List */}
+              <Box sx={{ mb: 1.5 }}>
+                <Typography variant="subtitle2" sx={{ mb: 0.5, fontWeight: 'bold' }}>
+                  Devices ({host.device_count})
+                </Typography>
+                <Box sx={{ maxHeight: '200px', overflowY: 'auto' }}>
                   {host.devices.map((device) => (
                     <Box
                       key={device.device_id}
-                      sx={{ mb: 1, pb: 1, borderBottom: '1px solid #f0f0f0' }}
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        py: 0.5,
+                        px: 1,
+                        borderRadius: 1,
+                        '&:hover': { backgroundColor: 'grey.100' },
+                      }}
                     >
-                      <Box display="flex" alignItems="center" gap={1} mb={0.5}>
-                        {getDeviceIcon(device.device_model)}
-                        <Typography variant="body2" fontWeight="bold">
-                          {device.device_name}
-                        </Typography>
-                        <Chip
-                          label={device.device_model}
-                          size="small"
-                          variant="outlined"
-                          sx={{ fontSize: '0.6rem' }}
-                        />
-                      </Box>
-
-                      <Typography variant="caption" color="textSecondary" display="block">
-                        📍 {device.device_ip}:{device.device_port}
+                      {getDeviceIcon(device.device_model)}
+                      <Typography variant="body2" sx={{ minWidth: '80px', fontWeight: 500 }}>
+                        {device.device_name}
                       </Typography>
-
-                      {device.video_stream_path && (
-                        <Typography variant="caption" color="textSecondary" display="block">
-                          🎥 {device.video_stream_path}
-                        </Typography>
-                      )}
+                      <Chip
+                        label={device.device_model}
+                        size="small"
+                        variant="outlined"
+                        sx={{ fontSize: '0.65rem', height: '20px' }}
+                      />
+                      <Typography
+                        variant="caption"
+                        color="textSecondary"
+                        sx={{ ml: 'auto', fontFamily: 'monospace' }}
+                      >
+                        {device.device_ip}:{device.device_port}
+                      </Typography>
                     </Box>
                   ))}
-                </AccordionDetails>
-              </Accordion>
+                </Box>
+              </Box>
 
               <Typography color="textSecondary" variant="caption" display="block">
                 Last seen: {formatLastSeen(host.last_seen)}
