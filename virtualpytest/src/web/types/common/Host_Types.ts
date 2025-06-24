@@ -43,12 +43,12 @@ export interface Device {
   device_ip?: string; // Device IP address (for ADB/device control)
   device_port?: string; // Device port (for ADB/device control)
   device_capabilities: DeviceCapabilities; // New detailed capability format (matches server format)
-  capability_list?: string[]; // Flat list for backward compatibility
-  controller_types?: string[]; // Device-specific controller types
+  device_capability_list?: string[]; // Flat list for backward compatibility (prefixed for consistency)
+  device_controller_types?: string[]; // Device-specific controller types (prefixed for consistency)
 
   // === DEVICE-LEVEL VERIFICATION AND ACTIONS ===
-  available_verification_types?: Verifications; // Available verification types from device controllers
-  available_action_types?: Actions; // Available action types from device controllers
+  device_verification_types?: Verifications; // Device verification types (simplified naming)
+  device_action_types?: Actions; // Device action types (simplified naming)
 }
 
 export interface Host {

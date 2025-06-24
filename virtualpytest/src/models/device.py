@@ -192,11 +192,11 @@ class Device:
         print(f"[@device:to_dict] Device {self.name} ({self.model}) detailed capabilities: {detailed_capabilities}")
         
         # Collect available verification types and action types from controllers
-        available_verification_types = self.get_available_verification_types()
-        available_action_types = self.get_available_action_types()
+        device_verification_types = self.get_available_verification_types()
+        device_action_types = self.get_available_action_types()
         
-        print(f"[@device:to_dict] Device {self.name} verification types: {len(available_verification_types)} controller types")
-        print(f"[@device:to_dict] Device {self.name} action types: {len(available_action_types)} action categories")
+        print(f"[@device:to_dict] Device {self.name} verification types: {len(device_verification_types)} controller types")
+        print(f"[@device:to_dict] Device {self.name} action types: {len(device_action_types)} action categories")
         
         # Base device information
         device_dict = {
@@ -206,8 +206,8 @@ class Device:
             'device_ip': self.device_ip,
             'device_port': self.device_port,
             'device_capabilities': detailed_capabilities,  # Updated field name to match frontend expectations
-            'available_verification_types': available_verification_types,  # Collected from verification controllers
-            'available_action_types': available_action_types  # Collected from action controllers
+            'device_verification_types': device_verification_types,  # Simplified naming (removed 'available_' prefix)
+            'device_action_types': device_action_types  # Simplified naming (removed 'available_' prefix)
         }
         
         # Include video paths needed for URL building (if available)

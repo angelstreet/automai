@@ -90,8 +90,8 @@ def register_host():
             print(f"[@route:register_host] Controller types: {controller_types}")
             
             # Check for device-level verification and action types
-            device_verification_types = device.get('available_verification_types', {})
-            device_action_types = device.get('available_action_types', {})
+            device_verification_types = device.get('device_verification_types', {})
+            device_action_types = device.get('device_action_types', {})
             
             if device_verification_types:
                 print(f"[@route:register_host] Device {device_name} has {len(device_verification_types)} verification controller types")
@@ -101,15 +101,15 @@ def register_host():
             # Add device with processed info (keep the device data as sent by host)
             device_with_controllers = {
                 'device_id': device.get('device_id'),
-                'name': device_name,
-                'model': device_model,
+                'device_name': device_name,
+                'device_model': device_model,
                 'device_ip': device.get('device_ip'),
                 'device_port': device.get('device_port'),
-                'capabilities': device_capabilities,  # Detailed format: {av: 'hdmi_stream', remote: 'android_mobile', verification: ['image', 'text']}
-                'capability_list': capability_list,   # Flat list for backward compatibility: ['av', 'remote', 'image', 'text']
-                'controller_types': controller_types, # Implementation types: ['av_hdmi_stream', 'remote_android_mobile', 'verification_image', 'verification_text']
-                'available_verification_types': device_verification_types,  # Device-level verification types
-                'available_action_types': device_action_types  # Device-level action types
+                'device_capabilities': device_capabilities,  # Detailed format: {av: 'hdmi_stream', remote: 'android_mobile', verification: ['image', 'text']}
+                'device_capability_list': capability_list,   # Flat list for backward compatibility: ['av', 'remote', 'image', 'text']
+                'device_controller_types': controller_types, # Implementation types: ['av_hdmi_stream', 'remote_android_mobile', 'verification_image', 'verification_text']
+                'device_verification_types': device_verification_types,  # Device-level verification types (removed 'available_' prefix)
+                'device_action_types': device_action_types  # Device-level action types (removed 'available_' prefix)
             }
             devices_with_controllers.append(device_with_controllers)
             
@@ -454,8 +454,8 @@ def get_available_actions():
         devices = host_data.get('devices', [])
         
         for device in devices:
-            device_action_types = device.get('available_action_types', {})
-            device_name = device.get('name', device.get('device_id', 'unknown'))
+            device_action_types = device.get('device_action_types', {})
+            device_name = device.get('device_name', device.get('device_id', 'unknown'))
             
             print(f"[@route:server_system_routes:get_available_actions] Device {device_name} has {len(device_action_types)} action categories")
             
