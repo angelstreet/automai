@@ -24,10 +24,30 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
   onClose,
   showRemoteByDefault = false,
 }) => {
+  // Early return if not open - prevents hooks from running
+  if (!isOpen || !host) return null;
+
+  return (
+    <RecHostStreamModalContent
+      host={host}
+      device={device}
+      onClose={onClose}
+      showRemoteByDefault={showRemoteByDefault}
+    />
+  );
+};
+
+// Separate component that only mounts when modal is open
+const RecHostStreamModalContent: React.FC<{
+  host: Host;
+  device?: Device;
+  onClose: () => void;
+  showRemoteByDefault: boolean;
+}> = ({ host, device, onClose, showRemoteByDefault }) => {
   // Local state
   const [showRemote, setShowRemote] = useState<boolean>(showRemoteByDefault);
 
-  // Hooks
+  // Hooks - now only run when modal is actually open
   const { showError, showWarning } = useToast();
 
   // NEW: Use device control hook (replaces all duplicate control logic)
@@ -46,8 +66,6 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
 
   // Calculate stream container dimensions for overlay alignment
   const streamContainerDimensions = useMemo(() => {
-    if (!isOpen || !host) return undefined;
-
     // Modal dimensions (95vw x 90vh)
     const modalWidth = window.innerWidth * 0.95;
     const modalHeight = window.innerHeight * 0.9;
@@ -79,7 +97,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
       dimensions,
     );
     return dimensions;
-  }, [isOpen, host, showRemote, isControlActive]);
+  }, [showRemote, isControlActive]);
 
   // Handle remote toggle
   const handleToggleRemote = useCallback(() => {
@@ -109,14 +127,12 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
       }
     };
 
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-    }
+    document.addEventListener('keydown', handleEscape);
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [isOpen, handleClose]);
+  }, [handleClose]);
 
   // Show control errors
   useEffect(() => {
@@ -132,8 +148,6 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
       showError(`Stream URL error: ${urlError}`);
     }
   }, [urlError, showError]);
-
-  if (!isOpen || !host) return null;
 
   return (
     <Box

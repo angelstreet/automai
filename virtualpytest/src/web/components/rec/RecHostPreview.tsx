@@ -245,7 +245,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
         isOpen={isStreamModalOpen}
         onClose={handleCloseStreamModal}
         showRemoteByDefault={false}
-        initialControlActive={false}
       />
     </Card>
   );

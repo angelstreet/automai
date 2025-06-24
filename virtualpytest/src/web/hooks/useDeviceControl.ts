@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { useHostManager } from '../contexts/useHostManager';
+
 import { Host } from '../types/common/Host_Types';
+
+import { useHostManager } from './useHostManager';
 
 // ========================================
 // TYPES
