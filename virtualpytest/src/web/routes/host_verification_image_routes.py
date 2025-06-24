@@ -59,7 +59,7 @@ def crop_area():
             }), 400
         
         # Get device-specific paths
-        from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
+        from src.utils.build_url_utils import get_device_local_captures_path, get_current_device_id
         
         device_id = get_current_device_id()
         captures_path = get_device_local_captures_path(host_device, device_id)
@@ -127,7 +127,7 @@ def crop_area():
                 print(f"[@route:host_crop_area] Cropping successful: {target_filename}")
                 
                 # Build complete URL for the cropped image (for temporary preview)
-                from src.utils.buildUrlUtils import buildCroppedImageUrl
+                from src.utils.build_url_utils import buildCroppedImageUrl
                 host_info = host_device
                 cropped_image_url = buildCroppedImageUrl(host_info, target_filename)
                 print(f"[@route:host_crop_area] Built cropped image URL: {cropped_image_url}")
@@ -192,7 +192,7 @@ def process_area():
             }), 400
         
         # Get device-specific paths
-        from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
+        from src.utils.build_url_utils import get_device_local_captures_path, get_current_device_id
         
         device_id = get_current_device_id()
         captures_path = get_device_local_captures_path(host_device, device_id)
@@ -282,7 +282,7 @@ def process_area():
             print(f"[@route:host_process_area] Processing successful: {target_filename}")
             
             # Build complete URL for the processed image (for temporary preview)
-            from src.utils.buildUrlUtils import buildCroppedImageUrl
+            from src.utils.build_url_utils import buildCroppedImageUrl
             host_info = host_device
             processed_image_url = buildCroppedImageUrl(host_info, target_filename)
             print(f"[@route:host_process_area] Built processed image URL: {processed_image_url}")
@@ -356,7 +356,7 @@ def save_resource():
             }), 400
         
         # Get device-specific paths
-        from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
+        from src.utils.build_url_utils import get_device_local_captures_path, get_current_device_id
         
         device_id = get_current_device_id()
         captures_path = get_device_local_captures_path(host_device, device_id)

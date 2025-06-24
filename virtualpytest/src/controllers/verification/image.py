@@ -989,7 +989,7 @@ class ImageVerificationController(VerificationControllerInterface):
             
             # Get host device info for URL building
             try:
-                from src.utils.buildUrlUtils import buildVerificationResultUrl
+                from src.utils.build_url_utils import buildVerificationResultUrl
                 from flask import current_app
                 
                 # Get host info from current app context

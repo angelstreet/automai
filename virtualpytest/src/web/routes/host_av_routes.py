@@ -289,7 +289,7 @@ def get_stream_url():
         print(f"[@route:host_av:stream_url] Using AV controller: {type(av_controller).__name__}")
         
         # Use URL building utilities
-        from src.utils.buildUrlUtils import buildStreamUrlForDevice
+        from src.utils.build_url_utils import buildStreamUrlForDevice
         from src.controllers.controller_manager import get_host
         
         host = get_host()
@@ -350,7 +350,7 @@ def take_screenshot():
         print(f"[@route:host_av:take_screenshot] Screenshot path from controller: {screenshot_path}")
         
         # Use URL building utilities
-        from src.utils.buildUrlUtils import buildScreenshotUrlFromPath
+        from src.utils.build_url_utils import buildScreenshotUrlFromPath
         from src.controllers.controller_manager import get_host
         
         try:
@@ -512,7 +512,7 @@ def serve_screenshot(filename):
         print(f"[@route:host_av:serve_screenshot] Screenshot request for: {filename}")
         
         # Use URL building utilities to resolve screenshot path
-        from src.utils.buildUrlUtils import resolveScreenshotFilePath
+        from src.utils.build_url_utils import resolveScreenshotFilePath
         
         try:
             screenshot_path = resolveScreenshotFilePath(filename)
@@ -560,7 +560,7 @@ def serve_image_by_path():
         image_path = request.args.get('path')
         
         # Use URL building utilities to resolve and validate image path
-        from src.utils.buildUrlUtils import resolveImageFilePath
+        from src.utils.build_url_utils import resolveImageFilePath
         
         try:
             validated_path = resolveImageFilePath(image_path)

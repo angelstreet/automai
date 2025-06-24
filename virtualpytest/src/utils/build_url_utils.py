@@ -197,6 +197,25 @@ def buildCloudImageUrl(bucket_name: str, image_path: str, base_url: str = None) 
     
     return f"{base_url.rstrip('/')}/{bucket_name}/{clean_path}"
 
+def buildServerUrl(endpoint: str) -> str:
+    """
+    Host URL builder - Build URLs for server endpoints from host context
+    
+    Args:
+        endpoint: The endpoint path to append
+        
+    Returns:
+        Complete URL to the server endpoint for host use
+    """
+    import os
+    # Host uses SERVER_URL environment variable to reach server
+    server_url = os.getenv('SERVER_URL', 'http://localhost:5109')
+    
+    # Clean endpoint
+    clean_endpoint = endpoint.lstrip('/')
+    
+    return f"{server_url}/{clean_endpoint}"
+
 # =====================================================
 # MULTI-DEVICE HELPER FUNCTIONS
 # =====================================================
@@ -239,7 +258,7 @@ def get_device_local_captures_path(host_info: dict, device_id: str = None) -> st
             if not capture_path:
                 raise ValueError(f"Device {device_id} has no video_capture_path configured (DEVICE{device_id.replace('device', '')}_VIDEO_CAPTURE_PATH missing)")
             
-            print(f"[@buildUrlUtils:get_device_local_captures_path] Using device {device_id} capture path: {capture_path}")
+            print(f"[@build_url_utils:get_device_local_captures_path] Using device {device_id} capture path: {capture_path}")
             return capture_path
     
     raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")
@@ -287,7 +306,7 @@ def get_device_local_stream_path(host_info: dict, device_id: str = None) -> str:
             clean_path = stream_path.replace('/host', '')
             local_path = f'/var/www/html{clean_path}'
             
-            print(f"[@buildUrlUtils:get_device_local_stream_path] Using device {device_id} stream path: {local_path}")
+            print(f"[@build_url_utils:get_device_local_stream_path] Using device {device_id} stream path: {local_path}")
             return local_path
     
     raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")
@@ -329,7 +348,7 @@ def get_current_device_id() -> str:
         return None
         
     except Exception as e:
-        print(f"[@buildUrlUtils:get_current_device_id] Error getting device ID: {e}")
+        print(f"[@build_url_utils:get_current_device_id] Error getting device ID: {e}")
         return None
 
 def _get_device_stream_path(host_info: dict, device_id: str = None) -> str:
@@ -374,7 +393,7 @@ def _get_device_stream_path(host_info: dict, device_id: str = None) -> str:
             clean_path = stream_path.replace('/host', '').lstrip('/')
             url_path = f'/{clean_path}'
             
-            print(f"[@buildUrlUtils:_get_device_stream_path] Using device {device_id} stream path: {url_path}")
+            print(f"[@build_url_utils:_get_device_stream_path] Using device {device_id} stream path: {url_path}")
             return url_path
     
     raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")
@@ -421,7 +440,7 @@ def _get_device_capture_path(host_info: dict, device_id: str = None) -> str:
             clean_path = stream_path.replace('/host', '').lstrip('/')
             url_path = f'/{clean_path}/captures'
             
-            print(f"[@buildUrlUtils:_get_device_capture_path] Using device {device_id} capture path: {url_path}")
+            print(f"[@build_url_utils:_get_device_capture_path] Using device {device_id} capture path: {url_path}")
             return url_path
     
     raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")

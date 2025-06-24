@@ -1,127 +1,141 @@
 """
-Stream Proxy Routes - Proxy HTTP streams through HTTPS to solve mixed content issues
-
-⚠️ DEPRECATED ROUTE PATTERN: This route uses host_name in URL path and legacy registry lookup.
-Modern approach should use POST requests with full host objects in request body.
-This is kept for backward compatibility only.
+Server stream proxy routes for forwarding requests to hosts
 """
 
-from flask import Blueprint, Response, request, current_app
+from flask import Blueprint, request, jsonify, Response
 import requests
-from src.utils.app_utils import get_host_by_name
+import json
 
-server_stream_proxy_routes = Blueprint('server_stream_proxy_routes', __name__)
+from src.utils.build_url_utils import buildHostUrl
+from src.utils.host_utils import get_host_manager
 
-@server_stream_proxy_routes.route('/server/stream-proxy/<host_name>/<path:stream_path>', methods=['GET'])
-def proxy_stream(host_name, stream_path):
-    """
-    Proxy HTTP stream content through HTTPS to solve mixed content issues.
-    
-    ⚠️ DEPRECATED: This route uses legacy registry lookup.
-    Modern approach should use POST with host object in request body.
-    
-    Args:
-        host_name: Name of the host to proxy stream from
-        stream_path: Path to the stream resource (e.g., 'output.m3u8', 'segment_123.ts')
-    """
+stream_proxy_bp = Blueprint('stream_proxy', __name__, url_prefix='/server/stream')
+
+@stream_proxy_bp.route('/av/screenshot', methods=['POST'])
+def proxy_screenshot():
+    """Proxy screenshot request to appropriate host"""
     try:
-        print(f"⚠️ WARNING: Using deprecated stream proxy route with registry lookup for host: {host_name}")
+        data = request.get_json()
+        host = data.get('host')
         
-        # Get host info from legacy registry (DEPRECATED)
-        host_info = get_host_by_name(host_name)
-        if not host_info:
-            print(f"[@route:stream_proxy] Host not found in legacy registry: {host_name}")
-            return "Host not found", 404
+        if not host or not host.get('host_name'):
+            return jsonify({'error': 'Host data is required'}), 400
         
-        # Build the original HTTP URL
-        host_base_url = host_info.get('host_url')
-        if not host_base_url:
-            print(f"[@route:stream_proxy] Host missing host_url in legacy registry: {host_name}")
-            return "Host URL not available", 500
+        host_name = host['host_name']
         
-        # Construct the target URL
-        target_url = f"{host_base_url}/host/stream/{stream_path}"
+        print(f"📸 [PROXY] Screenshot request for host: {host_name}")
         
-        # Forward query parameters
-        if request.query_string:
-            target_url += f"?{request.query_string.decode()}"
+        # Get host from manager
+        host_manager = get_host_manager()
+        host_data = host_manager.get_host(host_name)
+        if not host_data:
+            return jsonify({'error': f'Host {host_name} not found'}), 404
         
-        # Make request to the HTTP stream
-        try:
-            response = requests.get(target_url, stream=True, timeout=30)
-            response.raise_for_status()
-            
-            # Determine content type
-            content_type = response.headers.get('Content-Type', 'application/octet-stream')
-            
-            # For HLS playlists, we need to modify the content to use proxy URLs
-            if stream_path.endswith('.m3u8'):
-                content = response.text
-                
-                # Replace segment URLs with proxy URLs
-                lines = content.split('\n')
-                modified_lines = []
-                
-                for line in lines:
-                    if line.strip() and not line.startswith('#') and not line.startswith('http'):
-                        # This is a segment filename, convert to proxy URL
-                        proxy_segment_url = f"/server/stream-proxy/{host_name}/{line.strip()}"
-                        modified_lines.append(proxy_segment_url)
-                    else:
-                        modified_lines.append(line)
-                
-                modified_content = '\n'.join(modified_lines)
-                 
-                return Response(
-                    modified_content,
-                    content_type='application/vnd.apple.mpegurl',
-                    headers={
-                        'Access-Control-Allow-Origin': '*',
-                        'Access-Control-Allow-Methods': 'GET',
-                        'Access-Control-Allow-Headers': 'Content-Type',
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache',
-                        'Expires': '0'
-                    }
-                )
-            else:
-                # For other content (segments, etc.), stream directly
-                def generate():
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            yield chunk
-                
-                return Response(
-                    generate(),
-                    content_type=content_type,
-                    headers={
-                        'Access-Control-Allow-Origin': '*',
-                        'Access-Control-Allow-Methods': 'GET',
-                        'Access-Control-Allow-Headers': 'Content-Type',
-                        'Content-Length': response.headers.get('Content-Length'),
-                        'Accept-Ranges': response.headers.get('Accept-Ranges', 'bytes')
-                    }
-                )
-                
-        except requests.exceptions.RequestException as e:
-            print(f"[@route:stream_proxy] Request failed: {e}")
-            return f"Failed to fetch stream: {str(e)}", 502
-            
+        # Forward request to host
+        host_url = buildHostUrl(host_data, '/host/av/screenshot')
+        
+        print(f"📡 [PROXY] Forwarding screenshot request to: {host_url}")
+        
+        response = requests.post(
+            host_url,
+            json=data,
+            timeout=30,
+            verify=False
+        )
+        
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            error_msg = f"Screenshot request failed: {response.status_code} {response.text}"
+            print(f"❌ [PROXY] {error_msg}")
+            return jsonify({'error': error_msg}), response.status_code
+        
     except Exception as e:
-        print(f"[@route:stream_proxy] Proxy error: {e}")
-        import traceback
-        print(f"[@route:stream_proxy] Traceback: {traceback.format_exc()}")
-        return f"Proxy error: {str(e)}", 500
+        print(f"❌ [PROXY] Error proxying screenshot: {e}")
+        return jsonify({'error': str(e)}), 500
 
-@server_stream_proxy_routes.route('/server/stream-proxy/<host_name>/<path:stream_path>', methods=['OPTIONS'])
-def proxy_stream_options(host_name, stream_path):
-    """Handle CORS preflight requests"""
-    return Response(
-        '',
-        headers={
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-            'Access-Control-Max-Age': '86400'
-        }
-    ) 
+@stream_proxy_bp.route('/av/stream-url', methods=['POST'])
+def proxy_stream_url():
+    """Proxy stream URL request to appropriate host"""
+    try:
+        data = request.get_json()
+        host = data.get('host')
+        
+        if not host or not host.get('host_name'):
+            return jsonify({'error': 'Host data is required'}), 400
+        
+        host_name = host['host_name']
+        
+        print(f"📺 [PROXY] Stream URL request for host: {host_name}")
+        
+        # Get host from manager
+        host_manager = get_host_manager()
+        host_data = host_manager.get_host(host_name)
+        if not host_data:
+            return jsonify({'error': f'Host {host_name} not found'}), 404
+        
+        # Forward request to host
+        host_url = buildHostUrl(host_data, '/host/av/stream-url')
+        
+        print(f"📡 [PROXY] Forwarding stream URL request to: {host_url}")
+        
+        response = requests.post(
+            host_url,
+            json=data,
+            timeout=30,
+            verify=False
+        )
+        
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            error_msg = f"Stream URL request failed: {response.status_code} {response.text}"
+            print(f"❌ [PROXY] {error_msg}")
+            return jsonify({'error': error_msg}), response.status_code
+        
+    except Exception as e:
+        print(f"❌ [PROXY] Error proxying stream URL: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@stream_proxy_bp.route('/verification/execute', methods=['POST'])
+def proxy_verification():
+    """Proxy verification request to appropriate host"""
+    try:
+        data = request.get_json()
+        host = data.get('host')
+        
+        if not host or not host.get('host_name'):
+            return jsonify({'error': 'Host data is required'}), 400
+        
+        host_name = host['host_name']
+        
+        print(f"✅ [PROXY] Verification request for host: {host_name}")
+        
+        # Get host from manager
+        host_manager = get_host_manager()
+        host_data = host_manager.get_host(host_name)
+        if not host_data:
+            return jsonify({'error': f'Host {host_name} not found'}), 404
+        
+        # Forward request to host
+        host_url = buildHostUrl(host_data, '/host/verification/execute')
+        
+        print(f"📡 [PROXY] Forwarding verification request to: {host_url}")
+        
+        response = requests.post(
+            host_url,
+            json=data,
+            timeout=60,  # Longer timeout for verification
+            verify=False
+        )
+        
+        if response.status_code == 200:
+            return jsonify(response.json())
+        else:
+            error_msg = f"Verification request failed: {response.status_code} {response.text}"
+            print(f"❌ [PROXY] {error_msg}")
+            return jsonify({'error': error_msg}), response.status_code
+        
+    except Exception as e:
+        print(f"❌ [PROXY] Error proxying verification: {e}")
+        return jsonify({'error': str(e)}), 500 

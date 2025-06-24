@@ -16,23 +16,9 @@ from typing import TypedDict, Optional, List, Any
 # Import using consistent src. prefix (project root is already in sys.path from app startup)
 from src.controllers.controller_config_factory import create_controller_configs_from_device_info
 
-from src.utils.app_utils import (
-    get_host_registry
-)
+from src.utils.host_utils import get_host_manager
 
 system_bp = Blueprint('system', __name__, url_prefix='/server/system')
-
-
-
-def get_health_check_threads():
-    """Get health check threads from app context"""
-    return getattr(current_app, '_health_check_threads', {})
-
-def set_health_check_threads(threads):
-    """Set health check threads in app context"""
-    current_app._health_check_threads = threads
-
-
 
 @system_bp.route('/register', methods=['POST'])
 def register_host():
@@ -164,36 +150,14 @@ def register_host():
             'lockedAt': None,
         }
         
-        # Store host by host_name (primary key)
-        connected_hosts = get_host_registry()
+        # Store host using the host manager
+        host_manager = get_host_manager()
+        success = host_manager.register_host(host_info['host_name'], host_object)
         
-        # Check if host is already registered (by host_name)
-        existing_host = connected_hosts.get(host_info['host_name'])
-        
-        if existing_host:
-            # Update existing host
-            print(f"🔄 [SERVER] Updating existing host registration:")
-            print(f"   Host Name: {host_info['host_name']}")
-            print(f"   Devices: {len(devices)} device(s)")
-            
-            # Keep original registration time but update all other info
-            host_object['registered_at'] = existing_host.get('registered_at', host_object['registered_at'])
-            host_object['reconnected_at'] = datetime.now().isoformat()
-            
-            # Update with new data
-            connected_hosts[host_info['host_name']] = host_object
-            set_health_check_threads(get_health_check_threads())
-            
-            print(f"✅ [SERVER] Host registration updated successfully")
-        else:
-            # New host registration
-            connected_hosts[host_info['host_name']] = host_object
-            set_health_check_threads(get_health_check_threads())
-            
-            print(f"✅ [SERVER] New host registered successfully:")
-            print(f"   Host Name: {host_info['host_name']}")
-            print(f"   Host URL: {host_info['host_url']}")
-            print(f"   Devices: {len(devices)} device(s)")
+        if not success:
+            error_msg = f"Failed to register host {host_info['host_name']}"
+            print(f"❌ [SERVER] {error_msg}")
+            return jsonify({'error': error_msg}), 500
         
         response_data = host_object
         
@@ -222,18 +186,11 @@ def unregister_host():
         if not host_name:
             return jsonify({'error': 'Missing host_name'}), 400
         
-        connected_hosts = get_host_registry()
+        host_manager = get_host_manager()
+        success = host_manager.unregister_host(host_name)
         
-        # Find host by host_name
-        if host_name in connected_hosts:
-            host_to_remove = connected_hosts[host_name]
-            
-            # Remove host
-            del connected_hosts[host_name]
-            set_health_check_threads(get_health_check_threads())
-            
+        if success:
             print(f"🔌 Host unregistered: {host_name}")
-            
             return jsonify({
                 'status': 'success',
                 'message': 'Host unregistered successfully'
@@ -262,29 +219,21 @@ def health_check():
 def getAllHosts():
     """Return all registered hosts - single REST endpoint for host listing"""
     try:
-        connected_hosts = get_host_registry()
+        host_manager = get_host_manager()
         
         # Clean up stale hosts (not seen for more than 2 minutes)
-        current_time = time.time()
-        stale_hosts = []
+        cleaned_count = host_manager.cleanup_stale_hosts(120)
+        if cleaned_count > 0:
+            print(f"⚠️ [HOSTS] Cleaned up {cleaned_count} stale hosts")
         
-        for host_name, host_info in connected_hosts.items():
-            if current_time - host_info.get('last_seen', 0) > 120:  # 2 minutes
-                stale_hosts.append(host_name)
-                print(f"⚠️ [HOSTS] Removing stale host: {host_name}")
+        # Get all hosts from manager
+        all_hosts = host_manager.get_all_hosts()
         
-        # Remove stale hosts
-        for host_name in stale_hosts:
-            if host_name in connected_hosts:
-                del connected_hosts[host_name]
-                set_health_check_threads(get_health_check_threads())
-        
-        # Get all hosts directly from registry - they're already properly formatted
-        # Just verify required fields are present
+        # Verify required fields are present
         valid_hosts = []
         required_fields = ['host_name', 'host_url']
         
-        for host_name, host_info in connected_hosts.items():
+        for host_info in all_hosts:
             # Check required fields
             is_valid = True
             for field in required_fields:
@@ -294,8 +243,6 @@ def getAllHosts():
                     break
             
             if is_valid:
-                # No need to rebuild the object, just use it directly
-                # controller_objects should already be excluded at registration time
                 valid_hosts.append(host_info)
         
         print(f"🖥️ [HOSTS] Returning {len(valid_hosts)} valid hosts")
@@ -375,10 +322,11 @@ def client_ping():
         if not host_name:
             return jsonify({'error': 'Missing host_name in ping'}), 400
         
-        connected_hosts = get_host_registry()
+        host_manager = get_host_manager()
         
-        # Find host by host_name
-        if host_name not in connected_hosts:
+        # Check if host is registered
+        host_data = host_manager.get_host(host_name)
+        if not host_data:
             # Host not registered, ask them to register
             print(f"📍 [PING] Unknown host {host_name} sending registration request")
             return jsonify({
@@ -387,123 +335,23 @@ def client_ping():
                 'action': 'register'
             }), 404
         
-        # Update host information
-        host_to_update = connected_hosts[host_name]
-        current_time = time.time()
-        host_to_update['last_seen'] = current_time
-        host_to_update['status'] = 'online'
+        # Update host information using the manager
+        success = host_manager.update_host_ping(host_name, ping_data)
         
-        # Update system stats if provided
-        if 'system_stats' in ping_data:
-            host_to_update['system_stats'] = ping_data['system_stats']
-        
-        # Update device-level verification and action types if provided
-        if 'devices' in ping_data:
-            # Update device-level data while preserving existing device structure
-            for updated_device in ping_data['devices']:
-                device_id = updated_device.get('device_id')
-                if device_id:
-                    # Find the corresponding device in host data
-                    for existing_device in host_to_update.get('devices', []):
-                        if existing_device.get('device_id') == device_id:
-                            # Update device-level verification and action types
-                            if 'available_verification_types' in updated_device:
-                                existing_device['available_verification_types'] = updated_device['available_verification_types']
-                            if 'available_action_types' in updated_device:
-                                existing_device['available_action_types'] = updated_device['available_action_types']
-                            break
-        
-        # Update any other provided fields
-        for field in ['host_ip', 'host_port_external']:
-            if field in ping_data:
-                host_to_update[field] = ping_data[field]
-        
-        set_health_check_threads(get_health_check_threads())
+        if not success:
+            return jsonify({'error': 'Failed to update host ping'}), 500
         
         print(f"💓 [PING] Host {host_name} ping received - status updated")
         
         return jsonify({
             'status': 'success',
             'message': 'Ping received successfully',
-            'server_time': current_time
+            'server_time': time.time()
         }), 200
         
     except Exception as e:
         print(f"❌ [PING] Error processing host ping: {e}")
         return jsonify({'error': str(e)}), 500
-
-def start_health_check(client_id, client_ip, client_port):
-    """Start health check thread for a client"""
-    from flask import current_app
-    
-    # Get the Flask app instance before starting the thread
-    try:
-        app = current_app._get_current_object()
-    except RuntimeError:
-        print(f"⚠️ [HEALTH] Could not get current app context for client {client_id}")
-        return
-    
-    def health_worker(app_instance):
-        consecutive_failures = 0
-        max_failures = 3
-        
-        while True:
-            try:
-                # Use app context for each iteration
-                with app_instance.app_context():
-                    connected_clients = getattr(app_instance, '_connected_clients', {})
-                    if client_id not in connected_clients:
-                        print(f"🔌 [HEALTH] Health check stopped for {client_id} (client removed)")
-                        break
-                    
-                    try:
-                        # Always use centralized API URL builder from registry data
-                        host_info = connected_clients[client_id]
-                        from src.utils.buildUrlUtils import buildHostUrl
-                        health_url = buildHostUrl(host_info, "/server/system/health")
-                        
-                        response = requests.get(health_url, timeout=5)
-                        if response.status_code == 200:
-                            # Update last seen timestamp
-                            connected_clients[client_id]['last_seen'] = time.time()
-                            connected_clients[client_id]['status'] = 'online'
-                            
-                            # Update system stats if available in response
-                            try:
-                                health_data = response.json()
-                                if 'system_stats' in health_data:
-                                    connected_clients[client_id]['system_stats'] = health_data['system_stats']
-                                    print(f"💓 [HEALTH] Client {client_id[:8]}... health check OK - CPU: {health_data['system_stats']['cpu']['percent']}%, RAM: {health_data['system_stats']['memory']['percent']}%, Disk: {health_data['system_stats']['disk']['percent']}%")
-                                else:
-                                    print(f"💓 [HEALTH] Client {client_id[:8]}... health check OK")
-                            except Exception as json_error:
-                                print(f"💓 [HEALTH] Client {client_id[:8]}... health check OK (no stats)")
-                            
-                    except Exception as e:
-                        consecutive_failures += 1
-                        print(f"⚠️ [HEALTH] Health check failed for {client_id[:8]}...: {e}")
-                    
-                    # Remove client after max failures
-                    if consecutive_failures >= max_failures:
-                        print(f"❌ [HEALTH] Removing client {client_id[:8]}... after {max_failures} failed health checks")
-                        # Remove client using app context
-                        remove_client_with_app(client_id, app_instance)
-                        break
-                        
-            except Exception as context_error:
-                print(f"❌ [HEALTH] App context error for client {client_id[:8]}...: {context_error}")
-                break
-            
-            time.sleep(30)  # Check every 30 seconds
-    
-    # Start health check thread
-    health_check_threads = get_health_check_threads()
-    if client_id not in health_check_threads:
-        thread = threading.Thread(target=health_worker, args=(app,), daemon=True, name=f"health-{client_id[:8]}")
-        thread.start()
-        health_check_threads[client_id] = thread
-        set_health_check_threads(health_check_threads)
-        print(f"🏥 [HEALTH] Started health check thread for client {client_id[:8]}...")
 
 def get_system_stats():
     """Get current system statistics (CPU, RAM, Disk)"""
@@ -594,11 +442,11 @@ def get_available_actions():
         
         print(f"[@route:server_system_routes:get_available_actions] Getting available actions for host: {host_name}")
         
-        # Get host from connected hosts registry
-        connected_hosts = get_host_registry()
-        host_data = connected_hosts.get(host_name)
+        # Get host from host manager
+        host_manager = get_host_manager()
+        host_data = host_manager.get_host(host_name)
         if not host_data:
-            print(f"[@route:server_system_routes:get_available_actions] Host {host_name} not found in connected hosts")
+            print(f"[@route:server_system_routes:get_available_actions] Host {host_name} not found in host manager")
             return jsonify({'success': False, 'error': f'Host {host_name} not found'}), 404
         
         # Get available actions from all devices in the host

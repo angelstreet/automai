@@ -50,7 +50,7 @@ def text_auto_detect():
             }), 400
         
         # Get device-specific paths
-        from src.utils.buildUrlUtils import get_device_local_captures_path, get_current_device_id
+        from src.utils.build_url_utils import get_device_local_captures_path, get_current_device_id
         
         device_id = get_current_device_id()
         captures_path = get_device_local_captures_path(host_device, device_id)
@@ -162,7 +162,7 @@ def text_auto_detect():
                     print(f"[@route:host_text_auto_detect] Error: {str(fallback_error)}")
                     
                     # Build device-specific preview URL
-                    from src.utils.buildUrlUtils import _get_device_capture_path
+                    from src.utils.build_url_utils import _get_device_capture_path
                     capture_path = _get_device_capture_path(host_device, device_id)
                     preview_url = f'{capture_path}/cropped/{target_filename}'
                     
@@ -204,7 +204,7 @@ def text_auto_detect():
                     print(f"[@route:host_text_auto_detect] Language detection failed: {str(lang_error)}")
             
             # Return URL path for the preview image
-            from src.utils.buildUrlUtils import _get_device_capture_path
+            from src.utils.build_url_utils import _get_device_capture_path
             capture_path = _get_device_capture_path(host_device, device_id)
             preview_url = f'{capture_path}/cropped/{target_filename}'
             
@@ -226,7 +226,7 @@ def text_auto_detect():
                 print(f"[@route:host_text_auto_detect] Low confidence or no text detected")
                 
                 # Build device-specific preview URL for low confidence case
-                from src.utils.buildUrlUtils import _get_device_capture_path
+                from src.utils.build_url_utils import _get_device_capture_path
                 capture_path = _get_device_capture_path(host_device, device_id)
                 preview_url = f'{capture_path}/cropped/{target_filename}'
                 
@@ -242,7 +242,7 @@ def text_auto_detect():
             print(f"[@route:host_text_auto_detect] OCR libraries not available: {e}")
             
             # Build device-specific preview URL for error case
-            from src.utils.buildUrlUtils import _get_device_capture_path
+            from src.utils.build_url_utils import _get_device_capture_path
             capture_path = _get_device_capture_path(host_device, device_id)
             preview_url = f'{capture_path}/cropped/{target_filename}'
             

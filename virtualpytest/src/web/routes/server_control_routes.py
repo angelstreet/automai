@@ -9,20 +9,19 @@ This module contains server-side control endpoints that:
 - Provide controller type information
 """
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
+import uuid
+import json
 import requests
-import urllib.parse
+import time
+import threading
+from datetime import datetime
+from typing import Dict, Any, Optional
 
-from src.utils.app_utils import get_host_by_model, get_team_id, get_host_registry, get_user_id
-from src.utils.buildUrlUtils import buildHostUrl
-from src.utils.device_lock_manager_utils import (
-    lock_device_in_registry,
-    unlock_device_in_registry,
-    is_device_locked_in_registry,
-    get_device_lock_info,
-    cleanup_expired_locks,
-    get_all_locked_devices
-)
+from src.utils.app_utils import get_team_id, get_user_id
+from src.utils.build_url_utils import buildHostUrl
+from src.utils.host_utils import get_host_manager
+from src.utils.lock_utils import lock_device, unlock_device, get_all_locked_devices, get_device_lock_info
 from src.controllers.controller_config_factory import create_controller_configs_from_device_info
 
 # Create blueprint
@@ -34,326 +33,210 @@ control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
 
 @control_bp.route('/take-control', methods=['POST'])
 def take_control():
-    """Server-side take control - Coordinate device locking and host discovery"""
+    """Take control of a device"""
     try:
-        data = request.get_json() or {}
-        host_name = data.get('host_name')
-        session_id = data.get('session_id', 'default-session')
-        user_id = data.get('user_id') or get_user_id()  # Get user ID from request or headers
+        data = request.get_json()
+        host = data.get('host')
         
-        # Use user ID as the primary lock identifier (simplified approach)
-        lock_identifier = user_id if user_id != 'default-user-id' else session_id
+        if not host or not host.get('host_name'):
+            return jsonify({'error': 'Host data is required'}), 400
         
-        print(f"[@route:server_take_control] Take control requested for host: {host_name}")
-        print(f"[@route:server_take_control] Session ID: {session_id}")
-        print(f"[@route:server_take_control] Lock Identifier (User ID): {lock_identifier}")
-        print(f"[@route:server_take_control] User ID: {user_id}")
+        host_name = host['host_name']
         
-        if not host_name:
+        # Generate session ID if not exists
+        if 'session_id' not in session:
+            session['session_id'] = str(uuid.uuid4())
+        
+        session_id = session['session_id']
+        
+        print(f"🎮 [CONTROL] Taking control of host: {host_name} (session: {session_id})")
+        
+        # Use lock utils for device locking
+        success = lock_device(host_name, session_id)
+        
+        if success:
             return jsonify({
-                'success': False,
-                'error': 'Missing host_name'
-            }), 400
-        
-        # Lock the device using device_lock_manager_utils
-        try:
-            # Get host info first to check if it exists
-            connected_clients = get_host_registry()
-            host_info = connected_clients.get(host_name)
-            
-            if not host_info:
+                'success': True,
+                'message': f'Successfully took control of host: {host_name}',
+                'session_id': session_id,
+                'host_name': host_name
+            })
+        else:
+            lock_info = get_device_lock_info(host_name)
+            if lock_info:
                 return jsonify({
                     'success': False,
-                    'error': f'Host {host_name} not found in registry',
-                    'device_locked': False,
-                    'locked_by': None
-                }), 404
-            
-            # Try to acquire lock for the host using simplified lock identifier
-            lock_acquired = lock_device_in_registry(host_name, lock_identifier)
-            
-            if not lock_acquired:
-                # Host exists but lock failed - check who owns it
-                lock_info = get_device_lock_info(host_name)
-                if lock_info:
-                    current_owner = lock_info.get('lockedBy', 'unknown')
-                    
-                    # Check if it's locked by the same user (simplified check)
-                    locked_by_same_user = current_owner == user_id
-                    
-                    return jsonify({
-                        'success': False,
-                        'error': f'Host {host_name} is already locked by user: {current_owner}',
-                        'device_locked': True,
-                        'locked_by': current_owner,
-                        'locked_by_same_user': locked_by_same_user
-                    }), 409
-                else:
-                    # This shouldn't happen - lock failed but no lock info
-                    return jsonify({
-                        'success': False,
-                        'error': f'Failed to acquire lock for host {host_name} (unknown reason)',
-                        'device_locked': False,
-                        'locked_by': None
-                    }), 500
-            
-            print(f"[@route:server_take_control] Successfully locked host {host_name} for user {lock_identifier}")
-            
-        except Exception as e:
-            print(f"[@route:server_take_control] Error acquiring host lock: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to lock host: {str(e)}'
-            }), 500
-        
-        # Verify host is online (host_info is now available from above)
-        try:
-            # Just verify it's online
-            if host_info.get('status') != 'online':
-                unlock_device_in_registry(host_name, lock_identifier)
-                return jsonify({
-                    'success': False,
-                    'error': f'Host {host_name} is not online (status: {host_info.get("status")})'
-                }), 503
-            
-            print(f"[@route:server_take_control] Found host: {host_info.get('host_name')} at {host_info.get('host_url')}")
-            
-        except Exception as e:
-            unlock_device_in_registry(host_name, lock_identifier)
-            print(f"[@route:server_take_control] Error verifying host status: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to verify host status: {str(e)}'
-            }), 500
-        
-        # Forward request to host using proper URL building
-        try:
-            # Host doesn't need any payload - it uses its own stored host_device object
-            print(f"[@route:server_take_control] Forwarding to host using standardized URL building")
-            
-            # Build URL using centralized API URL builder
-            host_url = buildHostUrl(host_info, '/host/take-control')
-            
-            print(f"[@route:server_take_control] Built URL using buildHostUrl: {host_url}")
-            
-            # Make request without payload - host uses its own stored device info
-            host_response = requests.post(
-                host_url, 
-                json={},  # Empty payload since host uses its own stored host_device
-                timeout=30, 
-                verify=False
-            )
-            
-            if host_response.status_code == 200:
-                host_data = host_response.json()
-                print(f"[@route:server_take_control] Host response: {host_data}")
-                
-                if host_data.get('success'):
-                    # Host confirmed controllers started - that's all we need
-                    print(f"[@route:server_take_control] SUCCESS: Take control succeeded for host: {host_name}")
-                    return jsonify({
-                        'success': True,
-                        'message': 'Control taken successfully',
-                        'session_id': lock_identifier
-                    }), 200
-                else:
-                    # Host failed to start controllers - unlock and return simple error
-                    print(f"[@route:server_take_control] FAILED: Take control failed for host: {host_name}")
-                    unlock_device_in_registry(host_name, lock_identifier)
-                    
-                    return jsonify({
-                        'success': False,
-                        'error': host_data.get('error', 'Host failed to start controllers')
-                    }), 500
+                    'error': f'Host {host_name} is already locked by another session',
+                    'locked_by': lock_info.get('lockedBy'),
+                    'locked_at': lock_info.get('lockedAt')
+                }), 423  # HTTP 423 Locked
             else:
-                # Host request failed, release the device lock
-                unlock_device_in_registry(host_name, lock_identifier)
                 return jsonify({
                     'success': False,
-                    'error': f'Host request failed: {host_response.status_code} {host_response.text}',
-                    'error_type': 'host_communication_error'
+                    'error': f'Failed to lock host {host_name}'
                 }), 500
-                
-        except Exception as e:
-            # Host communication failed, release the device lock
-            unlock_device_in_registry(host_name, lock_identifier)
-            print(f"[@route:server_take_control] Error calling host: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to communicate with host: {str(e)}'
-            }), 500
         
     except Exception as e:
-        print(f"[@route:server_take_control] Unexpected error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Unexpected error: {str(e)}'
-        }), 500
-
+        print(f"❌ [CONTROL] Error taking control: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @control_bp.route('/release-control', methods=['POST'])
 def release_control():
-    """Server-side release control - Unlock device and forward request to host"""
+    """Release control of a device"""
     try:
-        data = request.get_json() or {}
-        host_name = data.get('host_name')
-        session_id = data.get('session_id', 'default-session')
-        user_id = data.get('user_id') or get_user_id()  # Get user ID from request or headers
+        data = request.get_json()
+        host = data.get('host')
         
-        # Use user ID as the primary lock identifier (simplified approach)
-        lock_identifier = user_id if user_id != 'default-user-id' else session_id
+        if not host or not host.get('host_name'):
+            return jsonify({'error': 'Host data is required'}), 400
         
-        print(f"[@route:server_release_control] Releasing control")
-        print(f"[@route:server_release_control] Host name: {host_name}")
-        print(f"[@route:server_release_control] Session ID: {session_id}")
-        print(f"[@route:server_release_control] Lock Identifier (User ID): {lock_identifier}")
-        print(f"[@route:server_release_control] User ID: {user_id}")
+        host_name = host['host_name']
+        session_id = session.get('session_id')
         
-        # Step 1: Call host release control if host_name provided
-        host_release_success = True
-        if host_name:
-            connected_clients = get_host_registry()
-            host_info = connected_clients.get(host_name)
-            
-            if host_info:
-                try:
-                    print(f"[@route:server_release_control] Calling host release control")
-                    
-                    # Build URL using centralized API URL builder
-                    host_url = buildHostUrl(host_info, '/host/release-control')
-                    host_response = requests.post(
-                        host_url,
-                        json={},  # Empty payload since host uses its own stored device info
-                        timeout=30,
-                        verify=False
-                    )
-                    
-                    if host_response.status_code == 200:
-                        host_result = host_response.json()
-                        host_release_success = host_result.get('success', False)
-                        print(f"[@route:server_release_control] Host confirmed controllers stopped: {host_release_success}")
-                    else:
-                        print(f"[@route:server_release_control] Host release failed: {host_response.status_code}")
-                        host_release_success = False
-                        
-                except Exception as e:
-                    print(f"[@route:server_release_control] Host communication error: {str(e)}")
-                    host_release_success = False
+        print(f"🔓 [CONTROL] Releasing control of host: {host_name} (session: {session_id})")
         
-        # Step 2: Unlock device if host_name provided
-        device_unlock_success = True
-        if host_name:
-            device_unlock_success = unlock_device_in_registry(host_name, lock_identifier)
-            if device_unlock_success:
-                print(f"[@route:server_release_control] Successfully unlocked host: {host_name}")
-            else:
-                print(f"[@route:server_release_control] Failed to unlock host: {host_name}")
+        # Use lock utils for device unlocking
+        success = unlock_device(host_name, session_id)
         
-        return jsonify({
-            'success': host_release_success and device_unlock_success,
-            'message': 'Control released',
-            'device_unlocked': device_unlock_success if host_name else None,
-            'host_released': host_release_success if host_name else None
-        })
-        
-    except Exception as e:
-        print(f"[@route:server_release_control] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Error releasing control: {str(e)}'
-        }), 500
-
-
-
-
-
-@control_bp.route('/navigate', methods=['POST'])
-def navigate():
-    """Server-side navigation - Forward navigation request to appropriate host"""
-    try:
-        data = request.get_json() or {}
-        host_name = data.get('host_name')
-        tree_id = data.get('tree_id')
-        target_node_id = data.get('target_node_id')
-        current_node_id = data.get('current_node_id')
-        execute_flag = data.get('execute', True)
-        
-        print(f"[@route:server_navigate] Navigation request for host: {host_name}")
-        print(f"[@route:server_navigate] Tree: {tree_id}, Target: {target_node_id}")
-        
-        if not host_name or not tree_id or not target_node_id:
+        if success:
             return jsonify({
-                'success': False,
-                'error': 'Missing required fields: host_name, tree_id, target_node_id'
-            }), 400
-        
-        # Find host by name
-        connected_clients = get_host_registry()
-        host_info = connected_clients.get(host_name)
-        
-        if not host_info or host_info.get('status') != 'online':
-            return jsonify({
-                'success': False,
-                'error': f'Host {host_name} not found or not online'
-            }), 404
-        
-        # Forward request to host using centralized API URL builder
-        host_url = buildHostUrl(host_info, f'/host/navigation/execute/{tree_id}/{target_node_id}')
-        
-        payload = {
-            'current_node_id': current_node_id,
-            'execute': execute_flag
-        }
-        
-        print(f"[@route:server_navigate] Forwarding to host: {host_url}")
-        
-        response = requests.post(host_url, json=payload, timeout=60)
-        
-        if response.status_code == 200:
-            result = response.json()
-            print(f"[@route:server_navigate] Host navigation completed: {result.get('success', False)}")
-            return jsonify(result)
+                'success': True,
+                'message': f'Successfully released control of host: {host_name}'
+            })
         else:
-            error_msg = f"Host navigation failed: HTTP {response.status_code}"
-            print(f"[@route:server_navigate] {error_msg}")
             return jsonify({
                 'success': False,
-                'error': error_msg
-            }), response.status_code
-            
+                'error': f'Failed to release control of host {host_name}'
+            }), 500
+        
     except Exception as e:
-        print(f"[@route:server_navigate] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-# =====================================================
-# DEVICE LOCK STATUS ENDPOINTS
-# =====================================================
+        print(f"❌ [CONTROL] Error releasing control: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @control_bp.route('/locked-devices', methods=['GET'])
 def get_locked_devices():
-    """Get all currently locked devices"""
+    """Get information about all currently locked devices"""
     try:
-        print("[@route:get_locked_devices] Fetching all locked devices")
-        
-        # Get all locked devices from the device lock manager
         locked_devices = get_all_locked_devices()
-        
-        print(f"[@route:get_locked_devices] Found {len(locked_devices)} locked devices")
         
         return jsonify({
             'success': True,
             'locked_devices': locked_devices
-        }), 200
+        })
         
     except Exception as e:
-        print(f"[@route:get_locked_devices] Error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to get locked devices: {str(e)}'
-        }), 500
+        print(f"❌ [CONTROL] Error getting locked devices: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@control_bp.route('/navigation/execute', methods=['POST'])
+def execute_navigation():
+    """Execute navigation on a host device."""
+    try:
+        data = request.get_json()
+        host = data.get('host')
+        navigation_data = data.get('navigation_data')
+        
+        if not host or not host.get('host_name'):
+            return jsonify({'error': 'Host data is required'}), 400
+        
+        if not navigation_data:
+            return jsonify({'error': 'Navigation data is required'}), 400
+        
+        host_name = host['host_name']
+        
+        print(f"🧭 [NAVIGATION] Executing navigation on host: {host_name}")
+        print(f"   Navigation data keys: {list(navigation_data.keys())}")
+        
+        # Check if host is registered
+        host_manager = get_host_manager()
+        host_data = host_manager.get_host(host_name)
+        if not host_data:
+            return jsonify({'error': f'Host {host_name} not found'}), 404
+        
+        # Forward request to host
+        host_endpoint = '/host/navigation/execute'
+        host_url = buildHostUrl(host_data, host_endpoint)
+        
+        print(f"📡 [NAVIGATION] Forwarding to: {host_url}")
+        
+        response = requests.post(
+            host_url,
+            json={'navigation_data': navigation_data},
+            timeout=60,
+            verify=False
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"✅ [NAVIGATION] Navigation completed successfully")
+            return jsonify(result)
+        else:
+            error_msg = f"Navigation failed with status {response.status_code}: {response.text}"
+            print(f"❌ [NAVIGATION] {error_msg}")
+            return jsonify({'error': error_msg}), response.status_code
+        
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Navigation request timed out'}), 408
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Network error: {str(e)}'}), 500
+    except Exception as e:
+        print(f"❌ [NAVIGATION] Error executing navigation: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@control_bp.route('/navigation/batch-execute', methods=['POST'])
+def batch_execute_navigation():
+    """Execute batch navigation on a host device."""
+    try:
+        data = request.get_json()
+        host = data.get('host')
+        batch_data = data.get('batch_data')
+        
+        if not host or not host.get('host_name'):
+            return jsonify({'error': 'Host data is required'}), 400
+        
+        if not batch_data or not isinstance(batch_data, list):
+            return jsonify({'error': 'Batch data must be a list of navigation items'}), 400
+        
+        host_name = host['host_name']
+        
+        print(f"🧭 [BATCH-NAVIGATION] Executing batch navigation on host: {host_name}")
+        print(f"   Batch size: {len(batch_data)} items")
+        
+        # Check if host is registered
+        host_manager = get_host_manager()
+        host_data = host_manager.get_host(host_name)
+        if not host_data:
+            return jsonify({'error': f'Host {host_name} not found'}), 404
+        
+        # Forward request to host
+        host_endpoint = '/host/navigation/batch-execute'
+        host_url = buildHostUrl(host_data, host_endpoint)
+        
+        print(f"📡 [BATCH-NAVIGATION] Forwarding to: {host_url}")
+        
+        response = requests.post(
+            host_url,
+            json={'batch_data': batch_data},
+            timeout=120,  # Longer timeout for batch operations
+            verify=False
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            print(f"✅ [BATCH-NAVIGATION] Batch navigation completed successfully")
+            return jsonify(result)
+        else:
+            error_msg = f"Batch navigation failed with status {response.status_code}: {response.text}"
+            print(f"❌ [BATCH-NAVIGATION] {error_msg}")
+            return jsonify({'error': error_msg}), response.status_code
+        
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Batch navigation request timed out'}), 408
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Network error: {str(e)}'}), 500
+    except Exception as e:
+        print(f"❌ [BATCH-NAVIGATION] Error executing batch navigation: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # =====================================================
 # CONTROLLER INFORMATION ENDPOINTS

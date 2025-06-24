@@ -1,7 +1,8 @@
 """
 Host Utilities
 
-Clean host registration and management using the new Host/Device/Controller architecture.
+Host registration, storage, and management using the new Host/Device/Controller architecture.
+Focused on host-related functionality only.
 """
 
 import os
@@ -14,15 +15,160 @@ import requests
 import uuid
 import psutil
 import platform
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+from datetime import datetime
 
 from ..controllers.system.system_info import get_host_system_stats
 from ..controllers.controller_manager import get_host
-from ..utils.app_utils import buildServerUrl
+from .build_url_utils import buildServerUrl
 
 # Disable SSL warnings for self-signed certificates
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# =====================================================
+# HOST STORAGE AND MANAGEMENT
+# =====================================================
+
+class HostManager:
+    """Host storage and management (no locking - use lock_utils for that)"""
+    
+    def __init__(self):
+        # Thread-safe storage for hosts
+        self._hosts: Dict[str, Dict[str, Any]] = {}
+        self._lock = threading.RLock()
+    
+    def register_host(self, host_name: str, host_data: Dict[str, Any]) -> bool:
+        """Register or update a host"""
+        with self._lock:
+            try:
+                # Ensure required fields
+                if not host_name or not host_data.get('host_url'):
+                    return False
+                
+                # Add metadata
+                current_time = time.time()
+                host_data['last_seen'] = current_time
+                host_data['status'] = 'online'
+                
+                # If updating existing host, preserve registration time
+                if host_name in self._hosts:
+                    existing_host = self._hosts[host_name]
+                    host_data['registered_at'] = existing_host.get('registered_at', datetime.now().isoformat())
+                    host_data['reconnected_at'] = datetime.now().isoformat()
+                    print(f"🔄 [HostManager] Updating existing host: {host_name}")
+                else:
+                    host_data['registered_at'] = datetime.now().isoformat()
+                    print(f"✅ [HostManager] Registering new host: {host_name}")
+                
+                self._hosts[host_name] = host_data
+                return True
+                
+            except Exception as e:
+                print(f"❌ [HostManager] Error registering host {host_name}: {e}")
+                return False
+    
+    def unregister_host(self, host_name: str) -> bool:
+        """Unregister a host"""
+        with self._lock:
+            try:
+                if host_name in self._hosts:
+                    del self._hosts[host_name]
+                    print(f"🔌 [HostManager] Unregistered host: {host_name}")
+                    return True
+                return False
+            except Exception as e:
+                print(f"❌ [HostManager] Error unregistering host {host_name}: {e}")
+                return False
+    
+    def get_host(self, host_name: str) -> Optional[Dict[str, Any]]:
+        """Get a specific host by name"""
+        with self._lock:
+            return self._hosts.get(host_name)
+    
+    def get_all_hosts(self) -> List[Dict[str, Any]]:
+        """Get all registered hosts"""
+        with self._lock:
+            return list(self._hosts.values())
+    
+    def get_hosts_by_model(self, models: List[str]) -> List[Dict[str, Any]]:
+        """Get hosts that have devices with specified models"""
+        with self._lock:
+            filtered_hosts = []
+            for host_data in self._hosts.values():
+                devices = host_data.get('devices', [])
+                if any(device.get('model') in models for device in devices):
+                    filtered_hosts.append(host_data)
+            return filtered_hosts
+    
+    def update_host_ping(self, host_name: str, ping_data: Dict[str, Any]) -> bool:
+        """Update host with ping data"""
+        with self._lock:
+            try:
+                if host_name not in self._hosts:
+                    return False
+                
+                host_data = self._hosts[host_name]
+                current_time = time.time()
+                host_data['last_seen'] = current_time
+                host_data['status'] = 'online'
+                
+                # Update system stats if provided
+                if 'system_stats' in ping_data:
+                    host_data['system_stats'] = ping_data['system_stats']
+                
+                # Update device-level data if provided
+                if 'devices' in ping_data:
+                    for updated_device in ping_data['devices']:
+                        device_id = updated_device.get('device_id')
+                        if device_id:
+                            # Find and update corresponding device
+                            for existing_device in host_data.get('devices', []):
+                                if existing_device.get('device_id') == device_id:
+                                    # Update device-level verification and action types
+                                    if 'available_verification_types' in updated_device:
+                                        existing_device['available_verification_types'] = updated_device['available_verification_types']
+                                    if 'available_action_types' in updated_device:
+                                        existing_device['available_action_types'] = updated_device['available_action_types']
+                                    break
+                
+                # Update other provided fields
+                for field in ['host_ip', 'host_port_external']:
+                    if field in ping_data:
+                        host_data[field] = ping_data[field]
+                
+                return True
+                
+            except Exception as e:
+                print(f"❌ [HostManager] Error updating host ping for {host_name}: {e}")
+                return False
+    
+    def cleanup_stale_hosts(self, timeout_seconds: int = 120) -> int:
+        """Remove hosts that haven't been seen for a while"""
+        with self._lock:
+            current_time = time.time()
+            stale_hosts = []
+            
+            for host_name, host_data in self._hosts.items():
+                if current_time - host_data.get('last_seen', 0) > timeout_seconds:
+                    stale_hosts.append(host_name)
+            
+            for host_name in stale_hosts:
+                del self._hosts[host_name]
+                print(f"⚠️ [HostManager] Removed stale host: {host_name}")
+            
+            return len(stale_hosts)
+
+# Global instance
+_host_manager = HostManager()
+
+def get_host_manager() -> HostManager:
+    """Get the global host manager instance"""
+    return _host_manager
+
+# =====================================================
+# HOST REGISTRATION AND CLIENT COMMUNICATION
+# =====================================================
 
 # Client registration state for host mode
 client_registration_state = {
@@ -34,7 +180,6 @@ client_registration_state = {
 # Ping thread for host mode
 ping_thread = None
 ping_stop_event = threading.Event()
-
 
 def register_host_with_server():
     """Register this host with the server using new architecture."""
@@ -233,7 +378,10 @@ def setup_host_signal_handlers():
     atexit.register(cleanup_on_exit) 
 
 
-# New clean controller access functions
+# =====================================================
+# CLEAN CONTROLLER ACCESS FUNCTIONS
+# =====================================================
+
 def get_host_instance():
     """Get the host instance."""
     return get_host()
@@ -309,7 +457,3 @@ def has_device_capability(device_id: str, capability: str):
     """Check if a device has a specific capability."""
     capabilities = get_device_capabilities(device_id)
     return capability in capabilities
-
-
-# ✅ PHASE 6 CLEANUP: Removed deprecated function
-# - get_local_controller() - REMOVED (use get_controller() instead) 
