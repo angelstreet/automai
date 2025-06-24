@@ -246,3 +246,11 @@ def get_host() -> Host:
         _host_instance = create_host_from_environment()
     
     return _host_instance
+
+
+def reset_host():
+    """
+    Reset the global host instance (for testing).
+    """
+    global _host_instance
+    _host_instance = None 
