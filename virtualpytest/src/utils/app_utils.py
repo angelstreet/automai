@@ -69,6 +69,17 @@ def setup_flask_app(app_name="VirtualPyTest"):
     """Setup and configure Flask application with CORS"""
     app = Flask(app_name)
 
+    # Configure Flask secret key for session management
+    # Use environment variable or generate a default for development
+    secret_key = os.getenv('FLASK_SECRET_KEY')
+    if not secret_key:
+        # Generate a default secret key for development
+        import secrets
+        secret_key = secrets.token_hex(32)
+        print(f"⚠️ Using generated secret key for development. Set FLASK_SECRET_KEY environment variable for production.")
+    
+    app.secret_key = secret_key
+
     # Configure CORS for development
     CORS(app, 
          origins="*",

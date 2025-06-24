@@ -315,6 +315,9 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
           } else if (result.status === 'device_not_found') {
             errorType = 'device_not_found';
             errorMessage = `Device ${host.host_name} not found or offline`;
+          } else if (result.error && result.error.includes('secret key')) {
+            errorType = 'server_configuration_error';
+            errorMessage = `Server configuration error: Flask secret key not configured. Please restart the server.`;
           } else if (response.status === 409 && result.locked_by_same_user) {
             console.log(
               `[@context:HostManagerProvider] Device ${host.host_name} locked by same user, reclaiming lock`,
@@ -408,7 +411,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
         }
       } catch (error: any) {
         console.error(
-          `[@context:HostManagerProvider] Exception releasing control of device ${hostName}:`,
+          `[@context:HostManagerProvider] Exception releasing control of device ${host.host_name}:`,
           error,
         );
         return {
@@ -550,7 +553,10 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       activeLocks.forEach(async (_lockUserId, hostName) => {
         try {
           console.log(`[@context:HostManagerProvider] Cleaning up lock for ${hostName} on unmount`);
-          await releaseControl(hostName);
+          const host = availableHosts.find((h) => h.host_name === hostName);
+          if (host) {
+            await releaseControl(host);
+          }
         } catch (error) {
           console.error(
             `[@context:HostManagerProvider] Error cleaning up lock for ${hostName}:`,

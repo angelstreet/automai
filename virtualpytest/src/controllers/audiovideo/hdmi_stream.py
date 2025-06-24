@@ -10,6 +10,7 @@ import threading
 import time
 import os
 import json
+import subprocess
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -47,39 +48,29 @@ class HDMIStreamController(AVControllerInterface):
 
         
     def restart_stream(self) -> bool:
-        """Restart HDMI streaming - simplified without systemd service management."""
+        """Restart HDMI streaming using systemd service management."""
         try:
-            print(f"HDMI[{self.capture_source}]: Stream restart requested - no service management needed")
-            return True
+            print(f"HDMI[{self.capture_source}]: Restarting stream service")
+            
+            # Restart the stream service
+            result = subprocess.run(
+                ['sudo', 'systemctl', 'restart', 'stream'],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0:
+                print(f"HDMI[{self.capture_source}]: Stream service restarted successfully")
+                return True
+            else:
+                print(f"HDMI[{self.capture_source}]: Failed to restart stream service: {result.stderr}")
+                return False
                 
         except Exception as e:
             print(f"HDMI[{self.capture_source}]: Error restarting stream: {e}")
             return False
-        
-    def _get_service_status(self) -> Dict[str, str]:
-        """Get service status - simplified without systemd service management."""
-        return {
-            'activestate': 'active',
-            'substate': 'running'
-        }
-        
-    def _get_stream_status(self) -> Dict[str, Any]:
-        """Get current streaming service status."""
-        service_status = self._get_service_status()
-        
-        # Check if stream service is running
-        is_streaming = service_status.get('activestate') == 'active' and service_status.get('substate') == 'running'
-        
-        status = {
-            'is_streaming': is_streaming,
-            'session_id': self.capture_session_id,
-            'service_status': service_status
-        }
-        
-        return status
-        
 
-        
     def take_screenshot(self, filename: str = None) -> Optional[str]:
         """
         Take screenshot using timestamp logic.
@@ -185,21 +176,9 @@ class HDMIStreamController(AVControllerInterface):
         """
         try:
             print(f"HDMI[{self.capture_source}]: Taking control of HDMI stream")
-            
-            # Check if we can connect to the HDMI device
-            if not self.is_connected:
-                if not self.connect():
-                    return {
-                        'success': False,
-                        'status': 'connection_failed',
-                        'error': 'Failed to connect to HDMI device',
-                        'controller_type': 'av',
-                        'device_name': self.device_name
-                    }
-            
             # Check stream status
-            stream_status = self._get_stream_status()
-            is_streaming = stream_status.get('is_streaming', False)
+            status = self.get_status()
+            is_streaming = status.get('is_streaming', False)
             
             # For HDMI stream, we just need the service to be running
             # The host continuously captures screenshots regardless
@@ -207,7 +186,7 @@ class HDMIStreamController(AVControllerInterface):
                 'success': True,
                 'status': 'stream_ready',
                 'controller_type': 'av',
-                'stream_info': stream_status,
+                'stream_info': status,
                 'capabilities': ['video_capture', 'screenshot', 'streaming']
             }
                 
@@ -299,19 +278,52 @@ class HDMIStreamController(AVControllerInterface):
             
 
     def get_status(self) -> Dict[str, Any]:
-        """Get controller status - simplified without systemd service management."""
+        """Get controller status using systemd service status."""
         try:
             print(f"[@controller:HDMIStream:get_status] Getting status for HDMI controller")
             
-            return {
-                'success': True,
-                'controller_type': 'av',
-                'service_status': 'active_running',
-                'is_streaming': True,
-                'is_capturing': self.is_capturing_video,
-                'capture_session_id': self.capture_session_id,
-                'message': 'HDMI controller is active'
-            }
+            # Get systemd service status
+            result = subprocess.run(
+                ['sudo', 'systemctl', 'show', 'stream', '--property=ActiveState,SubState'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            if result.returncode == 0:
+                # Parse systemctl output
+                service_status = {}
+                for line in result.stdout.strip().split('\n'):
+                    if '=' in line:
+                        key, value = line.split('=', 1)
+                        service_status[key.lower()] = value
+                
+                # Check if stream service is running
+                is_streaming = (service_status.get('activestate') == 'active' and 
+                              service_status.get('substate') == 'running')
+                
+                service_status_text = f"{service_status.get('activestate', 'unknown')}_{service_status.get('substate', 'unknown')}"
+                
+                return {
+                    'success': True,
+                    'controller_type': 'av',
+                    'service_status': service_status_text,
+                    'is_streaming': is_streaming,
+                    'is_capturing': self.is_capturing_video,
+                    'capture_session_id': self.capture_session_id,
+                    'service_details': service_status,
+                    'message': f'HDMI controller - service is {service_status_text}'
+                }
+            else:
+                print(f"[@controller:HDMIStream:get_status] Failed to get service status: {result.stderr}")
+                return {
+                    'success': False,
+                    'controller_type': 'av',
+                    'service_status': 'error',
+                    'is_streaming': False,
+                    'is_capturing': self.is_capturing_video,
+                    'error': f'Failed to get service status: {result.stderr}'
+                }
             
         except Exception as e:
             print(f"[@controller:HDMIStream:get_status] Error getting status: {e}")
@@ -321,7 +333,6 @@ class HDMIStreamController(AVControllerInterface):
                 'service_status': 'error',
                 'is_streaming': False,
                 'is_capturing': self.is_capturing_video,
-                'stream_url': None,
                 'error': f'Failed to get controller status: {str(e)}'
             }
 
