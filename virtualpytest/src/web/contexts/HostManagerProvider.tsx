@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { useUserSession } from '../hooks/useUserSession';
-import { Host } from '../types/common/Host_Types';
+import { Host, Device } from '../types/common/Host_Types';
 
 import { HostManagerContext } from './HostManagerContext';
 
@@ -136,7 +136,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   );
 
   // Get all devices from all available hosts
-  const getAllDevices = useCallback((): any[] => {
+  const getAllDevices = useCallback((): Device[] => {
     const allDevices = availableHosts.flatMap((host) =>
       (host.devices || []).map((device) => ({ ...device, hostName: host.host_name })),
     );
@@ -148,7 +148,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
   // Get all devices from specific host
   const getDevicesFromHost = useCallback(
-    (hostName: string): any[] => {
+    (hostName: string): Device[] => {
       const host = availableHosts.find((h) => h.host_name === hostName);
       const devices = host?.devices || [];
       console.log(
@@ -161,8 +161,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
   // Get devices with specific capability, returning {host, device} pairs
   const getDevicesByCapability = useCallback(
-    (capability: string): { host: Host; device: any }[] => {
-      const matchingDevices: { host: Host; device: any }[] = [];
+    (capability: string): { host: Host; device: Device }[] => {
+      const matchingDevices: { host: Host; device: Device }[] = [];
 
       availableHosts.forEach((host) => {
         if (host.devices) {

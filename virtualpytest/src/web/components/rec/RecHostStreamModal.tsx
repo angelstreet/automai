@@ -4,13 +4,13 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
 import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
-import { Host } from '../../types/common/Host_Types';
+import { Host, Device } from '../../types/common/Host_Types';
 import { StreamViewer } from '../controller/av/StreamViewer';
 import { RemotePanel } from '../controller/remote/RemotePanel';
 
 interface RecHostStreamModalProps {
-  host: Host | null;
-  device?: any; // Optional device for device-specific operations
+  host: Host;
+  device?: Device; // Optional device for device-specific operations
   isOpen: boolean;
   onClose: () => void;
   showRemoteByDefault?: boolean;
@@ -122,7 +122,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
       setStreamUrl('');
       setIsStreamActive(false);
     }
-  }, [host, showError]);
+  }, [host, device?.device_id, showError]);
 
   // Handle device control
   const handleTakeControl = useCallback(async () => {
@@ -265,7 +265,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
         });
       }
     };
-  }, []);
+  }, [host, isControlActive, releaseControl]);
 
   if (!isOpen || !host) return null;
 
@@ -309,7 +309,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
           }}
         >
           <Typography variant="h6" component="h2">
-            {host.device_name || host.host_name} - Live Stream
+            {device?.name || host.host_name} - Live Stream
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -400,7 +400,7 @@ export const RecHostStreamModal: React.FC<RecHostStreamModalProps> = ({
                 streamUrl={streamUrl}
                 isStreamActive={isStreamActive}
                 isCapturing={false}
-                model={host.device_model}
+                model={device?.model || 'unknown'}
                 isExpanded={true}
                 sx={{
                   width: '100%',

@@ -1,45 +1,28 @@
-import { Fullscreen as FullscreenIcon, Error as ErrorIcon } from '@mui/icons-material';
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Chip,
-  IconButton,
-  CircularProgress,
-} from '@mui/material';
+import { Error as ErrorIcon } from '@mui/icons-material';
+import { Card, CardContent, Typography, Box, Chip, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useEffect } from 'react';
 
-import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
-import { Host } from '../../types/common/Host_Types';
+import { Host, Device } from '../../types/common/Host_Types';
 import { ScreenshotCapture } from '../controller/av/ScreenshotCapture';
 
 import { RecHostStreamModal } from './RecHostStreamModal';
 
 interface RecHostPreviewProps {
   host: Host;
-  device?: any; // Optional device for multi-device support
-  takeScreenshot: (host: Host, deviceId?: string) => Promise<string | null>;
-  onFullscreen?: (host: Host) => void;
+  device?: Device;
 }
 
-export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
-  host,
-  device,
-  takeScreenshot,
-  onFullscreen,
-}) => {
+export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) => {
   const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
 
-  // Hooks for device control and notifications
-  const { takeControl } = useHostManager();
+  // Hook for notifications only
   const { showError } = useToast();
 
-  // Take screenshot function
+  // Take screenshot function - now internal
   const handleTakeScreenshot = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -47,13 +30,28 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     try {
       console.log(`[@component:RecHostPreview] Taking screenshot for host: ${host.host_name}`);
 
-      const url = await takeScreenshot(host, device?.device_id);
+      const response = await fetch('/server/av/take-screenshot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host: host,
+          device_id: device?.device_id || 'device1',
+        }),
+      });
 
-      if (url) {
-        setScreenshotUrl(url);
-        console.log(
-          `[@component:RecHostPreview] Screenshot captured successfully for: ${host.host_name}`,
-        );
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.screenshot_url) {
+          console.log(`[@component:RecHostPreview] Screenshot taken: ${result.screenshot_url}`);
+          setScreenshotUrl(result.screenshot_url);
+        } else {
+          setError('Failed to capture screenshot');
+          console.warn(
+            `[@component:RecHostPreview] Screenshot capture failed for: ${host.host_name}`,
+          );
+        }
       } else {
         setError('Failed to capture screenshot');
         console.warn(
@@ -66,67 +64,33 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [takeScreenshot, host, device]);
+  }, [host, device]);
 
   // Auto-take screenshot on mount
   useEffect(() => {
     handleTakeScreenshot();
   }, [handleTakeScreenshot]);
 
-  // Handle opening stream modal with automatic take control
-  const handleOpenStreamModal = useCallback(async () => {
+  // Handle opening stream modal - control will be handled by the modal itself
+  const handleOpenStreamModal = useCallback(() => {
     console.log(`[@component:RecHostPreview] Opening stream modal for host: ${host.host_name}`);
 
-    // Don't attempt if host is offline
+    // Basic check if host is online
     if (host.status !== 'online') {
-      console.warn(`[@component:RecHostPreview] Cannot take control - host status: ${host.status}`);
+      console.warn(`[@component:RecHostPreview] Cannot open modal - host status: ${host.status}`);
       showError('Host is not online');
       return;
     }
 
-    try {
-      console.log(
-        `[@component:RecHostPreview] Attempting to take control of device: ${host.host_name}`,
-      );
-
-      const result = await takeControl(host.host_name, 'rec-preview-session');
-
-      if (result.success) {
-        console.log(
-          `[@component:RecHostPreview] Successfully took control, opening stream modal for: ${host.host_name}`,
-        );
-        setIsStreamModalOpen(true);
-      } else {
-        console.error(`[@component:RecHostPreview] Failed to take control:`, result);
-
-        // Handle specific error types with appropriate toast duration
-        if (
-          result.errorType === 'stream_service_error' ||
-          result.errorType === 'adb_connection_error'
-        ) {
-          showError(result.error || 'Service error occurred', { duration: 6000 });
-        } else {
-          showError(result.error || 'Failed to take control of device');
-        }
-      }
-    } catch (error: any) {
-      console.error(`[@component:RecHostPreview] Exception during take control:`, error);
-      showError(`Unexpected error: ${error.message || 'Failed to communicate with server'}`);
-    }
-  }, [host, takeControl, showError]);
+    // Just open the modal - let it handle control logic
+    setIsStreamModalOpen(true);
+  }, [host, showError]);
 
   // Handle closing stream modal
   const handleCloseStreamModal = useCallback(() => {
     console.log(`[@component:RecHostPreview] Closing stream modal for host: ${host.host_name}`);
     setIsStreamModalOpen(false);
   }, [host]);
-
-  // Handle fullscreen
-  const handleFullscreen = useCallback(() => {
-    if (onFullscreen) {
-      onFullscreen(host);
-    }
-  }, [onFullscreen, host]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -253,50 +217,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
             </Box>
           )}
 
-          {/* Fullscreen button - only show when there's a screenshot and onFullscreen is provided */}
-          {onFullscreen && screenshotUrl && (
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 4,
-                right: 4,
-              }}
-            >
-              <IconButton
-                size="small"
-                onClick={handleFullscreen}
-                sx={{
-                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                  '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.9)' },
-                }}
-                title="View Fullscreen"
-              >
-                <FullscreenIcon fontSize="small" />
-              </IconButton>
-            </Box>
-          )}
-
-          {/* Click overlay for fullscreen */}
-          {onFullscreen && screenshotUrl && (
-            <Box
-              onClick={handleFullscreen}
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                cursor: 'pointer',
-                backgroundColor: 'transparent',
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                },
-              }}
-            />
-          )}
-
-          {/* Click overlay for stream modal - when no onFullscreen prop */}
-          {!onFullscreen && screenshotUrl && (
+          {/* Click overlay to open stream modal */}
+          {screenshotUrl && (
             <Box
               onClick={handleOpenStreamModal}
               sx={{
@@ -323,7 +245,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         isOpen={isStreamModalOpen}
         onClose={handleCloseStreamModal}
         showRemoteByDefault={false}
-        initialControlActive={true}
+        initialControlActive={false}
       />
     </Card>
   );

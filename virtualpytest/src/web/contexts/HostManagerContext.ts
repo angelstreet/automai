@@ -1,6 +1,6 @@
 import { createContext } from 'react';
 
-import { Host } from '../types/common/Host_Types';
+import { Host, Device } from '../types/common/Host_Types';
 
 // ========================================
 // TYPES
@@ -25,9 +25,9 @@ export interface HostManagerContextType {
   // NEW: Direct data access functions (Phase 1.1)
   getAllHosts: () => Host[];
   getHostsByModel: (models: string[]) => Host[];
-  getAllDevices: () => any[];
-  getDevicesFromHost: (hostName: string) => any[];
-  getDevicesByCapability: (capability: string) => { host: Host; device: any }[];
+  getAllDevices: () => Device[];
+  getDevicesFromHost: (hostName: string) => Device[];
+  getDevicesByCapability: (capability: string) => { host: Host; device: Device }[];
 
   // Device control functions
   takeControl: (

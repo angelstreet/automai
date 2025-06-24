@@ -1,16 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 
+import { Host, Device } from '../../types/common/Host_Types';
 import { useHostManager } from '../useHostManager';
 
 interface UseRecReturn {
-  avDevices: Array<{ host: any; device: any }>;
+  avDevices: Array<{ host: Host; device: Device }>;
   isLoading: boolean;
   error: string | null;
   refreshHosts: () => Promise<void>;
 }
 
 export const useRec = (): UseRecReturn => {
-  const [avDevices, setAvDevices] = useState<Array<{ host: any; device: any }>>([]);
+  const [avDevices, setAvDevices] = useState<Array<{ host: Host; device: Device }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
