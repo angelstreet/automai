@@ -82,6 +82,12 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       return;
     }
 
+    // Check if base URL is available before proceeding
+    const deviceKey = `${host.host_name}-${device.device_id}`;
+    console.log(
+      `[@component:RecHostPreview] Checking base URL availability for device: ${deviceKey}`,
+    );
+
     setIsLoading(true);
     setError(null);
 
@@ -114,6 +120,23 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         console.warn(
           `[@component:RecHostPreview] Base URL not initialized for: ${host.host_name}-${device.device_id}`,
         );
+
+        // If base URL is not available, try to initialize it again
+        if (initializeBaseUrl) {
+          console.log(
+            `[@component:RecHostPreview] Attempting to re-initialize base URL for: ${deviceKey}`,
+          );
+          setTimeout(async () => {
+            const reInitialized = await initializeBaseUrl(host, device);
+            if (reInitialized) {
+              console.log(
+                `[@component:RecHostPreview] Re-initialization successful for: ${deviceKey}`,
+              );
+              // Try taking screenshot again after re-initialization
+              setTimeout(() => handleTakeScreenshot(), 500);
+            }
+          }, 1000);
+        }
       }
     } catch (err: any) {
       console.error(
@@ -124,7 +147,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [host, device, thumbnailUrl, generateThumbnailUrl]);
+  }, [host, device, thumbnailUrl, generateThumbnailUrl, initializeBaseUrl]);
 
   // Initialize base URL once, then auto-generate URLs
   useEffect(() => {
