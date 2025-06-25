@@ -108,6 +108,7 @@ export const HDMIStream = React.memo(
       handleTakeScreenshot: hookTakeScreenshot,
     } = useHdmiStream({
       host,
+      deviceModel: effectiveDeviceModel,
       streamUrl: streamUrl || '', // Handle null by providing empty string fallback
       isStreamActive,
     });

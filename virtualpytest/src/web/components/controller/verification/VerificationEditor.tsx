@@ -103,81 +103,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
 
     if (!isVisible) return null;
 
-    if (!selectedDeviceId) {
-      return (
-        <Box
-          sx={{
-            width: finalLayoutConfig.width,
-            height: finalLayoutConfig.height,
-            p: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            ...sx,
-          }}
-        >
-          <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'error.main' }}>
-            Configuration Error
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'error.main', textAlign: 'center' }}>
-            Device ID is required for the Verification Editor
-          </Typography>
-        </Box>
-      );
-    }
-
-    if (!selectedDevice) {
-      return (
-        <Box
-          sx={{
-            width: finalLayoutConfig.width,
-            height: finalLayoutConfig.height,
-            p: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            ...sx,
-          }}
-        >
-          <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'error.main' }}>
-            Configuration Error
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'error.main', textAlign: 'center' }}>
-            Device "{selectedDeviceId}" not found in host "{selectedHost?.host_name}"
-          </Typography>
-        </Box>
-      );
-    }
-
-    if (!model || model.trim() === '') {
-      return (
-        <Box
-          sx={{
-            width: finalLayoutConfig.width,
-            height: finalLayoutConfig.height,
-            p: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            ...sx,
-          }}
-        >
-          <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'error.main' }}>
-            Configuration Error
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'error.main', textAlign: 'center' }}>
-            Device model is required for the Verification Editor
-          </Typography>
-        </Box>
-      );
-    }
-
     return (
       <Box
         sx={{
@@ -209,7 +134,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
         <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
           Verification Editor
           <Typography component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', ml: 1 }}>
-            ({model}) [{selectedDevice.device_name}]
+            ({model}) [{selectedDevice!.device_name}]
             {!finalLayoutConfig.isMobileModel && (
               <Typography component="span" sx={{ fontSize: '0.7rem' }}>
                 {' '}

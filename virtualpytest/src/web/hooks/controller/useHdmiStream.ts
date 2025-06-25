@@ -5,12 +5,14 @@ import { DragArea, HdmiStreamState, HdmiStreamActions } from '../../types/contro
 
 interface UseHdmiStreamProps {
   host: Host;
+  deviceModel?: string;
   streamUrl?: string;
   isStreamActive?: boolean;
 }
 
 export function useHdmiStream({
   host,
+  deviceModel = 'unknown',
   streamUrl: providedStreamUrl = '',
   isStreamActive: providedIsStreamActive = false,
 }: UseHdmiStreamProps): HdmiStreamState & HdmiStreamActions {
@@ -160,7 +162,7 @@ export function useHdmiStream({
     console.log('[@hook:useHdmiStream] Capture image dimensions:', captureImageDimensions);
     console.log('[@hook:useHdmiStream] Original image dimensions:', originalImageDimensions);
     console.log('[@hook:useHdmiStream] Reference name:', referenceName);
-    console.log('[@hook:useHdmiStream] Model:', host.device_model);
+    console.log('[@hook:useHdmiStream] Model:', deviceModel);
     console.log(
       '[@hook:useHdmiStream] Processing options:',
       referenceType === 'image' ? imageProcessingOptions : undefined,
@@ -184,7 +186,7 @@ export function useHdmiStream({
             area: selectedArea,
             source_path: captureSourcePath,
             reference_name: referenceName,
-            model: host.device_model,
+            model: deviceModel,
             autocrop: imageProcessingOptions.autocrop,
             remove_background: imageProcessingOptions.removeBackground,
           }),
@@ -201,7 +203,7 @@ export function useHdmiStream({
             area: selectedArea,
             source_path: captureSourcePath,
             reference_name: referenceName,
-            model: host.device_model,
+            model: deviceModel,
           }),
         });
       }
@@ -272,8 +274,8 @@ export function useHdmiStream({
   }, [host]);
 
   const handleAutoDetectText = useCallback(async () => {
-    if (!selectedArea || !host.device_model) {
-      console.log('[@hook:useHdmiStream] Cannot auto-detect: missing area or model');
+    if (!selectedArea) {
+      console.log('[@hook:useHdmiStream] Cannot auto-detect: missing area');
       return;
     }
 
@@ -292,7 +294,7 @@ export function useHdmiStream({
         },
         body: JSON.stringify({
           host_name: host.host_name,
-          model: host.device_model,
+          model: deviceModel,
           area: selectedArea,
           source_path: captureSourcePath,
           image_filter: 'none',
@@ -345,7 +347,7 @@ export function useHdmiStream({
     } catch (error) {
       console.error('[@hook:useHdmiStream] Error during text auto-detection:', error);
     }
-  }, [selectedArea, host.device_model, host.host_name, captureSourcePath]);
+  }, [selectedArea, deviceModel, host.host_name, captureSourcePath]);
 
   const validateRegex = useCallback((text: string): boolean => {
     if (!text) return true; // Empty text is valid

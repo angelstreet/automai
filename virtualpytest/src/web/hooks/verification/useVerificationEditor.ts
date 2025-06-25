@@ -426,8 +426,8 @@ export const useVerificationEditor = ({
 
   // Handle auto-detect text
   const handleAutoDetectText = useCallback(async () => {
-    if (!selectedArea || !deviceModel) {
-      console.log('[@hook:useVerificationEditor] Cannot auto-detect: missing area or model');
+    if (!selectedArea) {
+      console.log('[@hook:useVerificationEditor] Cannot auto-detect: missing area');
       return;
     }
 
@@ -515,7 +515,7 @@ export const useVerificationEditor = ({
 
   // Calculate if save is possible
   const canSave = (() => {
-    if (!referenceName.trim() || !selectedArea || !deviceModel || deviceModel.trim() === '') {
+    if (!referenceName.trim() || !selectedArea) {
       return false;
     }
 

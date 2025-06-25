@@ -73,12 +73,14 @@ def take_control():
                 
                 print(f"📡 [CONTROL] Forwarding take-control to host: {host_url}")
                 
-                # For Appium, device_id defaults to 'default' if not provided
-                effective_device_id = device_id if device_id else 'default'
+                # Send device_id as provided, let host handle device ID mapping
+                request_payload = {}
+                if device_id:
+                    request_payload['device_id'] = device_id
                 
                 response = requests.post(
                     host_url,
-                    json={'device_id': effective_device_id},
+                    json=request_payload,
                     timeout=30,
                     verify=False
                 )

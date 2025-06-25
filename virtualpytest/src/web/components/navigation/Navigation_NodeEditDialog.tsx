@@ -41,15 +41,14 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     return null;
   }
 
-  // Early return if selectedHost or model is invalid - MUST be before verification hook
-  if (!selectedHost || !model || model.trim() === '') {
+  // Early return if selectedHost is invalid - MUST be before verification hook
+  if (!selectedHost) {
     return (
       <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle>Edit Node</DialogTitle>
         <DialogContent>
           <Typography color="error">
-            No valid host device selected or device model missing. Please select a host device
-            first.
+            No valid host device selected. Please select a host device first.
           </Typography>
         </DialogContent>
         <DialogActions>
