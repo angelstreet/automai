@@ -175,7 +175,6 @@ class AppiumRemoteController(RemoteControllerInterface):
             capabilities['automationName'] = 'XCUITest'
             capabilities['usePrebuiltWDA'] = True
             capabilities['useNewWDA'] = False
-            capabilities['wdaLocalPort'] = 8100  # Default WDA port
             capabilities['skipLogCapture'] = True
             capabilities['shouldTerminateApp'] = False
             capabilities['shouldUseSingletonTestManager'] = False
