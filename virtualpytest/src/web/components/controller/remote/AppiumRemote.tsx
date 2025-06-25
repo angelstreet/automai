@@ -21,6 +21,8 @@ import { AppiumOverlay } from './AppiumOverlay';
 
 interface AppiumRemoteProps {
   host: Host;
+  deviceId: string;
+  isConnected?: boolean;
   onDisconnectComplete?: () => void;
   sx?: any;
   // Simplified panel state props
@@ -45,48 +47,50 @@ interface AppiumRemoteProps {
 
 export const AppiumRemote = React.memo(
   function AppiumRemote({
-  host,
-  onDisconnectComplete,
+    host,
+    deviceId,
+    isConnected,
+    onDisconnectComplete,
     sx = {},
-  isCollapsed,
-  panelWidth,
-  panelHeight,
-  deviceResolution,
-  streamCollapsed,
+    isCollapsed,
+    panelWidth,
+    panelHeight,
+    deviceResolution,
+    streamCollapsed,
     streamMinimized = false,
     captureMode = 'stream',
     streamContainerDimensions,
   }: AppiumRemoteProps) {
-    const hookResult = useAppiumRemote(host);
+    const hookResult = useAppiumRemote(host, deviceId, isConnected);
 
-  const {
-    // State
-    appiumElements,
-    appiumApps,
-    showOverlay,
-    selectedElement,
-    selectedApp,
-    isDumpingUI,
-    isDisconnecting,
-    isRefreshingApps,
+    const {
+      // State
+      appiumElements,
+      appiumApps,
+      showOverlay,
+      selectedElement,
+      selectedApp,
+      isDumpingUI,
+      isDisconnecting,
+      isRefreshingApps,
 
-    // Actions
-    handleDisconnect,
-    handleOverlayElementClick,
-    handleRemoteCommand,
-    clearElements,
-    handleGetApps,
-    handleDumpUIWithLoading,
+      // Actions
+      handleDisconnect,
+      handleOverlayElementClick,
+      handleRemoteCommand,
+      clearElements,
+      handleGetApps,
+      handleDumpUIWithLoading,
 
-    // Setters
-    setSelectedElement,
-    setSelectedApp,
+      // Setters
+      setSelectedElement,
+      setSelectedApp,
 
-    // Configuration
-    layoutConfig,
+      // Configuration
+      layoutConfig,
 
-    // Session info
-    session,
+      // Session info
+      session,
     } = hookResult;
 
     // Debug logging for elements state
@@ -257,7 +261,7 @@ export const AppiumRemote = React.memo(
       return fullDisplayName;
     };
 
-  return (
+    return (
       <Box
         sx={{ ...sx, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
       >
@@ -330,9 +334,9 @@ export const AppiumRemote = React.memo(
                 </FormControl>
               </Box>
 
-                  <Button
-                    variant="outlined"
-                    size="small"
+              <Button
+                variant="outlined"
+                size="small"
                 onClick={handleGetApps}
                 disabled={!session.connected || isRefreshingApps}
                 fullWidth
@@ -345,14 +349,14 @@ export const AppiumRemote = React.memo(
                 ) : (
                   'Refresh Apps'
                 )}
-                  </Button>
-          </Box>
+              </Button>
+            </Box>
 
             {/* UI Elements Section */}
             <Box sx={{ mb: 1 }}>
               <Typography variant="subtitle2" gutterBottom>
                 UI Elements ({appiumElements.length})
-            </Typography>
+              </Typography>
 
               <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
                 <Button
@@ -506,15 +510,15 @@ export const AppiumRemote = React.memo(
 
               {/* Volume controls */}
               <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
-                  <Button
-                    variant="outlined"
+                <Button
+                  variant="outlined"
                   size="small"
                   onClick={() => handleRemoteCommand('press_key', { key: 'VOLUME_UP' })}
                   disabled={!session.connected}
                   sx={{ flex: 1 }}
                 >
                   Vol+
-                  </Button>
+                </Button>
                 <Button
                   variant="outlined"
                   size="small"
@@ -539,7 +543,7 @@ export const AppiumRemote = React.memo(
                 fullWidth
               >
                 Disconnect
-                </Button>
+              </Button>
             </Box>
           </Box>
         </Box>
@@ -595,9 +599,9 @@ export const AppiumRemote = React.memo(
             <br />
             PanelState: {isCollapsed ? 'collapsed' : 'expanded'}
           </div>
-      )}
-    </Box>
-  );
+        )}
+      </Box>
+    );
   },
   (prevProps, nextProps) => {
     // Custom comparison function to prevent unnecessary re-renders

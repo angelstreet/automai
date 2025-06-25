@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
-import { AppiumElement, AppiumApp, AppiumSession } from '../../types/controller/Remote_Types';
-import { Host } from '../../types/common/Host_Types';
+
 import { appiumRemoteConfig } from '../../config/remote/appiumRemote';
+import { Host } from '../../types/common/Host_Types';
+import { AppiumElement, AppiumApp, AppiumSession } from '../../types/controller/Remote_Types';
 
 interface UseAppiumRemoteReturn {
   // State
@@ -35,7 +36,11 @@ interface UseAppiumRemoteReturn {
   session: AppiumSession;
 }
 
-export const useAppiumRemote = (host: Host): UseAppiumRemoteReturn => {
+export const useAppiumRemote = (
+  host: Host,
+  deviceId?: string,
+  isConnected?: boolean,
+): UseAppiumRemoteReturn => {
   // State management
   const [appiumElements, setAppiumElements] = useState<AppiumElement[]>([]);
   const [appiumApps, setAppiumApps] = useState<AppiumApp[]>([]);
@@ -47,7 +52,7 @@ export const useAppiumRemote = (host: Host): UseAppiumRemoteReturn => {
   const [isRefreshingApps, setIsRefreshingApps] = useState(false);
   const [detectedPlatform, setDetectedPlatform] = useState<string | null>(null);
 
-  // Session state
+  // Session state - now reflects the passed connection status
   const [session, setSession] = useState<AppiumSession>({
     connected: false,
     connectionInfo: '',
@@ -56,137 +61,63 @@ export const useAppiumRemote = (host: Host): UseAppiumRemoteReturn => {
     sessionId: undefined,
   });
 
-  console.log('[@hook:useAppiumRemote] Hook initialized for host:', host?.host_name);
+  console.log(
+    '[@hook:useAppiumRemote] Hook initialized for host:',
+    host?.host_name,
+    'deviceId:',
+    deviceId,
+    'isConnected:',
+    isConnected,
+  );
 
-  // Auto-connect when component mounts
+  // Update session based on external connection status
   useEffect(() => {
-    if (!session.connected && !session.connectionInfo?.includes('connecting')) {
-      handleConnect();
-    }
-  }, [host]);
-
-  const handleConnect = useCallback(async () => {
-    try {
-      console.log('[@hook:useAppiumRemote] Attempting to connect to Appium device');
-
-      setSession((prev) => ({
-        ...prev,
-        connectionInfo: 'Connecting to Appium device...',
-        connected: false,
-      }));
-
-      // Build connection parameters from host configuration
-      const connectionParams = {
-        host: host,
-        device_udid: host.device_udid || '',
-        platform_name: host.platform_name || 'Android',
-        platform_version: host.platform_version || '',
-        appium_url: host.appium_url || 'http://localhost:4723',
-        automation_name: host.automation_name || '',
-        app_package: host.app_package || '',
-        app_activity: host.app_activity || '',
-        bundle_id: host.bundle_id || '',
-      };
-
-      console.log('[@hook:useAppiumRemote] Connection params:', connectionParams);
-
-      // Call server endpoint to establish Appium connection
-      const response = await fetch('/server/control/take-control', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+    if (isConnected) {
+      setSession({
+        connected: true,
+        connectionInfo: 'Connected via external control',
+        deviceInfo: {
+          platform: 'iOS', // Default, can be detected later
+          platformVersion: '',
+          deviceName: host.host_name,
+          udid: '',
+          automationName: '',
         },
-        body: JSON.stringify(connectionParams),
+        appiumConnected: true,
+        sessionId: 'external-session',
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        console.log('[@hook:useAppiumRemote] Successfully connected to Appium device');
-
-        setSession({
-          connected: true,
-          connectionInfo: 'Connected',
-          deviceInfo: {
-            platform: result.platform || connectionParams.platform_name,
-            platformVersion: result.platformVersion || connectionParams.platform_version,
-            deviceName: result.deviceName || host.host_name,
-            udid: result.udid || connectionParams.device_udid,
-            automationName: result.automationName || connectionParams.automation_name,
-          },
-          appiumConnected: true,
-          sessionId: result.sessionId,
-        });
-
-        // Set detected platform
-        setDetectedPlatform(result.platform || connectionParams.platform_name.toLowerCase());
-
-        // Auto-load apps for supported platforms
-        if (
-          ['ios', 'android'].includes(
-            (result.platform || connectionParams.platform_name).toLowerCase(),
-          )
-        ) {
-          await handleGetApps();
-        }
-      } else {
-        console.error('[@hook:useAppiumRemote] Connection failed:', result.error);
-        setSession((prev) => ({
-          ...prev,
-          connectionInfo: `Connection failed: ${result.error}`,
-          connected: false,
-        }));
-      }
-    } catch (error) {
-      console.error('[@hook:useAppiumRemote] Connection error:', error);
-      setSession((prev) => ({
-        ...prev,
-        connectionInfo: `Connection error: ${error}`,
+      // Auto-load apps when connected
+      handleGetApps();
+    } else {
+      setSession({
         connected: false,
-      }));
+        connectionInfo: '',
+        deviceInfo: undefined,
+        appiumConnected: false,
+        sessionId: undefined,
+      });
+
+      // Clear state when disconnected
+      setAppiumElements([]);
+      setAppiumApps([]);
+      setSelectedElement('');
+      setSelectedApp('');
+      setDetectedPlatform(null);
     }
-  }, [host]);
+  }, [isConnected, host]);
 
   const handleDisconnect = useCallback(async () => {
-    try {
-      console.log('[@hook:useAppiumRemote] Disconnecting from Appium device');
-      setIsDisconnecting(true);
-
-      const response = await fetch('/server/control/release-control', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ host: host }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        console.log('[@hook:useAppiumRemote] Successfully disconnected');
-        setSession({
-          connected: false,
-          connectionInfo: '',
-          deviceInfo: undefined,
-          appiumConnected: false,
-          sessionId: undefined,
-        });
-
-        // Clear state
-        setAppiumElements([]);
-        setAppiumApps([]);
-        setSelectedElement('');
-        setSelectedApp('');
-        setDetectedPlatform(null);
-      } else {
-        console.error('[@hook:useAppiumRemote] Disconnect failed:', result.error);
-      }
-    } catch (error) {
-      console.error('[@hook:useAppiumRemote] Disconnect error:', error);
-    } finally {
-      setIsDisconnecting(false);
-    }
-  }, [host]);
+    console.log(
+      '[@hook:useAppiumRemote] Remote disconnect requested - this should be handled by parent component',
+    );
+    // Don't actually disconnect here - let the parent component handle it
+    // Just clear local state
+    setAppiumElements([]);
+    setAppiumApps([]);
+    setSelectedElement('');
+    setSelectedApp('');
+  }, []);
 
   const handleRemoteCommand = useCallback(
     async (command: string, params: any = {}) => {
@@ -198,16 +129,22 @@ export const useAppiumRemote = (host: Host): UseAppiumRemoteReturn => {
       try {
         console.log(`[@hook:useAppiumRemote] Executing command: ${command}`, params);
 
+        const requestBody: any = {
+          host: host,
+          command: command,
+          params: params,
+        };
+
+        if (deviceId) {
+          requestBody.device_id = deviceId;
+        }
+
         const response = await fetch('/server/remote/execute-command', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            host: host,
-            command: command,
-            params: params,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         const result = await response.json();
@@ -221,7 +158,7 @@ export const useAppiumRemote = (host: Host): UseAppiumRemoteReturn => {
         console.error(`[@hook:useAppiumRemote] Command ${command} error:`, error);
       }
     },
-    [host, session.connected],
+    [host, deviceId, session.connected],
   );
 
   const handleDumpUIWithLoading = useCallback(async () => {
@@ -234,12 +171,20 @@ export const useAppiumRemote = (host: Host): UseAppiumRemoteReturn => {
       console.log('[@hook:useAppiumRemote] Dumping UI elements with loading state');
       setIsDumpingUI(true);
 
+      const requestBody: any = {
+        host: host,
+      };
+
+      if (deviceId) {
+        requestBody.device_id = deviceId;
+      }
+
       const response = await fetch('/server/remote/screenshot-and-dump', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ host: host }),
+        body: JSON.stringify(requestBody),
       });
 
       const result = await response.json();
@@ -260,7 +205,7 @@ export const useAppiumRemote = (host: Host): UseAppiumRemoteReturn => {
     } finally {
       setIsDumpingUI(false);
     }
-  }, [host, session.connected]);
+  }, [host, deviceId, session.connected]);
 
   const handleGetApps = useCallback(async () => {
     if (!session.connected) {
@@ -311,18 +256,24 @@ export const useAppiumRemote = (host: Host): UseAppiumRemoteReturn => {
       try {
         console.log(`[@hook:useAppiumRemote] Clicking overlay element: ${element.id}`);
 
+        const requestBody: any = {
+          host: host,
+          command: 'click_element',
+          params: {
+            element_id: element.id,
+          },
+        };
+
+        if (deviceId) {
+          requestBody.device_id = deviceId;
+        }
+
         const response = await fetch('/server/remote/execute-command', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            host_name: host.host_name,
-            command: 'click_element',
-            params: {
-              element_id: element.id,
-            },
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         const result = await response.json();
@@ -340,7 +291,7 @@ export const useAppiumRemote = (host: Host): UseAppiumRemoteReturn => {
         console.error('[@hook:useAppiumRemote] Element click error:', error);
       }
     },
-    [host, session.connected, handleDumpUIWithLoading],
+    [host, deviceId, session.connected, handleDumpUIWithLoading],
   );
 
   const clearElements = useCallback(() => {

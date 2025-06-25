@@ -6,6 +6,8 @@ import { Host } from '../../../types/common/Host_Types';
 
 interface AndroidTvRemoteProps {
   host: Host;
+  deviceId?: string;
+  isConnected?: boolean;
   onDisconnectComplete?: () => void;
   sx?: any;
   isCollapsed: boolean;
@@ -16,6 +18,8 @@ interface AndroidTvRemoteProps {
 export const AndroidTvRemote = React.memo(
   function AndroidTvRemote({
     host,
+    deviceId,
+    isConnected,
     onDisconnectComplete,
     sx = {},
     isCollapsed,
@@ -29,7 +33,7 @@ export const AndroidTvRemote = React.memo(
       handleConnect,
       handleDisconnect,
       handleRemoteCommand,
-    } = useAndroidTv(host);
+    } = useAndroidTv(host, deviceId, isConnected);
 
     const [showOverlays, setShowOverlays] = useState(!isCollapsed);
 
@@ -37,13 +41,6 @@ export const AndroidTvRemote = React.memo(
     useEffect(() => {
       setShowOverlays(!isCollapsed);
     }, [isCollapsed]);
-
-    // Auto-connect when component mounts
-    useEffect(() => {
-      if (!session.connected && !session.connecting) {
-        handleConnect();
-      }
-    }, [session.connected, session.connecting, handleConnect]);
 
     const handleDisconnectWithCallback = async () => {
       await handleDisconnect();
@@ -293,8 +290,8 @@ export const AndroidTvRemote = React.memo(
     // Memoization to prevent unnecessary re-renders
     return (
       prevProps.host?.host_name === nextProps.host?.host_name &&
-      prevProps.host?.device_model === nextProps.host?.device_model &&
-      prevProps.host?.device_ip === nextProps.host?.device_ip &&
+      prevProps.deviceId === nextProps.deviceId &&
+      prevProps.isConnected === nextProps.isConnected &&
       prevProps.onDisconnectComplete === nextProps.onDisconnectComplete &&
       JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx) &&
       prevProps.isCollapsed === nextProps.isCollapsed &&

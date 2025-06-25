@@ -18,6 +18,7 @@ interface RemotePanelProps {
   host: Host;
   deviceId: string; // Device ID to select the correct device and controllers
   deviceModel: string; // Device model for remote config loading
+  isConnected?: boolean; // NEW: Connection status from parent
   onReleaseControl?: () => void;
   initialCollapsed?: boolean;
   // Device resolution for overlay scaling
@@ -42,6 +43,7 @@ export const RemotePanel = React.memo(
     host,
     deviceId,
     deviceModel,
+    isConnected,
     onReleaseControl,
     initialCollapsed = true,
     deviceResolution,
@@ -168,6 +170,7 @@ export const RemotePanel = React.memo(
             <AndroidMobileRemote
               host={host}
               deviceId={deviceId}
+              isConnected={isConnected}
               onDisconnectComplete={onReleaseControl}
               isCollapsed={isCollapsed}
               panelWidth={currentWidth}
@@ -189,6 +192,8 @@ export const RemotePanel = React.memo(
           return (
             <AndroidTvRemote
               host={host}
+              deviceId={deviceId}
+              isConnected={isConnected}
               onDisconnectComplete={onReleaseControl}
               isCollapsed={isCollapsed}
               panelWidth={currentWidth}
@@ -237,6 +242,7 @@ export const RemotePanel = React.memo(
           return (
             <AppiumRemote
               host={host}
+              deviceId={deviceId}
               onDisconnectComplete={onReleaseControl}
               isCollapsed={isCollapsed}
               panelWidth={currentWidth}
@@ -245,6 +251,7 @@ export const RemotePanel = React.memo(
               streamCollapsed={streamCollapsed}
               streamMinimized={streamMinimized}
               captureMode={captureMode}
+              isConnected={isConnected}
               sx={{
                 height: '100%',
                 '& .MuiButton-root': {
@@ -283,6 +290,7 @@ export const RemotePanel = React.memo(
       streamMinimized,
       captureMode,
       stableStreamContainerDimensions,
+      isConnected,
     ]);
 
     return (

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import { androidTvRemoteConfig } from '../../config/remote/androidTvRemote';
 import { Host } from '../../types/common/Host_Types';
@@ -19,7 +19,11 @@ interface UseAndroidTvReturn {
   handleRemoteCommand: (command: string, params?: any) => Promise<void>;
 }
 
-export const useAndroidTv = (host: Host): UseAndroidTvReturn => {
+export const useAndroidTv = (
+  host: Host,
+  deviceId?: string,
+  isConnected?: boolean,
+): UseAndroidTvReturn => {
   const [session, setSession] = useState<AndroidTvSession>({
     connected: false,
     connecting: false,
@@ -28,47 +32,44 @@ export const useAndroidTv = (host: Host): UseAndroidTvReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [lastAction, setLastAction] = useState('');
 
-  const handleConnect = useCallback(async () => {
-    setSession((prev) => ({ ...prev, connecting: true, error: null }));
-    setLastAction('Connecting to Android TV...');
-
-    try {
-      // Use existing host connection - assume it's already established
-      // when the component is loaded
+  // Update session based on external connection status
+  useEffect(() => {
+    if (isConnected) {
       setSession({
         connected: true,
         connecting: false,
         error: null,
       });
-      setLastAction('Connected to Android TV');
-      console.log(`[@hook:useAndroidTv] Connected to Android TV: ${host.host_name}`);
-    } catch (error: any) {
-      const errorMessage = error.message || 'Failed to connect to Android TV';
-      setSession({
-        connected: false,
-        connecting: false,
-        error: errorMessage,
-      });
-      setLastAction(`Error: ${errorMessage}`);
-      console.error(`[@hook:useAndroidTv] Connection failed:`, error);
-    }
-  }, [host]);
-
-  const handleDisconnect = useCallback(async () => {
-    setLastAction('Disconnecting...');
-
-    try {
+      setLastAction('Connected via external control');
+      console.log(
+        `[@hook:useAndroidTv] Connected via external control: ${host.host_name}, deviceId: ${deviceId}`,
+      );
+    } else {
       setSession({
         connected: false,
         connecting: false,
         error: null,
       });
-      setLastAction('Disconnected');
-      console.log(`[@hook:useAndroidTv] Disconnected from Android TV: ${host.host_name}`);
-    } catch (error: any) {
-      console.error(`[@hook:useAndroidTv] Disconnect error:`, error);
+      setLastAction('');
+      console.log(`[@hook:useAndroidTv] Disconnected: ${host.host_name}, deviceId: ${deviceId}`);
     }
-  }, [host]);
+  }, [isConnected, host, deviceId]);
+
+  // Remove the old handleConnect - no longer needed for passive mode
+  const handleConnect = useCallback(async () => {
+    console.log(
+      '[@hook:useAndroidTv] Connect requested - this should be handled by parent component',
+    );
+    // Legacy function kept for compatibility but does nothing in passive mode
+  }, []);
+
+  const handleDisconnect = useCallback(async () => {
+    console.log(
+      '[@hook:useAndroidTv] Disconnect requested - this should be handled by parent component',
+    );
+    // Don't actually disconnect here - let the parent component handle it
+    setLastAction('Disconnect requested');
+  }, []);
 
   const handleRemoteCommand = useCallback(
     async (command: string, _params?: any) => {
@@ -100,16 +101,23 @@ export const useAndroidTv = (host: Host): UseAndroidTvReturn => {
         const adbKey = keyMap[command] || command;
 
         // Use the same routing pattern as Android Mobile remote
+        const requestBody: any = {
+          host: host,
+          command: 'press_key',
+          params: { key: adbKey },
+        };
+
+        // Add deviceId if provided
+        if (deviceId) {
+          requestBody.device_id = deviceId;
+        }
+
         const response = await fetch('/server/remote/execute-command', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            host: host,
-            command: 'press_key',
-            params: { key: adbKey },
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         if (response.ok) {
@@ -133,7 +141,7 @@ export const useAndroidTv = (host: Host): UseAndroidTvReturn => {
         setIsLoading(false);
       }
     },
-    [session.connected, isLoading, host],
+    [session.connected, isLoading, host, deviceId],
   );
 
   return {

@@ -22,6 +22,7 @@ import { AndroidMobileOverlay } from './AndroidMobileOverlay';
 interface AndroidMobileRemoteProps {
   host: Host;
   deviceId: string; // Device ID to select the correct device and make API calls
+  isConnected?: boolean; // NEW: Connection status from parent (for consistency with AppiumRemote)
   onDisconnectComplete?: () => void;
   sx?: any;
   // Simplified panel state props
@@ -48,6 +49,7 @@ export const AndroidMobileRemote = React.memo(
   function AndroidMobileRemote({
     host,
     deviceId,
+    isConnected,
     onDisconnectComplete,
     sx = {},
     isCollapsed,
