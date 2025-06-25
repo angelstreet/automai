@@ -594,67 +594,38 @@ class AppiumRemoteController(RemoteControllerInterface):
             return False, "", error_msg
         
     def get_status(self) -> Dict[str, Any]:
-        """Get controller status - check Appium device connectivity."""
+        """Get controller status by checking Appium server connectivity via curl."""
         try:
-            # Basic status info
-            base_status = {
-                'success': True,
-                'controller_type': self.controller_type,
-                'device_type': self.device_type,
-                'device_name': self.device_name,
-                'device_id': self.device_id,
-                'platform_name': self.platform_name,
-                'detected_platform': self.detected_platform,
-                'appium_url': self.appium_server_url,
-                'connected': self.is_connected
-            }
+            # Simple curl check to Appium server status endpoint
+            import subprocess
+            import json
             
-            # Check Appium server connectivity
-            if self.appium_utils:
-                server_running = self.appium_utils.is_appium_server_running(self.appium_server_url)
-                base_status.update({
-                    'appium_server_running': server_running,
-                    'appium_status': 'server_running' if server_running else 'server_not_running',
-                    'message': f'Appium server is {"running" if server_running else "not running"} at {self.appium_server_url}'
-                })
-                
-                if self.is_connected:
-                    driver = self.appium_utils.get_driver(self.device_id)
-                    if driver:
-                        base_status.update({
-                            'driver_status': 'active',
-                            'session_id': getattr(driver, 'session_id', 'unknown'),
-                            'message': f'{self.platform_name} device {self.device_id} is connected and ready'
-                        })
-                    else:
-                        base_status.update({
-                            'driver_status': 'missing',
-                            'message': f'Connected but no driver found for device {self.device_id}'
-                        })
+            # Check if Appium server is reachable via curl (like AndroidMobile does for ADB)
+            curl_result = subprocess.run(
+                ['curl', '-s', '--connect-timeout', '5', '--max-time', '10', f'{self.appium_server_url}/status'], 
+                capture_output=True, 
+                text=True
+            )
+            
+            if curl_result.returncode != 0:
+                return {'success': False, 'error': f'Appium server not reachable at {self.appium_server_url}'}
+            
+            # Try to parse response as JSON
+            try:
+                response_data = json.loads(curl_result.stdout)
+                if response_data.get('value', {}).get('ready'):
+                    return {'success': True}
                 else:
-                    base_status.update({
-                        'driver_status': 'disconnected',
-                        'message': f'Device {self.device_id} is not connected'
-                    })
-            else:
-                base_status.update({
-                    'appium_server_running': False,
-                    'appium_status': 'not_initialized',
-                    'driver_status': 'not_initialized',
-                    'message': 'Appium utils not initialized'
-                })
-            
-            return base_status
+                    return {'success': False, 'error': 'Appium server not ready'}
+            except json.JSONDecodeError:
+                # If not JSON, check if we got any response
+                if curl_result.stdout.strip():
+                    return {'success': True}  # Server responded, assume it's working
+                else:
+                    return {'success': False, 'error': 'Empty response from Appium server'}
             
         except Exception as e:
-            return {
-                'success': False,
-                'controller_type': self.controller_type,
-                'device_name': self.device_name,
-                'appium_status': 'error',
-                'driver_status': 'error',
-                'error': f'Failed to check Appium device status: {str(e)}'
-            }
+            return {'success': False, 'error': f'Failed to check Appium server status: {str(e)}'}
 
     def tap_coordinates(self, x: int, y: int) -> bool:
         """

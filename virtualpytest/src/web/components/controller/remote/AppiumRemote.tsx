@@ -525,7 +525,7 @@ export const AppiumRemote = React.memo(
                   Vol-
                 </Button>
                 {/* Empty third button for symmetry */}
-                <Box sx={{ flex: 1 }} />
+                <Box sx={{ flex: 1 }}></Box>
               </Box>
             </Box>
 

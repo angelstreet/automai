@@ -23,18 +23,11 @@ def take_control():
     """Host-side take control - Check controllers for the requested device"""
     try:
         data = request.get_json() or {}
-        device_id = data.get('device_id')  # Required device_id
+        device_id = data.get('device_id', 'default')  # Default device_id if not provided
         
         print(f"[@route:take_control] Host checking controllers for device: {device_id}")
         
-        if not device_id:
-            return jsonify({
-                'success': False,
-                'error': 'device_id is required'
-            })
-        
         # Step 1: Check AV controller (optional)
-        av_status = None
         av_available = False
         try:
             av_controller = get_controller(device_id, 'av')
@@ -43,44 +36,42 @@ def take_control():
                 print(f"[@route:take_control] Using AV controller: {type(av_controller).__name__}")
                 av_status = av_controller.get_status()
                 print(f"[@route:take_control] AV controller status: {av_status}")
-                av_available = True
+                av_available = av_status.get('success', False)
             else:
                 print(f"[@route:take_control] No AV controller found for device {device_id} - continuing without AV")
             
         except Exception as e:
             print(f"[@route:take_control] AV controller error (continuing without AV): {e}")
         
-        # Step 2: Check and connect remote controller (optional)
-        remote_status = None
+        # Step 2: Check remote controller (optional) - simplified for Appium
         remote_available = False
         try:
             remote_controller = get_controller(device_id, 'remote')
             
             if remote_controller:
-                print(f"[@route:take_control] Using remote controller: {type(remote_controller).__name__}")
+                controller_type = type(remote_controller).__name__
+                print(f"[@route:take_control] Using remote controller: {controller_type}")
                 
-                # Connect the remote controller to the actual device
-                if not remote_controller.is_connected:
-                    print(f"[@route:take_control] Connecting remote controller to device...")
-                    connection_success = remote_controller.connect()
-                    if not connection_success:
-                        print(f"[@route:take_control] Failed to connect remote controller - continuing without remote")
-                    else:
-                        print(f"[@route:take_control] Remote controller connected successfully")
-                        remote_available = True
-                else:
-                    print(f"[@route:take_control] Remote controller already connected")
-                    remote_available = True
-                
-                if remote_available:
+                # For AppiumRemoteController, just check status without connecting
+                if controller_type == 'AppiumRemoteController':
+                    print(f"[@route:take_control] Appium controller - checking server status only")
                     remote_status = remote_controller.get_status()
-                    print(f"[@route:take_control] Remote controller status: {remote_status}")
+                    remote_available = remote_status.get('success', False)
+                    print(f"[@route:take_control] Appium server status: {remote_status}")
+                else:
+                    # For other controllers (AndroidMobile, etc.), connect as before
+                    if not remote_controller.is_connected:
+                        print(f"[@route:take_control] Connecting remote controller to device...")
+                        connection_success = remote_controller.connect()
+                        remote_available = connection_success
+                    else:
+                        print(f"[@route:take_control] Remote controller already connected")
+                        remote_available = True
                     
-                    # Check if remote controller status indicates failure
-                    if not remote_status.get('success', False):
-                        error_msg = remote_status.get('error', 'Remote controller status check failed')
-                        print(f"[@route:take_control] Remote controller status failed - continuing without remote: {error_msg}")
-                        remote_available = False
+                    if remote_available:
+                        remote_status = remote_controller.get_status()
+                        print(f"[@route:take_control] Remote controller status: {remote_status}")
+                        remote_available = remote_status.get('success', False)
             else:
                 print(f"[@route:take_control] No remote controller found for device {device_id} - continuing without remote")
                     
@@ -94,7 +85,7 @@ def take_control():
                 'error': f'No working controllers found for device {device_id}. Need at least AV or remote controller.'
             })
         
-        # Controllers are ready
+        # Controllers are ready - simple response
         available_controllers = []
         if av_available:
             available_controllers.append('av')
@@ -104,9 +95,7 @@ def take_control():
         print(f"[@route:take_control] SUCCESS: Take control succeeded for device: {device_id} with controllers: {available_controllers}")
         return jsonify({
             'success': True,
-            'available_controllers': available_controllers,
-            'av_available': av_available,
-            'remote_available': remote_available
+            'available_controllers': available_controllers
         })
             
     except Exception as e:

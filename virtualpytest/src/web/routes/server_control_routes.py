@@ -66,19 +66,22 @@ def take_control():
         success = lock_device(host_name, session_id)
         
         if success:
-            # Forward take-control request to the specific host with device_id
-            try:
-                host_endpoint = '/host/take-control'
-                host_url = buildHostUrl(host_data, host_endpoint)
-                
-                print(f"📡 [CONTROL] Forwarding take-control to host: {host_url}")
-                
-                response = requests.post(
-                    host_url,
-                    json={'device_id': device_id},
-                    timeout=30,
-                    verify=False
-                )
+                    # Forward take-control request to the specific host with device_id
+        try:
+            host_endpoint = '/host/take-control'
+            host_url = buildHostUrl(host_data, host_endpoint)
+            
+            print(f"📡 [CONTROL] Forwarding take-control to host: {host_url}")
+            
+            # For Appium, device_id defaults to 'default' if not provided
+            effective_device_id = device_id if device_id else 'default'
+            
+            response = requests.post(
+                host_url,
+                json={'device_id': effective_device_id},
+                timeout=30,
+                verify=False
+            )
                 
                 if response.status_code == 200:
                     result = response.json()
