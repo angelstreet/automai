@@ -45,69 +45,42 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   const getImageUrl = useCallback((screenshotPath: string) => {
     if (!screenshotPath) return '';
 
-    console.log(`[@component:RecHostPreview] Processing thumbnail path: ${screenshotPath}`);
-
     // Handle data URLs (base64 from remote system) - return as is
     if (screenshotPath.startsWith('data:')) {
-      console.log('[@component:RecHostPreview] Using data URL from remote system');
       return screenshotPath;
     }
 
     // Handle HTTPS URLs - return as is (no proxy needed)
     if (screenshotPath.startsWith('https:')) {
-      console.log('[@component:RecHostPreview] Using HTTPS URL directly');
       return screenshotPath;
     }
 
     // Handle HTTP URLs - use proxy to convert to HTTPS
     if (screenshotPath.startsWith('http:')) {
-      console.log('[@component:RecHostPreview] HTTP thumbnail URL detected, using proxy');
       const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(screenshotPath)}`;
-      console.log(`[@component:RecHostPreview] Generated proxy URL for thumbnail: ${proxyUrl}`);
-      console.log(`[@component:RecHostPreview] Original thumbnail URL: ${screenshotPath}`);
       return proxyUrl;
     }
 
     // For relative paths or other formats, use directly (assuming they are accessible)
-    console.log('[@component:RecHostPreview] Using path directly');
     return screenshotPath;
   }, []);
 
   // Optimized approach - just generate URL with current timestamp (no server calls after init)
   const handleTakeScreenshot = useCallback(async () => {
     if (!generateThumbnailUrl || !device) {
-      console.warn(
-        `[@component:RecHostPreview] Missing required functions or device for ${host.host_name}-${device?.device_id}`,
-      );
       return;
     }
-
-    // Check if base URL is available before proceeding
-    const deviceKey = `${host.host_name}-${device.device_id}`;
-    console.log(
-      `[@component:RecHostPreview] Checking base URL availability for device: ${deviceKey}`,
-    );
 
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log(
-        `[@component:RecHostPreview] Generating thumbnail URL for device: ${host.host_name}-${device.device_id}`,
-      );
-
       // Generate thumbnail URL directly with current timestamp (no server call)
       const newThumbnailUrl = generateThumbnailUrl(host, device);
 
       if (newThumbnailUrl) {
-        console.log(`[@component:RecHostPreview] Generated thumbnail URL: ${newThumbnailUrl}`);
-
         // Add 1 second delay to ensure thumbnail is properly generated and available
         setTimeout(() => {
-          console.log(
-            `[@component:RecHostPreview] Setting thumbnail URL after delay: ${newThumbnailUrl}`,
-          );
-
           // Smooth transition: store previous URL and set new one
           if (thumbnailUrl && thumbnailUrl !== newThumbnailUrl) {
             setPreviousThumbnailUrl(thumbnailUrl);
@@ -117,21 +90,12 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         }, 1000); // 1 second delay to ensure server has generated the thumbnail
       } else {
         setError('Base URL not initialized');
-        console.warn(
-          `[@component:RecHostPreview] Base URL not initialized for: ${host.host_name}-${device.device_id}`,
-        );
 
         // If base URL is not available, try to initialize it again
         if (initializeBaseUrl) {
-          console.log(
-            `[@component:RecHostPreview] Attempting to re-initialize base URL for: ${deviceKey}`,
-          );
           setTimeout(async () => {
             const reInitialized = await initializeBaseUrl(host, device);
             if (reInitialized) {
-              console.log(
-                `[@component:RecHostPreview] Re-initialization successful for: ${deviceKey}`,
-              );
               // Try taking screenshot again after re-initialization
               setTimeout(() => handleTakeScreenshot(), 500);
             }
@@ -159,69 +123,37 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     const initializeAndStartUpdates = async () => {
       // Early return if component was unmounted during async operation
       if (!isMounted) {
-        console.log(
-          `[@component:RecHostPreview] Component unmounted, skipping initialization for: ${host.host_name}-${device.device_id}`,
-        );
         return;
       }
 
-      console.log(
-        `[@component:RecHostPreview] Initializing base URL for: ${host.host_name}-${device.device_id}`,
-      );
-
       try {
         // Initialize base URL pattern (only called once)
-        console.log(
-          `[@component:RecHostPreview] Calling initializeBaseUrl for: ${host.host_name}-${device.device_id}`,
-        );
         const initialized = await initializeBaseUrl(host, device);
-        console.log(
-          `[@component:RecHostPreview] initializeBaseUrl returned: ${initialized} for: ${host.host_name}-${device.device_id}`,
-        );
 
         // Check if still mounted after async operation
         if (!isMounted) {
-          console.log(
-            `[@component:RecHostPreview] Component unmounted during initialization for: ${host.host_name}-${device.device_id}`,
-          );
           return;
         }
 
         if (initialized) {
-          console.log(
-            `[@component:RecHostPreview] Base URL initialized successfully, starting thumbnail updates for: ${host.host_name}-${device.device_id}`,
-          );
-
           // Wait a moment for state to settle, then take initial screenshot
           setTimeout(() => {
             if (!isMounted) return; // Check mount status before proceeding
 
-            console.log(
-              `[@component:RecHostPreview] Taking initial screenshot for: ${host.host_name}-${device.device_id}`,
-            );
             handleTakeScreenshot();
 
             // Set up interval AFTER first screenshot is taken and base URL is confirmed to work
             setTimeout(() => {
               if (!isMounted) return; // Check mount status before starting interval
 
-              console.log(
-                `[@component:RecHostPreview] Starting interval for: ${host.host_name}-${device.device_id}`,
-              );
               screenshotInterval = setInterval(() => {
                 if (isMounted && host && device && host.status === 'online') {
-                  console.log(
-                    `[@component:RecHostPreview] Interval update for: ${host.host_name}-${device.device_id}`,
-                  );
                   handleTakeScreenshot();
                 }
               }, 5000); // 5 seconds for debugging
             }, 1500); // Wait 1.5 seconds after first screenshot before starting interval
           }, 500);
         } else {
-          console.error(
-            `[@component:RecHostPreview] Failed to initialize base URL for: ${host.host_name}-${device.device_id}`,
-          );
           if (isMounted) {
             setError('Failed to initialize base URL');
           }
@@ -241,9 +173,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
     // Cleanup function
     return () => {
-      console.log(
-        `[@component:RecHostPreview] Cleaning up for: ${host.host_name}-${device?.device_id}`,
-      );
       isMounted = false; // Mark as unmounted
       if (screenshotInterval) {
         clearInterval(screenshotInterval);
@@ -254,11 +183,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
   // Handle opening stream modal - control will be handled by the modal itself
   const handleOpenStreamModal = useCallback(() => {
-    console.log(`[@component:RecHostPreview] Opening stream modal for host: ${host.host_name}`);
-
     // Basic check if host is online
     if (host.status !== 'online') {
-      console.warn(`[@component:RecHostPreview] Cannot open modal - host status: ${host.status}`);
       showError('Host is not online');
       return;
     }
@@ -269,9 +195,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
   // Handle closing stream modal
   const handleCloseStreamModal = useCallback(() => {
-    console.log(`[@component:RecHostPreview] Closing stream modal for host: ${host.host_name}`);
     setIsStreamModalOpen(false);
-  }, [host]);
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -284,20 +209,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     }
   };
 
-  // Clean display values with better logging
+  // Clean display values
   const displayName = device ? `${host.host_name}` : host.host_name;
-
-  // Debug log device data
-  useEffect(() => {
-    if (device) {
-      console.log(`[@component:RecHostPreview] Device data for ${host.host_name}:`, {
-        device_name: device.device_name,
-        device_model: device.device_model,
-        device_id: device.device_id,
-        device_capabilities: device.device_capabilities,
-      });
-    }
-  }, [host.host_name, device]);
 
   return (
     <Card

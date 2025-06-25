@@ -48,10 +48,6 @@ export const useRec = (): UseRecReturn => {
         baseUrlPatternsRef.current.has(deviceKey) ||
         baseUrlPatterns.has(deviceKey)
       ) {
-        console.log(
-          `[@hook:useRec] Base URL already exists for ${deviceKey} (global: ${globalBaseUrlPatterns.has(deviceKey)}, ref: ${baseUrlPatternsRef.current.has(deviceKey)}, state: ${baseUrlPatterns.has(deviceKey)})`,
-        );
-
         // Sync global to local if needed
         if (globalBaseUrlPatterns.has(deviceKey) && !baseUrlPatterns.has(deviceKey)) {
           const pattern = globalBaseUrlPatterns.get(deviceKey)!;
@@ -67,8 +63,6 @@ export const useRec = (): UseRecReturn => {
       }
 
       try {
-        console.log(`[@hook:useRec] Initializing base URL for device: ${deviceKey}`);
-
         const response = await fetch('/server/av/take-screenshot', {
           method: 'POST',
           headers: {
@@ -83,16 +77,11 @@ export const useRec = (): UseRecReturn => {
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.screenshot_url) {
-            console.log(
-              `[@hook:useRec] Initial screenshot taken for ${deviceKey}: ${result.screenshot_url}`,
-            );
-
             // Extract base pattern: remove timestamp and .jpg, keep _thumbnail
             const basePattern = result.screenshot_url.replace(
               /\d{14}_thumbnail\.jpg$/,
               '{timestamp}_thumbnail.jpg',
             );
-            console.log(`[@hook:useRec] Storing base URL pattern for ${deviceKey}: ${basePattern}`);
 
             // Update global state, ref (persistent), and local state (reactive)
             globalBaseUrlPatterns.set(deviceKey, basePattern);
@@ -100,7 +89,6 @@ export const useRec = (): UseRecReturn => {
             setBaseUrlPatterns((prev) => {
               const newMap = new Map(prev);
               newMap.set(deviceKey, basePattern);
-              console.log(`[@hook:useRec] Base URL pattern stored successfully for ${deviceKey}`);
               return newMap;
             });
 
@@ -129,32 +117,8 @@ export const useRec = (): UseRecReturn => {
         baseUrlPatternsRef.current.get(deviceKey) ||
         baseUrlPatterns.get(deviceKey);
 
-      // Debug: show all available patterns
-      console.log(
-        `[@hook:useRec] Available base URL patterns (global):`,
-        Array.from(globalBaseUrlPatterns.keys()),
-      );
-      console.log(
-        `[@hook:useRec] Available base URL patterns (ref):`,
-        Array.from(baseUrlPatternsRef.current.keys()),
-      );
-      console.log(
-        `[@hook:useRec] Available base URL patterns (state):`,
-        Array.from(baseUrlPatterns.keys()),
-      );
-      console.log(`[@hook:useRec] Looking for pattern for device: ${deviceKey}`);
-
       if (!basePattern) {
         console.warn(`[@hook:useRec] No base URL pattern found for device: ${deviceKey}`);
-        console.warn(
-          `[@hook:useRec] Available patterns (global): ${Array.from(globalBaseUrlPatterns.keys()).join(', ')}`,
-        );
-        console.warn(
-          `[@hook:useRec] Available patterns (ref): ${Array.from(baseUrlPatternsRef.current.keys()).join(', ')}`,
-        );
-        console.warn(
-          `[@hook:useRec] Available patterns (state): ${Array.from(baseUrlPatterns.keys()).join(', ')}`,
-        );
         return null;
       }
 
@@ -169,7 +133,6 @@ export const useRec = (): UseRecReturn => {
         now.getSeconds().toString().padStart(2, '0');
 
       const thumbnailUrl = basePattern.replace('{timestamp}', timestamp);
-      console.log(`[@hook:useRec] Generated thumbnail URL for ${deviceKey}: ${thumbnailUrl}`);
       return thumbnailUrl;
     },
     [baseUrlPatterns],
@@ -181,7 +144,6 @@ export const useRec = (): UseRecReturn => {
       (globalBaseUrlPatterns.size > 0 || baseUrlPatternsRef.current.size > 0) &&
       baseUrlPatterns.size === 0
     ) {
-      console.log('[@hook:useRec] Syncing global/ref patterns to state after remount');
       const mergedPatterns = new Map([...globalBaseUrlPatterns, ...baseUrlPatternsRef.current]);
       setBaseUrlPatterns(mergedPatterns);
       // Also sync to ref if global has more recent data
@@ -195,17 +157,14 @@ export const useRec = (): UseRecReturn => {
   const refreshHosts = useCallback(async (): Promise<void> => {
     // Don't fetch if HostManager is still loading
     if (isHostManagerLoading) {
-      console.log('[@hook:useRec] HostManager still loading, skipping refresh');
       return;
     }
 
-    console.log('[@hook:useRec] Refreshing AV devices');
     setIsLoading(true);
     setError(null);
 
     try {
       const devices = getDevicesByCapability('av');
-      console.log(`[@hook:useRec] Found ${devices.length} AV-capable devices`);
       setAvDevices(devices);
     } catch (error) {
       console.error('[@hook:useRec] Error refreshing devices:', error);
@@ -218,21 +177,17 @@ export const useRec = (): UseRecReturn => {
   // Trigger refresh when HostManager finishes loading
   useEffect(() => {
     if (!isHostManagerLoading) {
-      console.log('[@hook:useRec] HostManager ready, refreshing AV devices');
       refreshHosts();
     }
   }, [isHostManagerLoading, refreshHosts]);
 
   // Initialize on mount and set up auto-refresh
   useEffect(() => {
-    console.log('[@hook:useRec] Initializing useRec hook');
-
     // Initial refresh (will be skipped if HostManager is loading)
     refreshHosts();
 
     // Auto-refresh every 30 seconds
     const interval = setInterval(() => {
-      console.log('[@hook:useRec] Auto-refreshing AV devices');
       refreshHosts();
     }, 30000);
 
