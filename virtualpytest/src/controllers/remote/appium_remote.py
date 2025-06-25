@@ -80,6 +80,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         
         print(f"[@controller:AppiumRemote] Initialized for {self.platform_name} device {self.device_id}")
         print(f"[@controller:AppiumRemote] Server URL: {self.appium_server_url}")
+        self.connect()
         
     def connect(self) -> bool:
         """Connect to device via Appium WebDriver."""
