@@ -61,8 +61,8 @@ export const appiumRemoteConfig: AppiumRemoteConfig = {
     ios: {
       automationName: 'XCUITest',
       usePrebuiltWDA: true,
-      supportsTouchId: true,
-      supportsFaceId: true,
+      supportsTouchId: false,
+      supportsFaceId: false,
       commonApps: [
         { identifier: 'com.apple.Preferences', label: 'Settings' },
         { identifier: 'com.apple.mobilesafari', label: 'Safari' },
