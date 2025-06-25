@@ -61,7 +61,6 @@ export const appiumRemoteConfig: AppiumRemoteConfig = {
     ios: {
       automationName: 'XCUITest',
       usePrebuiltWDA: true,
-      wdaLocalPort: 8100,
       supportsTouchId: true,
       supportsFaceId: true,
       commonApps: [
