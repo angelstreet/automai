@@ -16,28 +16,27 @@ if src_utils_path not in sys.path:
     sys.path.insert(0, src_utils_path)
 
 from appium_utils import AppiumUtils, AppiumElement
+from ..base_controller import VerificationControllerInterface
 
 
-class AppiumVerificationController:
+class AppiumVerificationController(VerificationControllerInterface):
     """Appium verification controller that uses Appium WebDriver to verify UI elements across platforms."""
     
-    def __init__(self, av_controller, **kwargs):
+    def __init__(self, av_controller=None, **kwargs):
         """
         Initialize the Appium Verification controller.
         
         Args:
-            av_controller: AV controller for capturing screenshots (dependency injection)
+            av_controller: AV controller for capturing screenshots (optional, not used by Appium)
         """
-        # Dependency injection
-        self.av_controller = av_controller
+        super().__init__("Appium Verification", "appium")
         
-        # Validate required dependency
-        if not self.av_controller:
-            raise ValueError("av_controller is required for AppiumVerificationController")
+        # AV controller is optional for Appium verification (Appium doesn't need screenshots)
+        self.av_controller = av_controller
             
         self.appium_utils = AppiumUtils()
         self.device_id = f"appium_verification"  # Internal device identifier
-        self.is_connected = False
+        self.is_connected = True
         
         print(f"[@controller:AppiumVerification] Initialized with AV controller")
     
