@@ -26,6 +26,7 @@ interface DragArea {
 interface VerificationEditorProps {
   isVisible: boolean;
   selectedHost: Host;
+  selectedDeviceId: string;
   captureSourcePath?: string;
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
@@ -39,6 +40,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
   ({
     isVisible,
     selectedHost,
+    selectedDeviceId,
     captureSourcePath,
     selectedArea,
     onAreaSelected,
@@ -47,13 +49,19 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
     layoutConfig,
     sx = {},
   }) => {
-    // Extract model from host device
-    const model = selectedHost.device_model;
+    // Extract device from host devices array using selectedDeviceId
+    const selectedDevice = React.useMemo(() => {
+      return selectedHost?.devices?.find((device) => device.device_id === selectedDeviceId);
+    }, [selectedHost, selectedDeviceId]);
+
+    // Extract model from the selected device
+    const model = selectedDevice?.device_model;
 
     // Use the provided layout config or get it from the model type
     const finalLayoutConfig = React.useMemo(() => {
-      const config = layoutConfig || getVerificationEditorLayout(model);
+      const config = layoutConfig || getVerificationEditorLayout(model || 'unknown');
       console.log('[@component:VerificationEditor] Layout config recalculated:', {
+        selectedDeviceId,
         model,
         providedLayoutConfig: layoutConfig,
         calculatedConfig: config,
@@ -63,12 +71,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
         captureHeight: config.captureHeight,
       });
       return config;
-    }, [model, layoutConfig]);
+    }, [model, layoutConfig, selectedDeviceId]);
 
     // Use the verification editor hook to handle all verification logic
     const verification = useVerificationEditor({
       isVisible,
       selectedHost,
+      selectedDeviceId,
       captureSourcePath,
       selectedArea,
       onAreaSelected,
@@ -80,17 +89,69 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
     React.useEffect(() => {
       console.log('[@component:VerificationEditor] Component mounted with props:', {
         isVisible,
+        selectedDeviceId,
         model,
         isCaptureActive,
         layoutConfig: finalLayoutConfig,
+        selectedDevice: !!selectedDevice,
       });
 
       return () => {
         console.log('[@component:VerificationEditor] Component unmounting');
       };
-    }, [isVisible, model, isCaptureActive, finalLayoutConfig]);
+    }, [isVisible, selectedDeviceId, model, isCaptureActive, finalLayoutConfig, selectedDevice]);
 
     if (!isVisible) return null;
+
+    if (!selectedDeviceId) {
+      return (
+        <Box
+          sx={{
+            width: finalLayoutConfig.width,
+            height: finalLayoutConfig.height,
+            p: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            ...sx,
+          }}
+        >
+          <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'error.main' }}>
+            Configuration Error
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'error.main', textAlign: 'center' }}>
+            Device ID is required for the Verification Editor
+          </Typography>
+        </Box>
+      );
+    }
+
+    if (!selectedDevice) {
+      return (
+        <Box
+          sx={{
+            width: finalLayoutConfig.width,
+            height: finalLayoutConfig.height,
+            p: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            ...sx,
+          }}
+        >
+          <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600, color: 'error.main' }}>
+            Configuration Error
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'error.main', textAlign: 'center' }}>
+            Device "{selectedDeviceId}" not found in host "{selectedHost?.host_name}"
+          </Typography>
+        </Box>
+      );
+    }
 
     if (!model || model.trim() === '') {
       return (
@@ -148,9 +209,10 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
         <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
           Verification Editor
           <Typography component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', ml: 1 }}>
-            ({model}){' '}
+            ({model}) [{selectedDevice.device_name}]
             {!finalLayoutConfig.isMobileModel && (
               <Typography component="span" sx={{ fontSize: '0.7rem' }}>
+                {' '}
                 [Landscape]
               </Typography>
             )}
@@ -229,17 +291,13 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
                 onVerificationsChange={verification.handleVerificationsChange}
                 loading={verification.loading}
                 error={verification.error}
-                model={verification.selectedHost?.device_model || ''}
+                model={model}
                 onTest={verification.handleTest}
                 testResults={verification.testResults}
                 reloadTrigger={verification.referenceSaveCounter}
                 onReferenceSelected={verification.handleReferenceSelected}
                 selectedHost={verification.selectedHost}
-                modelReferences={React.useMemo(
-                  () =>
-                    verification.getModelReferences(verification.selectedHost?.device_model || ''),
-                  [verification.getModelReferences, verification.selectedHost?.device_model],
-                )}
+                modelReferences={verification.modelReferences}
                 referencesLoading={verification.referencesLoading}
               />
             </Box>
@@ -256,6 +314,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
     const isVisibleChanged = prevProps.isVisible !== nextProps.isVisible;
     const selectedHostChanged =
       JSON.stringify(prevProps.selectedHost) !== JSON.stringify(nextProps.selectedHost);
+    const selectedDeviceIdChanged = prevProps.selectedDeviceId !== nextProps.selectedDeviceId;
     const captureSourcePathChanged = prevProps.captureSourcePath !== nextProps.captureSourcePath;
     const selectedAreaChanged =
       JSON.stringify(prevProps.selectedArea) !== JSON.stringify(nextProps.selectedArea);
@@ -270,6 +329,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
     const shouldRerender =
       isVisibleChanged ||
       selectedHostChanged ||
+      selectedDeviceIdChanged ||
       captureSourcePathChanged ||
       selectedAreaChanged ||
       isCaptureActiveChanged ||
@@ -282,6 +342,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
       console.log('[@component:VerificationEditor] Props changed, re-rendering:', {
         isVisibleChanged,
         selectedHostChanged,
+        selectedDeviceIdChanged,
         captureSourcePathChanged,
         selectedAreaChanged,
         isCaptureActiveChanged,

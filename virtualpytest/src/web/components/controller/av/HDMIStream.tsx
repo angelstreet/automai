@@ -544,6 +544,7 @@ export const HDMIStream = React.memo(
               onAreaSelected={handleAreaSelected}
               onClearSelection={() => handleAreaSelected({ x: 0, y: 0, width: 0, height: 0 })}
               selectedHost={host}
+              selectedDeviceId={deviceId}
               sx={{
                 width: '100%',
                 height: '100%',

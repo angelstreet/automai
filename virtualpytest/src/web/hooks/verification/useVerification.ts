@@ -7,7 +7,7 @@ import { Verifications, Verification } from '../../types/verification/Verificati
 
 interface UseVerificationProps {
   selectedHost: Host | null;
-  deviceId: string | null;
+  deviceId?: string | null;
   captureSourcePath?: string;
 }
 

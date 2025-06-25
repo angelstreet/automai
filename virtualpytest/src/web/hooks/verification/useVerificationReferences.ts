@@ -53,7 +53,7 @@ export const useVerificationReferences = (
 
         if (result.success && (result.references || result.images || result.count > 0)) {
           // Server can return either { references: { image: [...], text: [...] } } or { images: [...], count: N }
-          const deviceModel = result.device_model || result.model || selectedHost.device_model;
+          const deviceModel = result.device_model || result.model || 'unknown';
           const modelRefs: ModelReferences = {};
 
           // Handle new format: { images: [...], count: N }

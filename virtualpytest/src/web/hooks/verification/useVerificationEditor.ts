@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 
@@ -35,6 +35,7 @@ interface SelectedReferenceInfo {
 interface UseVerificationEditorProps {
   isVisible: boolean;
   selectedHost: Host;
+  selectedDeviceId: string;
   captureSourcePath?: string;
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
@@ -45,15 +46,25 @@ interface UseVerificationEditorProps {
 export const useVerificationEditor = ({
   isVisible: _isVisible,
   selectedHost,
+  selectedDeviceId,
   captureSourcePath,
   selectedArea,
   onAreaSelected: _onAreaSelected,
   onClearSelection: _onClearSelection,
   isCaptureActive,
 }: UseVerificationEditorProps) => {
+  // Get the selected device from the host's devices array
+  const selectedDevice = useMemo(() => {
+    return selectedHost?.devices?.find((device) => device.device_id === selectedDeviceId);
+  }, [selectedHost, selectedDeviceId]);
+
+  // Get the device model from the selected device
+  const deviceModel = selectedDevice?.device_model;
+
   // Use the pure verification hook for core functionality
   const verification = useVerification({
     selectedHost,
+    deviceId: selectedDeviceId,
     captureSourcePath,
   });
 
@@ -68,6 +79,11 @@ export const useVerificationEditor = ({
   // Add references management after referenceSaveCounter is declared
   const { availableReferences, referencesLoading, fetchAvailableReferences, getModelReferences } =
     useVerificationReferences(referenceSaveCounter, selectedHost);
+
+  // Get model references using the device model
+  const modelReferences = useMemo(() => {
+    return getModelReferences(deviceModel || '');
+  }, [getModelReferences, deviceModel]);
 
   // State for reference type and details
   const [referenceText, setReferenceText] = useState<string>('');
@@ -145,6 +161,7 @@ export const useVerificationEditor = ({
       referenceName,
       referenceType,
       imageProcessingOptions,
+      deviceModel,
     });
 
     try {
@@ -164,10 +181,11 @@ export const useVerificationEditor = ({
           },
           body: JSON.stringify({
             host: selectedHost, // Send full host object
+            device_id: selectedDeviceId, // Send device ID
             area: selectedArea,
             source_path: captureSourcePath,
             reference_name: referenceName || 'temp_capture',
-            model: selectedHost.device_model,
+            model: deviceModel,
             autocrop: imageProcessingOptions.autocrop,
             remove_background: imageProcessingOptions.removeBackground,
           }),
@@ -181,10 +199,11 @@ export const useVerificationEditor = ({
           },
           body: JSON.stringify({
             host: selectedHost, // Send full host object
+            device_id: selectedDeviceId, // Send device ID
             area: selectedArea,
             source_path: captureSourcePath,
             reference_name: referenceName || 'temp_capture',
-            model: selectedHost.device_model,
+            model: deviceModel,
           }),
         });
       }
@@ -236,10 +255,12 @@ export const useVerificationEditor = ({
     captureSourcePath,
     referenceName,
     selectedHost,
+    selectedDeviceId,
     referenceType,
     imageProcessingOptions,
     _onAreaSelected,
     verification,
+    deviceModel,
   ]);
 
   // Handle save reference
@@ -259,7 +280,7 @@ export const useVerificationEditor = ({
     try {
       console.log('[@hook:useVerificationEditor] Saving reference with data:', {
         name: referenceName,
-        model: selectedHost.device_model,
+        model: deviceModel,
         area: selectedArea,
         captureSourcePath: captureSourcePath,
         referenceType: referenceType,
@@ -281,10 +302,11 @@ export const useVerificationEditor = ({
           },
           body: JSON.stringify({
             host: selectedHost,
+            device_id: selectedDeviceId,
             area: selectedArea,
             source_path: captureSourcePath,
             reference_name: referenceName,
-            model: selectedHost.device_model,
+            model: deviceModel,
             autocrop: imageProcessingOptions.autocrop,
             remove_background: imageProcessingOptions.removeBackground,
           }),
@@ -298,10 +320,11 @@ export const useVerificationEditor = ({
           },
           body: JSON.stringify({
             host: selectedHost,
+            device_id: selectedDeviceId,
             area: selectedArea,
             source_path: captureSourcePath,
             reference_name: referenceName,
-            model: selectedHost.device_model,
+            model: deviceModel,
           }),
         });
       }
@@ -323,7 +346,7 @@ export const useVerificationEditor = ({
           body: JSON.stringify({
             host: selectedHost,
             name: referenceName,
-            model: selectedHost.device_model,
+            model: deviceModel,
             area:
               imageProcessingOptions.autocrop && captureResult.processed_area
                 ? captureResult.processed_area
@@ -358,7 +381,7 @@ export const useVerificationEditor = ({
           body: JSON.stringify({
             host: selectedHost,
             reference_name: referenceName,
-            model: selectedHost.device_model,
+            model: deviceModel,
             area:
               imageProcessingOptions.autocrop && captureResult.processed_area
                 ? captureResult.processed_area
@@ -393,15 +416,17 @@ export const useVerificationEditor = ({
     captureSourcePath,
     referenceName,
     selectedHost,
+    selectedDeviceId,
     referenceType,
     referenceText,
     imageProcessingOptions,
     verification,
+    deviceModel,
   ]);
 
   // Handle auto-detect text
   const handleAutoDetectText = useCallback(async () => {
-    if (!selectedArea || !selectedHost.device_model) {
+    if (!selectedArea || !deviceModel) {
       console.log('[@hook:useVerificationEditor] Cannot auto-detect: missing area or model');
       return;
     }
@@ -428,7 +453,7 @@ export const useVerificationEditor = ({
         },
         body: JSON.stringify({
           host: selectedHost, // Send full host object
-          model: selectedHost.device_model,
+          model: deviceModel,
           area: selectedArea,
           source_filename: sourceFilename,
           image_filter: textImageFilter,
@@ -460,7 +485,7 @@ export const useVerificationEditor = ({
     } catch (error) {
       console.error('[@hook:useVerificationEditor] Error during text auto-detection:', error);
     }
-  }, [selectedArea, selectedHost, captureSourcePath, textImageFilter]);
+  }, [selectedArea, selectedHost, captureSourcePath, textImageFilter, deviceModel]);
 
   // Validate regex
   const validateRegex = useCallback((text: string): boolean => {
@@ -490,12 +515,7 @@ export const useVerificationEditor = ({
 
   // Calculate if save is possible
   const canSave = (() => {
-    if (
-      !referenceName.trim() ||
-      !selectedArea ||
-      !selectedHost.device_model ||
-      selectedHost.device_model.trim() === ''
-    ) {
+    if (!referenceName.trim() || !selectedArea || !deviceModel || deviceModel.trim() === '') {
       return false;
     }
 
@@ -532,6 +552,7 @@ export const useVerificationEditor = ({
     referencesLoading,
     fetchAvailableReferences,
     getModelReferences,
+    modelReferences,
 
     // Editor-specific state
     referenceName,
