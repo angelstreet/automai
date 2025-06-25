@@ -10,14 +10,14 @@ import { RecHostStreamModal } from './RecHostStreamModal';
 interface RecHostPreviewProps {
   host: Host;
   device?: Device;
-  takeScreenshot?: (host: Host, device: Device) => Promise<string | null>;
-  generateThumbnailUrl?: (host: Host, timestamp: string) => string | null;
+  initializeBaseUrl?: (host: Host, device: Device) => Promise<boolean>;
+  generateThumbnailUrl?: (host: Host) => string | null;
 }
 
 export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   host,
   device,
-  takeScreenshot,
+  initializeBaseUrl,
   generateThumbnailUrl,
 }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
@@ -73,9 +73,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     return screenshotPath;
   }, []);
 
-  // Optimized screenshot function - uses timestamp-based URL generation
+  // Optimized approach - just generate URL with current timestamp (no server calls after init)
   const handleTakeScreenshot = useCallback(async () => {
-    if (!takeScreenshot || !generateThumbnailUrl || !device) {
+    if (!generateThumbnailUrl || !device) {
       console.warn(
         `[@component:RecHostPreview] Missing required functions or device for ${host.host_name}`,
       );
@@ -87,81 +87,84 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
     try {
       console.log(
-        `[@component:RecHostPreview] Taking optimized screenshot for host: ${host.host_name}`,
+        `[@component:RecHostPreview] Generating thumbnail URL for host: ${host.host_name}`,
       );
 
-      // Use the hook's takeScreenshot function to get timestamp
-      const timestamp = await takeScreenshot(host, device);
+      // Generate thumbnail URL directly with current timestamp (no server call)
+      const newThumbnailUrl = generateThumbnailUrl(host);
 
-      if (timestamp) {
-        console.log(`[@component:RecHostPreview] Screenshot timestamp received: ${timestamp}`);
+      if (newThumbnailUrl) {
+        console.log(`[@component:RecHostPreview] Generated thumbnail URL: ${newThumbnailUrl}`);
 
-        // Generate thumbnail URL directly from timestamp
-        const newThumbnailUrl = generateThumbnailUrl(host, timestamp);
-
-        if (newThumbnailUrl) {
-          console.log(`[@component:RecHostPreview] Generated thumbnail URL: ${newThumbnailUrl}`);
-
-          // Add 1 second delay to ensure thumbnail is properly generated and available
-          setTimeout(() => {
-            console.log(
-              `[@component:RecHostPreview] Setting thumbnail URL after delay: ${newThumbnailUrl}`,
-            );
-
-            // Smooth transition: store previous URL and set new one
-            if (thumbnailUrl && thumbnailUrl !== newThumbnailUrl) {
-              setPreviousThumbnailUrl(thumbnailUrl);
-              setIsTransitioning(true);
-            }
-            setThumbnailUrl(newThumbnailUrl);
-          }, 1000); // 1 second delay
-        } else {
-          setError('Failed to generate thumbnail URL');
-          console.warn(
-            `[@component:RecHostPreview] Failed to generate thumbnail URL for: ${host.host_name}`,
+        // Add 1 second delay to ensure thumbnail is properly generated and available
+        setTimeout(() => {
+          console.log(
+            `[@component:RecHostPreview] Setting thumbnail URL after delay: ${newThumbnailUrl}`,
           );
-        }
+
+          // Smooth transition: store previous URL and set new one
+          if (thumbnailUrl && thumbnailUrl !== newThumbnailUrl) {
+            setPreviousThumbnailUrl(thumbnailUrl);
+            setIsTransitioning(true);
+          }
+          setThumbnailUrl(newThumbnailUrl);
+        }, 1000); // 1 second delay
       } else {
-        setError('Failed to capture screenshot');
-        console.warn(
-          `[@component:RecHostPreview] Screenshot capture failed for: ${host.host_name}`,
-        );
+        setError('Base URL not initialized');
+        console.warn(`[@component:RecHostPreview] Base URL not initialized for: ${host.host_name}`);
       }
     } catch (err: any) {
-      console.error(`[@component:RecHostPreview] Screenshot error for ${host.host_name}:`, err);
-      setError(err.message || 'Screenshot failed');
+      console.error(
+        `[@component:RecHostPreview] Thumbnail generation error for ${host.host_name}:`,
+        err,
+      );
+      setError(err.message || 'Thumbnail generation failed');
     } finally {
       setIsLoading(false);
     }
-  }, [host, device, thumbnailUrl, takeScreenshot, generateThumbnailUrl]);
+  }, [host, device, thumbnailUrl, generateThumbnailUrl]);
 
-  // Auto-take screenshot every 5 seconds - but only when device data is stable
+  // Initialize base URL once, then auto-generate URLs
   useEffect(() => {
-    if (!host || !device) return;
+    if (!host || !device || !initializeBaseUrl) return;
 
-    // Initial screenshot after device data is stable
-    const initialTimer = setTimeout(() => {
-      console.log(
-        `[@component:RecHostPreview] Device data stable, taking initial screenshot for: ${host.host_name}`,
-      );
-      handleTakeScreenshot();
-    }, 5000); // Small delay to prevent racing with data loading
+    const initializeAndStartUpdates = async () => {
+      console.log(`[@component:RecHostPreview] Initializing base URL for: ${host.host_name}`);
 
-    // Set up interval for periodic screenshots every 5 seconds
-    const screenshotInterval = setInterval(() => {
-      if (host && device && host.status === 'online') {
+      // Initialize base URL pattern (only called once)
+      const initialized = await initializeBaseUrl(host, device);
+
+      if (initialized) {
         console.log(
-          `[@component:RecHostPreview] Taking periodic screenshot for: ${host.host_name}`,
+          `[@component:RecHostPreview] Base URL initialized, starting thumbnail updates for: ${host.host_name}`,
         );
-        handleTakeScreenshot();
-      }
-    }, 1500); // 1 seconds
 
-    return () => {
-      clearTimeout(initialTimer);
-      clearInterval(screenshotInterval);
+        // Initial thumbnail after base URL is set
+        setTimeout(() => {
+          handleTakeScreenshot();
+        }, 1000);
+
+        // Set up interval for periodic thumbnail updates (no server calls)
+        const screenshotInterval = setInterval(() => {
+          if (host && device && host.status === 'online') {
+            console.log(`[@component:RecHostPreview] Updating thumbnail for: ${host.host_name}`);
+            handleTakeScreenshot();
+          }
+        }, 1500); // 1.5 seconds
+
+        return () => {
+          clearInterval(screenshotInterval);
+        };
+      } else {
+        console.warn(
+          `[@component:RecHostPreview] Failed to initialize base URL for: ${host.host_name}`,
+        );
+        setError('Failed to initialize base URL');
+      }
     };
-  }, [host, device, handleTakeScreenshot]);
+
+    initializeAndStartUpdates();
+  }, [host, device, initializeBaseUrl, handleTakeScreenshot]);
 
   // Handle opening stream modal - control will be handled by the modal itself
   const handleOpenStreamModal = useCallback(() => {

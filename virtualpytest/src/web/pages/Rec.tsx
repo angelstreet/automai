@@ -20,7 +20,7 @@ import { useRec } from '../hooks/pages/useRec';
 // REC page - directly uses the global HostManagerProvider from App.tsx
 // No local HostManagerProvider needed since we only need AV capability filtering
 const Rec: React.FC = () => {
-  const { avDevices, isLoading, error, takeScreenshot, generateThumbnailUrl } = useRec();
+  const { avDevices, isLoading, error, initializeBaseUrl, generateThumbnailUrl } = useRec();
 
   // Filter states
   const [hostFilter, setHostFilter] = useState<string>('');
@@ -178,7 +178,7 @@ const Rec: React.FC = () => {
               <RecHostPreview
                 host={host}
                 device={device}
-                takeScreenshot={takeScreenshot}
+                initializeBaseUrl={initializeBaseUrl}
                 generateThumbnailUrl={generateThumbnailUrl}
               />
             </Grid>

@@ -9,8 +9,8 @@ interface UseRecReturn {
   error: string | null;
   refreshHosts: () => Promise<void>;
   baseUrlPatterns: Map<string, string>; // host_name -> base URL pattern
-  takeScreenshot: (host: Host, device: Device) => Promise<string | null>; // Returns timestamp or null
-  generateThumbnailUrl: (host: Host, timestamp: string) => string | null; // Generate URL from timestamp
+  initializeBaseUrl: (host: Host, device: Device) => Promise<boolean>; // One-time base URL setup
+  generateThumbnailUrl: (host: Host) => string | null; // Generate URL with current timestamp
 }
 
 /**
@@ -29,11 +29,19 @@ export const useRec = (): UseRecReturn => {
   // Use the simplified HostManager function and loading state
   const { getDevicesByCapability, isLoading: isHostManagerLoading } = useHostManager();
 
-  // Take screenshot and return timestamp for direct URL generation
-  const takeScreenshot = useCallback(
-    async (host: Host, device: Device): Promise<string | null> => {
+  // One-time initialization to get base URL pattern (only called once per host)
+  const initializeBaseUrl = useCallback(
+    async (host: Host, device: Device): Promise<boolean> => {
+      const hostKey = host.host_name;
+
+      // Skip if base URL already exists
+      if (baseUrlPatterns.has(hostKey)) {
+        console.log(`[@hook:useRec] Base URL already exists for ${hostKey}`);
+        return true;
+      }
+
       try {
-        console.log(`[@hook:useRec] Taking screenshot for host: ${host.host_name}`);
+        console.log(`[@hook:useRec] Initializing base URL for host: ${host.host_name}`);
 
         const response = await fetch('/server/av/take-screenshot', {
           method: 'POST',
@@ -49,44 +57,47 @@ export const useRec = (): UseRecReturn => {
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.screenshot_url) {
-            console.log(`[@hook:useRec] Screenshot taken: ${result.screenshot_url}`);
+            console.log(`[@hook:useRec] Initial screenshot taken: ${result.screenshot_url}`);
 
-            // Extract and store base URL pattern if not already stored
-            const hostKey = host.host_name;
-            if (!baseUrlPatterns.has(hostKey)) {
-              // Extract base pattern: remove timestamp and .jpg, keep _thumbnail
-              const basePattern = result.screenshot_url.replace(
-                /\d{14}_thumbnail\.jpg$/,
-                '{timestamp}_thumbnail.jpg',
-              );
-              console.log(`[@hook:useRec] Storing base URL pattern for ${hostKey}: ${basePattern}`);
-              setBaseUrlPatterns((prev) => new Map(prev).set(hostKey, basePattern));
-            }
-
-            // Extract timestamp from the URL (14 digits before _thumbnail.jpg)
-            const timestampMatch = result.screenshot_url.match(/(\d{14})_thumbnail\.jpg$/);
-            return timestampMatch ? timestampMatch[1] : null;
+            // Extract base pattern: remove timestamp and .jpg, keep _thumbnail
+            const basePattern = result.screenshot_url.replace(
+              /\d{14}_thumbnail\.jpg$/,
+              '{timestamp}_thumbnail.jpg',
+            );
+            console.log(`[@hook:useRec] Storing base URL pattern for ${hostKey}: ${basePattern}`);
+            setBaseUrlPatterns((prev) => new Map(prev).set(hostKey, basePattern));
+            return true;
           }
         }
 
-        console.warn(`[@hook:useRec] Screenshot capture failed for: ${host.host_name}`);
-        return null;
+        console.warn(`[@hook:useRec] Base URL initialization failed for: ${host.host_name}`);
+        return false;
       } catch (err: any) {
-        console.error(`[@hook:useRec] Screenshot error for ${host.host_name}:`, err);
-        return null;
+        console.error(`[@hook:useRec] Base URL initialization error for ${host.host_name}:`, err);
+        return false;
       }
     },
     [baseUrlPatterns],
   );
 
-  // Generate thumbnail URL from base pattern and timestamp
+  // Generate thumbnail URL with current timestamp (no server calls)
   const generateThumbnailUrl = useCallback(
-    (host: Host, timestamp: string): string | null => {
+    (host: Host): string | null => {
       const basePattern = baseUrlPatterns.get(host.host_name);
       if (!basePattern) {
         console.warn(`[@hook:useRec] No base URL pattern found for host: ${host.host_name}`);
         return null;
       }
+
+      // Generate current timestamp in YYYYMMDDHHMMSS format
+      const now = new Date();
+      const timestamp =
+        now.getFullYear().toString() +
+        (now.getMonth() + 1).toString().padStart(2, '0') +
+        now.getDate().toString().padStart(2, '0') +
+        now.getHours().toString().padStart(2, '0') +
+        now.getMinutes().toString().padStart(2, '0') +
+        now.getSeconds().toString().padStart(2, '0');
 
       const thumbnailUrl = basePattern.replace('{timestamp}', timestamp);
       console.log(`[@hook:useRec] Generated thumbnail URL for ${host.host_name}: ${thumbnailUrl}`);
@@ -151,7 +162,7 @@ export const useRec = (): UseRecReturn => {
     error,
     refreshHosts,
     baseUrlPatterns,
-    takeScreenshot,
+    initializeBaseUrl,
     generateThumbnailUrl,
   };
 };
