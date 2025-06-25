@@ -139,7 +139,13 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
       try {
         // Initialize base URL pattern (only called once)
+        console.log(
+          `[@component:RecHostPreview] Calling initializeBaseUrl for: ${host.host_name}-${device.device_id}`,
+        );
         const initialized = await initializeBaseUrl(host, device);
+        console.log(
+          `[@component:RecHostPreview] initializeBaseUrl returned: ${initialized} for: ${host.host_name}-${device.device_id}`,
+        );
 
         if (initialized) {
           console.log(
@@ -148,18 +154,26 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
           // Wait a moment for state to settle, then take initial screenshot
           setTimeout(() => {
+            console.log(
+              `[@component:RecHostPreview] Taking initial screenshot for: ${host.host_name}-${device.device_id}`,
+            );
             handleTakeScreenshot();
-          }, 500);
 
-          // Set up interval for periodic thumbnail updates (no server calls)
-          screenshotInterval = setInterval(() => {
-            if (host && device && host.status === 'online') {
+            // Set up interval AFTER first screenshot is taken and base URL is confirmed to work
+            setTimeout(() => {
               console.log(
-                `[@component:RecHostPreview] Interval update for: ${host.host_name}-${device.device_id}`,
+                `[@component:RecHostPreview] Starting interval for: ${host.host_name}-${device.device_id}`,
               );
-              handleTakeScreenshot();
-            }
-          }, 5000); // 5 seconds for debugging
+              screenshotInterval = setInterval(() => {
+                if (host && device && host.status === 'online') {
+                  console.log(
+                    `[@component:RecHostPreview] Interval update for: ${host.host_name}-${device.device_id}`,
+                  );
+                  handleTakeScreenshot();
+                }
+              }, 5000); // 5 seconds for debugging
+            }, 1500); // Wait 1.5 seconds after first screenshot before starting interval
+          }, 500);
         } else {
           console.error(
             `[@component:RecHostPreview] Failed to initialize base URL for: ${host.host_name}-${device.device_id}`,
@@ -267,13 +281,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
           color={getStatusColor(host.status) as any}
           sx={{ fontSize: '0.7rem', height: 20 }}
         />
-      </Box>
-
-      {/* Device info */}
-      <Box sx={{ px: 1, pb: 0.5 }}>
-        <Typography variant="caption" color="text.secondary">
-          {displayInfo}
-        </Typography>
       </Box>
 
       {/* Screenshot area */}
