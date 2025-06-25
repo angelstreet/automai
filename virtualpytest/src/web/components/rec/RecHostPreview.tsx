@@ -11,7 +11,7 @@ interface RecHostPreviewProps {
   host: Host;
   device?: Device;
   initializeBaseUrl?: (host: Host, device: Device) => Promise<boolean>;
-  generateThumbnailUrl?: (host: Host) => string | null;
+  generateThumbnailUrl?: (host: Host, device: Device) => string | null;
 }
 
 export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
@@ -91,7 +91,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       );
 
       // Generate thumbnail URL directly with current timestamp (no server call)
-      const newThumbnailUrl = generateThumbnailUrl(host);
+      const newThumbnailUrl = generateThumbnailUrl(host, device);
 
       if (newThumbnailUrl) {
         console.log(`[@component:RecHostPreview] Generated thumbnail URL: ${newThumbnailUrl}`);

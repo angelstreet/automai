@@ -8,9 +8,9 @@ interface UseRecReturn {
   isLoading: boolean;
   error: string | null;
   refreshHosts: () => Promise<void>;
-  baseUrlPatterns: Map<string, string>; // host_name -> base URL pattern
+  baseUrlPatterns: Map<string, string>; // host_name-device_id -> base URL pattern
   initializeBaseUrl: (host: Host, device: Device) => Promise<boolean>; // One-time base URL setup
-  generateThumbnailUrl: (host: Host) => string | null; // Generate URL with current timestamp
+  generateThumbnailUrl: (host: Host, device: Device) => string | null; // Generate URL with current timestamp
 }
 
 /**
@@ -29,14 +29,14 @@ export const useRec = (): UseRecReturn => {
   // Use the simplified HostManager function and loading state
   const { getDevicesByCapability, isLoading: isHostManagerLoading } = useHostManager();
 
-  // One-time initialization to get base URL pattern (only called once per host)
+  // One-time initialization to get base URL pattern (only called once per device)
   const initializeBaseUrl = useCallback(
     async (host: Host, device: Device): Promise<boolean> => {
-      const hostKey = host.host_name;
+      const deviceKey = `${host.host_name}-${device.device_id}`;
 
       // Skip if base URL already exists
-      if (baseUrlPatterns.has(hostKey)) {
-        console.log(`[@hook:useRec] Base URL already exists for ${hostKey}`);
+      if (baseUrlPatterns.has(deviceKey)) {
+        console.log(`[@hook:useRec] Base URL already exists for ${deviceKey}`);
         return true;
       }
 
@@ -64,8 +64,8 @@ export const useRec = (): UseRecReturn => {
               /\d{14}_thumbnail\.jpg$/,
               '{timestamp}_thumbnail.jpg',
             );
-            console.log(`[@hook:useRec] Storing base URL pattern for ${hostKey}: ${basePattern}`);
-            setBaseUrlPatterns((prev) => new Map(prev).set(hostKey, basePattern));
+            console.log(`[@hook:useRec] Storing base URL pattern for ${deviceKey}: ${basePattern}`);
+            setBaseUrlPatterns((prev) => new Map(prev).set(deviceKey, basePattern));
             return true;
           }
         }
@@ -82,10 +82,11 @@ export const useRec = (): UseRecReturn => {
 
   // Generate thumbnail URL with current timestamp (no server calls)
   const generateThumbnailUrl = useCallback(
-    (host: Host): string | null => {
-      const basePattern = baseUrlPatterns.get(host.host_name);
+    (host: Host, device: Device): string | null => {
+      const deviceKey = `${host.host_name}-${device.device_id}`;
+      const basePattern = baseUrlPatterns.get(deviceKey);
       if (!basePattern) {
-        console.warn(`[@hook:useRec] No base URL pattern found for host: ${host.host_name}`);
+        console.warn(`[@hook:useRec] No base URL pattern found for device: ${deviceKey}`);
         return null;
       }
 
@@ -100,7 +101,7 @@ export const useRec = (): UseRecReturn => {
         now.getSeconds().toString().padStart(2, '0');
 
       const thumbnailUrl = basePattern.replace('{timestamp}', timestamp);
-      console.log(`[@hook:useRec] Generated thumbnail URL for ${host.host_name}: ${thumbnailUrl}`);
+      console.log(`[@hook:useRec] Generated thumbnail URL for ${deviceKey}: ${thumbnailUrl}`);
       return thumbnailUrl;
     },
     [baseUrlPatterns],
