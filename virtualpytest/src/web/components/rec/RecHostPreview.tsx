@@ -38,7 +38,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
   const getImageUrl = useCallback((screenshotPath: string) => {
     if (!screenshotPath) return '';
 
-    console.log(`[@component:RecHostPreview] Processing screenshot path: ${screenshotPath}`);
+    console.log(`[@component:RecHostPreview] Processing thumbnail path: ${screenshotPath}`);
 
     // Handle data URLs (base64 from remote system) - return as is
     if (screenshotPath.startsWith('data:')) {
@@ -54,9 +54,10 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
 
     // Handle HTTP URLs - use proxy to convert to HTTPS
     if (screenshotPath.startsWith('http:')) {
-      console.log('[@component:RecHostPreview] HTTP URL detected, using proxy');
+      console.log('[@component:RecHostPreview] HTTP thumbnail URL detected, using proxy');
       const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(screenshotPath)}`;
-      console.log(`[@component:RecHostPreview] Generated proxy URL: ${proxyUrl}`);
+      console.log(`[@component:RecHostPreview] Generated proxy URL for thumbnail: ${proxyUrl}`);
+      console.log(`[@component:RecHostPreview] Original thumbnail URL: ${screenshotPath}`);
       return proxyUrl;
     }
 
@@ -150,7 +151,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
         );
         handleTakeScreenshot();
       }
-    }, 2000); // 5 seconds
+    }, 4000); // 5 seconds
 
     return () => {
       clearTimeout(initialTimer);
