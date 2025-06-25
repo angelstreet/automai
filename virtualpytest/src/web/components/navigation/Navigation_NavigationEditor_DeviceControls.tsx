@@ -98,9 +98,6 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
           disabled={isControlLoading}
           sx={{ height: 32, fontSize: '0.75rem' }}
         >
-          <MenuItem value="">
-            <em>None</em>
-          </MenuItem>
           {availableHosts.map((host) => {
             const devices = host.devices || [];
 
@@ -165,7 +162,9 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
                       {deviceIsLocked && (
                         <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />
                       )}
-                      <span>{device.device_name}</span>
+                      <span>
+                        {device.device_name} ({host.host_name})
+                      </span>
                       {deviceIsLocked && (
                         <Typography
                           variant="caption"
@@ -184,7 +183,7 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
               ];
             }
 
-            // If host has exactly one device, show it directly without grouping
+            // If host has exactly one device, show it directly with host name
             const device = devices[0];
             const deviceKey = createDeviceKey(host.host_name, device.device_id);
             const deviceIsLocked = isDeviceLocked(deviceKey);
@@ -202,7 +201,9 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
                 }}
               >
                 {deviceIsLocked && <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />}
-                <span>{device.device_name}</span>
+                <span>
+                  {device.device_name} ({host.host_name})
+                </span>
                 {deviceIsLocked && (
                   <Typography
                     variant="caption"
