@@ -246,7 +246,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
       {/* Device info */}
       <Box sx={{ px: 1, pb: 1 }}>
         <Typography variant="caption" color="text.secondary">
-          {displayInfo} • {displayUrl}
+          {displayInfo}
         </Typography>
       </Box>
 
