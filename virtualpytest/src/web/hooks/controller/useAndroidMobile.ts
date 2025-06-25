@@ -67,7 +67,7 @@ export function useAndroidMobile(
   );
 
   // State management - initialize based on isConnected parameter
-  const [isConnected_internal, setIsConnected] = useState(isConnected ?? true);
+  const [isConnected_internal, setIsConnected] = useState(isConnected ?? false);
   const [androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
   const [androidElements, setAndroidElements] = useState<AndroidElement[]>([]);
   const [androidApps, setAndroidApps] = useState<AndroidApp[]>([]);

@@ -115,6 +115,23 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
     }
   }, [selectedHost, selectedDeviceId, hasAVCapabilities, hasRemoteCapabilities]);
 
+  // NEW: Debug logging for control and panel state
+  React.useEffect(() => {
+    console.log(`[@component:NavigationEditorDeviceControl] State debug:`, {
+      selectedHost: selectedHost?.host_name,
+      selectedDeviceId,
+      hasRemoteCapabilities,
+      isControlActive,
+      isRemotePanelOpen,
+      willShowRemotePanel:
+        selectedHost &&
+        selectedDeviceId &&
+        hasRemoteCapabilities &&
+        isControlActive &&
+        isRemotePanelOpen,
+    });
+  }, [selectedHost, selectedDeviceId, hasRemoteCapabilities, isControlActive, isRemotePanelOpen]);
+
   return (
     <>
       {/* Screen Definition Editor - Show when device has AV capabilities and control is active */}

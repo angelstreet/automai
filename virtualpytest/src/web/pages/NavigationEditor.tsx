@@ -297,6 +297,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
             stableSelectedHost?.device_model ||
             'unknown'
           : 'unknown',
+        isConnected: isControlActive,
         deviceResolution: { width: 1920, height: 1080 }, // Default HDMI resolution
         onReleaseControl: handleDisconnectComplete,
         streamCollapsed: isAVPanelCollapsed,
@@ -306,6 +307,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       [
         stableSelectedHost,
         selectedDeviceId,
+        isControlActive,
         handleDisconnectComplete,
         isAVPanelCollapsed,
         isAVPanelMinimized,
