@@ -141,7 +141,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
         `[@component:RecHostPreview] Device data stable, taking initial screenshot for: ${host.host_name}`,
       );
       handleTakeScreenshot();
-    }, 3000); // Small delay to prevent racing with data loading
+    }, 4000); // Small delay to prevent racing with data loading
 
     // Set up interval for periodic screenshots every 5 seconds
     const screenshotInterval = setInterval(() => {
@@ -151,7 +151,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
         );
         handleTakeScreenshot();
       }
-    }, 2000); // 5 seconds
+    }, 1200); // 1 seconds
 
     return () => {
       clearTimeout(initialTimer);

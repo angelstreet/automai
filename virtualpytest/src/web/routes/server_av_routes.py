@@ -190,6 +190,120 @@ def proxy_image_options():
         }
     )
 
+@av_bp.route('/proxy-stream', methods=['GET'])
+def proxy_stream():
+    """
+    Proxy HTTP HLS streams through HTTPS to solve mixed content issues.
+    Handles both m3u8 manifests and TS segments.
+    Only proxies HTTP URLs - returns HTTPS URLs directly.
+    """
+    try:
+        # Get stream URL from query parameters
+        stream_url = request.args.get('url')
+        if not stream_url:
+            return jsonify({
+                'success': False,
+                'error': 'Missing url parameter'
+            }), 400
+        
+        print(f"[@route:server_av:proxy_stream] Processing stream URL: {stream_url}")
+        
+        # Handle data URLs - return as is (unlikely for streams but consistent)
+        if stream_url.startswith('data:'):
+            print("[@route:server_av:proxy_stream] Data URL detected, redirecting directly")
+            return Response(
+                stream_url,
+                content_type='text/plain',
+                headers={'Access-Control-Allow-Origin': '*'}
+            )
+        
+        # Handle HTTPS URLs - redirect directly (no proxy needed)
+        if stream_url.startswith('https:'):
+            print("[@route:server_av:proxy_stream] HTTPS URL detected, redirecting directly")
+            return Response(
+                '',
+                status=302,
+                headers={
+                    'Location': stream_url,
+                    'Access-Control-Allow-Origin': '*'
+                }
+            )
+        
+        # Handle HTTP URLs - proxy through HTTPS
+        if stream_url.startswith('http:'):
+            print(f"[@route:server_av:proxy_stream] HTTP stream URL detected, proxying: {stream_url}")
+            
+            try:
+                # Fetch stream from HTTP source
+                response = requests.get(stream_url, stream=True, timeout=30, verify=False)
+                response.raise_for_status()
+                
+                print(f"[@route:server_av:proxy_stream] Successfully fetched stream from {stream_url}")
+                
+                # Determine content type (m3u8 manifest or TS segment)
+                content_type = response.headers.get('Content-Type')
+                if not content_type:
+                    # Default based on file extension
+                    if stream_url.endswith('.m3u8'):
+                        content_type = 'application/vnd.apple.mpegurl'
+                    elif stream_url.endswith('.ts'):
+                        content_type = 'video/mp2t'
+                    else:
+                        content_type = 'application/vnd.apple.mpegurl'
+                
+                # Stream the content
+                def generate():
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            yield chunk
+                
+                return Response(
+                    generate(),
+                    content_type=content_type,
+                    headers={
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Methods': 'GET',
+                        'Access-Control-Allow-Headers': 'Content-Type',
+                        'Content-Length': response.headers.get('Content-Length'),
+                        'Cache-Control': 'no-cache, no-store, must-revalidate'
+                    }
+                )
+                
+            except requests.exceptions.RequestException as e:
+                print(f"[@route:server_av:proxy_stream] Request failed: {e}")
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to fetch stream: {str(e)}'
+                }), 502
+        
+        # Unknown URL format
+        return jsonify({
+            'success': False,
+            'error': f'Unsupported URL format: {stream_url}'
+        }), 400
+            
+    except Exception as e:
+        print(f"[@route:server_av:proxy_stream] Proxy error: {e}")
+        import traceback
+        print(f"[@route:server_av:proxy_stream] Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': f'Stream proxy error: {str(e)}'
+        }), 500
+
+@av_bp.route('/proxy-stream', methods=['OPTIONS'])
+def proxy_stream_options():
+    """Handle CORS preflight requests for stream proxy"""
+    return Response(
+        '',
+        headers={
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Max-Age': '86400'
+        }
+    )
+
 @av_bp.route('/get-status', methods=['GET', 'POST'])
 def get_status():
     """Proxy get status request to selected host with device_id"""
