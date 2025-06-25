@@ -167,6 +167,7 @@ class AppiumRemoteController(RemoteControllerInterface):
             'udid': self.appium_device_id,
             'noReset': True,
             'fullReset': False,
+            'newCommandTimeout': 3600,  # 1 hour timeout instead of default (60 seconds)
         }
         
         # Add automation name based on platform
