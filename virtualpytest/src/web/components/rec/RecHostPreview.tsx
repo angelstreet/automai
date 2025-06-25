@@ -32,14 +32,23 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
   // Handle smooth transition when new image loads
   const handleImageLoad = useCallback(() => {
+    console.log(
+      `[RecHostPreview] ${host.host_name}-${device?.device_id}: Image loaded successfully`,
+    );
     if (isTransitioning) {
+      console.log(
+        `[RecHostPreview] ${host.host_name}-${device?.device_id}: Completing transition...`,
+      );
       // Clear the previous image after a brief delay to allow smooth transition
       setTimeout(() => {
         setPreviousThumbnailUrl(null);
         setIsTransitioning(false);
+        console.log(
+          `[RecHostPreview] ${host.host_name}-${device?.device_id}: Transition completed`,
+        );
       }, 300); // Small delay for smooth transition
     }
-  }, [isTransitioning]);
+  }, [isTransitioning, host, device]);
 
   // Process screenshot URL with conditional HTTP to HTTPS proxy (similar to ScreenshotCapture)
   const getImageUrl = useCallback((screenshotPath: string) => {
@@ -68,27 +77,63 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   // Optimized approach - just generate URL with current timestamp (no server calls after init)
   const handleTakeScreenshot = useCallback(async () => {
     if (!generateThumbnailUrl || !device) {
+      console.log(
+        `[RecHostPreview] ${host.host_name}-${device?.device_id}: Missing generateThumbnailUrl or device`,
+      );
       return;
     }
 
+    console.log(
+      `[RecHostPreview] ${host.host_name}-${device.device_id}: Starting screenshot capture...`,
+    );
     setIsLoading(true);
     setError(null);
 
     try {
       // Generate thumbnail URL directly with current timestamp (no server call)
       const newThumbnailUrl = generateThumbnailUrl(host, device);
+      console.log(
+        `[RecHostPreview] ${host.host_name}-${device.device_id}: Generated new URL:`,
+        newThumbnailUrl,
+      );
+      console.log(
+        `[RecHostPreview] ${host.host_name}-${device.device_id}: Current URL:`,
+        thumbnailUrl,
+      );
 
       if (newThumbnailUrl) {
         // Add 1 second delay to ensure thumbnail is properly generated and available
         setTimeout(() => {
           // Smooth transition: store previous URL and set new one
           if (thumbnailUrl && thumbnailUrl !== newThumbnailUrl) {
+            console.log(
+              `[RecHostPreview] ${host.host_name}-${device.device_id}: URL changed, setting up transition`,
+            );
+            console.log(
+              `[RecHostPreview] ${host.host_name}-${device.device_id}: Previous URL:`,
+              thumbnailUrl,
+            );
+            console.log(
+              `[RecHostPreview] ${host.host_name}-${device.device_id}: New URL:`,
+              newThumbnailUrl,
+            );
             setPreviousThumbnailUrl(thumbnailUrl);
             setIsTransitioning(true);
+          } else if (thumbnailUrl === newThumbnailUrl) {
+            console.log(
+              `[RecHostPreview] ${host.host_name}-${device.device_id}: URL unchanged, no transition needed`,
+            );
+          } else {
+            console.log(
+              `[RecHostPreview] ${host.host_name}-${device.device_id}: Setting initial URL`,
+            );
           }
           setThumbnailUrl(newThumbnailUrl);
         }, 1000); // 1 second delay to ensure server has generated the thumbnail
       } else {
+        console.log(
+          `[RecHostPreview] ${host.host_name}-${device.device_id}: No URL generated - base URL not initialized`,
+        );
         setError('Base URL not initialized');
 
         // If base URL is not available, try to initialize it again
@@ -126,9 +171,16 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         return;
       }
 
+      console.log(
+        `[RecHostPreview] ${host.host_name}-${device.device_id}: Starting initialization...`,
+      );
       try {
         // Initialize base URL pattern (only called once)
         const initialized = await initializeBaseUrl(host, device);
+        console.log(
+          `[RecHostPreview] ${host.host_name}-${device.device_id}: Initialization result:`,
+          initialized,
+        );
 
         // Check if still mounted after async operation
         if (!isMounted) {
@@ -136,6 +188,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         }
 
         if (initialized) {
+          console.log(
+            `[RecHostPreview] ${host.host_name}-${device.device_id}: Base URL initialized, taking initial screenshot`,
+          );
           // Wait a moment for state to settle, then take initial screenshot
           setTimeout(() => {
             if (!isMounted) return; // Check mount status before proceeding
@@ -146,9 +201,19 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
             setTimeout(() => {
               if (!isMounted) return; // Check mount status before starting interval
 
+              console.log(
+                `[RecHostPreview] ${host.host_name}-${device.device_id}: Setting up screenshot interval (5s)`,
+              );
               screenshotInterval = setInterval(() => {
                 if (isMounted && host && device && host.status === 'online') {
+                  console.log(
+                    `[RecHostPreview] ${host.host_name}-${device.device_id}: Interval triggered - taking screenshot`,
+                  );
                   handleTakeScreenshot();
+                } else {
+                  console.log(
+                    `[RecHostPreview] ${host.host_name}-${device.device_id}: Interval skipped - not mounted or host offline`,
+                  );
                 }
               }, 5000); // 5 seconds for debugging
             }, 1500); // Wait 1.5 seconds after first screenshot before starting interval
@@ -337,7 +402,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                 onLoad={handleImageLoad}
                 onError={(_e) => {
                   console.error(
-                    `[@component:RecHostPreview] Failed to load image: ${thumbnailUrl}`,
+                    `[RecHostPreview] ${host.host_name}-${device?.device_id}: Failed to load image: ${thumbnailUrl}`,
                   );
                   setError('Failed to load screenshot');
                 }}
