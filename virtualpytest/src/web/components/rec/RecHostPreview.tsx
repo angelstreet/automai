@@ -225,8 +225,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
       {/* Header */}
       <Box
         sx={{
-          p: 1,
-          pb: 0,
+          px: 1,
+          py: 0.5,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -244,19 +244,17 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
       </Box>
 
       {/* Device info */}
-      <Box sx={{ px: 1, pb: 1 }}>
+      <Box sx={{ px: 1, pb: 0.5 }}>
         <Typography variant="caption" color="text.secondary">
           {displayInfo}
         </Typography>
       </Box>
 
       {/* Screenshot area */}
-      <CardContent sx={{ flex: 1, p: 1, pt: 0, position: 'relative', minHeight: 0 }}>
+      <CardContent sx={{ flex: 1, p: 0, position: 'relative', minHeight: 0 }}>
         <Box
           sx={{
             height: '100%',
-            border: '1px solid #e0e0e0',
-            borderRadius: 1,
             position: 'relative',
             overflow: 'hidden',
             backgroundColor: 'transparent',
@@ -303,7 +301,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
                     left: 0,
                     width: '100%',
                     height: '100%',
-                    objectFit: 'contain',
+                    objectFit: 'cover',
                     opacity: isTransitioning ? 0 : 1,
                     transition: 'opacity 300ms ease-in-out',
                     cursor: 'pointer',
@@ -323,7 +321,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
                   left: 0,
                   width: '100%',
                   height: '100%',
-                  objectFit: 'contain',
+                  objectFit: 'cover',
                   opacity: 1,
                   transition: 'opacity 300ms ease-in-out',
                   cursor: 'pointer',

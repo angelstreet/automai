@@ -232,11 +232,18 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
               `[@context:HostManagerProvider] Found ${userLockedDevices.length} devices locked by current user, reclaiming...`,
             );
 
-            // Reclaim each device lock
-            for (const [deviceId, lockInfo] of userLockedDevices) {
-              const hostName = (lockInfo as any).hostName || deviceId;
-              console.log(`[@context:HostManagerProvider] Reclaiming lock for device: ${hostName}`);
-              setActiveLocks((prev) => new Map(prev).set(hostName, userId));
+            // Reclaim each device lock - now supports device-oriented locking
+            for (const [deviceKey, lockInfo] of userLockedDevices) {
+              // deviceKey can be either "hostname" (legacy) or "hostname:device_id" (new)
+              const [hostName, deviceId] = deviceKey.includes(':')
+                ? deviceKey.split(':')
+                : [deviceKey, 'device1'];
+              console.log(
+                `[@context:HostManagerProvider] Reclaiming lock for device: ${hostName}:${deviceId || 'device1'}`,
+              );
+              setActiveLocks((prev) =>
+                new Map(prev).set(`${hostName}:${deviceId || 'device1'}`, userId),
+              );
             }
           } else {
             console.log(`[@context:HostManagerProvider] No devices locked by current user found`);
@@ -270,8 +277,10 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     }> => {
       try {
         const effectiveSessionId = sessionId || browserSessionId;
+        const effectiveDeviceId = device_id || 'device1'; // Default to device1 if not specified
+
         console.log(
-          `[@context:HostManagerProvider] Taking control of device: ${host.host_name}, device_id: ${device_id}`,
+          `[@context:HostManagerProvider] Taking control of device: ${host.host_name}, device_id: ${effectiveDeviceId}`,
         );
         console.log(`[@context:HostManagerProvider] Using user ID for lock: ${userId}`);
 
@@ -282,7 +291,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
           },
           body: JSON.stringify({
             host: host,
-            device_id: device_id,
+            device_id: effectiveDeviceId, // Always include device_id
             session_id: effectiveSessionId,
             user_id: userId,
           }),
@@ -292,9 +301,12 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
         if (response.ok && result.success) {
           console.log(
-            `[@context:HostManagerProvider] Successfully took control of device: ${host.host_name}`,
+            `[@context:HostManagerProvider] Successfully took control of device: ${host.host_name}:${effectiveDeviceId}`,
           );
-          setActiveLocks((prev) => new Map(prev).set(host.host_name, userId));
+          // Store lock using device-oriented key
+          setActiveLocks((prev) =>
+            new Map(prev).set(`${host.host_name}:${effectiveDeviceId}`, userId),
+          );
           return { success: true };
         } else {
           // Handle specific error cases
@@ -314,15 +326,17 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
             errorMessage = `Device is locked by ${result.locked_by || 'another user'}`;
           } else if (result.status === 'device_not_found') {
             errorType = 'device_not_found';
-            errorMessage = `Device ${host.host_name} not found or offline`;
+            errorMessage = `Device ${host.host_name}:${effectiveDeviceId} not found or offline`;
           } else if (result.error && result.error.includes('secret key')) {
             errorType = 'server_configuration_error';
             errorMessage = `Server configuration error: Flask secret key not configured. Please restart the server.`;
           } else if (response.status === 409 && result.locked_by_same_user) {
             console.log(
-              `[@context:HostManagerProvider] Device ${host.host_name} locked by same user, reclaiming lock`,
+              `[@context:HostManagerProvider] Device ${host.host_name}:${effectiveDeviceId} locked by same user, reclaiming lock`,
             );
-            setActiveLocks((prev) => new Map(prev).set(host.host_name, userId));
+            setActiveLocks((prev) =>
+              new Map(prev).set(`${host.host_name}:${effectiveDeviceId}`, userId),
+            );
             return { success: true };
           }
 
@@ -335,7 +349,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
         }
       } catch (error: any) {
         console.error(
-          `[@context:HostManagerProvider] Exception taking control of device ${host.host_name}:`,
+          `[@context:HostManagerProvider] Exception taking control of device ${host.host_name}:${device_id || 'device1'}:`,
           error,
         );
         return {
@@ -363,9 +377,10 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     }> => {
       try {
         const effectiveSessionId = sessionId || browserSessionId;
+        const effectiveDeviceId = device_id || 'device1'; // Default to device1 if not specified
 
         console.log(
-          `[@context:HostManagerProvider] Releasing control of device: ${host.host_name}, device_id: ${device_id}`,
+          `[@context:HostManagerProvider] Releasing control of device: ${host.host_name}, device_id: ${effectiveDeviceId}`,
         );
         console.log(`[@context:HostManagerProvider] Using user ID for unlock: ${userId}`);
 
@@ -376,7 +391,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
           },
           body: JSON.stringify({
             host: host,
-            device_id: device_id,
+            device_id: effectiveDeviceId, // Always include device_id
             session_id: effectiveSessionId,
             user_id: userId,
           }),
@@ -390,11 +405,12 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
         if (result.success) {
           console.log(
-            `[@context:HostManagerProvider] Successfully released control of device: ${host.host_name}`,
+            `[@context:HostManagerProvider] Successfully released control of device: ${host.host_name}:${effectiveDeviceId}`,
           );
+          // Remove lock using device-oriented key
           setActiveLocks((prev) => {
             const newMap = new Map(prev);
-            newMap.delete(host.host_name);
+            newMap.delete(`${host.host_name}:${effectiveDeviceId}`);
             return newMap;
           });
           return { success: true };
@@ -411,7 +427,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
         }
       } catch (error: any) {
         console.error(
-          `[@context:HostManagerProvider] Exception releasing control of device ${host.host_name}:`,
+          `[@context:HostManagerProvider] Exception releasing control of device ${host.host_name}:${device_id || 'device1'}:`,
           error,
         );
         return {
@@ -425,21 +441,32 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     [browserSessionId, userId],
   );
 
-  // Check if we have an active lock for a device
+  // Check if we have an active lock for a device (device-oriented)
   const hasActiveLock = useCallback(
-    (hostName: string): boolean => {
-      return activeLocks.has(hostName);
+    (deviceKey: string): boolean => {
+      // Support both legacy "hostname" and new "hostname:device_id" formats
+      if (deviceKey.includes(':')) {
+        return activeLocks.has(deviceKey);
+      } else {
+        // Legacy support: check for any device on this host
+        const hostLocks = Array.from(activeLocks.keys()).filter((key) =>
+          key.startsWith(`${deviceKey}:`),
+        );
+        return hostLocks.length > 0 || activeLocks.has(deviceKey);
+      }
     },
     [activeLocks],
   );
 
-  // Check if device is locked (based on host data and local active locks)
+  // Check if device is locked (based on host data and local active locks) - device-oriented
   const isDeviceLocked = useCallback(
-    (host: Host | null): boolean => {
+    (host: Host | null, deviceId?: string): boolean => {
       if (!host) return false;
 
+      const deviceKey = deviceId ? `${host.host_name}:${deviceId}` : host.host_name;
+
       // If we have an active lock for this device, it's not locked for us
-      if (hasActiveLock(host.host_name)) {
+      if (hasActiveLock(deviceKey)) {
         return false;
       }
 
@@ -449,11 +476,21 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     [hasActiveLock],
   );
 
-  // Check if device can be locked (based on host data)
-  const canLockDevice = useCallback((host: Host | null): boolean => {
-    if (!host) return false;
-    return host.status === 'online' && !host.isLocked;
-  }, []);
+  // Check if device can be locked (based on host data) - device-oriented
+  const canLockDevice = useCallback(
+    (host: Host | null, deviceId?: string): boolean => {
+      if (!host) return false;
+
+      // Check if specific device exists if deviceId is provided
+      if (deviceId && host.devices) {
+        const device = host.devices.find((d) => d.device_id === deviceId);
+        if (!device) return false;
+      }
+
+      return host.status === 'online' && !isDeviceLocked(host, deviceId);
+    },
+    [isDeviceLocked],
+  );
 
   // ========================================
   // UI HANDLERS

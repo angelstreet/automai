@@ -8,13 +8,44 @@ import { RemotePanel } from '../components/controller/remote/RemotePanel';
 import { VerificationResultsDisplay } from '../components/verification/VerificationResultsDisplay';
 import { NavigationEditorDeviceControlProps } from '../types/pages/Navigation_Types';
 
-const getDeviceRemoteConfig = (selectedHost: any) => {
-  // Find any remote controller config (remote_android_mobile, remote_android_tv, etc.)
-  if (!selectedHost?.controller_configs) return null;
-  const remoteControllerKey = Object.keys(selectedHost.controller_configs).find((key) =>
-    key.startsWith('remote_'),
-  );
-  return remoteControllerKey ? selectedHost.controller_configs[remoteControllerKey] : null;
+const getDeviceRemoteConfig = (selectedHost: any, selectedDeviceId: string) => {
+  // Find device-specific remote controller config
+  if (!selectedHost?.devices || !selectedDeviceId) return null;
+
+  const device = selectedHost.devices.find((d: any) => d.device_id === selectedDeviceId);
+  if (!device || !device.device_capabilities) return null;
+
+  // Check if device has remote capability
+  if (device.device_capabilities.remote) {
+    return {
+      type: device.device_capabilities.remote,
+      device_id: selectedDeviceId,
+      device_name: device.device_name,
+      device_model: device.device_model,
+    };
+  }
+
+  return null;
+};
+
+const getDeviceAVConfig = (selectedHost: any, selectedDeviceId: string) => {
+  // Find device-specific AV controller config
+  if (!selectedHost?.devices || !selectedDeviceId) return null;
+
+  const device = selectedHost.devices.find((d: any) => d.device_id === selectedDeviceId);
+  if (!device || !device.device_capabilities) return null;
+
+  // Check if device has AV capability
+  if (device.device_capabilities.av) {
+    return {
+      type: device.device_capabilities.av,
+      device_id: selectedDeviceId,
+      device_name: device.device_name,
+      device_model: device.device_model,
+    };
+  }
+
+  return null;
 };
 
 export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceControlProps> = ({
@@ -44,79 +75,50 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
   // Ref to track the ScreenDefinitionEditor container for position calculation
   const screenEditorRef = useRef<HTMLDivElement>(null);
 
-  // Memoize computed values based on selectedHost from registration context
+  // Memoize computed values based on selectedHost and selectedDeviceId
   const remoteConfig = useMemo(() => {
-    return selectedHost ? getDeviceRemoteConfig(selectedHost) : null;
-  }, [selectedHost]);
+    return selectedHost && selectedDeviceId
+      ? getDeviceRemoteConfig(selectedHost, selectedDeviceId)
+      : null;
+  }, [selectedHost, selectedDeviceId]);
+
+  const avConfig = useMemo(() => {
+    return selectedHost && selectedDeviceId
+      ? getDeviceAVConfig(selectedHost, selectedDeviceId)
+      : null;
+  }, [selectedHost, selectedDeviceId]);
 
   const hasAVCapabilities = useMemo(() => {
-    return selectedHost?.controller_configs?.av?.parameters != null;
-  }, [selectedHost]);
+    return avConfig !== null;
+  }, [avConfig]);
 
-  // Effect to find and track the video element from ScreenDefinitionEditor
+  const hasRemoteCapabilities = useMemo(() => {
+    return remoteConfig !== null;
+  }, [remoteConfig]);
+
+  // Log device capabilities for debugging
   React.useEffect(() => {
-    if (!screenEditorRef.current || !isControlActive || !hasAVCapabilities) {
-      setStreamInfo(null);
-      return;
+    if (selectedHost && selectedDeviceId) {
+      const device = selectedHost.devices?.find((d: any) => d.device_id === selectedDeviceId);
+      if (device) {
+        console.log(
+          `[@component:NavigationEditorDeviceControl] Device capabilities for ${device.device_name}:`,
+          {
+            device_id: selectedDeviceId,
+            av: device.device_capabilities?.av || 'none',
+            remote: device.device_capabilities?.remote || 'none',
+            hasAV: hasAVCapabilities,
+            hasRemote: hasRemoteCapabilities,
+          },
+        );
+      }
     }
-
-    const updateStreamInfo = () => {
-      const videoElement = screenEditorRef.current?.querySelector('video') as HTMLVideoElement;
-
-      if (!videoElement) {
-        setStreamInfo(null);
-        return;
-      }
-
-      const videoRect = videoElement.getBoundingClientRect();
-
-      // Only update if video has actual dimensions
-      if (videoRect.width > 0 && videoRect.height > 0) {
-        setStreamInfo({
-          position: { x: videoRect.left, y: videoRect.top },
-          size: { width: videoRect.width, height: videoRect.height },
-          resolution: { width: 1920, height: 1080 }, // Default device resolution
-          videoElement,
-        });
-
-        console.log('[@component:NavigationEditorDeviceControl] Stream info updated:', {
-          position: { x: videoRect.left, y: videoRect.top },
-          size: { width: videoRect.width, height: videoRect.height },
-        });
-      }
-    };
-
-    // Initial update
-    updateStreamInfo();
-
-    // Update on resize/scroll
-    const handleUpdate = () => updateStreamInfo();
-    window.addEventListener('resize', handleUpdate);
-    window.addEventListener('scroll', handleUpdate);
-
-    // Use MutationObserver to detect when video element is added/changed
-    const observer = new MutationObserver(() => {
-      updateStreamInfo();
-    });
-
-    observer.observe(screenEditorRef.current, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['src', 'style'],
-    });
-
-    return () => {
-      window.removeEventListener('resize', handleUpdate);
-      window.removeEventListener('scroll', handleUpdate);
-      observer.disconnect();
-    };
-  }, [isControlActive, hasAVCapabilities, selectedHost]);
+  }, [selectedHost, selectedDeviceId, hasAVCapabilities, hasRemoteCapabilities]);
 
   return (
     <>
       {/* Screen Definition Editor - Show when device has AV capabilities and control is active */}
-      {selectedHost && hasAVCapabilities && isControlActive && (
+      {selectedHost && selectedDeviceId && hasAVCapabilities && isControlActive && (
         <div ref={screenEditorRef}>
           <ScreenDefinitionEditor
             selectedHost={selectedHost}
@@ -154,11 +156,15 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
           }}
         >
           <Box
-            sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 1,
+            }}
           >
-            <Typography variant="h6" sx={{ fontSize: '1rem', mb: 1 }}>
-              Verification Results - Node:{' '}
-              {nodes.find((n) => n.id === lastVerifiedNodeId)?.data.label || lastVerifiedNodeId}
+            <Typography variant="h6" sx={{ fontSize: '1rem' }}>
+              Verification Results
             </Typography>
             <IconButton
               size="small"
@@ -166,155 +172,95 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                 onSetVerificationResults([]);
                 onSetLastVerifiedNodeId(null);
               }}
-              sx={{ p: 0.25 }}
             >
-              <CloseIcon fontSize="small" />
+              <CloseIcon />
             </IconButton>
           </Box>
-
           <VerificationResultsDisplay
-            testResults={verificationResults}
-            verifications={nodes.find((n) => n.id === lastVerifiedNodeId)?.data.verifications || []}
+            results={verificationResults}
             passCondition={verificationPassCondition}
-            onPassConditionChange={onSetVerificationPassCondition}
-            showPassConditionSelector={true}
-            compact={false}
+            onSetPassCondition={onSetVerificationPassCondition}
           />
         </Box>
       )}
 
-      {/* Remote Control Panel - Only show if device has remote capabilities */}
-      {isRemotePanelOpen && remoteConfig && (
-        <>
-          {/* Android Mobile uses compact component instead of modal */}
-          {remoteConfig.type === 'android_mobile' ? (
-            <Box
-              sx={{
-                position: 'fixed',
-                right: 0,
-                top: '130px',
-                width: '320px',
-                height: 'calc(100vh - 130px)',
-                bgcolor: 'background.paper',
-                borderLeft: '1px solid',
-                borderColor: 'divider',
-                zIndex: 1000,
-                display: 'flex',
-                flexDirection: 'column',
-                boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)',
-              }}
-            >
-              <Box
-                sx={{
-                  p: 1,
-                  borderBottom: '1px solid',
-                  borderColor: 'divider',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}
-              >
-                <Typography variant="h6" component="div">
-                  Android Mobile
-                </Typography>
-              </Box>
-
+      {/* Remote Panel - Show when control is active and device has remote capabilities */}
+      {selectedHost &&
+        selectedDeviceId &&
+        hasRemoteCapabilities &&
+        isControlActive &&
+        isRemotePanelOpen && (
+          <>
+            {/* Android Mobile Remote - Special handling for mobile devices with AV overlay */}
+            {remoteConfig.type === 'android_mobile' && hasAVCapabilities ? (
               <AndroidMobileRemote
                 host={selectedHost}
-                onDisconnectComplete={onReleaseControl}
-                streamPosition={streamInfo?.position}
-                streamSize={streamInfo?.size}
-                streamResolution={{ width: 1080, height: 1920 }}
-                videoElement={streamInfo?.videoElement || undefined}
-                panelState={{
-                  isCollapsed: false, // Fixed panel is always expanded
-                  collapsedPosition: { x: window.innerWidth - 320, y: 130 },
-                  collapsedSize: { width: 320, height: window.innerHeight - 130 },
-                  expandedPosition: { x: window.innerWidth - 320, y: 130 },
-                  expandedSize: { width: 320, height: window.innerHeight - 130 },
-                }}
+                deviceId={selectedDeviceId}
+                streamInfo={streamInfo}
+                onReleaseControl={onReleaseControl}
+                collapsedPosition={{ x: window.innerWidth - 320, y: 130 }}
+                collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
+                expandedPosition={{ x: 0, y: 130 }}
+                expandedSize={{ width: window.innerWidth, height: window.innerHeight - 130 }}
+                deviceResolution={{ width: 1080, height: 1920 }}
+                onStreamInfoUpdate={setStreamInfo}
               />
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                position: 'fixed',
-                right: 0,
-                top: '130px',
-                width: '320px',
-                height: 'calc(100vh - 130px)',
-                bgcolor: 'background.paper',
-                borderLeft: '1px solid',
-                borderColor: 'divider',
-                zIndex: 1000,
-                display: 'flex',
-                flexDirection: 'column',
-                boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)',
-              }}
-            >
+            ) : (
               <Box
                 sx={{
-                  p: 0,
-                  borderBottom: '1px solid',
+                  position: 'fixed',
+                  right: 0,
+                  top: '130px',
+                  width: '320px',
+                  height: 'calc(100vh - 130px)',
+                  bgcolor: 'background.paper',
+                  borderLeft: '1px solid',
                   borderColor: 'divider',
+                  zIndex: 1000,
                   display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
+                  flexDirection: 'column',
+                  boxShadow: '-2px 0 8px rgba(0, 0, 0, 0.1)',
                 }}
               >
-                <Typography variant="h6" component="div">
-                  {remoteConfig.type === 'android_tv'
-                    ? 'Android TV Remote'
-                    : remoteConfig.type === 'ir_remote'
-                      ? 'IR Remote'
-                      : remoteConfig.type === 'bluetooth_remote'
-                        ? 'Bluetooth Remote'
-                        : 'Remote Control'}
-                </Typography>
-              </Box>
-
-              {/* Remote Panel Content - Dynamic based on device type */}
-              {remoteConfig.type === 'android_tv' ? (
-                <RemotePanel
-                  host={selectedHost}
-                  onReleaseControl={onReleaseControl}
-                  collapsedPosition={{ x: window.innerWidth - 320, y: 130 }}
-                  collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
-                  expandedPosition={{ x: window.innerWidth - 320, y: 130 }}
-                  expandedSize={{ width: 320, height: window.innerHeight - 130 }}
-                  deviceResolution={{ width: 1920, height: 1080 }}
-                />
-              ) : remoteConfig.type === 'ir_remote' ? (
-                <RemotePanel
-                  host={selectedHost}
-                  onReleaseControl={onReleaseControl}
-                  collapsedPosition={{ x: window.innerWidth - 320, y: 130 }}
-                  collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
-                  expandedPosition={{ x: window.innerWidth - 320, y: 130 }}
-                  expandedSize={{ width: 320, height: window.innerHeight - 130 }}
-                  deviceResolution={{ width: 1920, height: 1080 }}
-                />
-              ) : remoteConfig.type === 'bluetooth_remote' ? (
-                <RemotePanel
-                  host={selectedHost}
-                  onReleaseControl={onReleaseControl}
-                  collapsedPosition={{ x: window.innerWidth - 320, y: 130 }}
-                  collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
-                  expandedPosition={{ x: window.innerWidth - 320, y: 130 }}
-                  expandedSize={{ width: 320, height: window.innerHeight - 130 }}
-                  deviceResolution={{ width: 1920, height: 1080 }}
-                />
-              ) : (
-                <Box sx={{ p: 2, textAlign: 'center' }}>
-                  <Typography variant="body2" color="textSecondary">
-                    Unsupported remote type: {remoteConfig.type}
+                <Box
+                  sx={{
+                    p: 2,
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Typography variant="h6" component="div">
+                    {remoteConfig.type === 'android_tv'
+                      ? 'Android TV Remote'
+                      : remoteConfig.type === 'ir_remote'
+                        ? 'IR Remote'
+                        : remoteConfig.type === 'bluetooth_remote'
+                          ? 'Bluetooth Remote'
+                          : `${remoteConfig.device_name} Remote`}
                   </Typography>
+                  <IconButton onClick={onReleaseControl} size="small">
+                    <CloseIcon />
+                  </IconButton>
                 </Box>
-              )}
-            </Box>
-          )}
-        </>
-      )}
+
+                {/* Remote Panel Content - Dynamic based on device type */}
+                <RemotePanel
+                  host={selectedHost}
+                  deviceId={selectedDeviceId}
+                  onReleaseControl={onReleaseControl}
+                  collapsedPosition={{ x: window.innerWidth - 320, y: 130 }}
+                  collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
+                  expandedPosition={{ x: window.innerWidth - 320, y: 130 }}
+                  expandedSize={{ width: 320, height: window.innerHeight - 130 }}
+                  deviceResolution={{ width: 1920, height: 1080 }}
+                />
+              </Box>
+            )}
+          </>
+        )}
     </>
   );
 };

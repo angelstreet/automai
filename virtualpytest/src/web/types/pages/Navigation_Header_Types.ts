@@ -28,12 +28,12 @@ export interface NavigationEditorActionButtonsProps {
 
 export interface NavigationEditorDeviceControlsProps {
   selectedHost: Host | null;
-  selectedDeviceId: string | null;
+  selectedDeviceId: string | null; // Device ID within the selected host
   isControlActive: boolean;
   isControlLoading: boolean;
   isRemotePanelOpen: boolean;
   availableHosts: Host[];
-  isDeviceLocked: (hostName: string) => boolean;
+  isDeviceLocked: (deviceKey: string) => boolean; // Device-oriented locking: "hostname:device_id"
   onDeviceSelect: (host: Host | null, deviceId: string | null) => void;
   onTakeControl: () => Promise<void>;
   onToggleRemotePanel: () => void;

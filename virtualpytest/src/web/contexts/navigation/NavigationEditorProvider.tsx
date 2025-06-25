@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { HostManagerProvider } from '../HostManagerProvider';
 import { NavigationNodesProvider } from './NavigationNodesContext';
 import { NavigationUIProvider } from './NavigationUIContext';
 import { NavigationFlowProvider } from './NavigationFlowContext';
@@ -11,23 +12,34 @@ import { NavigationActionsProvider } from './NavigationActionsContext';
 
 interface NavigationEditorProviderProps {
   children: React.ReactNode;
+  // Optional interface filtering for device selection
+  userInterface?: {
+    models?: string[];
+  };
 }
 
 // ========================================
 // PROVIDER
 // ========================================
 
-export const NavigationEditorProvider: React.FC<NavigationEditorProviderProps> = ({ children }) => {
-  console.log('[@context:NavigationEditorProvider] Initializing navigation editor provider');
+export const NavigationEditorProvider: React.FC<NavigationEditorProviderProps> = ({
+  children,
+  userInterface,
+}) => {
+  console.log(
+    '[@context:NavigationEditorProvider] Initializing navigation editor provider with device-oriented architecture',
+  );
 
   return (
-    <NavigationFlowProvider>
-      <NavigationNodesProvider>
-        <NavigationUIProvider>
-          <NavigationActionsProvider>{children}</NavigationActionsProvider>
-        </NavigationUIProvider>
-      </NavigationNodesProvider>
-    </NavigationFlowProvider>
+    <HostManagerProvider userInterface={userInterface}>
+      <NavigationFlowProvider>
+        <NavigationNodesProvider>
+          <NavigationUIProvider>
+            <NavigationActionsProvider>{children}</NavigationActionsProvider>
+          </NavigationUIProvider>
+        </NavigationNodesProvider>
+      </NavigationFlowProvider>
+    </HostManagerProvider>
   );
 };
 

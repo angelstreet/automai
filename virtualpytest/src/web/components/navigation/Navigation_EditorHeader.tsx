@@ -75,10 +75,11 @@ export const NavigationEditorHeader: React.FC<{
   // Get toast notifications
   const { showError } = useToast();
 
-  // NEW: Use device control hook (replaces all duplicate control logic)
+  // NEW: Use device control hook with device_id support for device-oriented architecture
   const { isControlActive, isControlLoading, controlError, handleToggleControl, clearError } =
     useDeviceControl({
       host: selectedHost,
+      device_id: selectedDeviceId || 'device1', // Pass device_id for device-oriented control
       sessionId: 'navigation-editor-session',
       autoCleanup: true, // Auto-release on unmount
     });
@@ -95,6 +96,18 @@ export const NavigationEditorHeader: React.FC<{
       clearError();
     }
   }, [controlError, showError, clearError]);
+
+  // Debug logging for device selection changes
+  React.useEffect(() => {
+    if (selectedHost && selectedDeviceId) {
+      const device = selectedHost.devices?.find((d: any) => d.device_id === selectedDeviceId);
+      if (device) {
+        console.log(
+          `[@component:NavigationEditorHeader] Device selected: ${device.device_name} (${device.device_model}) on host ${selectedHost.host_name}`,
+        );
+      }
+    }
+  }, [selectedHost, selectedDeviceId]);
 
   return (
     <>
@@ -160,7 +173,7 @@ export const NavigationEditorHeader: React.FC<{
               onDiscardChanges={onDiscardChanges}
             />
 
-            {/* Section 4: Device Controls */}
+            {/* Section 4: Device Controls - now with device-oriented locking */}
             <NavigationEditorDeviceControls
               selectedHost={selectedHost}
               selectedDeviceId={selectedDeviceId || null}
@@ -168,7 +181,12 @@ export const NavigationEditorHeader: React.FC<{
               isControlLoading={isControlLoading}
               isRemotePanelOpen={isRemotePanelOpen}
               availableHosts={availableHosts}
-              isDeviceLocked={() => false} // Simplified - useDeviceControl handles lock logic
+              isDeviceLocked={(deviceKey: string) => {
+                // Device-oriented locking: check if specific device is locked
+                // deviceKey format: "hostname:device_id"
+                // TODO: This should be connected to proper device-based lock checking
+                return false; // Simplified for now - useDeviceControl handles lock logic
+              }}
               onDeviceSelect={onDeviceSelect}
               onTakeControl={handleToggleControl}
               onToggleRemotePanel={onToggleRemotePanel}

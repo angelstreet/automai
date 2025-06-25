@@ -29,7 +29,7 @@ export interface HostManagerContextType {
   getDevicesFromHost: (hostName: string) => Device[];
   getDevicesByCapability: (capability: string) => { host: Host; device: Device }[];
 
-  // Device control functions
+  // Device control functions - now device-oriented
   takeControl: (
     host: Host,
     device_id?: string,
@@ -52,10 +52,10 @@ export interface HostManagerContextType {
     details?: any;
   }>;
 
-  // Status checking methods
-  isDeviceLocked: (host: Host | null) => boolean;
-  canLockDevice: (host: Host | null) => boolean;
-  hasActiveLock: (hostName: string) => boolean;
+  // Status checking methods - now device-oriented
+  isDeviceLocked: (host: Host | null, deviceId?: string) => boolean;
+  canLockDevice: (host: Host | null, deviceId?: string) => boolean;
+  hasActiveLock: (deviceKey: string) => boolean; // deviceKey format: "hostname" or "hostname:device_id"
 
   // Panel and UI handlers
   handleDeviceSelect: (host: Host | null, deviceId: string | null) => void;

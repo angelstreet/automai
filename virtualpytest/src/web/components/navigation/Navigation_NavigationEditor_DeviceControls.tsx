@@ -39,8 +39,11 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
       ? createDeviceKey(selectedHost.host_name, selectedDeviceId)
       : '';
 
-  // Check if the selected device is locked
-  const isSelectedDeviceLocked = selectedHost ? isDeviceLocked(selectedHost.host_name) : false;
+  // Check if the selected device is locked (device-based locking)
+  const isSelectedDeviceLocked =
+    selectedHost && selectedDeviceId
+      ? isDeviceLocked(`${selectedHost.host_name}:${selectedDeviceId}`)
+      : false;
 
   // Handle device selection change
   const handleDeviceChange = (deviceKey: string) => {
@@ -56,11 +59,15 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
       // Verify device exists in host
       const device = host.devices?.find((d) => d.device_id === deviceId);
       if (device) {
+        console.log(
+          `[@component:DeviceControls] Selected device: ${device.device_name} (${device.device_model}) on host ${host.host_name}`,
+        );
         onDeviceSelect(host, deviceId);
       } else {
         console.error('[@component:DeviceControls] Device not found in host:', {
           hostName,
           deviceId,
+          availableDevices: host.devices?.map((d) => d.device_id) || [],
         });
         onDeviceSelect(null, null);
       }
@@ -95,15 +102,17 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
             <em>None</em>
           </MenuItem>
           {availableHosts.map((host) => {
-            const hostIsLocked = isDeviceLocked(host.host_name);
             const devices = host.devices || [];
 
             // If host has no devices, show the host itself as an option with 'default' device_id
             if (devices.length === 0) {
+              const deviceKey = createDeviceKey(host.host_name, 'default');
+              const hostIsLocked = isDeviceLocked(deviceKey);
+
               return (
                 <MenuItem
-                  key={host.host_name}
-                  value={createDeviceKey(host.host_name, 'default')}
+                  key={deviceKey}
+                  value={deviceKey}
                   disabled={hostIsLocked}
                   sx={{
                     display: 'flex',
@@ -136,61 +145,69 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
                 <ListSubheader key={`header-${host.host_name}`} sx={{ fontSize: '0.75rem' }}>
                   {host.host_name}
                 </ListSubheader>,
-                ...devices.map((device) => (
-                  <MenuItem
-                    key={createDeviceKey(host.host_name, device.device_id)}
-                    value={createDeviceKey(host.host_name, device.device_id)}
-                    disabled={hostIsLocked}
-                    sx={{
-                      pl: 3, // Indent under host name
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      opacity: hostIsLocked ? 0.6 : 1,
-                    }}
-                  >
-                    {hostIsLocked && (
-                      <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />
-                    )}
-                    <span>
-                      {device.name} ({device.model})
-                    </span>
-                    {hostIsLocked && (
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          ml: 'auto',
-                          color: 'warning.main',
-                          fontSize: '0.65rem',
-                        }}
-                      >
-                        (Locked)
-                      </Typography>
-                    )}
-                  </MenuItem>
-                )),
+                ...devices.map((device) => {
+                  const deviceKey = createDeviceKey(host.host_name, device.device_id);
+                  const deviceIsLocked = isDeviceLocked(deviceKey);
+
+                  return (
+                    <MenuItem
+                      key={deviceKey}
+                      value={deviceKey}
+                      disabled={deviceIsLocked}
+                      sx={{
+                        pl: 3, // Indent under host name
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        opacity: deviceIsLocked ? 0.6 : 1,
+                      }}
+                    >
+                      {deviceIsLocked && (
+                        <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />
+                      )}
+                      <span>
+                        {device.device_name} ({device.device_model})
+                      </span>
+                      {deviceIsLocked && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            ml: 'auto',
+                            color: 'warning.main',
+                            fontSize: '0.65rem',
+                          }}
+                        >
+                          (Locked)
+                        </Typography>
+                      )}
+                    </MenuItem>
+                  );
+                }),
               ];
             }
 
             // If host has exactly one device, show it directly without grouping
             const device = devices[0];
+            const deviceKey = createDeviceKey(host.host_name, device.device_id);
+            const deviceIsLocked = isDeviceLocked(deviceKey);
+
             return (
               <MenuItem
-                key={createDeviceKey(host.host_name, device.device_id)}
-                value={createDeviceKey(host.host_name, device.device_id)}
-                disabled={hostIsLocked}
+                key={deviceKey}
+                value={deviceKey}
+                disabled={deviceIsLocked}
                 sx={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: 1,
-                  opacity: hostIsLocked ? 0.6 : 1,
+                  opacity: deviceIsLocked ? 0.6 : 1,
                 }}
               >
-                {hostIsLocked && <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />}
+                {deviceIsLocked && <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />}
                 <span>
-                  {device.name} ({device.model})
+                  {device.device_name} ({device.device_model})
                 </span>
-                {hostIsLocked && (
+                {deviceIsLocked && (
                   <Typography
                     variant="caption"
                     sx={{
@@ -228,7 +245,7 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
           isControlLoading
             ? 'Processing...'
             : isSelectedDeviceLocked
-              ? `Device is locked by ${selectedHost?.lockedBy || 'another user'}`
+              ? `Device is locked by another user`
               : isControlActive
                 ? 'Release Control'
                 : 'Take Control'
