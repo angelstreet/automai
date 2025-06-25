@@ -80,10 +80,10 @@ export const useRec = (): UseRecReturn => {
           if (result.success && result.screenshot_url) {
             console.log(`[useRec] ${deviceKey}: Original screenshot URL:`, result.screenshot_url);
 
-            // Extract base pattern: remove timestamp and .jpg, keep _thumbnail
+            // Extract base pattern: remove timestamp from capture_YYYYMMDDHHMMSS.jpg format
             const basePattern = result.screenshot_url.replace(
-              /\d{14}_thumbnail\.jpg$/,
-              '{timestamp}_thumbnail.jpg',
+              /capture_\d{14}\.jpg$/,
+              'capture_{timestamp}.jpg',
             );
 
             console.log(`[useRec] ${deviceKey}: Extracted base pattern:`, basePattern);
