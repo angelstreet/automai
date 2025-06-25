@@ -175,7 +175,8 @@ client_registration_state = {
     'registered': False,
     'host_name': None,
     'urls': {},
-    'ping_failures': 0
+    'ping_failures': 0,
+    'last_ping_time': 0  # To prevent duplicate pings
 }
 
 # Ping thread for host mode
@@ -248,7 +249,8 @@ def register_host_with_server():
                     'ping': buildServerUrl('/server/system/ping'),
                     'unregister': buildServerUrl('/server/system/unregister')
                 },
-                'ping_failures': 0
+                'ping_failures': 0,
+                'last_ping_time': 0
             })
             
             print(f"   Registered as: {host.host_name}")
@@ -276,6 +278,13 @@ def send_ping_to_server():
     if not client_registration_state.get('registered'):
         return
     
+    # Prevent duplicate pings within 5 seconds
+    current_time = time.time()
+    if current_time - client_registration_state.get('last_ping_time', 0) < 5:
+        return
+    
+    client_registration_state['last_ping_time'] = current_time
+    
     try:
         host = get_host()
         
@@ -298,22 +307,22 @@ def send_ping_to_server():
                 # Count failure
                 client_registration_state['ping_failures'] += 1
                 failure_count = client_registration_state['ping_failures']
-                print(f"⚠️ [HOST] Ping failed ({failure_count}/10): {response.status_code}")
+                print(f"⚠️ [HOST] Ping failed ({failure_count}/3): {response.status_code}")
                 
-                # After 10 failures, try to reconnect
-                if failure_count >= 10:
-                    print("🔄 [HOST] 10 ping failures - attempting reconnection...")
+                # After 3 failures, try to reconnect
+                if failure_count >= 3:
+                    print("🔄 [HOST] 3 ping failures - attempting reconnection...")
                     try_reconnect()
                 
     except Exception as e:
         # Count failure for network errors too
         client_registration_state['ping_failures'] += 1
         failure_count = client_registration_state['ping_failures']
-        print(f"⚠️ [HOST] Ping failed ({failure_count}/10): {str(e)}")
+        print(f"⚠️ [HOST] Ping failed ({failure_count}/3): {str(e)}")
         
-        # After 10 failures, try to reconnect
-        if failure_count >= 10:
-            print("🔄 [HOST] 10 ping failures - attempting reconnection...")
+        # After 3 failures, try to reconnect
+        if failure_count >= 3:
+            print("🔄 [HOST] 3 ping failures - attempting reconnection...")
             try_reconnect()
 
 
@@ -367,7 +376,8 @@ def unregister_from_server():
             'registered': False,
             'host_name': None,
             'urls': {},
-            'ping_failures': 0
+            'ping_failures': 0,
+            'last_ping_time': 0
         })
         
     except Exception as e:
@@ -378,8 +388,11 @@ def start_ping_thread():
     """Start the ping thread."""
     global ping_thread, ping_stop_event
     
+    # Stop existing thread if running
     if ping_thread and ping_thread.is_alive():
-        return
+        print("🔄 [HOST] Stopping existing ping thread...")
+        ping_stop_event.set()
+        ping_thread.join(timeout=2)
     
     ping_stop_event.clear()
     
