@@ -1,17 +1,15 @@
-import { Computer as ComputerIcon, FilterList as FilterIcon } from '@mui/icons-material';
+import { Computer as ComputerIcon } from '@mui/icons-material';
 import {
   Box,
   Typography,
   Alert,
   Grid,
   CircularProgress,
-  TextField,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Chip,
-  Paper,
   Stack,
 } from '@mui/material';
 import React, { useEffect, useState, useMemo } from 'react';
@@ -72,35 +70,37 @@ const Rec: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" component="h1" gutterBottom>
-          Remote Eye Controller
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          View and control connected devices
-        </Typography>
-      </Box>
-
-      {/* Filters */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <FilterIcon sx={{ mr: 1, color: 'text.secondary' }} />
-          <Typography variant="subtitle1">Filters</Typography>
-          {hasActiveFilters && (
-            <Chip
-              label="Clear Filters"
-              size="small"
-              variant="outlined"
-              onClick={clearFilters}
-              sx={{ ml: 2 }}
-            />
-          )}
+      {/* Header with integrated filters */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          mb: 3,
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
+        {/* Left side - Title and description */}
+        <Box sx={{ flex: 1, minWidth: 250 }}>
+          <Typography variant="h5" component="h1" gutterBottom>
+            Remote Eye Controller
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            View and control connected devices
+            {hasActiveFilters && (
+              <span>
+                {' '}
+                • Showing {filteredDevices.length} of {avDevices.length} devices
+              </span>
+            )}
+          </Typography>
         </Box>
 
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        {/* Right side - Compact filters */}
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
           {/* Host Filter */}
-          <FormControl sx={{ minWidth: 200 }}>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>Host</InputLabel>
             <Select value={hostFilter} label="Host" onChange={(e) => setHostFilter(e.target.value)}>
               <MenuItem value="">
@@ -115,15 +115,15 @@ const Rec: React.FC = () => {
           </FormControl>
 
           {/* Device Model Filter */}
-          <FormControl sx={{ minWidth: 200 }}>
-            <InputLabel>Device Model</InputLabel>
+          <FormControl size="small" sx={{ minWidth: 140 }}>
+            <InputLabel>Model</InputLabel>
             <Select
               value={deviceModelFilter}
-              label="Device Model"
+              label="Model"
               onChange={(e) => setDeviceModelFilter(e.target.value)}
             >
               <MenuItem value="">
-                <em>All Device Models</em>
+                <em>All Models</em>
               </MenuItem>
               {uniqueDeviceModels.map((deviceModel) => (
                 <MenuItem key={deviceModel} value={deviceModel}>
@@ -132,33 +132,19 @@ const Rec: React.FC = () => {
               ))}
             </Select>
           </FormControl>
-        </Stack>
 
-        {/* Filter Results Summary */}
-        {hasActiveFilters && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              Showing {filteredDevices.length} of {avDevices.length} devices
-              {hostFilter && (
-                <Chip
-                  label={`Host: ${hostFilter}`}
-                  size="small"
-                  sx={{ ml: 1 }}
-                  onDelete={() => setHostFilter('')}
-                />
-              )}
-              {deviceModelFilter && (
-                <Chip
-                  label={`Model: ${deviceModelFilter}`}
-                  size="small"
-                  sx={{ ml: 1 }}
-                  onDelete={() => setDeviceModelFilter('')}
-                />
-              )}
-            </Typography>
-          </Box>
-        )}
-      </Paper>
+          {/* Clear filters chip */}
+          {hasActiveFilters && (
+            <Chip
+              label="Clear"
+              size="small"
+              variant="outlined"
+              onClick={clearFilters}
+              sx={{ height: 32 }}
+            />
+          )}
+        </Stack>
+      </Box>
 
       {/* Error state */}
       {error && (
