@@ -96,12 +96,19 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
           );
           console.log(`[@component:RecHostPreview] Thumbnail URL: ${thumbnailUrlFromScreenshot}`);
 
-          // Smooth transition: store previous URL and set new one
-          if (thumbnailUrl && thumbnailUrl !== thumbnailUrlFromScreenshot) {
-            setPreviousThumbnailUrl(thumbnailUrl);
-            setIsTransitioning(true);
-          }
-          setThumbnailUrl(thumbnailUrlFromScreenshot);
+          // Add 1 second delay to ensure thumbnail is properly generated and available
+          setTimeout(() => {
+            console.log(
+              `[@component:RecHostPreview] Setting thumbnail URL after delay: ${thumbnailUrlFromScreenshot}`,
+            );
+
+            // Smooth transition: store previous URL and set new one
+            if (thumbnailUrl && thumbnailUrl !== thumbnailUrlFromScreenshot) {
+              setPreviousThumbnailUrl(thumbnailUrl);
+              setIsTransitioning(true);
+            }
+            setThumbnailUrl(thumbnailUrlFromScreenshot);
+          }, 1000); // 1 second delay
         } else {
           setError('Failed to capture screenshot');
           console.warn(
