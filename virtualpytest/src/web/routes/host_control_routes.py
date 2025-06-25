@@ -33,29 +33,26 @@ def take_control():
                 'error': 'device_id is required'
             })
         
-        # Step 1: Check AV controller
+        # Step 1: Check AV controller (optional)
+        av_status = None
+        av_available = False
         try:
             av_controller = get_controller(device_id, 'av')
             
-            if not av_controller:
-                return jsonify({
-                    'success': False,
-                    'error': f'No AV controller found for device {device_id}'
-                })
-            
-            print(f"[@route:take_control] Using AV controller: {type(av_controller).__name__}")
-            av_status = av_controller.get_status()
-            print(f"[@route:take_control] AV controller status: {av_status}")
+            if av_controller:
+                print(f"[@route:take_control] Using AV controller: {type(av_controller).__name__}")
+                av_status = av_controller.get_status()
+                print(f"[@route:take_control] AV controller status: {av_status}")
+                av_available = True
+            else:
+                print(f"[@route:take_control] No AV controller found for device {device_id} - continuing without AV")
             
         except Exception as e:
-            print(f"[@route:take_control] AV controller error: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'AV controller error: {str(e)}'
-            })
+            print(f"[@route:take_control] AV controller error (continuing without AV): {e}")
         
-        # Step 2: Check and connect remote controller
+        # Step 2: Check and connect remote controller (optional)
         remote_status = None
+        remote_available = False
         try:
             remote_controller = get_controller(device_id, 'remote')
             
@@ -67,40 +64,49 @@ def take_control():
                     print(f"[@route:take_control] Connecting remote controller to device...")
                     connection_success = remote_controller.connect()
                     if not connection_success:
-                        print(f"[@route:take_control] Failed to connect remote controller")
-                        return jsonify({
-                            'success': False,
-                            'error': 'Failed to connect remote controller to device'
-                        })
-                    print(f"[@route:take_control] Remote controller connected successfully")
+                        print(f"[@route:take_control] Failed to connect remote controller - continuing without remote")
+                    else:
+                        print(f"[@route:take_control] Remote controller connected successfully")
+                        remote_available = True
                 else:
                     print(f"[@route:take_control] Remote controller already connected")
+                    remote_available = True
                 
-                remote_status = remote_controller.get_status()
-                print(f"[@route:take_control] Remote controller status: {remote_status}")
-                
-                # Check if remote controller status indicates failure
-                if not remote_status.get('success', False):
-                    error_msg = remote_status.get('error', 'Remote controller status check failed')
-                    print(f"[@route:take_control] Remote controller status failed: {error_msg}")
-                    return jsonify({
-                        'success': False,
-                        'error': f'Remote controller not ready: {error_msg}'
-                    })
+                if remote_available:
+                    remote_status = remote_controller.get_status()
+                    print(f"[@route:take_control] Remote controller status: {remote_status}")
+                    
+                    # Check if remote controller status indicates failure
+                    if not remote_status.get('success', False):
+                        error_msg = remote_status.get('error', 'Remote controller status check failed')
+                        print(f"[@route:take_control] Remote controller status failed - continuing without remote: {error_msg}")
+                        remote_available = False
             else:
-                print(f"[@route:take_control] No remote controller found for device {device_id}")
+                print(f"[@route:take_control] No remote controller found for device {device_id} - continuing without remote")
                     
         except Exception as e:
-            print(f"[@route:take_control] Remote controller error: {e}")
+            print(f"[@route:take_control] Remote controller error (continuing without remote): {e}")
+        
+        # Check if at least one controller is available
+        if not av_available and not remote_available:
             return jsonify({
                 'success': False,
-                'error': f'Remote controller error: {str(e)}'
+                'error': f'No working controllers found for device {device_id}. Need at least AV or remote controller.'
             })
         
         # Controllers are ready
-        print(f"[@route:take_control] SUCCESS: Take control succeeded for device: {device_id}")
+        available_controllers = []
+        if av_available:
+            available_controllers.append('av')
+        if remote_available:
+            available_controllers.append('remote')
+            
+        print(f"[@route:take_control] SUCCESS: Take control succeeded for device: {device_id} with controllers: {available_controllers}")
         return jsonify({
-            'success': True
+            'success': True,
+            'available_controllers': available_controllers,
+            'av_available': av_available,
+            'remote_available': remote_available
         })
             
     except Exception as e:

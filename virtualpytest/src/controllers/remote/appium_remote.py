@@ -69,6 +69,10 @@ class AppiumRemoteController(RemoteControllerInterface):
         # Appium driver
         self.driver = None
         
+        # UI elements state
+        self.last_ui_elements = []
+        self.last_dump_time = 0
+        
         print(f"[@controller:AppiumRemote] Initialized for {self.device_ip}:{self.device_port}")
         print(f"[@controller:AppiumRemote] Server URL: {self.appium_server_url}")
         
@@ -259,12 +263,12 @@ class AppiumRemoteController(RemoteControllerInterface):
             
     def execute_sequence(self, commands: List[Dict[str, Any]]) -> bool:
         """
-        Execute a sequence of commands on the device.
+        Execute a sequence of commands.
         
         Args:
             commands: List of command dictionaries with 'action', 'params', and optional 'delay'
         """
-        if not self.is_connected or not self.appium_utils:
+        if not self.is_connected:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
@@ -286,16 +290,35 @@ class AppiumRemoteController(RemoteControllerInterface):
                 success = self.launch_app(params.get('app_identifier', ''))
             elif action == 'close_app':
                 success = self.close_app(params.get('app_identifier', ''))
+            elif action == 'click_element':
+                element_id = params.get('element_id')
+                if element_id:
+                    # Use the direct click method
+                    success = self.click_element(element_id)
+                else:
+                    print(f"Remote[{self.device_type.upper()}]: No element ID provided")
+                    return False
+            elif action == 'click_element_by_id':
+                element_id = params.get('element_id')
+                if element_id and self.last_ui_elements:
+                    # Find element in dumped elements and pass AppiumElement object
+                    element = next((el for el in self.last_ui_elements if str(el.id) == str(element_id)), None)
+                    if element:
+                        success = self.click_element_by_id(element)
+                    else:
+                        print(f"Remote[{self.device_type.upper()}]: Element with ID {element_id} not found")
+                        return False
+                else:
+                    print(f"Remote[{self.device_type.upper()}]: No element ID provided or no UI elements available")
+                    return False
             elif action == 'tap_coordinates':
                 x = params.get('x', 0)
                 y = params.get('y', 0)
                 success = self.tap_coordinates(x, y)
-            elif action == 'click_element':
-                element = params.get('element')
-                if element:
-                    success = self.click_element(element)
-                else:
-                    print(f"Remote[{self.device_type.upper()}]: Missing element parameter for click_element")
+            elif action == 'dump_ui':
+                success, elements, error = self.dump_ui_elements()
+                if not success:
+                    print(f"Remote[{self.device_type.upper()}]: UI dump failed: {error}")
                     return False
             elif action == 'dump_ui_elements':
                 success, _, _ = self.dump_ui_elements()
@@ -423,9 +446,50 @@ class AppiumRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: {error_msg}")
             return False, [], error_msg
             
-    def click_element(self, element: AppiumElement) -> bool:
+    def click_element(self, element_identifier: str) -> bool:
         """
-        Click on a UI element.
+        Click element directly by text, identifier, or content description using Appium search.
+        
+        Args:
+            element_identifier: Text, identifier, or content description to click
+            
+        Returns:
+            bool: True if click successful
+        """
+        if not self.is_connected or not self.appium_utils:
+            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
+            return False
+            
+        try:
+            print(f"Remote[{self.device_type.upper()}]: Direct click on element: '{element_identifier}'")
+            
+            # Try to find element by text first
+            element = self.find_element_by_text(element_identifier)
+            if not element:
+                # Try by identifier
+                element = self.find_element_by_identifier(element_identifier)
+            if not element:
+                # Try by content description
+                element = self.find_element_by_content_desc(element_identifier)
+            
+            if element:
+                success = self.appium_utils.click_element(self.device_id, element)
+                if success:
+                    print(f"Remote[{self.device_type.upper()}]: Successfully clicked element: '{element_identifier}'")
+                else:
+                    print(f"Remote[{self.device_type.upper()}]: Failed to click element: '{element_identifier}'")
+                return success
+            else:
+                print(f"Remote[{self.device_type.upper()}]: Element not found: '{element_identifier}'")
+                return False
+                
+        except Exception as e:
+            print(f"Remote[{self.device_type.upper()}]: Direct element click error: {e}")
+            return False
+            
+    def click_element_by_id(self, element: AppiumElement) -> bool:
+        """
+        Click on a UI element object (for internal/frontend use after UI dump).
         
         Args:
             element: AppiumElement to click
@@ -652,52 +716,80 @@ class AppiumRemoteController(RemoteControllerInterface):
         """Get available actions for this Appium remote controller."""
         return {
             'remote': [
+                # Navigation actions
+                {
+                    'id': 'click_element',
+                    'label': 'Click UI Element',
+                    'command': 'click_element',
+                    'action_type': 'remote',
+                    'params': {},
+                    'description': 'Click on a UI element directly by text/ID (no UI dump required)',
+                    'requiresInput': True,
+                    'inputLabel': 'Element Text/ID',
+                    'inputPlaceholder': 'Home Tab'
+                },
+                {
+                    'id': 'tap_coordinates',
+                    'label': 'Tap Coordinates',
+                    'command': 'tap_coordinates',
+                    'action_type': 'remote',
+                    'params': {},
+                    'description': 'Tap at specific screen coordinates',
+                    'requiresInput': True,
+                    'inputLabel': 'Coordinates (x,y)',
+                    'inputPlaceholder': '100,200'
+                },
                 {
                     'id': 'press_key_up',
-                    'label': 'Navigate Up',
+                    'label': 'Up',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'UP'},
                     'description': 'Navigate up in the interface',
                     'requiresInput': False
                 },
                 {
                     'id': 'press_key_down',
-                    'label': 'Navigate Down',
+                    'label': 'Down', 
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'DOWN'},
                     'description': 'Navigate down in the interface',
                     'requiresInput': False
                 },
                 {
                     'id': 'press_key_left',
-                    'label': 'Navigate Left',
+                    'label': 'Left',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'LEFT'},
                     'description': 'Navigate left in the interface',
                     'requiresInput': False
                 },
                 {
                     'id': 'press_key_right',
-                    'label': 'Navigate Right',
+                    'label': 'Right',
                     'command': 'press_key',
-                    'params': {'key': 'RIGHT'},
+                    'action_type': 'remote',
+                    'params': {'key': 'RIGHT'}, 
                     'description': 'Navigate right in the interface',
                     'requiresInput': False
-                }
-            ],
-            'control': [
+                },
+                # Control actions
                 {
-                    'id': 'press_key_ok',
-                    'label': 'Select/OK',
+                    'id': 'press_key_enter',
+                    'label': 'Select/Enter',
                     'command': 'press_key',
-                    'params': {'key': 'OK'},
-                    'description': 'Select current item',
+                    'action_type': 'remote',
+                    'params': {'key': 'ENTER'},
+                    'description': 'Select current item or confirm action',
                     'requiresInput': False
                 },
                 {
                     'id': 'press_key_back',
                     'label': 'Back',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'BACK'},
                     'description': 'Go back to previous screen',
                     'requiresInput': False
@@ -706,6 +798,7 @@ class AppiumRemoteController(RemoteControllerInterface):
                     'id': 'press_key_home',
                     'label': 'Home',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'HOME'},
                     'description': 'Go to home screen',
                     'requiresInput': False
@@ -714,28 +807,29 @@ class AppiumRemoteController(RemoteControllerInterface):
                     'id': 'press_key_menu',
                     'label': 'Menu',
                     'command': 'press_key',
+                    'action_type': 'remote',
                     'params': {'key': 'MENU'},
                     'description': 'Open menu',
                     'requiresInput': False
-                }
-            ],
-            'input': [
+                },
+                # Text input actions
                 {
                     'id': 'input_text',
                     'label': 'Input Text',
                     'command': 'input_text',
+                    'action_type': 'remote',
                     'params': {},
                     'description': 'Type text into current field',
                     'requiresInput': True,
                     'inputLabel': 'Text to input',
                     'inputPlaceholder': 'Enter text...'
-                }
-            ],
-            'app_management': [
+                },
+                # App management actions
                 {
                     'id': 'launch_app',
                     'label': 'Launch App',
                     'command': 'launch_app',
+                    'action_type': 'remote',
                     'params': {},
                     'description': 'Launch an application',
                     'requiresInput': True,
@@ -746,118 +840,17 @@ class AppiumRemoteController(RemoteControllerInterface):
                     'id': 'close_app',
                     'label': 'Close App',
                     'command': 'close_app',
+                    'action_type': 'remote',
                     'params': {},
                     'description': 'Close an application',
                     'requiresInput': True,
-                    'inputLabel': 'App identifier',
+                    'inputLabel': 'App identifier', 
                     'inputPlaceholder': 'com.example.app'
-                },
-                {
-                    'id': 'get_installed_apps',
-                    'label': 'Get Installed Apps',
-                    'command': 'get_installed_apps',
-                    'params': {},
-                    'description': 'List all installed applications',
-                    'requiresInput': False
-                }
-            ],
-            'ui_interaction': [
-                {
-                    'id': 'dump_ui_elements',
-                    'label': 'Dump UI Elements',
-                    'command': 'dump_ui_elements',
-                    'params': {},
-                    'description': 'Get current screen UI elements',
-                    'requiresInput': False
-                },
-                {
-                    'id': 'click_element',
-                    'label': 'Click UI Element',
-                    'command': 'click_element',
-                    'params': {},
-                    'description': 'Click on a UI element',
-                    'requiresInput': True,
-                    'inputLabel': 'Element (JSON)',
-                    'inputPlaceholder': '{"text": "Button", "resource_id": "button_id"}'
-                },
-                {
-                    'id': 'find_element_by_text',
-                    'label': 'Find Element by Text',
-                    'command': 'find_element_by_text',
-                    'params': {},
-                    'description': 'Find UI element by visible text',
-                    'requiresInput': True,
-                    'inputLabel': 'Text to search for',
-                    'inputPlaceholder': 'Button text'
-                },
-                {
-                    'id': 'find_element_by_identifier',
-                    'label': 'Find Element by ID',
-                    'command': 'find_element_by_identifier',
-                    'params': {},
-                    'description': 'Find UI element by identifier',
-                    'requiresInput': True,
-                    'inputLabel': 'Element identifier',
-                    'inputPlaceholder': 'resource_id or accessibility_id'
-                },
-                {
-                    'id': 'find_element_by_content_desc',
-                    'label': 'Find Element by Description',
-                    'command': 'find_element_by_content_desc',
-                    'params': {},
-                    'description': 'Find UI element by content description',
-                    'requiresInput': True,
-                    'inputLabel': 'Content description',
-                    'inputPlaceholder': 'Element description'
-                }
-            ],
-            'coordinate_input': [
-                {
-                    'id': 'tap_coordinates',
-                    'label': 'Tap Coordinates',
-                    'command': 'tap_coordinates',
-                    'params': {},
-                    'description': 'Tap at specific screen coordinates',
-                    'requiresInput': True,
-                    'inputLabel': 'Coordinates (x,y)',
-                    'inputPlaceholder': '100,200'
-                }
-            ],
-            'utility': [
-                {
-                    'id': 'get_device_resolution',
-                    'label': 'Get Device Resolution',
-                    'command': 'get_device_resolution',
-                    'params': {},
-                    'description': 'Get device screen resolution',
-                    'requiresInput': False
-                },
-                {
-                    'id': 'take_screenshot',
-                    'label': 'Take Screenshot',
-                    'command': 'take_screenshot',
-                    'params': {},
-                    'description': 'Capture current screen',
-                    'requiresInput': False
-                }
-            ],
-            'sequences': [
-                {
-                    'id': 'execute_sequence',
-                    'label': 'Execute Sequence',
-                    'command': 'execute_sequence',
-                    'params': {},
-                    'description': 'Execute a sequence of commands',
-                    'requiresInput': True,
-                    'inputLabel': 'Command sequence (JSON)',
-                    'inputPlaceholder': '[{"action": "press_key", "params": {"key": "OK"}}]'
-                }
+                }  
             ]
         }
 
-    def get_device_capture_path(self) -> str:
-        """Get device-specific capture path for screenshots."""
-        return self.device_config['video_capture_path']
+
 
 # Backward compatibility alias
 UniversalAppiumController = AppiumRemoteController 

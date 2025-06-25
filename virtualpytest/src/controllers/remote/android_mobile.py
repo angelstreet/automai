@@ -181,64 +181,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Text input error: {e}")
             return False
             
-    def execute_sequence(self, commands: List[Dict[str, Any]]) -> bool:
-        """
-        Execute a sequence of commands on the Android mobile device.
-        
-        Args:
-            commands: List of command dictionaries with 'action', 'params', and optional 'delay'
-        """
-        if not self.is_connected or not self.adb_utils:
-            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
-            return False
-            
-        print(f"Remote[{self.device_type.upper()}]: Executing sequence of {len(commands)} commands")
-        
-        for i, command in enumerate(commands):
-            action = command.get('action')
-            params = command.get('params', {})
-            delay = command.get('delay', 0.5)
-            
-            print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {action}")
-            
-            success = False
-            if action == 'press_key':
-                success = self.press_key(params.get('key', 'OK'))
-            elif action == 'input_text':
-                success = self.input_text(params.get('text', ''))
-            elif action == 'launch_app':
-                success = self.launch_app(params.get('package_name', ''))
-            elif action == 'close_app':
-                success = self.close_app(params.get('package_name', ''))
-            elif action == 'tap_coordinates':
-                x = params.get('x', 0)
-                y = params.get('y', 0)
-                success = self.tap_coordinates(x, y)
-            elif action == 'click_element':
-                element = params.get('element')
-                if element:
-                    success = self.click_element(element)
-                else:
-                    print(f"Remote[{self.device_type.upper()}]: Missing element parameter for click_element")
-                    return False
-            elif action == 'dump_ui_elements':
-                success, _, _ = self.dump_ui_elements()
-            elif action == 'take_screenshot':
-                success, _, _ = self.take_screenshot()
-            else:
-                print(f"Remote[{self.device_type.upper()}]: Unknown action: {action}")
-                return False
-                
-            if not success:
-                print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
-                return False
-                
-            # Add delay between commands (except for the last one)
-            if delay > 0 and i < len(commands) - 1:
-                time.sleep(delay)
-                
-        print(f"Remote[{self.device_type.upper()}]: Sequence completed successfully")
-        return True
+
             
     def execute_sequence(self, commands: List[Dict[str, Any]]) -> bool:
         """
