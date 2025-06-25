@@ -354,9 +354,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                 position: 'relative',
                 width: '100%',
                 height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
                 backgroundColor: 'transparent',
                 overflow: 'hidden',
               }}
@@ -372,8 +369,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                     top: 0,
                     left: 0,
                     width: '100%',
-                    height: isMobileDevice ? '100%' : 'auto',
+                    height: '100%',
                     objectFit: isMobileDevice ? 'cover' : 'contain',
+                    objectPosition: 'top left', // Fixed position, no centering
                     opacity: isTransitioning ? 0 : 1,
                     transition: 'opacity 300ms ease-in-out',
                     cursor: 'pointer',
@@ -388,12 +386,13 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                 src={getImageUrl(thumbnailUrl)}
                 alt="Current screenshot"
                 sx={{
-                  position: previousThumbnailUrl && isTransitioning ? 'absolute' : 'relative',
+                  position: 'absolute',
                   top: 0,
                   left: 0,
                   width: '100%',
-                  height: isMobileDevice ? '100%' : 'auto',
+                  height: '100%',
                   objectFit: isMobileDevice ? 'cover' : 'contain',
+                  objectPosition: 'top left', // Fixed position, no centering
                   opacity: 1,
                   transition: 'opacity 300ms ease-in-out',
                   cursor: 'pointer',
