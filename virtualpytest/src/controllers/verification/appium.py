@@ -22,23 +22,38 @@ from ..base_controller import VerificationControllerInterface
 class AppiumVerificationController(VerificationControllerInterface):
     """Appium verification controller that uses Appium WebDriver to verify UI elements across platforms."""
     
-    def __init__(self, av_controller=None, **kwargs):
+    def __init__(self, appium_platform_name: str, appium_device_id: str, appium_server_url: str = "http://localhost:4723", av_controller=None):
         """
         Initialize the Appium Verification controller.
         
         Args:
+            appium_platform_name: Platform name ("iOS" or "Android") - MANDATORY
+            appium_device_id: Device UDID/ID - MANDATORY  
+            appium_server_url: Appium server URL - MANDATORY
             av_controller: AV controller for capturing screenshots (optional, not used by Appium)
         """
         super().__init__("Appium Verification", "appium")
+        
+        # Validate mandatory parameters
+        if not appium_platform_name:
+            raise ValueError("appium_platform_name is required for AppiumVerificationController")
+        if not appium_device_id:
+            raise ValueError("appium_device_id is required for AppiumVerificationController")
+        if not appium_server_url:
+            raise ValueError("appium_server_url is required for AppiumVerificationController")
+        
+        # Store mandatory fields
+        self.platform_name = appium_platform_name
+        self.device_id = appium_device_id
+        self.appium_server_url = appium_server_url
         
         # AV controller is optional for Appium verification (Appium doesn't need screenshots)
         self.av_controller = av_controller
             
         self.appium_utils = AppiumUtils()
-        self.device_id = f"appium_verification"  # Internal device identifier
         self.is_connected = True
         
-        print(f"[@controller:AppiumVerification] Initialized with AV controller")
+        print(f"[@controller:AppiumVerification] Initialized for {self.platform_name} device {self.device_id}")
     
     def _get_default_automation_name(self) -> str:
         """Get default automation name based on platform."""
@@ -52,29 +67,19 @@ class AppiumVerificationController(VerificationControllerInterface):
     def _connect_device(self) -> bool:
         """Connect to the device via Appium."""
         try:
-            print(f"[@controller:AppiumVerification:_connect_device] Connecting to {self.platform_name} device {self.device_ip}:{self.device_port}")
+            print(f"[@controller:AppiumVerification:_connect_device] Connecting to {self.platform_name} device {self.device_id}")
             
             # Build capabilities based on platform
             capabilities = {
                 'platformName': self.platform_name.capitalize(),
-                'deviceName': f"{self.device_ip}:{self.device_port}",
-                'automationName': self.automation_name,
+                'udid': self.device_id,
+                'automationName': self._get_default_automation_name(),
                 'newCommandTimeout': 300,
                 'noReset': True
             }
             
-            if self.platform_name == 'ios':
-                capabilities['udid'] = f"{self.device_ip}:{self.device_port}"
-                if self.app_package:
-                    capabilities['bundleId'] = self.app_package
-            elif self.platform_name == 'android':
-                capabilities['udid'] = f"{self.device_ip}:{self.device_port}"
-                if self.app_package:
-                    capabilities['appPackage'] = self.app_package
-                    capabilities['appActivity'] = '.MainActivity'  # Default Android activity
-            
             # Connect using appium_utils
-            success = self.appium_utils.connect_device(self.device_id, capabilities, self.appium_url)
+            success = self.appium_utils.connect_device(self.device_id, capabilities, self.appium_server_url)
             
             if success:
                 self.is_connected = True
@@ -167,9 +172,8 @@ class AppiumVerificationController(VerificationControllerInterface):
                 "elements": element_list,
                 "device_info": {
                     "device_id": self.device_id,
-                    "device_ip": self.device_ip,
-                    "device_port": self.device_port,
-                    "platform": self.platform_name
+                    "platform": self.platform_name,
+                    "appium_server_url": self.appium_server_url
                 }
             }
             

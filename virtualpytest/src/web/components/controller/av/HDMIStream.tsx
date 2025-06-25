@@ -25,8 +25,8 @@ import { VideoCapture } from './VideoCapture';
 
 interface HDMIStreamProps {
   host: Host;
-  device_id: string;
-  device_model?: string;
+  deviceId: string;
+  deviceModel?: string;
   onCollapsedChange?: (isCollapsed: boolean) => void;
   onMinimizedChange?: (isMinimized: boolean) => void;
   onCaptureModeChange?: (mode: 'stream' | 'screenshot' | 'video') => void;
@@ -36,8 +36,8 @@ interface HDMIStreamProps {
 export const HDMIStream = React.memo(
   function HDMIStream({
     host,
-    device_id,
-    device_model,
+    deviceId,
+    deviceModel,
     onCollapsedChange,
     onMinimizedChange,
     onCaptureModeChange,
@@ -46,8 +46,8 @@ export const HDMIStream = React.memo(
     console.log(
       '[@component:HDMIStream] Component rendering with host:',
       host.host_name,
-      'device_id:',
-      device_id,
+      'deviceId:',
+      deviceId,
     );
 
     // Stream state
@@ -58,16 +58,16 @@ export const HDMIStream = React.memo(
     // AV config state
     const [avConfig, setAvConfig] = useState<any>(null);
 
-    // Use new stream hook - auto-fetches when host/device_id changes
-    const { streamUrl, isLoadingUrl, urlError } = useStream({ host, device_id });
+    // Use new stream hook - auto-fetches when host/deviceId changes
+    const { streamUrl, isLoadingUrl, urlError } = useStream({ host, device_id: deviceId });
     const isStreamActive = !!streamUrl && !isLoadingUrl;
 
     // Get device model from device or use override
     const effectiveDeviceModel = useMemo(() => {
-      if (device_model) return device_model;
-      const device = host.devices?.find((d) => d.device_id === device_id);
+      if (deviceModel) return deviceModel;
+      const device = host.devices?.find((d) => d.device_id === deviceId);
       return device?.model || 'unknown';
-    }, [device_model, host.devices, device_id]);
+    }, [deviceModel, host.devices, deviceId]);
 
     // Load AV config
     useEffect(() => {

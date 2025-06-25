@@ -134,8 +134,8 @@ def _get_remote_params(implementation: str, device_config: dict) -> dict:
         }
     elif implementation == 'appium':
         return {
-            'device_ip': device_config.get('device_ip', '192.168.1.100'),
-            'device_port': device_config.get('device_port', 4723),
+            'appium_platform_name': device_config.get('appium_platform_name'),
+            'appium_device_id': device_config.get('appium_device_id'),
             'appium_server_url': device_config.get('appium_server_url', 'http://localhost:4723')
         }
     return {}
@@ -155,8 +155,8 @@ def _get_verification_params(implementation: str, device_config: dict) -> dict:
     elif implementation == 'appium':
         # Appium verification controller needs Appium server info
         return {
-            'device_ip': device_config.get('device_ip', '192.168.1.100'),
-            'device_port': device_config.get('device_port', 4723),
+            'appium_platform_name': device_config.get('appium_platform_name'),
+            'appium_device_id': device_config.get('appium_device_id'),
             'appium_server_url': device_config.get('appium_server_url', 'http://localhost:4723')
         }
     return {}

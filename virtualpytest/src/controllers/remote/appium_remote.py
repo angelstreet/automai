@@ -46,41 +46,46 @@ class AppiumRemoteController(RemoteControllerInterface):
         except Exception as e:
             raise RuntimeError(f"Error loading Appium remote config from file: {e}")
     
-    def __init__(self, device_ip: str, device_port: int = 4723, appium_server_url: str = None, **kwargs):
+    def __init__(self, appium_platform_name: str, appium_device_id: str, appium_server_url: str = "http://localhost:4723"):
         """
-        Initialize the Appium remote controller.
+        Initialize the Appium remote controller with only mandatory fields.
         
         Args:
-            device_ip: Device IP address (required)
-            device_port: Appium server port (default: 4723)
-            appium_server_url: Full Appium server URL (optional, constructed from ip:port if not provided)
+            appium_platform_name: Platform name ("iOS" or "Android") - MANDATORY
+            appium_device_id: Device UDID/ID - MANDATORY  
+            appium_server_url: Appium server URL - MANDATORY
         """
         super().__init__("Appium Remote", "appium")
         
-        # Appium connection parameters
-        self.device_ip = device_ip
-        self.device_port = device_port
-        self.appium_server_url = appium_server_url or f"http://{device_ip}:{device_port}/wd/hub"
+        # Validate mandatory parameters
+        if not appium_platform_name:
+            raise ValueError("appium_platform_name is required for AppiumRemoteController")
+        if not appium_device_id:
+            raise ValueError("appium_device_id is required for AppiumRemoteController")
+        if not appium_server_url:
+            raise ValueError("appium_server_url is required for AppiumRemoteController")
         
-        # Validate required parameters
-        if not self.device_ip:
-            raise ValueError("device_ip is required for AppiumRemoteController")
-            
-        # Appium driver
+        # Store mandatory fields
+        self.platform_name = appium_platform_name
+        self.device_id = appium_device_id
+        self.appium_server_url = appium_server_url
+        
+        # Appium driver and utils
         self.driver = None
+        self.appium_utils = None
         
         # UI elements state
         self.last_ui_elements = []
         self.last_dump_time = 0
         
-        print(f"[@controller:AppiumRemote] Initialized for {self.device_ip}:{self.device_port}")
+        print(f"[@controller:AppiumRemote] Initialized for {self.platform_name} device {self.device_id}")
         print(f"[@controller:AppiumRemote] Server URL: {self.appium_server_url}")
         
     def connect(self) -> bool:
         """Connect to device via Appium WebDriver."""
         try:
             print(f"Remote[{self.device_type.upper()}]: Connecting to {self.platform_name} device")
-            print(f"Remote[{self.device_type.upper()}]: Device IP: {self.device_ip}:{self.device_port}")
+            print(f"Remote[{self.device_type.upper()}]: Device ID: {self.device_id}")
             print(f"Remote[{self.device_type.upper()}]: Appium URL: {self.appium_server_url}")
             
             # Initialize Appium utilities
@@ -98,21 +103,19 @@ class AppiumRemoteController(RemoteControllerInterface):
             
             # For iOS, provide additional troubleshooting info
             if self.platform_name.lower() == 'ios':
-                print(f"Remote[{self.device_type.upper()}]: iOS WiFi Debugging Requirements:")
-                print(f"Remote[{self.device_type.upper()}]: 1. Device must be on same network as this machine")
-                print(f"Remote[{self.device_type.upper()}]: 2. WiFi debugging must be enabled in Xcode (Window > Devices and Simulators)")
-                print(f"Remote[{self.device_type.upper()}]: 3. Device must be paired and trusted")
-                print(f"Remote[{self.device_type.upper()}]: 4. WebDriverAgent must be installed on device")
+                print(f"Remote[{self.device_type.upper()}]: iOS Device Requirements:")
+                print(f"Remote[{self.device_type.upper()}]: 1. Device must be connected and trusted")
+                print(f"Remote[{self.device_type.upper()}]: 2. WebDriverAgent must be installed on device")
+                print(f"Remote[{self.device_type.upper()}]: 3. Device UDID must be correct: {self.device_id}")
             
             # Connect to device via Appium
             if not self.appium_utils.connect_device(self.device_id, capabilities, self.appium_server_url):
                 print(f"Remote[{self.device_type.upper()}]: Failed to connect to device")
                 if self.platform_name.lower() == 'ios':
                     print(f"Remote[{self.device_type.upper()}]: Troubleshooting steps:")
-                    print(f"Remote[{self.device_type.upper()}]: - Verify device IP: {self.device_ip}")
-                    print(f"Remote[{self.device_type.upper()}]: - Check if device is reachable: ping {self.device_ip}")
-                    print(f"Remote[{self.device_type.upper()}]: - Verify WiFi debugging is enabled")
-                    print(f"Remote[{self.device_type.upper()}]: - Try connecting via USB first")
+                    print(f"Remote[{self.device_type.upper()}]: - Verify device UDID: {self.device_id}")
+                    print(f"Remote[{self.device_type.upper()}]: - Check device is connected and trusted")
+                    print(f"Remote[{self.device_type.upper()}]: - Verify WebDriverAgent is installed")
                 self.disconnect()
                 return False
                 
@@ -135,54 +138,26 @@ class AppiumRemoteController(RemoteControllerInterface):
             return False
     
     def _build_capabilities(self) -> Dict[str, Any]:
-        """Build Appium capabilities based on platform and parameters."""
+        """Build Appium capabilities based on platform and device ID."""
         capabilities = {
             'platformName': self.platform_name,
+            'udid': self.device_id,
             'noReset': True,
             'fullReset': False,
         }
         
-        # For iOS network connections, use the IP:port format as UDID
-        # For other platforms, use device_id
+        # Add automation name based on platform
         if self.platform_name.lower() == 'ios':
-            # iOS network debugging format: IP:port
-            capabilities['udid'] = f"{self.device_ip}:{self.device_port}"
-        else:
-            capabilities['udid'] = self.device_id
-        
-        # Add platform version if provided
-        if self.platform_version:
-            capabilities['platformVersion'] = self.platform_version
-        
-        # Add automation name if provided, otherwise use defaults
-        if self.device_name_cap:
-            capabilities['automationName'] = self.device_name_cap
-        elif self.platform_name.lower() == 'ios':
             capabilities['automationName'] = 'XCUITest'
-        elif self.platform_name.lower() == 'android':
-            capabilities['automationName'] = 'UIAutomator2'
-        
-        # Add iOS-specific capabilities
-        if self.platform_name.lower() == 'ios':
             capabilities['usePrebuiltWDA'] = True
             capabilities['useNewWDA'] = False
             capabilities['wdaLocalPort'] = 8100  # Default WDA port
             capabilities['skipLogCapture'] = True
             capabilities['shouldTerminateApp'] = False
             capabilities['shouldUseSingletonTestManager'] = False
-            
-            if self.bundle_id:
-                capabilities['bundleId'] = self.bundle_id
-            else:
-                # Don't specify an app - just connect to device for automation
-                capabilities['autoAcceptAlerts'] = True
-        
-        # Add Android-specific capabilities
+            capabilities['autoAcceptAlerts'] = True
         elif self.platform_name.lower() == 'android':
-            if self.app_package:
-                capabilities['appPackage'] = self.app_package
-            if self.app_activity:
-                capabilities['appActivity'] = self.app_activity
+            capabilities['automationName'] = 'UIAutomator2'
         
         print(f"Remote[{self.device_type.upper()}]: Built capabilities: {capabilities}")
         return capabilities

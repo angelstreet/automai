@@ -94,6 +94,19 @@ def _get_devices_config_from_environment() -> List[Dict[str, Any]]:
                 'power_device': os.getenv(f'DEVICE{i}_power_device'),
             }
             
+            # Load Appium env vars directly into device_config (flat)
+            appium_platform_name = os.getenv(f'DEVICE{i}_APPIUM_PLATFORM_NAME')
+            if appium_platform_name:
+                device_config['appium_platform_name'] = appium_platform_name
+            
+            appium_device_id = os.getenv(f'DEVICE{i}_APPIUM_DEVICE_ID')
+            if appium_device_id:
+                device_config['appium_device_id'] = appium_device_id
+                
+            appium_server_url = os.getenv(f'DEVICE{i}_APPIUM_SERVER_URL')
+            if appium_server_url:
+                device_config['appium_server_url'] = appium_server_url
+            
             # Remove None values
             device_config = {k: v for k, v in device_config.items() if v is not None}
             devices_config.append(device_config)

@@ -290,6 +290,14 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const remotePanelProps = useMemo(
       () => ({
         host: stableSelectedHost!,
+        deviceId: selectedDeviceId!,
+        deviceModel: selectedDeviceId
+          ? stableSelectedHost?.devices?.find((d) => d.device_id === selectedDeviceId)
+              ?.device_model ||
+            stableSelectedHost?.device_model ||
+            'unknown'
+          : 'unknown',
+        deviceResolution: { width: 1920, height: 1080 }, // Default HDMI resolution
         onReleaseControl: handleDisconnectComplete,
         streamCollapsed: isAVPanelCollapsed,
         streamMinimized: isAVPanelMinimized,
@@ -297,6 +305,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       }),
       [
         stableSelectedHost,
+        selectedDeviceId,
         handleDisconnectComplete,
         isAVPanelCollapsed,
         isAVPanelMinimized,
@@ -308,12 +317,18 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const hdmiStreamProps = useMemo(
       () => ({
         host: stableSelectedHost!,
+        deviceId: selectedDeviceId!,
+        deviceModel: selectedDeviceId
+          ? stableSelectedHost?.devices?.find((d) => d.device_id === selectedDeviceId)
+              ?.device_model || stableSelectedHost?.device_model
+          : undefined,
         onCollapsedChange: handleAVPanelCollapsedChange,
         onMinimizedChange: handleAVPanelMinimizedChange,
         onCaptureModeChange: handleCaptureModeChange,
       }),
       [
         stableSelectedHost,
+        selectedDeviceId,
         handleAVPanelCollapsedChange,
         handleAVPanelMinimizedChange,
         handleCaptureModeChange,
@@ -686,9 +701,11 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         </Box>
 
         {/* Autonomous Panels - Now self-positioning with configurable layouts */}
-        {showRemotePanel && selectedHost && <RemotePanel {...remotePanelProps} />}
+        {showRemotePanel && selectedHost && selectedDeviceId && (
+          <RemotePanel {...remotePanelProps} />
+        )}
 
-        {showAVPanel && selectedHost && <HDMIStream {...hdmiStreamProps} />}
+        {showAVPanel && selectedHost && selectedDeviceId && <HDMIStream {...hdmiStreamProps} />}
 
         {/* Node Edit Dialog */}
         {isNodeDialogOpen && (
