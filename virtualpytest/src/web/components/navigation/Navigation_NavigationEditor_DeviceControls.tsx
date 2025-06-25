@@ -60,7 +60,7 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
       const device = host.devices?.find((d) => d.device_id === deviceId);
       if (device) {
         console.log(
-          `[@component:DeviceControls] Selected device: ${device.device_name} (${device.device_model}) on host ${host.host_name}`,
+          `[@component:DeviceControls] Selected device: ${device.device_name} on host ${host.host_name}`,
         );
         onDeviceSelect(host, deviceId);
       } else {
@@ -165,9 +165,7 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
                       {deviceIsLocked && (
                         <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />
                       )}
-                      <span>
-                        {device.device_name} ({device.device_model})
-                      </span>
+                      <span>{device.device_name}</span>
                       {deviceIsLocked && (
                         <Typography
                           variant="caption"
@@ -204,9 +202,7 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
                 }}
               >
                 {deviceIsLocked && <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />}
-                <span>
-                  {device.device_name} ({device.device_model})
-                </span>
+                <span>{device.device_name}</span>
                 {deviceIsLocked && (
                   <Typography
                     variant="caption"
