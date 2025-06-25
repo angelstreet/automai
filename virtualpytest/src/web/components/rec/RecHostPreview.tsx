@@ -150,7 +150,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                 if (isMounted && host && device && host.status === 'online') {
                   handleTakeScreenshot();
                 }
-              }, 5000); // 5 seconds for debugging
+              }, 3000); // 5 seconds for debugging
             }, 1500); // Wait 1.5 seconds after first screenshot before starting interval
           }, 500);
         } else {
@@ -306,7 +306,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                     width: '100%',
                     height: '100%',
                     objectFit: isMobileDevice ? 'cover' : 'contain',
-                    objectPosition: 'top left', // Fixed position, no centering
+                    objectPosition: 'top center', // Center horizontally, anchor to top
                     opacity: isTransitioning ? 0 : 1,
                     transition: 'opacity 300ms ease-in-out',
                     cursor: 'pointer',
@@ -327,7 +327,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                   width: '100%',
                   height: '100%',
                   objectFit: isMobileDevice ? 'cover' : 'contain',
-                  objectPosition: 'top left', // Fixed position, no centering
+                  objectPosition: 'top center', // Center horizontally, anchor to top
                   opacity: 1,
                   transition: 'opacity 300ms ease-in-out',
                   cursor: 'pointer',
@@ -338,7 +338,34 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                   console.error(
                     `[RecHostPreview] ${host.host_name}-${device?.device_id}: Failed to load image: ${thumbnailUrl}`,
                   );
-                  setError('Failed to load screenshot');
+                  // Retry with timestamp minus 1 second to handle timing issues
+                  if (generateThumbnailUrl && device) {
+                    // Generate a URL with timestamp 1 second earlier
+                    const now = new Date(Date.now() - 1000); // 1 second ago
+                    const timestamp =
+                      now.getFullYear().toString() +
+                      (now.getMonth() + 1).toString().padStart(2, '0') +
+                      now.getDate().toString().padStart(2, '0') +
+                      now.getHours().toString().padStart(2, '0') +
+                      now.getMinutes().toString().padStart(2, '0') +
+                      now.getSeconds().toString().padStart(2, '0');
+
+                    // Get base pattern and create retry URL
+                    const retryUrl = generateThumbnailUrl(host, device)?.replace(
+                      /capture_\d{14}\.jpg$/,
+                      `capture_${timestamp}.jpg`,
+                    );
+
+                    if (retryUrl && retryUrl !== thumbnailUrl) {
+                      setThumbnailUrl(retryUrl);
+                    } else {
+                      // If retry fails, reset transition state
+                      if (isTransitioning) {
+                        setPreviousThumbnailUrl(null);
+                        setIsTransitioning(false);
+                      }
+                    }
+                  }
                 }}
               />
             </Box>
