@@ -1,67 +1,96 @@
 #!/bin/bash
 
-# Function to kill existing processes
+# Configuration array for four grabbers
+declare -A GRABBERS=(
+  ["0"]="/dev/video0:/var/www/html/stream/capture1"
+  ["1"]="/dev/video2:/var/www/html/stream/capture2"
+  ["2"]="/dev/video4:/var/www/html/stream/capture3"
+  ["3"]="/dev/video6:/var/www/html/stream/capture4"
+)
+
+# Function to kill existing processes for a specific grabber (simplified like older script)
 kill_existing_processes() {
-  echo "Checking for existing processes..."
-  pkill -f "ffmpeg.*v4l2.*output.m3u8" 2>/dev/null && echo "Killed existing ffmpeg"
-  pkill -f "rename_captures.sh" 2>/dev/null && echo "Killed existing rename_captures.sh"
-  pkill -f "clean_captures.sh" 2>/dev/null && echo "Killed existing clean_captures.sh"
+  local output_dir=$1
+  local video_device=$2
+  echo "Checking for existing processes for $video_device..."
+  pkill -f "ffmpeg.*$video_device" 2>/dev/null && echo "Killed existing ffmpeg for $video_device"
+  pkill -f "rename_captures.sh.*$output_dir" 2>/dev/null && echo "Killed existing rename_captures.sh for $output_dir"
+  pkill -f "clean_captures.sh.*$output_dir" 2>/dev/null && echo "Killed existing clean_captures.sh for $output_dir"
 }
 
-# Cleanup function to kill background processes
+# Cleanup function (similar to older script)
 cleanup() {
-  echo "Caught signal, cleaning up..."
-  # Kill background processes if their PIDs exist
-  [ -n "$FFMPEG_PID" ] && kill "$FFMPEG_PID" 2>/dev/null && echo "Killed ffmpeg (PID: $FFMPEG_PID)"
-  [ -n "$RENAME_PID" ] && kill "$RENAME_PID" 2>/dev/null && echo "Killed rename_captures.sh (PID: $RENAME_PID)"
-  [ -n "$CLEAN_PID" ] && kill "$CLEAN_PID" 2>/dev/null && echo "Killed clean_captures.sh (PID: $CLEAN_PID)"
-  exit 0
+  local ffmpeg_pid=$1
+  local rename_pid=$2
+  local clean_pid=$3
+  local video_device=$4
+  echo "Caught signal, cleaning up for $video_device..."
+  [ -n "$ffmpeg_pid" ] && kill "$ffmpeg_pid" 2>/dev/null && echo "Killed ffmpeg (PID: $ffmpeg_pid)"
+  [ -n "$rename_pid" ] && kill "$rename_pid" 2>/dev/null && echo "Killed rename_captures.sh (PID: $rename_pid)"
+  [ -n "$clean_pid" ] && kill "$clean_pid" 2>/dev/null && echo "Killed clean_captures.sh (PID: $clean_pid)"
 }
 
-# Set up trap to catch Ctrl+C (SIGINT) and SIGTERM
-trap cleanup SIGINT SIGTERM
+# Function to start processes for a single grabber (aligned with older script's structure)
+start_grabber() {
+  local video_device=$1
+  local capture_dir=$2
+  local index=$3
 
-# Kill any existing processes before starting
-kill_existing_processes
+  # Create capture directory (same as older script)
+  mkdir -p "$capture_dir/captures"
 
-CAPTURE_DIR="/var/www/html/stream/captures"
-VIDEO_DEVICE="/dev/video0"
+  # Kill existing processes (simplified like older script)
+  kill_existing_processes "$capture_dir" "$video_device"
 
-# Optimized FFMPEG command for low latency streaming (Option 1: 2-4s latency)
-FFMPEG_CMD="/usr/bin/ffmpeg -y -f v4l2 -input_format mjpeg -framerate 10 -video_size 1920x1080 -i $VIDEO_DEVICE \
-  -fflags nobuffer+flush_packets \
-  -avioflags direct \
-  -probesize 32 \
-  -analyzeduration 0 \
-  -filter_complex split=2[stream][capture]\;[stream]scale=640:360,format=yuv420p[streamout]\;[capture]fps=5[captureout] \
-  -map [streamout] -c:v libx264 -preset ultrafast -tune zerolatency -b:v 500k -maxrate 600k -bufsize 100k -g 5 -keyint_min 5 -sc_threshold 0 -flags low_delay+global_header -threads 2 -an -x264opts rc-lookahead=0:sync-lookahead=0:ref=1:bframes=0 \
-    -f hls -hls_time 0.5 -hls_list_size 2 -hls_flags delete_segments+discont_start+split_by_time+independent_segments -hls_segment_type mpegts -hls_init_time 0.5 \
-    -hls_allow_cache 0 -hls_segment_filename /var/www/html/stream/segment_%03d.ts \
-    /var/www/html/stream/output.m3u8 \
-  -map [captureout] -c:v mjpeg -q:v 4 -r 4 -f image2 \
-    /var/www/html/stream/captures/test_capture_%06d.jpg"
+  # FFMPEG command (identical to older script, adapted for multi-grabber)
+  FFMPEG_CMD="/usr/bin/ffmpeg -y -f v4l2 -input_format mjpeg -framerate 10 -video_size 1920x1080 -i $video_device \
+    -fflags nobuffer+flush_packets \
+    -avioflags direct \
+    -probesize 32 \
+    -analyzeduration 0 \
+    -filter_complex split=2[stream][capture]\;[stream]scale=640:360,format=yuv420p[streamout]\;[capture]fps=5[captureout] \
+    -map [streamout] -c:v libx264 -preset ultrafast -tune zerolatency -b:v 500k -maxrate 600k -bufsize 100k -g 5 -keyint_min 5 -sc_threshold 0 -flags low_delay+global_header -threads 2 -an -x264opts rc-lookahead=0:sync-lookahead=0:ref=1:bframes=0 \
+      -f hls -hls_time 0.5 -hls_list_size 2 -hls_flags delete_segments+discont_start+split_by_time+independent_segments -hls_segment_type mpegts -hls_init_time 0.5 \
+      -hls_allow_cache 0 -hls_segment_filename $capture_dir/segment_%03d.ts \
+      $capture_dir/output.m3u8 \
+    -map [captureout] -c:v mjpeg -q:v 4 -r 4 -f image2 \
+      $capture_dir/captures/test_capture_%06d.jpg"
 
-RENAME_SCRIPT="/usr/local/bin/rename_captures.sh"
-CLEAN_SCRIPT="/usr/local/bin/clean_captures.sh"
+  # Start ffmpeg (same as older script)
+  echo "Starting ffmpeg for $video_device..."
+  eval $FFMPEG_CMD > "/tmp/ffmpeg_output_${index}.log" 2>&1 &
+  local FFMPEG_PID=$!
+  echo "Started ffmpeg for $video_device with PID: $FFMPEG_PID"
 
-# Start ffmpeg with proper error handling
-echo "Starting ffmpeg..."
-eval $FFMPEG_CMD > /tmp/ffmpeg_output.log 2>&1 &
-FFMPEG_PID=$!
-echo "Started ffmpeg with PID: $FFMPEG_PID"
+  # Start rename script (same as older script)
+  /usr/local/bin/rename_captures.sh &
+  local RENAME_PID=$!
+  echo "Started rename_captures.sh for $capture_dir with PID: $RENAME_PID"
 
-# Start rename script and capture its PID
-$RENAME_SCRIPT &
-RENAME_PID=$!
-echo "Started rename_captures.sh with PID: $RENAME_PID"
+  # Start clean script (same as older script)
+  while true; do
+    /usr/local/bin/clean_captures.sh
+    sleep 300
+  done &
+  local CLEAN_PID=$!
+  echo "Started clean_captures.sh loop for $capture_dir with PID: $CLEAN_PID"
 
-# Start clean script in a loop and capture its PID
+  # Set up trap for this grabber (same as older script)
+  trap "cleanup $FFMPEG_PID $RENAME_PID $CLEAN_PID $video_device" SIGINT SIGTERM
+}
+
+# Main loop to start all grabbers (adapted for four devices)
+PIDS=()
+for index in "${!GRABBERS[@]}"; do
+  IFS=':' read -r video_device capture_dir <<< "${GRABBERS[$index]}"
+  start_grabber "$video_device" "$capture_dir" "$index" &
+  PIDS+=($!)
+done
+
+# Wait for all grabber processes (mimics older script's wait)
+wait "${PIDS[@]}"
+
+# Keep script alive (ensures systemd compatibility, not needed in older script but added for stability)
 while true; do
-  $CLEAN_SCRIPT
-  sleep 300
-done &
-CLEAN_PID=$!
-echo "Started clean_captures.sh loop with PID: $CLEAN_PID"
-
-# Wait for all background processes
-wait
+  sleep 3600
+done
