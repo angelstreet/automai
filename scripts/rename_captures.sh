@@ -21,8 +21,8 @@ process_directory() {
   inotifywait -m "$CAPTURE_DIR" -e create -e moved_to --format '%w%f' |
     while read -r filepath; do
       if [[ "$filepath" =~ test_capture_[0-9]+\.jpg$ ]]; then
-        sleep 0.2
         if [ -f "$filepath" ]; then
+          start_time=$(date +%s.%N)
           timestamp=$(TZ="Europe/Zurich" stat -c %y "$filepath" 2>>/tmp/rename.log | awk '{print $1 $2}' | tr -d ':-' | cut -d'.' -f1)
           if [ -z "$timestamp" ]; then
             echo "Failed to get timestamp for $filepath" >> /tmp/rename.log
@@ -32,15 +32,14 @@ process_directory() {
           thumbnail="${CAPTURE_DIR}/capture_${timestamp}_thumbnail.jpg"
           if mv -f "$filepath" "$newname" 2>>/tmp/rename.log; then
             echo "Renamed $(basename "$filepath") to $(basename "$newname")" >> /tmp/rename.log
-            # Create thumbnail (resize to 320x240, maintain aspect ratio)
-            if convert "$newname" -resize 498x280 "$thumbnail" 2>>/tmp/rename.log; then
-              echo "Created thumbnail $(basename "$thumbnail")" >> /tmp/rename.log
-            else
-              echo "Failed to create thumbnail for $newname" >> /tmp/rename.log
-            fi
+            # Create thumbnail in background (498x280, optimized for speed)
+            convert "$newname" -thumbnail 498x280 -strip -quality 85 "$thumbnail" 2>>/tmp/rename.log &
+            echo "Started thumbnail creation for $(basename "$thumbnail")" >> /tmp/rename.log
           else
             echo "Failed to rename $filepath to $newname" >> /tmp/rename.log
           fi
+          end_time=$(date +%s.%N)
+          echo "Processed $filepath in $(echo "$end_time - $start_time" | bc) seconds" >> /tmp/rename.log
         else
           echo "File $filepath does not exist or is not accessible" >> /tmp/rename.log
         fi
