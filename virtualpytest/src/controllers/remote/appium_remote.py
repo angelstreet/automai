@@ -57,13 +57,24 @@ class AppiumRemoteController(RemoteControllerInterface):
         """
         super().__init__("Appium Remote", "appium")
         
+        print(f"[@controller:AppiumRemote:__init__] DEBUG: Starting initialization")
+        print(f"[@controller:AppiumRemote:__init__] DEBUG: appium_platform_name = {appium_platform_name}")
+        print(f"[@controller:AppiumRemote:__init__] DEBUG: appium_device_id = {appium_device_id}")
+        print(f"[@controller:AppiumRemote:__init__] DEBUG: appium_server_url = {appium_server_url}")
+        
         # Validate mandatory parameters
         if not appium_platform_name:
-            raise ValueError("appium_platform_name is required for AppiumRemoteController")
+            error_msg = "appium_platform_name is required for AppiumRemoteController"
+            print(f"[@controller:AppiumRemote:__init__] ERROR: {error_msg}")
+            raise ValueError(error_msg)
         if not appium_device_id:
-            raise ValueError("appium_device_id is required for AppiumRemoteController")
+            error_msg = "appium_device_id is required for AppiumRemoteController"
+            print(f"[@controller:AppiumRemote:__init__] ERROR: {error_msg}")
+            raise ValueError(error_msg)
         if not appium_server_url:
-            raise ValueError("appium_server_url is required for AppiumRemoteController")
+            error_msg = "appium_server_url is required for AppiumRemoteController"
+            print(f"[@controller:AppiumRemote:__init__] ERROR: {error_msg}")
+            raise ValueError(error_msg)
         
         # Store mandatory fields - IMPORTANT: Keep device_id as host identifier, not UDID
         self.platform_name = appium_platform_name
@@ -78,24 +89,35 @@ class AppiumRemoteController(RemoteControllerInterface):
         self.last_ui_elements = []
         self.last_dump_time = 0
         
+        print(f"[@controller:AppiumRemote:__init__] DEBUG: Successfully stored parameters")
+        print(f"[@controller:AppiumRemote:__init__] DEBUG: platform_name = {self.platform_name}")
+        print(f"[@controller:AppiumRemote:__init__] DEBUG: device_id = {self.appium_device_id}")
+        print(f"[@controller:AppiumRemote:__init__] DEBUG: server_url = {self.appium_server_url}")
+        
         print(f"[@controller:AppiumRemote] Initialized for {self.platform_name} device UDID {self.appium_device_id}")
         print(f"[@controller:AppiumRemote] Server URL: {self.appium_server_url}")
+        
+        print(f"[@controller:AppiumRemote:__init__] DEBUG: About to call connect()")
         self.connect()
         
     def connect(self) -> bool:
         """Connect to device via Appium WebDriver."""
         try:
+            print(f"[@controller:AppiumRemote:connect] DEBUG: Starting connection process")
             print(f"Remote[{self.device_type.upper()}]: Connecting to {self.platform_name} device")
             print(f"Remote[{self.device_type.upper()}]: Device ID: {self.appium_device_id}")
             print(f"Remote[{self.device_type.upper()}]: Appium URL: {self.appium_server_url}")
             
             # Initialize Appium utilities
+            print(f"[@controller:AppiumRemote:connect] DEBUG: Initializing AppiumUtils")
             self.appium_utils = AppiumUtils()
             
             # Check if Appium server is running
+            print(f"[@controller:AppiumRemote:connect] DEBUG: Checking if Appium server is running at {self.appium_server_url}")
             if not self.appium_utils.is_appium_server_running(self.appium_server_url):
                 print(f"Remote[{self.device_type.upper()}]: ERROR - Appium server is not running at {self.appium_server_url}")
                 print(f"Remote[{self.device_type.upper()}]: Please start Appium server: appium --address 127.0.0.1 --port 4723")
+                print(f"[@controller:AppiumRemote:connect] DEBUG: Appium server check failed")
                 return False
             
             # Build Appium capabilities

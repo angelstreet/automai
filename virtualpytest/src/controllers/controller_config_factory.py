@@ -45,10 +45,15 @@ def create_controller_configs_from_device_info(device_config: dict) -> dict:
     """Create controller configurations for a device."""
     device_model = device_config.get('model', device_config.get('device_model'))
     
+    print(f"[@controller_factory:create_controller_configs_from_device_info] DEBUG: Received device_config:")
+    for key, value in device_config.items():
+        print(f"[@controller_factory:create_controller_configs_from_device_info] DEBUG:   {key} = {value}")
+    
     print(f"[@controller_factory:create_controller_configs_from_device_info] Creating configs for device model: {device_model}")
     
     if device_model not in DEVICE_CONTROLLER_MAP:
         print(f"[@controller_factory:create_controller_configs_from_device_info] ERROR: Unknown device model: {device_model}")
+        print(f"[@controller_factory:create_controller_configs_from_device_info] ERROR: Available models: {list(DEVICE_CONTROLLER_MAP.keys())}")
         return {}
     
     configs = {}
@@ -127,17 +132,29 @@ def _get_av_params(implementation: str, device_config: dict) -> dict:
 
 def _get_remote_params(implementation: str, device_config: dict) -> dict:
     """Get parameters for Remote controllers."""
+    print(f"[@controller_factory:_get_remote_params] DEBUG: Getting remote params for implementation: {implementation}")
+    
     if implementation in ['android_mobile', 'android_tv']:
-        return {
+        params = {
             'device_ip': device_config.get('device_ip', '192.168.1.100'),
             'device_port': device_config.get('device_port', 5555)
         }
+        print(f"[@controller_factory:_get_remote_params] DEBUG: Android params: {params}")
+        return params
     elif implementation == 'appium':
-        return {
+        params = {
             'appium_platform_name': device_config.get('appium_platform_name'),
             'appium_device_id': device_config.get('appium_device_id'),
             'appium_server_url': device_config.get('appium_server_url', 'http://localhost:4723')
         }
+        print(f"[@controller_factory:_get_remote_params] DEBUG: Appium params: {params}")
+        print(f"[@controller_factory:_get_remote_params] DEBUG: Key Appium values:")
+        print(f"[@controller_factory:_get_remote_params] DEBUG:   platform_name = {params['appium_platform_name']}")
+        print(f"[@controller_factory:_get_remote_params] DEBUG:   device_id = {params['appium_device_id']}")
+        print(f"[@controller_factory:_get_remote_params] DEBUG:   server_url = {params['appium_server_url']}")
+        return params
+    
+    print(f"[@controller_factory:_get_remote_params] DEBUG: Unknown implementation, returning empty params")
     return {}
 
 def _get_verification_params(implementation: str, device_config: dict) -> dict:

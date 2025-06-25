@@ -73,42 +73,78 @@ def _get_devices_config_from_environment() -> List[Dict[str, Any]]:
     """
     devices_config = []
     
+    print("[@controller_manager:_get_devices_config_from_environment] DEBUG: Starting device configuration extraction")
+    
     # Look for DEVICE1, DEVICE2, DEVICE3, DEVICE4
     for i in range(1, 5):
         device_name = os.getenv(f'DEVICE{i}_NAME')
         
+        print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_NAME = {device_name}")
+        
         if device_name:
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: Found device {i}, extracting all environment variables...")
+            
+            # Extract all environment variables for this device
+            device_model = os.getenv(f'DEVICE{i}_MODEL', 'unknown')
+            video = os.getenv(f'DEVICE{i}_VIDEO')
+            video_stream_path = os.getenv(f'DEVICE{i}_VIDEO_STREAM_PATH')
+            video_capture_path = os.getenv(f'DEVICE{i}_VIDEO_CAPTURE_PATH')
+            device_ip = os.getenv(f'DEVICE{i}_IP')
+            device_port = os.getenv(f'DEVICE{i}_PORT')
+            ir_device = os.getenv(f'DEVICE{i}_ir_device')
+            bluetooth_device = os.getenv(f'DEVICE{i}_bluetooth_device')
+            power_device = os.getenv(f'DEVICE{i}_power_device')
+            appium_platform_name = os.getenv(f'DEVICE{i}_APPIUM_PLATFORM_NAME')
+            appium_device_id = os.getenv(f'DEVICE{i}_APPIUM_DEVICE_ID')
+            appium_server_url = os.getenv(f'DEVICE{i}_APPIUM_SERVER_URL')
+            
+            # Print all extracted values
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_MODEL = {device_model}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_VIDEO = {video}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_VIDEO_STREAM_PATH = {video_stream_path}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_VIDEO_CAPTURE_PATH = {video_capture_path}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_IP = {device_ip}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_PORT = {device_port}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_ir_device = {ir_device}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_bluetooth_device = {bluetooth_device}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_power_device = {power_device}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_APPIUM_PLATFORM_NAME = {appium_platform_name}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_APPIUM_DEVICE_ID = {appium_device_id}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_APPIUM_SERVER_URL = {appium_server_url}")
+            
             device_config = {
                 'device_id': f'device{i}',
                 'device_name': device_name,
-                'device_model': os.getenv(f'DEVICE{i}_MODEL', 'unknown'),
+                'device_model': device_model,
                 # Video configuration
-                'video': os.getenv(f'DEVICE{i}_VIDEO'),
-                'video_stream_path': os.getenv(f'DEVICE{i}_VIDEO_STREAM_PATH'),
-                'video_capture_path': os.getenv(f'DEVICE{i}_VIDEO_CAPTURE_PATH'),
+                'video': video,
+                'video_stream_path': video_stream_path,
+                'video_capture_path': video_capture_path,
                 # Device IP/Port (used by both Android ADB and Appium - mutually exclusive)
-                'device_ip': os.getenv(f'DEVICE{i}_IP'),
-                'device_port': os.getenv(f'DEVICE{i}_PORT'),
-                'ir_device': os.getenv(f'DEVICE{i}_ir_device'),
-                'bluetooth_device': os.getenv(f'DEVICE{i}_bluetooth_device'),
-                'power_device': os.getenv(f'DEVICE{i}_power_device'),
+                'device_ip': device_ip,
+                'device_port': device_port,
+                'ir_device': ir_device,
+                'bluetooth_device': bluetooth_device,
+                'power_device': power_device,
             }
             
             # Load Appium env vars directly into device_config (flat)
-            appium_platform_name = os.getenv(f'DEVICE{i}_APPIUM_PLATFORM_NAME')
             if appium_platform_name:
                 device_config['appium_platform_name'] = appium_platform_name
             
-            appium_device_id = os.getenv(f'DEVICE{i}_APPIUM_DEVICE_ID')
             if appium_device_id:
                 device_config['appium_device_id'] = appium_device_id
                 
-            appium_server_url = os.getenv(f'DEVICE{i}_APPIUM_SERVER_URL')
             if appium_server_url:
                 device_config['appium_server_url'] = appium_server_url
             
             # Remove None values
             device_config = {k: v for k, v in device_config.items() if v is not None}
+            
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: Final device_config for DEVICE{i}:")
+            for key, value in device_config.items():
+                print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG:   {key} = {value}")
+            
             devices_config.append(device_config)
     
     return devices_config
