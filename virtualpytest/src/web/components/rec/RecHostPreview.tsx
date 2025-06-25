@@ -1,5 +1,5 @@
 import { Error as ErrorIcon } from '@mui/icons-material';
-import { Card, CardContent, Typography, Box, Chip, CircularProgress } from '@mui/material';
+import { Card, Typography, Box, Chip, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useEffect } from 'react';
 
 import { useToast } from '../../hooks/useToast';
@@ -253,8 +253,12 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
+        p: 0, // Remove all padding from Card
         '&:hover': {
           boxShadow: 4,
+        },
+        '& .MuiCard-root': {
+          padding: 0, // Ensure no default card padding
         },
       }}
     >
@@ -280,7 +284,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       </Box>
 
       {/* Screenshot area */}
-      <CardContent sx={{ flex: 1, p: 0, position: 'relative', minHeight: 0 }}>
+      <Box sx={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
         <Box
           sx={{
             height: '100%',
@@ -410,7 +414,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
             />
           )}
         </Box>
-      </CardContent>
+      </Box>
 
       {/* Stream Modal */}
       <RecHostStreamModal
