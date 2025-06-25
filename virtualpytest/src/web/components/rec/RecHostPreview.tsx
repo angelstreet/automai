@@ -210,7 +210,15 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   };
 
   // Clean display values
-  const displayName = device ? `${host.host_name}` : host.host_name;
+  const displayName = device ? `${host.host_name} - ${device.device_name}` : host.host_name;
+
+  // Determine if device is mobile based on device_model
+  const isMobileDevice = device?.device_model
+    ? device.device_model.toLowerCase().includes('mobile') ||
+      device.device_model === 'android_mobile' ||
+      device.device_model === 'ios_mobile' ||
+      device.device_model.toLowerCase().includes('phone')
+    : false;
 
   return (
     <Card
@@ -299,8 +307,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                     top: 0,
                     left: 0,
                     width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
+                    height: isMobileDevice ? '100%' : 'auto',
+                    objectFit: isMobileDevice ? 'cover' : 'contain',
                     opacity: isTransitioning ? 0 : 1,
                     transition: 'opacity 300ms ease-in-out',
                     cursor: 'pointer',
@@ -319,8 +327,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                   top: 0,
                   left: 0,
                   width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
+                  height: isMobileDevice ? '100%' : 'auto',
+                  objectFit: isMobileDevice ? 'cover' : 'contain',
                   opacity: 1,
                   transition: 'opacity 300ms ease-in-out',
                   cursor: 'pointer',
