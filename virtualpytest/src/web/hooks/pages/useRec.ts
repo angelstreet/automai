@@ -76,17 +76,12 @@ export const useRec = (): UseRecReturn => {
 
         if (response.ok) {
           const result = await response.json();
-          console.log(`[useRec] ${deviceKey}: Server response:`, result);
           if (result.success && result.screenshot_url) {
-            console.log(`[useRec] ${deviceKey}: Original screenshot URL:`, result.screenshot_url);
-
             // Extract base pattern: remove timestamp from capture_YYYYMMDDHHMMSS.jpg format
             const basePattern = result.screenshot_url.replace(
               /capture_\d{14}\.jpg$/,
               'capture_{timestamp}.jpg',
             );
-
-            console.log(`[useRec] ${deviceKey}: Extracted base pattern:`, basePattern);
 
             // Update global state, ref (persistent), and local state (reactive)
             globalBaseUrlPatterns.set(deviceKey, basePattern);
@@ -127,8 +122,6 @@ export const useRec = (): UseRecReturn => {
         return null;
       }
 
-      console.log(`[useRec] ${deviceKey}: Base pattern:`, basePattern);
-
       // Generate current timestamp in YYYYMMDDHHMMSS format
       const now = new Date();
       const timestamp =
@@ -139,11 +132,7 @@ export const useRec = (): UseRecReturn => {
         now.getMinutes().toString().padStart(2, '0') +
         now.getSeconds().toString().padStart(2, '0');
 
-      console.log(`[useRec] ${deviceKey}: Generated timestamp:`, timestamp);
-
       const thumbnailUrl = basePattern.replace('{timestamp}', timestamp);
-      console.log(`[useRec] ${deviceKey}: Final URL:`, thumbnailUrl);
-
       return thumbnailUrl;
     },
     [baseUrlPatterns],
