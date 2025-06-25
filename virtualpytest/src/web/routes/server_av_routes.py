@@ -251,7 +251,50 @@ def proxy_stream():
                     else:
                         content_type = 'application/vnd.apple.mpegurl'
                 
-                # Stream the content
+                # Handle M3U8 playlist rewriting
+                if stream_url.endswith('.m3u8'):
+                    print(f"[@route:server_av:proxy_stream] M3U8 playlist detected, rewriting segment URLs")
+                    
+                    # Read the entire M3U8 content
+                    m3u8_content = response.text
+                    print(f"[@route:server_av:proxy_stream] Original M3U8 content: {m3u8_content[:500]}...")
+                    
+                    # Rewrite segment URLs to use our proxy
+                    lines = m3u8_content.split('\n')
+                    rewritten_lines = []
+                    
+                    for line in lines:
+                        line = line.strip()
+                        if line and not line.startswith('#'):
+                            # This is a segment URL - rewrite it
+                            if line.endswith('.ts'):
+                                # Build the full URL for the segment
+                                base_url = stream_url.rsplit('/', 1)[0]  # Remove filename, keep path
+                                segment_full_url = f"{base_url}/{line}"
+                                # Create proxy URL for this segment
+                                proxy_segment_url = f"/server/av/proxy-stream?url={requests.utils.quote(segment_full_url, safe='')}"
+                                print(f"[@route:server_av:proxy_stream] Rewriting segment: {line} -> {proxy_segment_url}")
+                                rewritten_lines.append(proxy_segment_url)
+                            else:
+                                rewritten_lines.append(line)
+                        else:
+                            rewritten_lines.append(line)
+                    
+                    rewritten_content = '\n'.join(rewritten_lines)
+                    print(f"[@route:server_av:proxy_stream] Rewritten M3U8 content: {rewritten_content[:500]}...")
+                    
+                    return Response(
+                        rewritten_content,
+                        content_type=content_type,
+                        headers={
+                            'Access-Control-Allow-Origin': '*',
+                            'Access-Control-Allow-Methods': 'GET',
+                            'Access-Control-Allow-Headers': 'Content-Type',
+                            'Cache-Control': 'no-cache, no-store, must-revalidate'
+                        }
+                    )
+                
+                # Stream the content (for TS segments)
                 def generate():
                     for chunk in response.iter_content(chunk_size=8192):
                         if chunk:
