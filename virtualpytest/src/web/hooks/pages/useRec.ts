@@ -41,7 +41,7 @@ export const useRec = (): UseRecReturn => {
       }
 
       try {
-        console.log(`[@hook:useRec] Initializing base URL for host: ${host.host_name}`);
+        console.log(`[@hook:useRec] Initializing base URL for device: ${deviceKey}`);
 
         const response = await fetch('/server/av/take-screenshot', {
           method: 'POST',
@@ -57,7 +57,9 @@ export const useRec = (): UseRecReturn => {
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.screenshot_url) {
-            console.log(`[@hook:useRec] Initial screenshot taken: ${result.screenshot_url}`);
+            console.log(
+              `[@hook:useRec] Initial screenshot taken for ${deviceKey}: ${result.screenshot_url}`,
+            );
 
             // Extract base pattern: remove timestamp and .jpg, keep _thumbnail
             const basePattern = result.screenshot_url.replace(
@@ -65,15 +67,23 @@ export const useRec = (): UseRecReturn => {
               '{timestamp}_thumbnail.jpg',
             );
             console.log(`[@hook:useRec] Storing base URL pattern for ${deviceKey}: ${basePattern}`);
-            setBaseUrlPatterns((prev) => new Map(prev).set(deviceKey, basePattern));
+
+            // Update state synchronously
+            setBaseUrlPatterns((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(deviceKey, basePattern);
+              console.log(`[@hook:useRec] Base URL pattern stored successfully for ${deviceKey}`);
+              return newMap;
+            });
+
             return true;
           }
         }
 
-        console.warn(`[@hook:useRec] Base URL initialization failed for: ${host.host_name}`);
+        console.warn(`[@hook:useRec] Base URL initialization failed for: ${deviceKey}`);
         return false;
       } catch (err: any) {
-        console.error(`[@hook:useRec] Base URL initialization error for ${host.host_name}:`, err);
+        console.error(`[@hook:useRec] Base URL initialization error for ${deviceKey}:`, err);
         return false;
       }
     },
@@ -85,8 +95,19 @@ export const useRec = (): UseRecReturn => {
     (host: Host, device: Device): string | null => {
       const deviceKey = `${host.host_name}-${device.device_id}`;
       const basePattern = baseUrlPatterns.get(deviceKey);
+
+      // Debug: show all available patterns
+      console.log(
+        `[@hook:useRec] Available base URL patterns:`,
+        Array.from(baseUrlPatterns.keys()),
+      );
+      console.log(`[@hook:useRec] Looking for pattern for device: ${deviceKey}`);
+
       if (!basePattern) {
         console.warn(`[@hook:useRec] No base URL pattern found for device: ${deviceKey}`);
+        console.warn(
+          `[@hook:useRec] Available patterns: ${Array.from(baseUrlPatterns.keys()).join(', ')}`,
+        );
         return null;
       }
 
