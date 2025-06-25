@@ -2,6 +2,7 @@ import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 import React from 'react';
 
 import { useDeviceControl } from '../../hooks/useDeviceControl';
+import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
 import {
   ValidationPreviewClient,
@@ -29,7 +30,6 @@ export const NavigationEditorHeader: React.FC<{
   isRemotePanelOpen: boolean;
   // Host data (filtered by interface models)
   availableHosts: any[];
-  getHostByName: (hostName: string) => any;
 
   onAddNewNode: () => void;
   onFitView: () => void;
@@ -74,6 +74,9 @@ export const NavigationEditorHeader: React.FC<{
 }) => {
   // Get toast notifications
   const { showError } = useToast();
+
+  // Get device locking functionality from HostManager
+  const { isDeviceLocked } = useHostManager();
 
   // NEW: Use device control hook with device_id support for device-oriented architecture
   const { isControlActive, isControlLoading, controlError, handleToggleControl, clearError } =
@@ -173,7 +176,7 @@ export const NavigationEditorHeader: React.FC<{
               onDiscardChanges={onDiscardChanges}
             />
 
-            {/* Section 4: Device Controls - now with device-oriented locking */}
+            {/* Section 4: Device Controls - now with proper device-oriented locking */}
             <NavigationEditorDeviceControls
               selectedHost={selectedHost}
               selectedDeviceId={selectedDeviceId || null}
@@ -182,10 +185,13 @@ export const NavigationEditorHeader: React.FC<{
               isRemotePanelOpen={isRemotePanelOpen}
               availableHosts={availableHosts}
               isDeviceLocked={(deviceKey: string) => {
-                // Device-oriented locking: check if specific device is locked
-                // deviceKey format: "hostname:device_id"
-                // TODO: This should be connected to proper device-based lock checking
-                return false; // Simplified for now - useDeviceControl handles lock logic
+                // Parse deviceKey format: "hostname:device_id"
+                const [hostName, deviceId] = deviceKey.includes(':')
+                  ? deviceKey.split(':')
+                  : [deviceKey, 'device1'];
+
+                const host = availableHosts.find((h) => h.host_name === hostName);
+                return isDeviceLocked(host, deviceId);
               }}
               onDeviceSelect={onDeviceSelect}
               onTakeControl={handleToggleControl}
