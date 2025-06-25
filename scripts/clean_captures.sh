@@ -1,4 +1,17 @@
 #!/bin/bash
-CAPTURE_DIR="/var/www/html/stream/captures"
-# Delete files older than 1 hour (3600 seconds)
-find "$CAPTURE_DIR" -type f -name "test_capture_*.jpg" -mmin +60 -delete -printf "Deleted %f\n" >> /tmp/clean.log
+
+# Array of possible capture directories
+CAPTURE_DIRS=(
+  "/var/www/html/stream/capture1/captures"
+  "/var/www/html/stream/capture2/captures"
+  "/var/www/html/stream/capture3/captures"
+  "/var/www/html/stream/capture4/captures"
+)
+
+# Process each existing directory
+for CAPTURE_DIR in "${CAPTURE_DIRS[@]}"; do
+  if [ -d "$CAPTURE_DIR" ]; then
+    # Delete files older than 10 minutes (600 seconds)
+    find "$CAPTURE_DIR" -type f -name "capture_*.jpg" -mmin +10 -delete -printf "Deleted %f\n" >> /tmp/clean.log 2>&1
+  fi
+done

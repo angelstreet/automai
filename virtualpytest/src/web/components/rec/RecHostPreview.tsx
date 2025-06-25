@@ -13,8 +13,8 @@ interface RecHostPreviewProps {
 }
 
 export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) => {
-  const [screenshotUrl, setScreenshotUrl] = useState<string | null>(null);
-  const [previousScreenshotUrl, setPreviousScreenshotUrl] = useState<string | null>(null);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [previousThumbnailUrl, setPreviousThumbnailUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
@@ -28,7 +28,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
     if (isTransitioning) {
       // Clear the previous image after a brief delay to allow smooth transition
       setTimeout(() => {
-        setPreviousScreenshotUrl(null);
+        setPreviousThumbnailUrl(null);
         setIsTransitioning(false);
       }, 300); // Small delay for smooth transition
     }
@@ -89,12 +89,19 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
         if (result.success && result.screenshot_url) {
           console.log(`[@component:RecHostPreview] Screenshot taken: ${result.screenshot_url}`);
 
+          // Convert screenshot URL to thumbnail URL
+          const thumbnailUrlFromScreenshot = result.screenshot_url.replace(
+            '.jpg',
+            '_thumbnail.jpg',
+          );
+          console.log(`[@component:RecHostPreview] Thumbnail URL: ${thumbnailUrlFromScreenshot}`);
+
           // Smooth transition: store previous URL and set new one
-          if (screenshotUrl && screenshotUrl !== result.screenshot_url) {
-            setPreviousScreenshotUrl(screenshotUrl);
+          if (thumbnailUrl && thumbnailUrl !== thumbnailUrlFromScreenshot) {
+            setPreviousThumbnailUrl(thumbnailUrl);
             setIsTransitioning(true);
           }
-          setScreenshotUrl(result.screenshot_url);
+          setThumbnailUrl(thumbnailUrlFromScreenshot);
         } else {
           setError('Failed to capture screenshot');
           console.warn(
@@ -113,7 +120,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
     } finally {
       setIsLoading(false);
     }
-  }, [host, device, screenshotUrl]);
+  }, [host, device, thumbnailUrl]);
 
   // Auto-take screenshot every 5 seconds - but only when device data is stable
   useEffect(() => {
@@ -264,7 +271,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
                 {error}
               </Typography>
             </Box>
-          ) : screenshotUrl ? (
+          ) : thumbnailUrl ? (
             <Box
               sx={{
                 position: 'relative',
@@ -278,10 +285,10 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
               }}
             >
               {/* Previous image - fading out */}
-              {previousScreenshotUrl && isTransitioning && (
+              {previousThumbnailUrl && isTransitioning && (
                 <Box
                   component="img"
-                  src={getImageUrl(previousScreenshotUrl)}
+                  src={getImageUrl(previousThumbnailUrl)}
                   alt="Previous screenshot"
                   sx={{
                     position: 'absolute',
@@ -301,10 +308,10 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
               {/* Current image - fading in */}
               <Box
                 component="img"
-                src={getImageUrl(screenshotUrl)}
+                src={getImageUrl(thumbnailUrl)}
                 alt="Current screenshot"
                 sx={{
-                  position: previousScreenshotUrl && isTransitioning ? 'absolute' : 'relative',
+                  position: previousThumbnailUrl && isTransitioning ? 'absolute' : 'relative',
                   top: 0,
                   left: 0,
                   width: '100%',
@@ -318,7 +325,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
                 onLoad={handleImageLoad}
                 onError={(_e) => {
                   console.error(
-                    `[@component:RecHostPreview] Failed to load image: ${screenshotUrl}`,
+                    `[@component:RecHostPreview] Failed to load image: ${thumbnailUrl}`,
                   );
                   setError('Failed to load screenshot');
                 }}
@@ -351,7 +358,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
           )}
 
           {/* Click overlay to open stream modal */}
-          {screenshotUrl && (
+          {thumbnailUrl && (
             <Box
               onClick={handleOpenStreamModal}
               sx={{
