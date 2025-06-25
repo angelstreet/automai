@@ -196,8 +196,7 @@ export const RemotePanel = React.memo(
               isConnected={isConnected}
               onDisconnectComplete={onReleaseControl}
               isCollapsed={isCollapsed}
-              panelWidth={currentWidth}
-              panelHeight={currentHeight}
+              streamContainerDimensions={stableStreamContainerDimensions}
               sx={{
                 height: '100%',
                 '& .MuiButton-root': {
