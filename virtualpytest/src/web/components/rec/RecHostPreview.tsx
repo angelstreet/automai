@@ -151,7 +151,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
         );
         handleTakeScreenshot();
       }
-    }, 1200); // 1 seconds
+    }, 1500); // 1 seconds
 
     return () => {
       clearTimeout(initialTimer);
