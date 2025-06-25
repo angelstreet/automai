@@ -17,16 +17,17 @@ process_file() {
   if [[ "$filepath" =~ test_capture_[0-9]+\.jpg$ ]]; then
     if [ -f "$filepath" ]; then
       start_time=$(date +%s.%N)
-      timestamp=$(TZ="Europe/Zurich" stat -c %y "$filepath" 2>>/tmp/rename.log | awk '{print $1 $2}' | tr -d ':-' | cut -d'.' -f1)
+      # Use current system time for timestamp
+      timestamp=$(TZ="Europe/Zurich" date +%Y%m%d%H%M%S)
       if [ -z "$timestamp" ]; then
-        echo "Failed to get timestamp for $filepath" >> /tmp/rename.log
+        echo "Failed to generate timestamp for $filepath" >> /tmp/rename.log
         return
       fi
       CAPTURE_DIR=$(dirname "$filepath")
       newname="${CAPTURE_DIR}/capture_${timestamp}.jpg"
       thumbnail="${CAPTURE_DIR}/capture_${timestamp}_thumbnail.jpg"
       if mv -f "$filepath" "$newname" 2>>/tmp/rename.log; then
-        echo "Renamed $(basename "$filepath") to $(basename "$newname")" >> /tmp/rename.log
+        echo "Renamed $(basename "$filepath") to $(basename "$newname") at $(date)" >> /tmp/rename.log
         # Create thumbnail in background
         convert "$newname" -thumbnail 498x280 -strip -quality 85 "$thumbnail" 2>>/tmp/rename.log &
         echo "Started thumbnail creation for $(basename "$thumbnail")" >> /tmp/rename.log
@@ -44,6 +45,12 @@ process_file() {
 # Check if ImageMagick is installed
 if ! command -v convert >/dev/null 2>&1; then
   echo "ImageMagick is not installed. Please install it to create thumbnails." >> /tmp/rename.log
+  exit 1
+fi
+
+# Check if clock is synchronized
+if ! timedatectl | grep -q "System clock synchronized: yes"; then
+  echo "System clock not synchronized, exiting..." >> /tmp/rename.log
   exit 1
 fi
 
