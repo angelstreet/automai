@@ -228,8 +228,13 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         flexDirection: 'column',
         position: 'relative',
         p: 0, // Remove all padding from Card
+        backgroundColor: 'transparent', // Transparent background
+        backgroundImage: 'none', // Remove any background image
+        boxShadow: 'none', // Remove default shadow
+        border: '1px solid rgba(255, 255, 255, 0.1)', // Subtle border for definition
         '&:hover': {
-          boxShadow: 4,
+          boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.3)', // Darker shadow on hover
+          border: '1px solid rgba(255, 255, 255, 0.2)', // Slightly more visible border on hover
         },
         '& .MuiCard-root': {
           padding: 0, // Ensure no default card padding
