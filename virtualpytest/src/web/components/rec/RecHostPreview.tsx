@@ -110,7 +110,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
               setIsTransitioning(true);
             }
             setThumbnailUrl(thumbnailUrlFromScreenshot);
-          }, 1000); // 1 second delay
+          }, 2000); // 1 second delay
         } else {
           setError('Failed to capture screenshot');
           console.warn(
@@ -141,7 +141,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
         `[@component:RecHostPreview] Device data stable, taking initial screenshot for: ${host.host_name}`,
       );
       handleTakeScreenshot();
-    }, 500); // Small delay to prevent racing with data loading
+    }, 2000); // Small delay to prevent racing with data loading
 
     // Set up interval for periodic screenshots every 5 seconds
     const screenshotInterval = setInterval(() => {
