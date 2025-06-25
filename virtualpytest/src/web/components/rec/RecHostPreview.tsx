@@ -234,10 +234,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   // Clean display values with better logging
   const displayName = device ? `${host.host_name}` : host.host_name;
 
-  const displayInfo = device
-    ? `${device.device_name || 'Unknown Device'} (${device.device_model || 'Unknown Model'})`
-    : host.host_name;
-
   // Debug log device data
   useEffect(() => {
     if (device) {
