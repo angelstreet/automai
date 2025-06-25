@@ -57,7 +57,7 @@ echo "Started rename_captures.sh with PID: $RENAME_PID"
 
 # Start clean script in a loop and capture its PID
 while true; do
-  $CLEAN_SCRIPT
+  sudo -u www-data $CLEAN_SCRIPT
   sleep 300
 done &
 CLEAN_PID=$!

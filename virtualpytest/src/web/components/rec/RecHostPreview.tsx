@@ -10,9 +10,16 @@ import { RecHostStreamModal } from './RecHostStreamModal';
 interface RecHostPreviewProps {
   host: Host;
   device?: Device;
+  takeScreenshot?: (host: Host, device: Device) => Promise<string | null>;
+  generateThumbnailUrl?: (host: Host, timestamp: string) => string | null;
 }
 
-export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) => {
+export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
+  host,
+  device,
+  takeScreenshot,
+  generateThumbnailUrl,
+}) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [previousThumbnailUrl, setPreviousThumbnailUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,55 +73,52 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
     return screenshotPath;
   }, []);
 
-  // Take screenshot function - now internal
+  // Optimized screenshot function - uses timestamp-based URL generation
   const handleTakeScreenshot = useCallback(async () => {
+    if (!takeScreenshot || !generateThumbnailUrl || !device) {
+      console.warn(
+        `[@component:RecHostPreview] Missing required functions or device for ${host.host_name}`,
+      );
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      console.log(`[@component:RecHostPreview] Taking screenshot for host: ${host.host_name}`);
+      console.log(
+        `[@component:RecHostPreview] Taking optimized screenshot for host: ${host.host_name}`,
+      );
 
-      const response = await fetch('/server/av/take-screenshot', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host: host,
-          device_id: device?.device_id || 'device1',
-        }),
-      });
+      // Use the hook's takeScreenshot function to get timestamp
+      const timestamp = await takeScreenshot(host, device);
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.screenshot_url) {
-          console.log(`[@component:RecHostPreview] Screenshot taken: ${result.screenshot_url}`);
+      if (timestamp) {
+        console.log(`[@component:RecHostPreview] Screenshot timestamp received: ${timestamp}`);
 
-          // Convert screenshot URL to thumbnail URL
-          // Replace .jpg with _thumbnail.jpg at the end of the filename
-          const thumbnailUrlFromScreenshot = result.screenshot_url.replace(
-            /\.jpg$/i,
-            '_thumbnail.jpg',
-          );
-          console.log(`[@component:RecHostPreview] Thumbnail URL: ${thumbnailUrlFromScreenshot}`);
+        // Generate thumbnail URL directly from timestamp
+        const newThumbnailUrl = generateThumbnailUrl(host, timestamp);
+
+        if (newThumbnailUrl) {
+          console.log(`[@component:RecHostPreview] Generated thumbnail URL: ${newThumbnailUrl}`);
 
           // Add 1 second delay to ensure thumbnail is properly generated and available
           setTimeout(() => {
             console.log(
-              `[@component:RecHostPreview] Setting thumbnail URL after delay: ${thumbnailUrlFromScreenshot}`,
+              `[@component:RecHostPreview] Setting thumbnail URL after delay: ${newThumbnailUrl}`,
             );
 
             // Smooth transition: store previous URL and set new one
-            if (thumbnailUrl && thumbnailUrl !== thumbnailUrlFromScreenshot) {
+            if (thumbnailUrl && thumbnailUrl !== newThumbnailUrl) {
               setPreviousThumbnailUrl(thumbnailUrl);
               setIsTransitioning(true);
             }
-            setThumbnailUrl(thumbnailUrlFromScreenshot);
+            setThumbnailUrl(newThumbnailUrl);
           }, 1000); // 1 second delay
         } else {
-          setError('Failed to capture screenshot');
+          setError('Failed to generate thumbnail URL');
           console.warn(
-            `[@component:RecHostPreview] Screenshot capture failed for: ${host.host_name}`,
+            `[@component:RecHostPreview] Failed to generate thumbnail URL for: ${host.host_name}`,
           );
         }
       } else {
@@ -129,7 +133,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
     } finally {
       setIsLoading(false);
     }
-  }, [host, device, thumbnailUrl]);
+  }, [host, device, thumbnailUrl, takeScreenshot, generateThumbnailUrl]);
 
   // Auto-take screenshot every 5 seconds - but only when device data is stable
   useEffect(() => {

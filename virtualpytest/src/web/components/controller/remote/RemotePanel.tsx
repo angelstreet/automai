@@ -134,14 +134,22 @@ export const RemotePanel = React.memo(
       }
     };
 
-    // Build position styles - simple container without scaling
-    const positionStyles: any = {
-      position: 'fixed',
-      zIndex: panelLayout.zIndex,
-      // Always anchor at bottom-right (collapsed position)
-      bottom: panelLayout.collapsed.position.bottom || '20px',
-      right: panelLayout.collapsed.position.right || '20px',
-    };
+    // Build position styles - detect modal context
+    const positionStyles: any = streamContainerDimensions
+      ? {
+          // Modal context: use relative positioning within the modal container
+          position: 'relative',
+          width: '100%',
+          height: '100%',
+        }
+      : {
+          // Floating panel context: use fixed positioning
+          position: 'fixed',
+          zIndex: panelLayout.zIndex,
+          // Always anchor at bottom-right (collapsed position)
+          bottom: panelLayout.collapsed.position.bottom || '20px',
+          right: panelLayout.collapsed.position.right || '20px',
+        };
 
     // Simple device model detection - no loading, no fallback, no validation
     const effectiveDeviceResolution = useMemo(() => {
@@ -282,19 +290,25 @@ export const RemotePanel = React.memo(
         {/* Inner content container - uses appropriate size for state */}
         <Box
           sx={{
-            width: currentWidth,
-            height: currentHeight,
-            position: 'absolute',
-            // Simple positioning - bottom and right anchored
-            bottom: 0,
-            right: 0,
+            width: streamContainerDimensions ? '100%' : currentWidth,
+            height: streamContainerDimensions ? '100%' : currentHeight,
+            position: streamContainerDimensions ? 'relative' : 'absolute',
+            // Simple positioning - bottom and right anchored (only for floating panels)
+            ...(streamContainerDimensions
+              ? {}
+              : {
+                  bottom: 0,
+                  right: 0,
+                }),
             backgroundColor: 'background.paper',
-            border: '1px solid',
+            border: streamContainerDimensions ? 'none' : '1px solid',
             borderColor: 'divider',
-            borderRadius: 1,
-            boxShadow: 3,
+            borderRadius: streamContainerDimensions ? 0 : 1,
+            boxShadow: streamContainerDimensions ? 'none' : 3,
             overflow: 'hidden',
-            transition: 'width 0.3s ease-in-out, height 0.3s ease-in-out',
+            transition: streamContainerDimensions
+              ? 'none'
+              : 'width 0.3s ease-in-out, height 0.3s ease-in-out',
           }}
         >
           {/* Header with minimize and expand/collapse buttons */}

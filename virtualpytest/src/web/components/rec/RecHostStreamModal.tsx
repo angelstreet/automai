@@ -71,8 +71,8 @@ const RecHostStreamModalContent: React.FC<{
     const modalWidth = window.innerWidth * 0.95;
     const modalHeight = window.innerHeight * 0.9;
 
-    // Header height (estimated from the header styling)
-    const headerHeight = 64; // Approximate header height with padding
+    // Header height (matches the minHeight + padding)
+    const headerHeight = 48; // minHeight from header styling
 
     // Stream area dimensions
     const streamAreaWidth = showRemote && isControlActive ? modalWidth * 0.75 : modalWidth;
@@ -177,13 +177,15 @@ const RecHostStreamModalContent: React.FC<{
         {/* Header */}
         <Box
           sx={{
-            p: 2,
+            px: 2,
+            py: 1,
             backgroundColor: 'grey.800',
             color: 'white',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             borderRadius: '8px 8px 0 0',
+            minHeight: 48,
           }}
         >
           <Typography variant="h6" component="h2">
@@ -267,6 +269,10 @@ const RecHostStreamModalContent: React.FC<{
               width: showRemote && isControlActive ? '75%' : '100%',
               position: 'relative',
               overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'black',
             }}
           >
             {streamUrl ? (
@@ -275,7 +281,7 @@ const RecHostStreamModalContent: React.FC<{
                 isStreamActive={true}
                 isCapturing={false}
                 model={device?.device_model || 'unknown'}
-                isExpanded={true}
+                isExpanded={false}
                 sx={{
                   width: '100%',
                   height: '100%',
@@ -310,7 +316,10 @@ const RecHostStreamModalContent: React.FC<{
                 backgroundColor: 'background.default',
                 borderLeft: '1px solid',
                 borderColor: 'divider',
-                overflow: 'hidden',
+                overflow: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
               }}
             >
               <RemotePanel
