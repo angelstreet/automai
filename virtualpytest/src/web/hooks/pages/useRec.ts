@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { Host, Device } from '../../types/common/Host_Types';
 import { useHostManager } from '../useHostManager';
+
+// Global state to persist across React remounts in development mode
+const globalBaseUrlPatterns = new Map<string, string>();
 
 interface UseRecReturn {
   avDevices: Array<{ host: Host; device: Device }>;
@@ -24,7 +27,12 @@ export const useRec = (): UseRecReturn => {
   const [avDevices, setAvDevices] = useState<Array<{ host: Host; device: Device }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [baseUrlPatterns, setBaseUrlPatterns] = useState<Map<string, string>>(new Map());
+
+  // Use ref to persist baseUrlPatterns across React remounts in dev mode
+  const baseUrlPatternsRef = useRef<Map<string, string>>(new Map());
+  const [baseUrlPatterns, setBaseUrlPatterns] = useState<Map<string, string>>(
+    baseUrlPatternsRef.current,
+  );
 
   // Use the simplified HostManager function and loading state
   const { getDevicesByCapability, isLoading: isHostManagerLoading } = useHostManager();
@@ -34,9 +42,27 @@ export const useRec = (): UseRecReturn => {
     async (host: Host, device: Device): Promise<boolean> => {
       const deviceKey = `${host.host_name}-${device.device_id}`;
 
-      // Skip if base URL already exists
-      if (baseUrlPatterns.has(deviceKey)) {
-        console.log(`[@hook:useRec] Base URL already exists for ${deviceKey}`);
+      // Check global state, ref, and local state for existing URL
+      if (
+        globalBaseUrlPatterns.has(deviceKey) ||
+        baseUrlPatternsRef.current.has(deviceKey) ||
+        baseUrlPatterns.has(deviceKey)
+      ) {
+        console.log(
+          `[@hook:useRec] Base URL already exists for ${deviceKey} (global: ${globalBaseUrlPatterns.has(deviceKey)}, ref: ${baseUrlPatternsRef.current.has(deviceKey)}, state: ${baseUrlPatterns.has(deviceKey)})`,
+        );
+
+        // Sync global to local if needed
+        if (globalBaseUrlPatterns.has(deviceKey) && !baseUrlPatterns.has(deviceKey)) {
+          const pattern = globalBaseUrlPatterns.get(deviceKey)!;
+          baseUrlPatternsRef.current.set(deviceKey, pattern);
+          setBaseUrlPatterns((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(deviceKey, pattern);
+            return newMap;
+          });
+        }
+
         return true;
       }
 
@@ -68,7 +94,9 @@ export const useRec = (): UseRecReturn => {
             );
             console.log(`[@hook:useRec] Storing base URL pattern for ${deviceKey}: ${basePattern}`);
 
-            // Update state synchronously
+            // Update global state, ref (persistent), and local state (reactive)
+            globalBaseUrlPatterns.set(deviceKey, basePattern);
+            baseUrlPatternsRef.current.set(deviceKey, basePattern);
             setBaseUrlPatterns((prev) => {
               const newMap = new Map(prev);
               newMap.set(deviceKey, basePattern);
@@ -94,11 +122,24 @@ export const useRec = (): UseRecReturn => {
   const generateThumbnailUrl = useCallback(
     (host: Host, device: Device): string | null => {
       const deviceKey = `${host.host_name}-${device.device_id}`;
-      const basePattern = baseUrlPatterns.get(deviceKey);
+
+      // Check global first, then ref, then state
+      let basePattern =
+        globalBaseUrlPatterns.get(deviceKey) ||
+        baseUrlPatternsRef.current.get(deviceKey) ||
+        baseUrlPatterns.get(deviceKey);
 
       // Debug: show all available patterns
       console.log(
-        `[@hook:useRec] Available base URL patterns:`,
+        `[@hook:useRec] Available base URL patterns (global):`,
+        Array.from(globalBaseUrlPatterns.keys()),
+      );
+      console.log(
+        `[@hook:useRec] Available base URL patterns (ref):`,
+        Array.from(baseUrlPatternsRef.current.keys()),
+      );
+      console.log(
+        `[@hook:useRec] Available base URL patterns (state):`,
         Array.from(baseUrlPatterns.keys()),
       );
       console.log(`[@hook:useRec] Looking for pattern for device: ${deviceKey}`);
@@ -106,7 +147,13 @@ export const useRec = (): UseRecReturn => {
       if (!basePattern) {
         console.warn(`[@hook:useRec] No base URL pattern found for device: ${deviceKey}`);
         console.warn(
-          `[@hook:useRec] Available patterns: ${Array.from(baseUrlPatterns.keys()).join(', ')}`,
+          `[@hook:useRec] Available patterns (global): ${Array.from(globalBaseUrlPatterns.keys()).join(', ')}`,
+        );
+        console.warn(
+          `[@hook:useRec] Available patterns (ref): ${Array.from(baseUrlPatternsRef.current.keys()).join(', ')}`,
+        );
+        console.warn(
+          `[@hook:useRec] Available patterns (state): ${Array.from(baseUrlPatterns.keys()).join(', ')}`,
         );
         return null;
       }
@@ -127,6 +174,22 @@ export const useRec = (): UseRecReturn => {
     },
     [baseUrlPatterns],
   );
+
+  // Sync global and ref to state on mount (handles remount scenario)
+  useEffect(() => {
+    if (
+      (globalBaseUrlPatterns.size > 0 || baseUrlPatternsRef.current.size > 0) &&
+      baseUrlPatterns.size === 0
+    ) {
+      console.log('[@hook:useRec] Syncing global/ref patterns to state after remount');
+      const mergedPatterns = new Map([...globalBaseUrlPatterns, ...baseUrlPatternsRef.current]);
+      setBaseUrlPatterns(mergedPatterns);
+      // Also sync to ref if global has more recent data
+      if (globalBaseUrlPatterns.size > baseUrlPatternsRef.current.size) {
+        baseUrlPatternsRef.current = new Map(globalBaseUrlPatterns);
+      }
+    }
+  }, [baseUrlPatterns.size]);
 
   // Get AV-capable devices - only when HostManager is ready
   const refreshHosts = useCallback(async (): Promise<void> => {

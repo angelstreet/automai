@@ -154,8 +154,17 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     if (!host || !device || !initializeBaseUrl || !generateThumbnailUrl) return;
 
     let screenshotInterval: NodeJS.Timeout | null = null;
+    let isMounted = true; // Track mount status to prevent race conditions
 
     const initializeAndStartUpdates = async () => {
+      // Early return if component was unmounted during async operation
+      if (!isMounted) {
+        console.log(
+          `[@component:RecHostPreview] Component unmounted, skipping initialization for: ${host.host_name}-${device.device_id}`,
+        );
+        return;
+      }
+
       console.log(
         `[@component:RecHostPreview] Initializing base URL for: ${host.host_name}-${device.device_id}`,
       );
@@ -170,6 +179,14 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
           `[@component:RecHostPreview] initializeBaseUrl returned: ${initialized} for: ${host.host_name}-${device.device_id}`,
         );
 
+        // Check if still mounted after async operation
+        if (!isMounted) {
+          console.log(
+            `[@component:RecHostPreview] Component unmounted during initialization for: ${host.host_name}-${device.device_id}`,
+          );
+          return;
+        }
+
         if (initialized) {
           console.log(
             `[@component:RecHostPreview] Base URL initialized successfully, starting thumbnail updates for: ${host.host_name}-${device.device_id}`,
@@ -177,6 +194,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
           // Wait a moment for state to settle, then take initial screenshot
           setTimeout(() => {
+            if (!isMounted) return; // Check mount status before proceeding
+
             console.log(
               `[@component:RecHostPreview] Taking initial screenshot for: ${host.host_name}-${device.device_id}`,
             );
@@ -184,11 +203,13 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
             // Set up interval AFTER first screenshot is taken and base URL is confirmed to work
             setTimeout(() => {
+              if (!isMounted) return; // Check mount status before starting interval
+
               console.log(
                 `[@component:RecHostPreview] Starting interval for: ${host.host_name}-${device.device_id}`,
               );
               screenshotInterval = setInterval(() => {
-                if (host && device && host.status === 'online') {
+                if (isMounted && host && device && host.status === 'online') {
                   console.log(
                     `[@component:RecHostPreview] Interval update for: ${host.host_name}-${device.device_id}`,
                   );
@@ -201,14 +222,18 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
           console.error(
             `[@component:RecHostPreview] Failed to initialize base URL for: ${host.host_name}-${device.device_id}`,
           );
-          setError('Failed to initialize base URL');
+          if (isMounted) {
+            setError('Failed to initialize base URL');
+          }
         }
       } catch (error) {
         console.error(
           `[@component:RecHostPreview] Error during initialization for: ${host.host_name}-${device.device_id}`,
           error,
         );
-        setError('Initialization error');
+        if (isMounted) {
+          setError('Initialization error');
+        }
       }
     };
 
@@ -216,8 +241,13 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
     // Cleanup function
     return () => {
+      console.log(
+        `[@component:RecHostPreview] Cleaning up for: ${host.host_name}-${device?.device_id}`,
+      );
+      isMounted = false; // Mark as unmounted
       if (screenshotInterval) {
         clearInterval(screenshotInterval);
+        screenshotInterval = null;
       }
     };
   }, [host, device, initializeBaseUrl, generateThumbnailUrl, handleTakeScreenshot]);
