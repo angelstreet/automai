@@ -61,7 +61,7 @@ export const AndroidMobileRemote = React.memo(
     captureMode = 'stream',
     streamContainerDimensions,
   }: AndroidMobileRemoteProps) {
-    const hookResult = useAndroidMobile(host, deviceId);
+    const hookResult = useAndroidMobile(host, deviceId, isConnected);
 
     const {
       // State

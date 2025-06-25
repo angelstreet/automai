@@ -216,6 +216,9 @@ export default function RemoteTestPage() {
         })() && (
           <RemotePanel
             host={selectedHost}
+            deviceId="test-device-1"
+            deviceModel={selectedHost.device_model}
+            isConnected={true}
             initialCollapsed={true}
             deviceResolution={{ width: 1920, height: 1080 }}
             streamCollapsed={streamCollapsed}

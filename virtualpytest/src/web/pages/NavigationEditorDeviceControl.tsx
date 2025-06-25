@@ -250,11 +250,10 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                 <RemotePanel
                   host={selectedHost}
                   deviceId={selectedDeviceId}
+                  deviceModel={remoteConfig.type}
+                  isConnected={isControlActive}
                   onReleaseControl={onReleaseControl}
-                  collapsedPosition={{ x: window.innerWidth - 320, y: 130 }}
-                  collapsedSize={{ width: 320, height: window.innerHeight - 130 }}
-                  expandedPosition={{ x: window.innerWidth - 320, y: 130 }}
-                  expandedSize={{ width: 320, height: window.innerHeight - 130 }}
+                  initialCollapsed={false}
                   deviceResolution={{ width: 1920, height: 1080 }}
                 />
               </Box>

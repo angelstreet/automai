@@ -23,12 +23,18 @@ interface AndroidMobileLayoutConfig {
   autoDumpDelay: number;
 }
 
-export function useAndroidMobile(selectedHost: Host | null, deviceId: string | null) {
+export function useAndroidMobile(
+  selectedHost: Host | null,
+  deviceId: string | null,
+  isConnected?: boolean,
+) {
   console.log(
     '[@hook:useAndroidMobile] Hook called for device:',
     deviceId,
     'host:',
     selectedHost?.host_name,
+    'isConnected:',
+    isConnected,
   );
 
   // Simple validation - no complex memoization
@@ -60,8 +66,8 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
     [],
   );
 
-  // State management
-  const [isConnected, setIsConnected] = useState(true);
+  // State management - initialize based on isConnected parameter
+  const [isConnected_internal, setIsConnected] = useState(isConnected ?? true);
   const [androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
   const [androidElements, setAndroidElements] = useState<AndroidElement[]>([]);
   const [androidApps, setAndroidApps] = useState<AndroidApp[]>([]);
@@ -71,6 +77,29 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
   const [isDumpingUI, setIsDumpingUI] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isRefreshingApps, setIsRefreshingApps] = useState(false);
+
+  // Update connection state based on external isConnected parameter (like useAndroidTv)
+  useEffect(() => {
+    if (isConnected !== undefined) {
+      setIsConnected(isConnected);
+      console.log(
+        `[@hook:useAndroidMobile] Connection state updated via external control: ${isConnected}`,
+        'host:',
+        selectedHost?.host_name,
+        'deviceId:',
+        deviceId,
+      );
+
+      // Clear state when disconnected
+      if (!isConnected) {
+        setAndroidElements([]);
+        setAndroidApps([]);
+        setSelectedElement('');
+        setSelectedApp('');
+        setAndroidScreenshot(null);
+      }
+    }
+  }, [isConnected, selectedHost?.host_name, deviceId]);
 
   // Debug logging for state changes
   useEffect(() => {
@@ -318,10 +347,10 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
   // Session info
   const session = useMemo(
     () => ({
-      connected: isConnected,
-      connectionInfo: isConnected ? 'Connected' : 'Disconnected',
+      connected: isConnected_internal,
+      connectionInfo: isConnected_internal ? 'Connected' : 'Disconnected',
     }),
-    [isConnected],
+    [isConnected_internal],
   );
 
   return {
@@ -329,7 +358,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
     layoutConfig,
 
     // State
-    isConnected,
+    isConnected: isConnected_internal,
     androidScreenshot,
     androidElements,
     androidApps,
