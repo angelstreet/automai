@@ -1,8 +1,8 @@
-import { Box, Typography, IconButton, Collapse } from '@mui/material';
 import {
   KeyboardArrowDown as ArrowDownIcon,
   KeyboardArrowRight as ArrowRightIcon,
 } from '@mui/icons-material';
+import { Box, Typography, IconButton, Collapse } from '@mui/material';
 import React from 'react';
 
 import {

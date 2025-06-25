@@ -72,7 +72,9 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
   const processedCapturedReferenceImage = useMemo(() => {
     if (!capturedReferenceImage) return '';
 
-    console.log(`[@component:VerificationCapture] Processing captured reference image: ${capturedReferenceImage}`);
+    console.log(
+      `[@component:VerificationCapture] Processing captured reference image: ${capturedReferenceImage}`,
+    );
 
     // Handle data URLs (base64) - return as is
     if (capturedReferenceImage.startsWith('data:')) {
@@ -82,15 +84,21 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
 
     // Handle HTTP URLs - use proxy to convert to HTTPS
     if (capturedReferenceImage.startsWith('http:')) {
-      console.log('[@component:VerificationCapture] HTTP URL detected in captured reference, using proxy');
+      console.log(
+        '[@component:VerificationCapture] HTTP URL detected in captured reference, using proxy',
+      );
       const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(capturedReferenceImage)}`;
-      console.log(`[@component:VerificationCapture] Generated proxy URL for captured reference: ${proxyUrl}`);
+      console.log(
+        `[@component:VerificationCapture] Generated proxy URL for captured reference: ${proxyUrl}`,
+      );
       return proxyUrl;
     }
 
     // Handle HTTPS URLs - return as is (no proxy needed)
     if (capturedReferenceImage.startsWith('https:')) {
-      console.log('[@component:VerificationCapture] Using HTTPS URL directly for captured reference');
+      console.log(
+        '[@component:VerificationCapture] Using HTTPS URL directly for captured reference',
+      );
       return capturedReferenceImage;
     }
 
@@ -102,7 +110,9 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
   const processedSelectedReferenceImage = useMemo(() => {
     if (!selectedReferenceImage) return '';
 
-    console.log(`[@component:VerificationCapture] Processing selected reference image: ${selectedReferenceImage}`);
+    console.log(
+      `[@component:VerificationCapture] Processing selected reference image: ${selectedReferenceImage}`,
+    );
 
     // Handle data URLs (base64) - return as is
     if (selectedReferenceImage.startsWith('data:')) {
@@ -112,15 +122,21 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
 
     // Handle HTTP URLs - use proxy to convert to HTTPS
     if (selectedReferenceImage.startsWith('http:')) {
-      console.log('[@component:VerificationCapture] HTTP URL detected in selected reference, using proxy');
+      console.log(
+        '[@component:VerificationCapture] HTTP URL detected in selected reference, using proxy',
+      );
       const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(selectedReferenceImage)}`;
-      console.log(`[@component:VerificationCapture] Generated proxy URL for selected reference: ${proxyUrl}`);
+      console.log(
+        `[@component:VerificationCapture] Generated proxy URL for selected reference: ${proxyUrl}`,
+      );
       return proxyUrl;
     }
 
     // Handle HTTPS URLs - return as is (no proxy needed)
     if (selectedReferenceImage.startsWith('https:')) {
-      console.log('[@component:VerificationCapture] Using HTTPS URL directly for selected reference');
+      console.log(
+        '[@component:VerificationCapture] Using HTTPS URL directly for selected reference',
+      );
       return selectedReferenceImage;
     }
 

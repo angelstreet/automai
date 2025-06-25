@@ -42,9 +42,9 @@ class AppiumVerificationController(VerificationControllerInterface):
         if not appium_server_url:
             raise ValueError("appium_server_url is required for AppiumVerificationController")
         
-        # Store mandatory fields
+        # Store mandatory fields - IMPORTANT: Keep device_id as host identifier, not UDID
         self.platform_name = appium_platform_name
-        self.device_id = appium_device_id
+        self.appium_device_id = appium_device_id  # This is the actual iOS/Android UDID
         self.appium_server_url = appium_server_url
         
         # AV controller is optional for Appium verification (Appium doesn't need screenshots)
@@ -53,7 +53,7 @@ class AppiumVerificationController(VerificationControllerInterface):
         self.appium_utils = AppiumUtils()
         self.is_connected = True
         
-        print(f"[@controller:AppiumVerification] Initialized for {self.platform_name} device {self.device_id}")
+        print(f"[@controller:AppiumVerification] Initialized for {self.platform_name} device UDID {self.appium_device_id}")
     
     def _get_default_automation_name(self) -> str:
         """Get default automation name based on platform."""
@@ -67,19 +67,19 @@ class AppiumVerificationController(VerificationControllerInterface):
     def _connect_device(self) -> bool:
         """Connect to the device via Appium."""
         try:
-            print(f"[@controller:AppiumVerification:_connect_device] Connecting to {self.platform_name} device {self.device_id}")
+            print(f"[@controller:AppiumVerification:_connect_device] Connecting to {self.platform_name} device {self.appium_device_id}")
             
             # Build capabilities based on platform
             capabilities = {
                 'platformName': self.platform_name.capitalize(),
-                'udid': self.device_id,
+                'udid': self.appium_device_id,
                 'automationName': self._get_default_automation_name(),
                 'newCommandTimeout': 300,
                 'noReset': True
             }
             
             # Connect using appium_utils
-            success = self.appium_utils.connect_device(self.device_id, capabilities, self.appium_server_url)
+            success = self.appium_utils.connect_device(self.appium_device_id, capabilities, self.appium_server_url)
             
             if success:
                 self.is_connected = True
@@ -101,14 +101,14 @@ class AppiumVerificationController(VerificationControllerInterface):
             Tuple of (success, element_list, error_message)
         """
         try:
-            print(f"[@controller:AppiumVerification:getElementLists] Getting elements for device {self.device_id}")
+            print(f"[@controller:AppiumVerification:getElementLists] Getting elements for device {self.appium_device_id}")
             
             if not self.is_connected:
                 if not self._connect_device():
                     return False, [], "Device not connected"
             
             # Use existing appiumUtils to dump UI elements
-            success, elements, error = self.appium_utils.dump_ui_elements(self.device_id)
+            success, elements, error = self.appium_utils.dump_ui_elements(self.appium_device_id)
             
             if not success:
                 print(f"[@controller:AppiumVerification:getElementLists] Failed: {error}")
@@ -148,7 +148,7 @@ class AppiumVerificationController(VerificationControllerInterface):
             }
         """
         try:
-            print(f"[@controller:AppiumVerification:getElementListsWithSmartSearch] Getting enhanced element list for device {self.device_id}")
+            print(f"[@controller:AppiumVerification:getElementListsWithSmartSearch] Getting enhanced element list for device {self.appium_device_id}")
             if search_term:
                 print(f"[@controller:AppiumVerification:getElementListsWithSmartSearch] With smart search for: '{search_term}'")
             
@@ -157,7 +157,7 @@ class AppiumVerificationController(VerificationControllerInterface):
                     return False, {}, "Device not connected"
             
             # Get all UI elements
-            success, elements, error = self.appium_utils.dump_ui_elements(self.device_id)
+            success, elements, error = self.appium_utils.dump_ui_elements(self.appium_device_id)
             
             if not success:
                 print(f"[@controller:AppiumVerification:getElementListsWithSmartSearch] Failed: {error}")
@@ -171,7 +171,7 @@ class AppiumVerificationController(VerificationControllerInterface):
                 "total_elements": len(element_list),
                 "elements": element_list,
                 "device_info": {
-                    "device_id": self.device_id,
+                    "device_id": self.appium_device_id,
                     "platform": self.platform_name,
                     "appium_server_url": self.appium_server_url
                 }
@@ -196,7 +196,7 @@ class AppiumVerificationController(VerificationControllerInterface):
                     for i, term in enumerate(terms):
                         print(f"[@controller:AppiumVerification:getElementListsWithSmartSearch] Attempt {i+1}/{len(terms)}: Searching for '{term}'")
                         
-                        term_success, term_matches, term_error = self.appium_utils.smart_element_search(self.device_id, term)
+                        term_success, term_matches, term_error = self.appium_utils.smart_element_search(self.appium_device_id, term)
                         
                         if term_success and term_matches:
                             search_success = True
@@ -227,7 +227,7 @@ class AppiumVerificationController(VerificationControllerInterface):
                 else:
                     # Single term - original logic
                     terms = [search_term_clean]
-                    search_success, matches, search_error = self.appium_utils.smart_element_search(self.device_id, search_term_clean)
+                    search_success, matches, search_error = self.appium_utils.smart_element_search(self.appium_device_id, search_term_clean)
                     
                     enhanced_data["search_results"] = {
                         "search_term": search_term_clean,
@@ -332,7 +332,7 @@ class AppiumVerificationController(VerificationControllerInterface):
                     if len(terms) > 1:
                         print(f"[@controller:AppiumVerification:waitForElementToAppear] Attempt {i+1}/{len(terms)}: Searching for '{term}'")
                     
-                    success, matches, error = self.appium_utils.smart_element_search(self.device_id, term)
+                    success, matches, error = self.appium_utils.smart_element_search(self.appium_device_id, term)
                     
                     if error:
                         print(f"[@controller:AppiumVerification:waitForElementToAppear] Search failed for term '{term}': {error}")
@@ -488,7 +488,7 @@ class AppiumVerificationController(VerificationControllerInterface):
                     if len(terms) > 1:
                         print(f"[@controller:AppiumVerification:waitForElementToDisappear] Checking {i+1}/{len(terms)}: Searching for '{term}'")
                     
-                    success, matches, error = self.appium_utils.smart_element_search(self.device_id, term)
+                    success, matches, error = self.appium_utils.smart_element_search(self.appium_device_id, term)
                     
                     if error:
                         print(f"[@controller:AppiumVerification:waitForElementToDisappear] Search failed for term '{term}': {error}")

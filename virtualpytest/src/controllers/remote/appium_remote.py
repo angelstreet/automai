@@ -65,9 +65,9 @@ class AppiumRemoteController(RemoteControllerInterface):
         if not appium_server_url:
             raise ValueError("appium_server_url is required for AppiumRemoteController")
         
-        # Store mandatory fields
+        # Store mandatory fields - IMPORTANT: Keep device_id as host identifier, not UDID
         self.platform_name = appium_platform_name
-        self.device_id = appium_device_id
+        self.appium_device_id = appium_device_id  # This is the actual iOS/Android UDID
         self.appium_server_url = appium_server_url
         
         # Appium driver and utils
@@ -78,7 +78,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         self.last_ui_elements = []
         self.last_dump_time = 0
         
-        print(f"[@controller:AppiumRemote] Initialized for {self.platform_name} device {self.device_id}")
+        print(f"[@controller:AppiumRemote] Initialized for {self.platform_name} device UDID {self.appium_device_id}")
         print(f"[@controller:AppiumRemote] Server URL: {self.appium_server_url}")
         self.connect()
         
@@ -86,7 +86,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         """Connect to device via Appium WebDriver."""
         try:
             print(f"Remote[{self.device_type.upper()}]: Connecting to {self.platform_name} device")
-            print(f"Remote[{self.device_type.upper()}]: Device ID: {self.device_id}")
+            print(f"Remote[{self.device_type.upper()}]: Device ID: {self.appium_device_id}")
             print(f"Remote[{self.device_type.upper()}]: Appium URL: {self.appium_server_url}")
             
             # Initialize Appium utilities
@@ -107,28 +107,28 @@ class AppiumRemoteController(RemoteControllerInterface):
                 print(f"Remote[{self.device_type.upper()}]: iOS Device Requirements:")
                 print(f"Remote[{self.device_type.upper()}]: 1. Device must be connected and trusted")
                 print(f"Remote[{self.device_type.upper()}]: 2. WebDriverAgent must be installed on device")
-                print(f"Remote[{self.device_type.upper()}]: 3. Device UDID must be correct: {self.device_id}")
+                print(f"Remote[{self.device_type.upper()}]: 3. Device UDID must be correct: {self.appium_device_id}")
             
             # Connect to device via Appium
-            if not self.appium_utils.connect_device(self.device_id, capabilities, self.appium_server_url):
+            if not self.appium_utils.connect_device(self.appium_device_id, capabilities, self.appium_server_url):
                 print(f"Remote[{self.device_type.upper()}]: Failed to connect to device")
                 if self.platform_name.lower() == 'ios':
                     print(f"Remote[{self.device_type.upper()}]: Troubleshooting steps:")
-                    print(f"Remote[{self.device_type.upper()}]: - Verify device UDID: {self.device_id}")
+                    print(f"Remote[{self.device_type.upper()}]: - Verify device UDID: {self.appium_device_id}")
                     print(f"Remote[{self.device_type.upper()}]: - Check device is connected and trusted")
                     print(f"Remote[{self.device_type.upper()}]: - Verify WebDriverAgent is installed")
                 self.disconnect()
                 return False
                 
-            print(f"Remote[{self.device_type.upper()}]: Successfully connected to {self.platform_name} device {self.device_id}")
+            print(f"Remote[{self.device_type.upper()}]: Successfully connected to {self.platform_name} device UDID {self.appium_device_id}")
             
             # Get device resolution
-            self.device_resolution = self.appium_utils.get_device_resolution(self.device_id)
+            self.device_resolution = self.appium_utils.get_device_resolution(self.appium_device_id)
             if self.device_resolution:
                 print(f"Remote[{self.device_type.upper()}]: Device resolution: {self.device_resolution['width']}x{self.device_resolution['height']}")
             
             # Store detected platform
-            self.detected_platform = self.appium_utils.get_platform(self.device_id)
+            self.detected_platform = self.appium_utils.get_platform(self.appium_device_id)
             
             self.is_connected = True
             return True
@@ -142,7 +142,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         """Build Appium capabilities based on platform and device ID."""
         capabilities = {
             'platformName': self.platform_name,
-            'udid': self.device_id,
+            'udid': self.appium_device_id,
             'noReset': True,
             'fullReset': False,
         }
@@ -170,7 +170,7 @@ class AppiumRemoteController(RemoteControllerInterface):
             
             # Clean up Appium connection
             if self.appium_utils:
-                self.appium_utils.disconnect_device(self.device_id)
+                self.appium_utils.disconnect_device(self.appium_device_id)
                 self.appium_utils = None
                 
             self.is_connected = False
@@ -197,7 +197,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Pressing key '{key}'")
             
-            success = self.appium_utils.execute_key_command(self.device_id, key)
+            success = self.appium_utils.execute_key_command(self.appium_device_id, key)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully pressed key '{key}'")
@@ -224,7 +224,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Sending text: '{text}'")
             
-            success = self.appium_utils.input_text(self.device_id, text)
+            success = self.appium_utils.input_text(self.appium_device_id, text)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully sent text: '{text}'")
@@ -329,7 +329,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Launching app: {app_identifier}")
             
-            success = self.appium_utils.launch_app(self.device_id, app_identifier)
+            success = self.appium_utils.launch_app(self.appium_device_id, app_identifier)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully launched {app_identifier}")
@@ -356,7 +356,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Closing app: {app_identifier}")
             
-            success = self.appium_utils.close_app(self.device_id, app_identifier)
+            success = self.appium_utils.close_app(self.appium_device_id, app_identifier)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully closed {app_identifier}")
@@ -383,7 +383,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Getting installed apps")
             
-            apps = self.appium_utils.get_installed_apps(self.device_id)
+            apps = self.appium_utils.get_installed_apps(self.appium_device_id)
             
             print(f"Remote[{self.device_type.upper()}]: Found {len(apps)} installed apps")
             return apps
@@ -406,7 +406,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Dumping UI elements")
             
-            success, elements, error = self.appium_utils.dump_ui_elements(self.device_id)
+            success, elements, error = self.appium_utils.dump_ui_elements(self.appium_device_id)
             
             if success:
                 self.last_ui_elements = elements
@@ -449,7 +449,7 @@ class AppiumRemoteController(RemoteControllerInterface):
                 element = self.find_element_by_content_desc(element_identifier)
             
             if element:
-                success = self.appium_utils.click_element(self.device_id, element)
+                success = self.appium_utils.click_element(self.appium_device_id, element)
                 if success:
                     print(f"Remote[{self.device_type.upper()}]: Successfully clicked element: '{element_identifier}'")
                 else:
@@ -480,7 +480,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Clicking element ID={element.id}, text='{element.text}'")
             
-            success = self.appium_utils.click_element(self.device_id, element)
+            success = self.appium_utils.click_element(self.appium_device_id, element)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully clicked element")
@@ -580,7 +580,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Taking screenshot")
             
-            success, screenshot_data, error = self.appium_utils.take_screenshot(self.device_id)
+            success, screenshot_data, error = self.appium_utils.take_screenshot(self.appium_device_id)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Screenshot captured successfully")
@@ -646,7 +646,7 @@ class AppiumRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Tapping at coordinates ({x}, {y})")
             
-            success = self.appium_utils.tap_coordinates(self.device_id, x, y)
+            success = self.appium_utils.tap_coordinates(self.appium_device_id, x, y)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully tapped at ({x}, {y})")
