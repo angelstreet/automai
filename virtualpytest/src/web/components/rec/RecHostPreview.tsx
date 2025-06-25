@@ -90,8 +90,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
           console.log(`[@component:RecHostPreview] Screenshot taken: ${result.screenshot_url}`);
 
           // Convert screenshot URL to thumbnail URL
+          // Replace .jpg with _thumbnail.jpg at the end of the filename
           const thumbnailUrlFromScreenshot = result.screenshot_url.replace(
-            '.jpg',
+            /\.jpg$/i,
             '_thumbnail.jpg',
           );
           console.log(`[@component:RecHostPreview] Thumbnail URL: ${thumbnailUrlFromScreenshot}`);
@@ -195,8 +196,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({ host, device }) 
   const displayInfo = device
     ? `${device.device_name || 'Unknown Device'} (${device.device_model || 'Unknown Model'})`
     : host.host_name;
-
-  const displayUrl = device?.device_ip || host.host_url;
 
   // Debug log device data
   useEffect(() => {
