@@ -150,7 +150,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                 if (isMounted && host && device && host.status === 'online') {
                   handleTakeScreenshot();
                 }
-              }, 3000); // 5 seconds for debugging
+              }, 5000); // 5 seconds for debugging
             }, 1500); // Wait 1.5 seconds after first screenshot before starting interval
           }, 500);
         } else {
