@@ -222,10 +222,6 @@ def release_control():
     except Exception as e:
         print(f"❌ [CONTROL] Error releasing control: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
-        
-    except Exception as e:
-        print(f"❌ [CONTROL] Error releasing control: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 @control_bp.route('/locked-devices', methods=['GET'])
 def get_locked_devices():
