@@ -105,14 +105,25 @@ class TextHelpers:
             # Apply binarization
             _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
             
-            # Save processed image for OCR
+            # Save processed image to captures directory (not temp) so it can be served by host
+            timestamp = int(time.time())
+            processed_filename = f'text_detection_{timestamp}.png'
+            processed_path = os.path.join(self.captures_path, processed_filename)
+            
+            # Ensure captures directory exists
+            os.makedirs(self.captures_path, exist_ok=True)
+            
+            # Save the cropped image (before filters) for display
+            cv2.imwrite(processed_path, img)
+            
+            # Use the binary filtered version for OCR
             with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
                 cv2.imwrite(tmp.name, binary)
-                processed_path = tmp.name
+                ocr_temp_path = tmp.name
             
             # Step 3: OCR text extraction
             result = subprocess.run(
-                ['tesseract', processed_path, 'stdout', '-l', 'eng'],
+                ['tesseract', ocr_temp_path, 'stdout', '-l', 'eng'],
                 capture_output=True, text=True, timeout=30
             )
             

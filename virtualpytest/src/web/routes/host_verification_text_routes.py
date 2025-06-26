@@ -6,6 +6,7 @@ Host-side text verification endpoints that execute using instantiated text verif
 
 from flask import Blueprint, request, jsonify
 from src.utils.host_utils import get_controller, get_device_by_id
+from src.utils.build_url_utils import buildHostImageUrl
 
 # Create blueprint
 verification_text_host_bp = Blueprint('verification_text_host', __name__, url_prefix='/host/verification/text')
@@ -39,8 +40,16 @@ def detect_text():
         # Get device info for response
         device = get_device_by_id(device_id)
         
-        # Controller handles everything
+        # Get text detection result
         result = text_controller.detect_text(data)
+        
+        # If successful, create a cropped image URL like image cropping does
+        if result.get('success') and result.get('processed_image_path'):
+            # Build proper URL for the processed (cropped) image
+            processed_image_url = buildHostImageUrl(data.get('host', {}), result['processed_image_path'])
+            result['processed_image_url'] = processed_image_url
+            
+            print(f"[@route:host_detect_text] Built processed image URL: {processed_image_url}")
         
         # Add device_model to response for server route (following established pattern)
         if device:

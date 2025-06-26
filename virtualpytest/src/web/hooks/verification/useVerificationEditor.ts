@@ -490,12 +490,12 @@ export const useVerificationEditor = ({
         // Pre-fill the text input with detected text
         setReferenceText(result.extracted_text || '');
 
-        // Display the original source image in the drag area (like image cropping does)
-        if (captureSourcePath) {
+        // Display the cropped area image in the drag area (like image cropping does)
+        if (result.processed_image_url) {
           const timestamp = new Date().getTime();
-          const imageUrl = `${captureSourcePath}?t=${timestamp}`;
+          const imageUrl = `${result.processed_image_url}?t=${timestamp}`;
           console.log(
-            '[@hook:useVerificationEditor] Text detection using source image URL:',
+            '[@hook:useVerificationEditor] Text detection using cropped image URL:',
             imageUrl,
           );
           setCapturedReferenceImage(imageUrl);
