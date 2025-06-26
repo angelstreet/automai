@@ -288,10 +288,154 @@ class ImageVerificationController(
                 'message': f"Verification failed: {str(e)}"
             }
 
-    def save_image_reference(self, image_path: str, reference_name: str, model: str, 
-                            area: dict = None, confidence: float = 0.8) -> str:
-        """Save an image reference for future verification use."""
-        return self._save_image_reference(image_path, reference_name, model, area, confidence)
+    # =============================================================================
+    # Route Interface Methods (Expected by Host Routes)
+    # =============================================================================
+
+    def crop_image_for_verification(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle image cropping from verification request."""
+        try:
+            # Extract data from request
+            host = request_data.get('host', {})
+            area = request_data.get('area', {})
+            reference_name = request_data.get('reference_name', 'cropped_reference')
+            
+            # Resolve source path
+            source_path = self._resolve_source_path(request_data)
+            
+            # Build target path
+            captures_path = self._get_captures_path(host)
+            filename = self._get_unique_filename(reference_name)
+            target_path = os.path.join(captures_path, filename)
+            
+            # Crop the image
+            success = self._crop_reference_image(source_path, target_path, area)
+            
+            if success:
+                # Build URL for access
+                cropped_url = self._build_cropped_image_url(host, filename)
+                
+                return {
+                    'success': True,
+                    'cropped_path': target_path,
+                    'image_url': cropped_url,
+                    'filename': filename,
+                    'area': area,
+                    'reference_name': reference_name
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Failed to crop image'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Cropping error: {str(e)}'
+            }
+    
+    def process_image_for_verification(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Handle image processing from verification request."""
+        try:
+            # Extract data from request
+            source_path = self._resolve_source_path(request_data)
+            autocrop = request_data.get('autocrop', False)
+            remove_background = request_data.get('remove_background', False)
+            image_filter = request_data.get('image_filter', 'none')
+            
+            # Create working copy
+            import shutil
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                temp_path = tmp.name
+            shutil.copy2(source_path, temp_path)
+            
+            # Apply processing
+            processed_area = self._process_reference_image(
+                temp_path, 
+                autocrop=autocrop, 
+                remove_background=remove_background
+            )
+            
+            # Apply filter
+            filter_success = self._apply_image_filter(temp_path, image_filter)
+            
+            return {
+                'success': True,
+                'processed_path': temp_path,
+                'processed_area': processed_area,
+                'filter_applied': filter_success,
+                'operations': {
+                    'autocrop': autocrop,
+                    'remove_background': remove_background,
+                    'filter': image_filter
+                }
+            }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Processing error: {str(e)}'
+            }
+    
+    def save_image_reference(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Save image reference from verification request, upload to R2 and save to database."""
+        try:
+            # Extract data from request
+            host = request_data.get('host', {})
+            reference_name = request_data.get('reference_name', 'image_reference')
+            area = request_data.get('area', {})
+            device_id = request_data.get('device_id')
+            
+            # Resolve source path
+            source_path = self._resolve_source_path(request_data)
+            
+            # Build target path
+            captures_path = self._get_captures_path(host)
+            filename = self._get_unique_filename(reference_name)
+            target_path = os.path.join(captures_path, filename)
+            
+            # Save the image
+            success = self._copy_reference_with_filtered_versions(source_path, target_path)
+            
+            if success:
+                # Upload to R2 (if configured)
+                r2_url = self._upload_to_r2(target_path, filename)
+                
+                # Save to database
+                db_result = self._save_to_database(
+                    device_id=device_id,
+                    reference_name=reference_name,
+                    file_path=target_path,
+                    r2_url=r2_url,
+                    area=area,
+                    host=host
+                )
+                
+                # Build local URL for access
+                local_url = self._build_cropped_image_url(host, filename)
+                
+                return {
+                    'success': True,
+                    'saved_path': target_path,
+                    'local_url': local_url,
+                    'r2_url': r2_url,
+                    'database_saved': db_result,
+                    'reference_name': reference_name,
+                    'area': area
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'Failed to save image reference'
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': f'Save error: {str(e)}'
+            }
 
     def auto_detect_images(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Auto-detect images in a screenshot."""
