@@ -281,7 +281,7 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
         )
         
         if controller:
-            device.controllers[implementation] = controller
+            device.add_controller(controller_type, controller)
             print(f"[@controller_manager:_create_device_with_controllers] ✓ Created {implementation} verification controller")
         else:
             print(f"[@controller_manager:_create_device_with_controllers] ✗ Failed to create {implementation} verification controller")
