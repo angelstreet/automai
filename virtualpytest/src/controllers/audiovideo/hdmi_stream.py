@@ -276,7 +276,6 @@ class HDMIStreamController(AVControllerInterface):
             print(f"HDMI[{self.capture_source}]: Capture duration ({duration}s) reached, stopping automatically")
             self.stop_video_capture()
             
-
     def get_status(self) -> Dict[str, Any]:
         """Get controller status using systemd service status."""
         try:
@@ -335,7 +334,3 @@ class HDMIStreamController(AVControllerInterface):
                 'is_capturing': self.is_capturing_video,
                 'error': f'Failed to get controller status: {str(e)}'
             }
-
-
-# Backward compatibility alias
-HDMI_Stream_Controller = HDMIStreamController 
