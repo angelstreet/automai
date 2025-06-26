@@ -163,34 +163,12 @@ class ImageVerificationController(
         found, _, _ = self.waitForImageToAppear(image_name, timeout, confidence)
         return found
 
-    def verify_element_exists(self, element_id: str, element_type: str = "any") -> bool:
-        """Verify that an element exists (not implemented for image controller)."""
-        return False
 
-    def verify_audio_playing(self, min_level: float = 10.0, duration: float = 2.0) -> bool:
-        """Verify that audio is playing (delegated to AV controller)."""
-        if self.av_controller:
-            return self.av_controller.verify_audio_playing(min_level, duration)
-        return False
-
-    def verify_video_playing(self, motion_threshold: float = 5.0, duration: float = 3.0) -> bool:
-        """Verify that video is playing (delegated to AV controller)."""
-        if self.av_controller:
-            return self.av_controller.verify_video_playing(motion_threshold, duration)
-        return False
-
-    def verify_color_present(self, color: str, tolerance: float = 10.0) -> bool:
-        """Verify that a color is present (not implemented for image controller)."""
-        return False
 
     def verify_screen_state(self, expected_state: str, timeout: float = 5.0) -> bool:
         """Verify screen state by looking for specific image."""
         found, _, _ = self.waitForImageToAppear(expected_state, timeout)
         return found
-
-    def verify_performance_metric(self, metric_name: str, expected_value: float, tolerance: float = 10.0) -> bool:
-        """Verify performance metrics (not implemented for image controller)."""
-        return False
 
     def wait_and_verify(self, verification_type: str, target: str, timeout: float = 10.0, **kwargs) -> bool:
         """Generic wait and verify method."""
@@ -437,31 +415,4 @@ class ImageVerificationController(
                 'error': f'Save error: {str(e)}'
             }
 
-    def auto_detect_images(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Auto-detect images in a screenshot."""
-        try:
-            screenshot_path = request_data.get('screenshot_path')
-            area = request_data.get('area')
-            
-            if not screenshot_path or not os.path.exists(screenshot_path):
-                return {
-                    'success': False,
-                    'message': 'Invalid or missing screenshot path'
-                }
-            
-            # Use  method to detect images
-            detected_images = self._detect_images_in_area(screenshot_path, area)
-            
-            return {
-                'success': True,
-                'detected_images': detected_images,
-                'screenshot_path': screenshot_path,
-                'area': area
-            }
-            
-        except Exception as e:
-            print(f"[@controller:ImageVerification] Error in auto_detect_images: {e}")
-            return {
-                'success': False,
-                'message': f'Image detection failed: {str(e)}'
-            } 
+ 
