@@ -184,18 +184,24 @@ class TextVerificationController:
             if not processed_image_path or not os.path.exists(processed_image_path):
                 return {'success': False, 'message': 'processed image not found'}
             
-            # Upload processed image to R2 and save to database
-            # TODO: Add R2 upload and database save logic here
-            # For now, just move the processed image to references folder
-            
+            # Save text reference locally (for local file backup)
             helpers = TextHelpers(self.captures_path)
             saved_path = helpers.save_text_reference(text, reference_name, area)
             
+            # Return data needed for server step database save
             return {
                 'success': bool(saved_path),
                 'message': 'Text reference saved successfully' if saved_path else 'Failed to save text reference',
                 'saved_path': saved_path,
-                'processed_image_path': processed_image_path
+                'processed_image_path': processed_image_path,
+                # Data for server step
+                'reference_name': reference_name,
+                'area': area,
+                'text_data': {
+                    'text': text,
+                    'font_size': 12.0,  # Default font size
+                    'confidence': 0.8   # Default confidence
+                }
             }
             
         except Exception as e:
