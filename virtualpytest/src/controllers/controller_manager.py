@@ -20,6 +20,9 @@ from ..controllers.verification.text import TextVerificationController
 from ..controllers.verification.adb import ADBVerificationController
 from ..controllers.verification.appium import AppiumVerificationController
 
+# Global list to track all verification controllers for listing purposes
+verification_controllers_list = []
+
 
 def create_host_from_environment() -> Host:
     """
@@ -28,6 +31,9 @@ def create_host_from_environment() -> Host:
     Returns:
         Host instance with all devices and controllers configured
     """
+    # Clear previous verification controllers list
+    clear_verification_controllers_list()
+    
     # Get host info from environment
     host_name = os.getenv('HOST_NAME', 'unnamed-host')
     host_port = int(os.getenv('HOST_PORT', '6109'))
@@ -280,7 +286,8 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
         )
         
         if controller:
-            device.add_controller(implementation, controller)
+            verification_controllers_list.append(controller)
+            device.controllers[implementation] = controller
             print(f"[@controller_manager:_create_device_with_controllers] ✓ Created {implementation} verification controller")
         else:
             print(f"[@controller_manager:_create_device_with_controllers] ✗ Failed to create {implementation} verification controller")
@@ -299,6 +306,17 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
     
     print(f"[@controller_manager:_create_device_with_controllers] Device {device_id} created with capabilities: {device.get_capabilities()}")
     return device
+
+
+def get_verification_controllers_list():
+    """Get the global list of verification controllers."""
+    return verification_controllers_list
+
+
+def clear_verification_controllers_list():
+    """Clear the global list of verification controllers."""
+    global verification_controllers_list
+    verification_controllers_list = []
 
 
 # Global host instance
