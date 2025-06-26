@@ -27,6 +27,8 @@ class TextVerificationController:
         # Use AV controller's capture path
         self.captures_path = av_controller.video_capture_path
         
+        # Set verification type for controller lookup
+        self.verification_type = 'text'
 
         print(f"[@controller:TextVerification] Initialized with captures path: {self.captures_path}")
         

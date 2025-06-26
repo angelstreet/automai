@@ -40,6 +40,9 @@ class ImageVerificationController(
         # Use AV controller's capture path
         self.captures_path = av_controller.video_capture_path
         
+        # Set verification type for controller lookup
+        self.verification_type = 'image'
+        
         # Validate required dependencies
         if not self.av_controller:
             raise ValueError("av_controller is required for ImageVerificationController")

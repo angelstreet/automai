@@ -47,6 +47,9 @@ class AppiumVerificationController(VerificationControllerInterface):
         self.appium_device_id = appium_device_id  # This is the actual iOS/Android UDID
         self.appium_server_url = appium_server_url
         
+        # Set verification type for controller lookup
+        self.verification_type = 'appium'
+        
         # AV controller is optional for Appium verification (Appium doesn't need screenshots)
         self.av_controller = av_controller
             

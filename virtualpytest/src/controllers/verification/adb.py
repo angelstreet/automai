@@ -34,6 +34,9 @@ class ADBVerificationController(VerificationControllerInterface):
         # AV controller is optional for ADB verification (ADB doesn't need screenshots)
         self.av_controller = av_controller
         
+        # Set verification type for controller lookup
+        self.verification_type = 'adb'
+        
         self.device_id = f"adb_verification"  # Internal device identifier
         self.adb_utils = ADBUtils()
         self.is_connected = True  # Assume connected since we're using direct ADB
