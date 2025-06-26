@@ -24,8 +24,8 @@ class TextVerificationController:
         # Dependency injection
         self.av_controller = av_controller
         
-        # Use AV controller's capture path
-        self.captures_path = av_controller.video_capture_path
+        # Use AV controller's capture path with captures subdirectory
+        self.captures_path = os.path.join(av_controller.video_capture_path, 'captures')
         
         # Set verification type for controller lookup
         self.verification_type = 'text'
