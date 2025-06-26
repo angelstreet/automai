@@ -61,17 +61,17 @@ class TextDetection:
             return False
     
     def _wait_for_text_to_appear(self, text: str, timeout: float = 10.0, 
-                                case_sensitive: bool = False, area: dict = None,
-                                image_filter: str = None) -> Tuple[bool, str, dict]:
+                                case_sensitive: bool = False, area: dict = None) -> Tuple[bool, str, dict]:
         """
         Wait for specific text to appear on screen.
+        
+        Note: Image filtering should be handled by the controller separately.
         
         Args:
             text: Text to wait for
             timeout: Maximum time to wait in seconds
             case_sensitive: Whether matching should be case sensitive
             area: Area to search within {x, y, width, height}
-            image_filter: Filter to apply before OCR
             
         Returns:
             tuple: (found, image_path, extracted_info)
@@ -89,7 +89,7 @@ class TextDetection:
                 
                 # Extract text from the captured image
                 extracted_text, temp_path = self._extract_text_from_area(
-                    capture_path, area, image_filter
+                    capture_path, area
                 )
                 
                 # Check if target text appears
@@ -101,8 +101,7 @@ class TextDetection:
                         'extracted_text': extracted_text,
                         'target_text': text,
                         'elapsed_time': elapsed_time,
-                        'area': area,
-                        'filter': image_filter
+                        'area': area
                     }
                 
                 # Clean up temporary file
@@ -122,17 +121,17 @@ class TextDetection:
         return False, "", {}
     
     def _wait_for_text_to_disappear(self, text: str, timeout: float = 10.0,
-                                   case_sensitive: bool = False, area: dict = None,
-                                   image_filter: str = None) -> Tuple[bool, str, dict]:
+                                   case_sensitive: bool = False, area: dict = None) -> Tuple[bool, str, dict]:
         """
         Wait for specific text to disappear from screen.
+        
+        Note: Image filtering should be handled by the controller separately.
         
         Args:
             text: Text to wait for disappearance
             timeout: Maximum time to wait in seconds
             case_sensitive: Whether matching should be case sensitive
             area: Area to search within {x, y, width, height}
-            image_filter: Filter to apply before OCR
             
         Returns:
             tuple: (disappeared, image_path, extracted_info)
@@ -150,7 +149,7 @@ class TextDetection:
                 
                 # Extract text from the captured image
                 extracted_text, temp_path = self._extract_text_from_area(
-                    capture_path, area, image_filter
+                    capture_path, area
                 )
                 
                 # Check if target text is no longer present
@@ -162,8 +161,7 @@ class TextDetection:
                         'extracted_text': extracted_text,
                         'target_text': text,
                         'elapsed_time': elapsed_time,
-                        'area': area,
-                        'filter': image_filter
+                        'area': area
                     }
                 
                 # Clean up temporary file

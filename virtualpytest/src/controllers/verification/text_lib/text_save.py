@@ -62,8 +62,6 @@ class TextSave:
             
             if success:
                 print(f"[@text_save] Saved cropped source image: {cropped_source_path}")
-                # Automatically create greyscale and binary versions
-                self._create_filtered_versions(cropped_source_path)
                 return cropped_source_path
             else:
                 print(f"[@text_save] Failed to save cropped source image")
@@ -97,9 +95,6 @@ class TextSave:
             shutil.copy2(source_image_path, saved_source_path)
             
             print(f"[@text_save] Saved source image: {saved_source_path}")
-            # Automatically create greyscale and binary versions
-            self._create_filtered_versions(saved_source_path)
-            
             return saved_source_path
             
         except Exception as e:

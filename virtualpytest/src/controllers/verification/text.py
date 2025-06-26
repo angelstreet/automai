@@ -102,7 +102,7 @@ class TextVerificationController(
             
             # Use the  method for core functionality
             found, capture_path, info = self._wait_for_text_to_appear(
-                text, timeout, case_sensitive, area, image_filter
+                text, timeout, case_sensitive, area
             )
             
             if found:
@@ -129,7 +129,6 @@ class TextVerificationController(
                     'extracted_text': info.get('extracted_text', ''),
                     'elapsed_time': info.get('elapsed_time', 0),
                     'area': area,
-                    'filter': image_filter,
                     'model': model,
                     'verification_index': verification_index
                 }
@@ -170,7 +169,7 @@ class TextVerificationController(
             
             # Use the  method for core functionality
             disappeared, capture_path, info = self._wait_for_text_to_disappear(
-                text, timeout, case_sensitive, area, image_filter
+                text, timeout, case_sensitive, area
             )
             
             if disappeared:
@@ -197,7 +196,6 @@ class TextVerificationController(
                     'extracted_text': info.get('extracted_text', ''),
                     'elapsed_time': info.get('elapsed_time', 0),
                     'area': area,
-                    'filter': image_filter,
                     'model': model,
                     'verification_index': verification_index
                 }
@@ -209,43 +207,10 @@ class TextVerificationController(
             print(f"[@controller:TextVerification] Error in waitForTextToDisappear: {e}")
             return False, "", {'error': str(e)}
 
-    # Verification interface methods (stubs for compatibility)
-    def verify_image_appears(self, image_name: str, timeout: float = 10.0, confidence: float = 0.8) -> bool:
-        """Verify that an image appears (not implemented for text controller)."""
-        print(f"[@controller:TextVerification] verify_image_appears not implemented")
-        return False
-
-    def verify_element_exists(self, element_id: str, element_type: str = "any") -> bool:
-        """Verify that an element exists (not implemented for text controller)."""
-        print(f"[@controller:TextVerification] verify_element_exists not implemented")
-        return False
-
-    def verify_audio_playing(self, min_level: float = 10.0, duration: float = 2.0) -> bool:
-        """Verify that audio is playing (delegated to AV controller)."""
-        if self.av_controller:
-            return self.av_controller.verify_audio_playing(min_level, duration)
-        return False
-
-    def verify_video_playing(self, motion_threshold: float = 5.0, duration: float = 3.0) -> bool:
-        """Verify that video is playing (delegated to AV controller)."""
-        if self.av_controller:
-            return self.av_controller.verify_video_playing(motion_threshold, duration)
-        return False
-
-    def verify_color_present(self, color: str, tolerance: float = 10.0) -> bool:
-        """Verify that a color is present (not implemented for text controller)."""
-        print(f"[@controller:TextVerification] verify_color_present not implemented")
-        return False
-
     def verify_screen_state(self, expected_state: str, timeout: float = 5.0) -> bool:
         """Verify screen state by looking for specific text."""
         found, _, _ = self.waitForTextToAppear(expected_state, timeout)
         return found
-
-    def verify_performance_metric(self, metric_name: str, expected_value: float, tolerance: float = 10.0) -> bool:
-        """Verify performance metrics (not implemented for text controller)."""
-        print(f"[@controller:TextVerification] verify_performance_metric not implemented")
-        return False
 
     def wait_and_verify(self, verification_type: str, target: str, timeout: float = 10.0, **kwargs) -> bool:
         """

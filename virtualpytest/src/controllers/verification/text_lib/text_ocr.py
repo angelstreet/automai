@@ -53,14 +53,15 @@ class TextOCR:
             print(f"[@ocr] OCR error: {e}")
             return ""
     
-    def _extract_text_from_area(self, image_path: str, area: dict = None, image_filter: str = None) -> tuple:
+    def _extract_text_from_area(self, image_path: str, area: dict = None) -> tuple:
         """
-        Extract text from a specific area of an image, with optional filtering.
+        Extract text from a specific area of an image.
+        
+        Note: Image filtering should be handled by the controller separately.
         
         Args:
             image_path: Path to the source image
             area: Area to extract from {x, y, width, height}
-            image_filter: Filter to apply ('greyscale', 'binary', 'none')
             
         Returns:
             tuple: (extracted_text, temp_image_path) 
@@ -101,11 +102,8 @@ class TextOCR:
             # Save cropped image
             cv2.imwrite(temp_image_path, img)
             
-            # Apply filter if specified
-            if image_filter and image_filter != 'none':
-                if not self._apply_image_filter(temp_image_path, image_filter):
-                    print(f"[@ocr] Failed to apply filter: {image_filter}")
-                    # Continue with unfiltered image
+            # Note: Image filtering should be handled by the controller
+            # Library should only handle core OCR functionality
             
             # Extract text using OCR
             extracted_text = self._extract_text_from_image(temp_image_path)
