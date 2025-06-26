@@ -818,8 +818,3 @@ class AppiumRemoteController(RemoteControllerInterface):
                 }  
             ]
         }
-
-
-
-# Backward compatibility alias
-UniversalAppiumController = AppiumRemoteController 

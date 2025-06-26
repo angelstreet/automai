@@ -714,6 +714,3 @@ class AndroidTVRemoteController(RemoteControllerInterface):
     def get_device_capture_path(self) -> str:
         """Get device-specific capture path for screenshots."""
         return self.device_config['video_capture_path']
-
-# Backward compatibility alias
-RealAndroidTVController = AndroidTVRemoteController 

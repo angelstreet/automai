@@ -755,8 +755,3 @@ class IRRemoteController(RemoteControllerInterface):
                 }
             ]
         }
-
-
-
-# Backward compatibility alias
-IRController = IRRemoteController 

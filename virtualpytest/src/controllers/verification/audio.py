@@ -605,7 +605,3 @@ class AudioVerificationController(VerificationControllerInterface):
                 'confidence': 0.0,
                 'details': {'error': str(e)}
             }
-
-
-# Backward compatibility alias
-AudioVerificationController = AudioVerificationController 

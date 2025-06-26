@@ -728,6 +728,3 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 }  
             ]
         }
-
-# Backward compatibility alias
-RealAndroidMobileController = AndroidMobileRemoteController 

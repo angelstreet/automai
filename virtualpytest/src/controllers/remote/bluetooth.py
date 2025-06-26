@@ -516,9 +516,3 @@ class BluetoothRemoteController(RemoteControllerInterface):
                 }
             ]
         }
-
-
-
-
-# Backward compatibility alias
-BluetoothController = BluetoothRemoteController 

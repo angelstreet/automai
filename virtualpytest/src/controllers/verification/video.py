@@ -887,6 +887,3 @@ class VideoVerificationController(VerificationControllerInterface):
         
         return False
 
-
-# Backward compatibility alias
-VideoVerificationController = VideoVerificationController 
