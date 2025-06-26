@@ -173,21 +173,29 @@ class TextVerificationController:
     def save_text(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for saving text references."""
         try:
-            helpers = TextHelpers(self.captures_path)
-            
             text = data.get('text', '')
             reference_name = data.get('reference_name', 'text_reference')
             area = data.get('area')
+            processed_image_path = data.get('processed_image_path', '')
             
             if not text:
                 return {'success': False, 'message': 'text is required for saving reference'}
             
+            if not processed_image_path or not os.path.exists(processed_image_path):
+                return {'success': False, 'message': 'processed image not found'}
+            
+            # Upload processed image to R2 and save to database
+            # TODO: Add R2 upload and database save logic here
+            # For now, just move the processed image to references folder
+            
+            helpers = TextHelpers(self.captures_path)
             saved_path = helpers.save_text_reference(text, reference_name, area)
             
             return {
                 'success': bool(saved_path),
                 'message': 'Text reference saved successfully' if saved_path else 'Failed to save text reference',
-                'saved_path': saved_path
+                'saved_path': saved_path,
+                'processed_image_path': processed_image_path
             }
             
         except Exception as e:

@@ -80,12 +80,12 @@ class TextHelpers:
         """
         try:
             if not os.path.exists(image_path):
-                return {'extracted_text': '', 'error': 'Image not found'}
+                return {'extracted_text': '', 'error': 'Image not found', 'processed_image_path': ''}
             
             # Load image
             img = cv2.imread(image_path)
             if img is None:
-                return {'extracted_text': '', 'error': 'Failed to load image'}
+                return {'extracted_text': '', 'error': 'Failed to load image', 'processed_image_path': ''}
             
             # Step 1: Crop to area if specified
             if area:
@@ -94,7 +94,7 @@ class TextHelpers:
                 
                 img_height, img_width = img.shape[:2]
                 if x < 0 or y < 0 or x + w > img_width or y + h > img_height:
-                    return {'extracted_text': '', 'error': 'Area out of bounds'}
+                    return {'extracted_text': '', 'error': 'Area out of bounds', 'processed_image_path': ''}
                 
                 img = img[y:y+h, x:x+w]
             
@@ -126,11 +126,12 @@ class TextHelpers:
                 'character_count': len(extracted_text),
                 'word_count': len(extracted_text.split()) if extracted_text else 0,
                 'language': language,
-                'area': area
+                'area': area,
+                'processed_image_path': processed_path
             }
             
         except Exception as e:
-            return {'extracted_text': '', 'error': str(e)}
+            return {'extracted_text': '', 'error': str(e), 'processed_image_path': ''}
     
     def detect_language(self, text: str) -> str:
         """Simple language detection."""

@@ -20,6 +20,7 @@ interface DetectedTextData {
   detectedLanguage?: string;
   detectedLanguageName?: string;
   languageConfidence?: number;
+  processed_image_path?: string;
 }
 
 interface ImageProcessingOptions {
@@ -284,57 +285,12 @@ export const useVerificationEditor = ({
         imageProcessingOptions: imageProcessingOptions,
       });
 
-      // Step 1: Capture the area (with processing if needed)
-      let captureResponse;
-
-      if (
-        referenceType === 'image' &&
-        (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)
-      ) {
-        console.log('[@hook:useVerificationEditor] Capturing with processing options for save');
-        captureResponse = await fetch(`/server/verification/image/process-image`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            host: selectedHost,
-            device_id: selectedDeviceId,
-            area: selectedArea,
-            source_filename: captureSourcePath,
-            reference_name: referenceName,
-            model: deviceModel,
-            autocrop: imageProcessingOptions.autocrop,
-            remove_background: imageProcessingOptions.removeBackground,
-          }),
-        });
-      } else {
-        console.log('[@hook:useVerificationEditor] Capturing without processing for save');
-        captureResponse = await fetch(`/server/verification/image/crop-image`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            host: selectedHost,
-            device_id: selectedDeviceId,
-            area: selectedArea,
-            source_filename: captureSourcePath,
-            reference_name: referenceName,
-            model: deviceModel,
-          }),
-        });
-      }
-
-      const captureResult = await captureResponse.json();
-
-      if (!captureResult.success) {
-        throw new Error(captureResult.error || 'Failed to capture area');
-      }
-
-      // Step 2: Upload to R2 (HOST) and then save to database (SERVER)
+      // Handle saving based on reference type
       if (referenceType === 'text') {
-        // Text references use the old single-call pattern
+        // Text references should use processed image from detect-text (no cropping needed)
+        console.log(
+          '[@hook:useVerificationEditor] Saving text reference using processed image from detect-text',
+        );
         const response = await fetch('/server/verification/text/save-text', {
           method: 'POST',
           headers: {
@@ -342,16 +298,11 @@ export const useVerificationEditor = ({
           },
           body: JSON.stringify({
             host: selectedHost,
-            name: referenceName,
+            reference_name: referenceName,
             model: deviceModel,
-            area:
-              imageProcessingOptions.autocrop && captureResult.processed_area
-                ? captureResult.processed_area
-                : selectedArea,
-            screenshot_path: captureSourcePath,
-            referenceType: referenceType === 'text' ? 'reference_text' : 'reference_image',
+            area: selectedArea,
             text: referenceText,
-            cropped_filename: captureResult.filename,
+            processed_image_path: detectedTextData?.processed_image_path || '', // Use processed image from detect-text
           }),
         });
 
@@ -372,6 +323,51 @@ export const useVerificationEditor = ({
           );
         }
       } else {
+        // Image references: First capture, then save
+        let captureResponse;
+
+        if (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground) {
+          console.log('[@hook:useVerificationEditor] Capturing with processing options for save');
+          captureResponse = await fetch(`/server/verification/image/process-image`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              host: selectedHost,
+              device_id: selectedDeviceId,
+              area: selectedArea,
+              source_filename: captureSourcePath,
+              reference_name: referenceName,
+              model: deviceModel,
+              autocrop: imageProcessingOptions.autocrop,
+              remove_background: imageProcessingOptions.removeBackground,
+            }),
+          });
+        } else {
+          console.log('[@hook:useVerificationEditor] Capturing without processing for save');
+          captureResponse = await fetch(`/server/verification/image/crop-image`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              host: selectedHost,
+              device_id: selectedDeviceId,
+              area: selectedArea,
+              source_filename: captureSourcePath,
+              reference_name: referenceName,
+              model: deviceModel,
+            }),
+          });
+        }
+
+        const captureResult = await captureResponse.json();
+
+        if (!captureResult.success) {
+          throw new Error(captureResult.error || 'Failed to capture area');
+        }
+
         // Image references: Single call uploads to R2 and saves to database
         const response = await fetch('/server/verification/image/save-image', {
           method: 'POST',
@@ -424,6 +420,7 @@ export const useVerificationEditor = ({
     referenceText,
     imageProcessingOptions,
     deviceModel,
+    detectedTextData,
   ]);
 
   // Handle auto-detect text
@@ -474,6 +471,7 @@ export const useVerificationEditor = ({
           detectedLanguage: result.language || result.detected_language,
           detectedLanguageName: result.detected_language_name,
           languageConfidence: result.language_confidence,
+          processed_image_path: result.processed_image_path,
         });
 
         // Pre-fill the text input with detected text
