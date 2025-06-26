@@ -274,9 +274,17 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
             else:
                 print(f"[@controller_manager:_create_device_with_controllers] WARNING: {implementation} verification needs AV controller but none available")
         
-        controller = _create_controller_instance(controller_type, implementation, controller_params)
+        # Create the verification controller instance
+        controller = _create_controller_instance(
+            controller_type, implementation, controller_params
+        )
+        
         if controller:
-            device.add_controller(controller_type, controller)
+            verification_controllers_list.append(controller)
+            device.controllers[implementation] = controller
+            print(f"[@controller_manager:_create_device_with_controllers] ✓ Created {implementation} verification controller")
+        else:
+            print(f"[@controller_manager:_create_device_with_controllers] ✗ Failed to create {implementation} verification controller")
     
     # Step 4: Create power controllers (no dependencies)
     for controller_config in power_controllers:

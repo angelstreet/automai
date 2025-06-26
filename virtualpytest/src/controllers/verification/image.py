@@ -1,7 +1,7 @@
 """
 Image Verification Controller Implementation
 
-Modular image verification controller using centralized URL building architecture.
+Pure image processing controller - no URL building or path resolution.
 """
 
 import os
@@ -13,11 +13,6 @@ from .image_lib.image_save import ImageSave
 from .image_lib.image_processing import ImageProcessing
 from .image_lib.image_matching import ImageMatching
 from .image_lib.image_utils import ImageUtils
-from src.utils.build_url_utils import (
-    buildCroppedImageUrl, 
-    buildHostImageUrl, 
-    get_device_local_captures_path
-)
 
 
 class ImageVerificationController(
@@ -30,30 +25,26 @@ class ImageVerificationController(
 ):
     """Image verification controller that uses template matching to detect images on screen."""
     
-    def __init__(self, av_controller, host_info=None, device_id=None, **kwargs):
+    def __init__(self, av_controller, **kwargs):
         """
         Initialize the Image Verification controller.
         
         Args:
             av_controller: AV controller for capturing images (dependency injection)
-            host_info: Host information from device registration
-            device_id: Device ID from device registration
         """
         super().__init__("Image Verification", "image")
         
         # Dependency injection
         self.av_controller = av_controller
-        self.host_info = host_info
-        self.device_id = device_id
+        
+        # Use AV controller's capture path
+        self.captures_path = av_controller.video_capture_path
         
         # Validate required dependencies
         if not self.av_controller:
             raise ValueError("av_controller is required for ImageVerificationController")
-        
-        if not self.host_info:
-            print(f"[@controller:ImageVerification] Warning: No host_info provided, URL building may fail")
             
-        print(f"[@controller:ImageVerification] Initialized with AV controller for device: {device_id}")
+        print(f"[@controller:ImageVerification] Initialized with captures path: {self.captures_path}")
 
         # Controller is always ready
         self.is_connected = True
@@ -75,8 +66,7 @@ class ImageVerificationController(
             "connected": self.is_connected,
             "av_controller": self.av_controller.device_name if self.av_controller else None,
             "controller_type": "image",
-            "device_id": self.device_id,
-            "host_info": bool(self.host_info)
+            "captures_path": self.captures_path
         }
 
     def waitForImageToAppear(self, image_path: str, timeout: float = 10.0, confidence: float = 0.8,
@@ -99,7 +89,7 @@ class ImageVerificationController(
             print(f"[@controller:ImageVerification] Waiting for image to appear: {image_path}")
             print(f"[@controller:ImageVerification] Timeout: {timeout}s, Confidence: {confidence}")
             
-            # Use the  method for core functionality
+            # Use the method for core functionality
             found, location, screenshot_path = self._wait_for_image_to_appear(
                 image_path, timeout, confidence, area
             )
@@ -148,7 +138,7 @@ class ImageVerificationController(
         try:
             print(f"[@controller:ImageVerification] Waiting for image to disappear: {image_path}")
             
-            # Use the  method for core functionality
+            # Use the method for core functionality
             disappeared, screenshot_path = self._wait_for_image_to_disappear(
                 image_path, timeout, confidence, area
             )
@@ -171,13 +161,104 @@ class ImageVerificationController(
             print(f"[@controller:ImageVerification] Error in waitForImageToDisappear: {e}")
             return False, ""
 
-    # Verification interface methods
+    # =============================================================================
+    # Pure Image Processing Methods (No URL Building)
+    # =============================================================================
+
+    def crop_image_file(self, source_path: str, area: Dict[str, Any], output_filename: str) -> Optional[str]:
+        """
+        Pure image cropping - takes paths, returns path.
+        
+        Args:
+            source_path: Path to source image
+            area: Crop area {x, y, width, height}
+            output_filename: Output filename
+            
+        Returns:
+            str: Output path if successful, None if failed
+        """
+        try:
+            # Generate output path
+            output_path = os.path.join(self.captures_path, output_filename)
+            
+            # Crop the image
+            success = self._crop_reference_image(source_path, output_path, area)
+            
+            if success:
+                # Create filtered versions
+                self._create_filtered_versions(output_path)
+                return output_path
+            else:
+                return None
+                
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error in crop_image_file: {e}")
+            return None
+
+    def process_image_file(self, image_path: str, remove_background: bool = False, 
+                          image_filter: str = 'none') -> str:
+        """
+        Pure image processing - takes path, modifies in place.
+        
+        Args:
+            image_path: Path to image to process
+            remove_background: Whether to remove background
+            image_filter: Filter to apply ('none', 'greyscale', 'binary')
+            
+        Returns:
+            str: Path to processed image
+        """
+        try:
+            # Apply background removal processing
+            if remove_background:
+                self._process_reference_image(image_path, remove_background)
+            
+            # Apply filter
+            self._apply_image_filter(image_path, image_filter)
+            
+            return image_path
+                
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error in process_image_file: {e}")
+            return image_path
+
+    def save_image_file(self, source_path: str, output_filename: str) -> Optional[str]:
+        """
+        Pure image saving - takes paths, returns path.
+        
+        Args:
+            source_path: Path to source image
+            output_filename: Output filename
+            
+        Returns:
+            str: Output path if successful, None if failed
+        """
+        try:
+            # Generate output path
+            output_path = os.path.join(self.captures_path, output_filename)
+            
+            # Save the image
+            success = self._copy_reference_image(source_path, output_path)
+            
+            if success:
+                # Create filtered versions
+                self._create_filtered_versions(output_path)
+                return output_path
+            else:
+                return None
+                
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error in save_image_file: {e}")
+            return None
+
+    # =============================================================================
+    # Verification Interface Methods
+    # =============================================================================
+
     def verify_image_appears(self, image_name: str, timeout: float = 10.0, confidence: float = 0.8) -> bool:
         """Verify that an image appears on screen."""
         found, _, _ = self.waitForImageToAppear(image_name, timeout, confidence)
         return found
-
-
 
     def verify_screen_state(self, expected_state: str, timeout: float = 5.0) -> bool:
         """Verify screen state by looking for specific image."""
@@ -278,202 +359,6 @@ class ImageVerificationController(
                 'success': False,
                 'type': verification_config.get('type', 'unknown'),
                 'message': f"Verification failed: {str(e)}"
-            }
-
-    # =============================================================================
-    # Path Resolution Methods (Using Centralized Utilities)
-    # =============================================================================
-
-    def _get_captures_path(self) -> str:
-        """Get the captures directory path using centralized device configuration."""
-        if not self.host_info:
-            raise ValueError("host_info is required for path resolution")
-        return get_device_local_captures_path(self.host_info, self.device_id)
-
-    def _resolve_source_path(self, request_data: Dict[str, Any]) -> str:
-        """Resolve the source image path from request data."""
-        if request_data.get('source') == 'last_capture':
-            captures_path = self._get_captures_path()
-            capture_files = [f for f in os.listdir(captures_path) if f.endswith('.png')]
-            if not capture_files:
-                raise FileNotFoundError("No capture files found")
-            
-            latest_file = max(capture_files, key=lambda f: os.path.getctime(os.path.join(captures_path, f)))
-            return os.path.join(captures_path, latest_file)
-        
-        elif request_data.get('source_path'):
-            return request_data['source_path']
-        
-        else:
-            raise ValueError("No valid source specified")
-
-    def _build_image_url(self, local_path: str) -> str:
-        """Build URL for accessing images using centralized URL builder."""
-        if not self.host_info:
-            raise ValueError("host_info is required for URL building")
-        return buildHostImageUrl(self.host_info, local_path)
-
-    def _build_cropped_image_url(self, filename: str) -> str:
-        """Build URL for accessing cropped images using centralized URL builder."""
-        if not self.host_info:
-            raise ValueError("host_info is required for URL building")
-        return buildCroppedImageUrl(self.host_info, filename, self.device_id)
-
-    # =============================================================================
-    # Route Interface Methods (Expected by Host Routes)
-    # =============================================================================
-
-    def crop_image(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle image cropping from verification request."""
-        try:
-            # Extract data from request
-            host = request_data.get('host', {})
-            area = request_data.get('area', {})
-            reference_name = request_data.get('reference_name', 'cropped_reference')
-            
-            # Resolve source path
-            source_path = self._resolve_source_path(request_data)
-            
-            # Build target path
-            captures_path = self._get_captures_path()
-            filename = self._get_unique_filename(reference_name)
-            target_path = os.path.join(captures_path, filename)
-            
-            # Crop the image
-            success = self._crop_reference_image(source_path, target_path, area)
-            
-            if success:
-                # Create filtered versions (controller orchestrates this)
-                self._create_filtered_versions(target_path)
-                
-                # Build URL for access
-                cropped_url = self._build_cropped_image_url(filename)
-                
-                return {
-                    'success': True,
-                    'cropped_path': target_path,
-                    'image_url': cropped_url,
-                    'filename': filename,
-                    'area': area,
-                    'reference_name': reference_name
-                }
-            else:
-                return {
-                    'success': False,
-                    'error': 'Failed to crop image'
-                }
-                
-        except Exception as e:
-            return {
-                'success': False,
-                'error': f'Cropping error: {str(e)}'
-            }
-    
-    def process_image(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle image processing from verification request."""
-        try:
-            # Extract data from request
-            source_path = self._resolve_source_path(request_data)
-            autocrop = request_data.get('autocrop', False)
-            remove_background = request_data.get('remove_background', False)
-            image_filter = request_data.get('image_filter', 'none')
-            
-            # Create working copy
-            import shutil
-            import tempfile
-            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-                temp_path = tmp.name
-            shutil.copy2(source_path, temp_path)
-            
-            # Handle auto-crop first (controller orchestrates this)
-            processed_area = None
-            if autocrop:
-                processed_area = self._auto_crop_image(temp_path)
-            
-            # Apply background removal processing
-            process_success = self._process_reference_image(temp_path, remove_background)
-            
-            # Apply filter
-            filter_success = self._apply_image_filter(temp_path, image_filter)
-            
-            return {
-                'success': True,
-                'processed_path': temp_path,
-                'processed_area': processed_area,
-                'filter_applied': filter_success,
-                'operations': {
-                    'autocrop': autocrop,
-                    'remove_background': remove_background,
-                    'filter': image_filter
-                }
-            }
-                
-        except Exception as e:
-            return {
-                'success': False,
-                'error': f'Processing error: {str(e)}'
-            }
-    
-    def save_image(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Save image reference from verification request, upload to R2 and save to database."""
-        try:
-            # Extract data from request
-            host = request_data.get('host', {})
-            reference_name = request_data.get('reference_name', 'image_reference')
-            area = request_data.get('area', {})
-            device_id = request_data.get('device_id')
-            
-            # Resolve source path
-            source_path = self._resolve_source_path(request_data)
-            
-            # Build target path
-            captures_path = self._get_captures_path()
-            filename = self._get_unique_filename(reference_name)
-            target_path = os.path.join(captures_path, filename)
-            
-            # Save the image
-            success = self._copy_reference_image(source_path, target_path)
-            
-            # Create filtered versions (controller orchestrates this)
-            if success:
-                self._create_filtered_versions(target_path)
-            
-            if success:
-                # Upload to R2 (if configured)
-                r2_url = self._upload_to_r2(target_path, filename)
-                
-                # Save to database
-                db_result = self._save_to_database(
-                    device_id=device_id,
-                    reference_name=reference_name,
-                    file_path=target_path,
-                    r2_url=r2_url,
-                    area=area,
-                    host=host
-                )
-                
-                # Build local URL for access
-                local_url = self._build_cropped_image_url(filename)
-                
-                return {
-                    'success': True,
-                    'saved_path': target_path,
-                    'local_url': local_url,
-                    'r2_url': r2_url,
-                    'database_saved': db_result,
-                    'reference_name': reference_name,
-                    'area': area
-                }
-            else:
-                return {
-                    'success': False,
-                    'error': 'Failed to save image reference'
-                }
-                
-        except Exception as e:
-            return {
-                'success': False,
-                'error': f'Save error: {str(e)}'
             }
 
  
