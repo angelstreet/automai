@@ -1,0 +1,524 @@
+"""
+Image Helpers
+
+Core image processing helpers for 4 main operations:
+1. Wait for image to appear/disappear (template matching)
+2. Crop image to area
+3. Process image (filters, background removal) 
+4. Save/download images
+
+Includes: template matching, cropping, filtering, background removal, URL downloading
+"""
+
+import os
+import requests
+import tempfile
+import time
+import cv2
+import numpy as np
+import shutil
+import subprocess
+from typing import Dict, Any, Optional, Tuple, List
+from urllib.parse import urlparse
+
+
+class ImageHelpers:
+    """Core image processing helpers for verification operations."""
+    
+    def __init__(self, captures_path: str, av_controller):
+        """Initialize image helpers with captures path and AV controller."""
+        self.captures_path = captures_path
+        self.av_controller = av_controller
+        
+        # Create image references directory
+        self.image_references_dir = os.path.join(captures_path, 'image_references')
+        os.makedirs(self.image_references_dir, exist_ok=True)
+    
+    def download_image(self, source_url: str) -> str:
+        """Download image from URL only."""
+        try:
+            response = requests.get(source_url, timeout=30)
+            response.raise_for_status()
+            
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                tmp.write(response.content)
+                return tmp.name
+                
+        except Exception as e:
+            print(f"[@image_helpers] Error downloading image from URL: {e}")
+            raise
+    
+    def save_image_reference(self, image_path: str, reference_name: str, 
+                           area: Dict[str, Any] = None) -> str:
+        """Save image reference for future use."""
+        try:
+            timestamp = int(time.time())
+            ref_filename = f'{reference_name}_{timestamp}.png'
+            ref_path = os.path.join(self.image_references_dir, ref_filename)
+            
+            # Copy image to references directory
+            shutil.copy2(image_path, ref_path)
+            
+            return ref_path
+            
+        except Exception as e:
+            print(f"[@image_helpers] Error saving image reference: {e}")
+            return ""
+    
+    # =============================================================================
+    # Core Operation 1: Template Matching (Wait for Image)
+    # =============================================================================
+    
+    def wait_for_image_to_appear(self, reference_path: str, timeout: float = 10.0, 
+                                confidence: float = 0.8, area: dict = None) -> Tuple[bool, dict, str]:
+        """
+        Core function: Wait for image to appear on screen.
+        1. Take screenshots in loop
+        2. Template matching with confidence threshold
+        3. Return found status, location, screenshot path
+        """
+        try:
+            start_time = time.time()
+            screenshot_path = ""
+            
+            while time.time() - start_time < timeout:
+                # Take screenshot using AV controller
+                screenshot_path = self.av_controller.take_screenshot()
+                if not screenshot_path or not os.path.exists(screenshot_path):
+                    time.sleep(0.5)
+                    continue
+                
+                # Check if image matches
+                match_result = self.match_template_in_area(
+                    screenshot_path, reference_path, area, confidence
+                )
+                
+                if match_result['found']:
+                    elapsed_time = time.time() - start_time
+                    print(f"[@image_helpers] Image appeared after {elapsed_time:.2f}s")
+                    return True, match_result['location'], screenshot_path
+                
+                time.sleep(0.5)
+            
+            print(f"[@image_helpers] Image did not appear within {timeout}s")
+            return False, None, screenshot_path
+                
+        except Exception as e:
+            print(f"[@image_helpers] Error in wait_for_image_to_appear: {e}")
+            return False, None, ""
+    
+    def wait_for_image_to_disappear(self, reference_path: str, timeout: float = 10.0,
+                                   confidence: float = 0.8, area: dict = None) -> Tuple[bool, str]:
+        """
+        Core function: Wait for image to disappear from screen.
+        1. Take screenshots in loop
+        2. Template matching with confidence threshold
+        3. Return disappeared status, screenshot path
+        """
+        try:
+            start_time = time.time()
+            screenshot_path = ""
+            
+            while time.time() - start_time < timeout:
+                # Take screenshot using AV controller
+                screenshot_path = self.av_controller.take_screenshot()
+                if not screenshot_path or not os.path.exists(screenshot_path):
+                    time.sleep(0.5)
+                    continue
+                
+                # Check if image still matches
+                match_result = self.match_template_in_area(
+                    screenshot_path, reference_path, area, confidence
+                )
+                
+                if not match_result['found']:
+                    elapsed_time = time.time() - start_time
+                    print(f"[@image_helpers] Image disappeared after {elapsed_time:.2f}s")
+                    return True, screenshot_path
+                
+                time.sleep(0.5)
+            
+            print(f"[@image_helpers] Image did not disappear within {timeout}s")
+            return False, screenshot_path
+                
+        except Exception as e:
+            print(f"[@image_helpers] Error in wait_for_image_to_disappear: {e}")
+            return False, ""
+    
+    def match_template_in_area(self, source_filename: str, template_path: str, 
+                              area: Dict[str, Any] = None, threshold: float = 0.8) -> Dict[str, Any]:
+        """
+        Template matching within a specific area of source image.
+        
+        Args:
+            source_filename: Path to source image
+            template_path: Path to template image
+            area: Area to search within (optional, searches full image if None)
+            threshold: Matching threshold (0.0 to 1.0)
+            
+        Returns:
+            Dict with matching results
+        """
+        try:
+            # Load images
+            source_img = cv2.imread(source_filename)
+            template_img = cv2.imread(template_path)
+            
+            if source_img is None or template_img is None:
+                return {
+                    'found': False,
+                    'error': 'Failed to load images',
+                    'confidence': 0.0
+                }
+            
+            # Use full image if no area specified
+            if area:
+                x = int(area['x'])
+                y = int(area['y'])
+                width = int(area['width'])
+                height = int(area['height'])
+                
+                # Validate bounds
+                src_height, src_width = source_img.shape[:2]
+                if x < 0 or y < 0 or x + width > src_width or y + height > src_height:
+                    return {
+                        'found': False,
+                        'error': 'Search area out of bounds',
+                        'confidence': 0.0
+                    }
+                
+                # Crop search area
+                search_area = source_img[y:y+height, x:x+width]
+                offset_x, offset_y = x, y
+            else:
+                search_area = source_img
+                offset_x, offset_y = 0, 0
+            
+            # Perform template matching
+            result = cv2.matchTemplate(search_area, template_img, cv2.TM_CCOEFF_NORMED)
+            
+            # Find best match location
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(result)
+            
+            # Check if match exceeds threshold
+            found = max_val >= threshold
+            
+            if found:
+                # Calculate absolute coordinates
+                match_x = offset_x + max_loc[0]
+                match_y = offset_y + max_loc[1]
+                template_height, template_width = template_img.shape[:2]
+                
+                return {
+                    'found': True,
+                    'confidence': float(max_val),
+                    'location': {
+                        'x': match_x,
+                        'y': match_y,
+                        'width': template_width,
+                        'height': template_height
+                    },
+                    'center': {
+                        'x': match_x + template_width // 2,
+                        'y': match_y + template_height // 2
+                    }
+                }
+            else:
+                return {
+                    'found': False,
+                    'confidence': float(max_val),
+                    'threshold': threshold
+                }
+                
+        except Exception as e:
+            return {
+                'found': False,
+                'error': f'Matching error: {str(e)}',
+                'confidence': 0.0
+            }
+
+
+    # =============================================================================
+    # Core Operation 2: Image Cropping
+    # =============================================================================
+    
+    def crop_image_to_area(self, source_filename: str, target_path: str, area: Dict[str, Any]) -> bool:
+        """
+        Core function: Crop image to specific area.
+        1. Load source image
+        2. Validate area bounds
+        3. Crop and save to target path
+        """
+        try:
+            if not os.path.exists(source_filename):
+                print(f"[@image_helpers] Source image not found: {source_filename}")
+                return False
+            
+            if not self.validate_area(area):
+                print(f"[@image_helpers] Invalid area coordinates: {area}")
+                return False
+            
+            # Load image
+            img = cv2.imread(source_filename)
+            if img is None:
+                print(f"[@image_helpers] Failed to load image: {source_filename}")
+                return False
+            
+            # Extract coordinates
+            x = int(area['x'])
+            y = int(area['y'])
+            width = int(area['width'])
+            height = int(area['height'])
+            
+            # Validate bounds
+            img_height, img_width = img.shape[:2]
+            if x < 0 or y < 0 or x + width > img_width or y + height > img_height:
+                print(f"[@image_helpers] Crop area out of bounds: {area} for image {img_width}x{img_height}")
+                return False
+            
+            # Crop image
+            cropped_img = img[y:y+height, x:x+width]
+            
+            # Ensure target directory exists
+            target_dir = os.path.dirname(target_path)
+            os.makedirs(target_dir, exist_ok=True)
+            
+            # Save cropped image
+            success = cv2.imwrite(target_path, cropped_img)
+            if success:
+                print(f"[@image_helpers] Successfully cropped image: {target_path}")
+                return True
+            else:
+                print(f"[@image_helpers] Failed to save cropped image: {target_path}")
+                return False
+                
+        except Exception as e:
+            print(f"[@image_helpers] Error cropping image: {e}")
+            return False
+    
+    # =============================================================================
+    # Core Operation 3: Image Processing (Filters)
+    # =============================================================================
+    
+    def apply_image_filter(self, image_path: str, filter_type: str) -> bool:
+        """
+        Core function: Apply image filter.
+        1. Load image
+        2. Apply filter (greyscale/binary)
+        3. Save filtered image
+        """
+        try:
+            if filter_type == 'none' or not filter_type:
+                return True  # No filtering needed
+                
+            # Read image
+            img = cv2.imread(image_path)
+            if img is None:
+                print(f"[@image_helpers] Failed to load image for filtering: {image_path}")
+                return False
+            
+            if filter_type == 'greyscale':
+                # Convert to grayscale
+                processed_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                # Convert back to 3-channel for consistent format
+                processed_img = cv2.cvtColor(processed_img, cv2.COLOR_GRAY2BGR)
+                
+            elif filter_type == 'binary':
+                # Convert to grayscale first
+                gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                # Apply binary threshold
+                _, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+                # Convert back to 3-channel
+                processed_img = cv2.cvtColor(binary, cv2.COLOR_GRAY2BGR)
+                
+            else:
+                print(f"[@image_helpers] Unknown filter type: {filter_type}")
+                return False
+            
+            # Save processed image
+            success = cv2.imwrite(image_path, processed_img)
+            if success:
+                print(f"[@image_helpers] Applied {filter_type} filter to: {image_path}")
+            else:
+                print(f"[@image_helpers] Failed to save filtered image: {image_path}")
+            
+            return success
+            
+        except Exception as e:
+            print(f"[@image_helpers] Error applying filter: {e}")
+            return False
+    
+    def remove_background(self, image_path: str, method: str = 'opencv') -> bool:
+        """
+        Core function: Remove background from image.
+        1. Load image
+        2. Apply background removal (opencv or rembg)
+        3. Save processed image
+        """
+        try:
+            if not os.path.exists(image_path):
+                print(f"[@image_helpers] Image not found for background removal: {image_path}")
+                return False
+            
+            if method == 'opencv':
+                return self._remove_background_opencv(image_path)
+            elif method == 'rembg':
+                return self._remove_background_rembg(image_path)
+            else:
+                print(f"[@image_helpers] Unknown background removal method: {method}")
+                return False
+                
+        except Exception as e:
+            print(f"[@image_helpers] Error in background removal: {e}")
+            return False
+    
+    def _remove_background_opencv(self, image_path: str) -> bool:
+        """Remove background using OpenCV-based method."""
+        try:
+            # Load image
+            img = cv2.imread(image_path)
+            if img is None:
+                return False
+            
+            # Convert to HSV for better color segmentation
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            
+            # Create mask for background (assuming white/light background)
+            lower_white = np.array([0, 0, 200])
+            upper_white = np.array([180, 30, 255])
+            mask = cv2.inRange(hsv, lower_white, upper_white)
+            
+            # Invert mask to get foreground
+            mask_inv = cv2.bitwise_not(mask)
+            
+            # Apply mask
+            result = cv2.bitwise_and(img, img, mask=mask_inv)
+            
+            # Make background transparent by converting to RGBA
+            result_rgba = cv2.cvtColor(result, cv2.COLOR_BGR2BGRA)
+            result_rgba[:, :, 3] = mask_inv  # Set alpha channel
+            
+            # Save as PNG to preserve transparency
+            success = cv2.imwrite(image_path, result_rgba)
+            if success:
+                print(f"[@image_helpers] Background removed using OpenCV: {image_path}")
+            
+            return success
+            
+        except Exception as e:
+            print(f"[@image_helpers] OpenCV background removal error: {e}")
+            return False
+    
+    def _remove_background_rembg(self, image_path: str) -> bool:
+        """Remove background using rembg library."""
+        try:
+            # Use rembg command line tool
+            output_path = f"{image_path}_nobg.png"
+            result = subprocess.run(
+                ['rembg', 'i', image_path, output_path],
+                capture_output=True,
+                text=True,
+                timeout=30
+            )
+            
+            if result.returncode == 0 and os.path.exists(output_path):
+                # Replace original with processed
+                shutil.move(output_path, image_path)
+                print(f"[@image_helpers] Background removed using rembg: {image_path}")
+                return True
+            else:
+                print(f"[@image_helpers] rembg failed: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            print(f"[@image_helpers] rembg timeout for: {image_path}")
+            return False
+        except Exception as e:
+            print(f"[@image_helpers] rembg error: {e}")
+            return False
+    
+    # =============================================================================
+    # Core Operation 4: Image Saving/Copying
+    # =============================================================================
+    
+    def copy_image_file(self, source_filename: str, target_path: str) -> bool:
+        """
+        Core function: Copy image file.
+        1. Validate source exists
+        2. Create target directory
+        3. Copy file
+        """
+        try:
+            if not os.path.exists(source_filename):
+                print(f"[@image_helpers] Source image not found: {source_filename}")
+                return False
+            
+            # Ensure target directory exists
+            target_dir = os.path.dirname(target_path)
+            os.makedirs(target_dir, exist_ok=True)
+            
+            # Copy the image
+            shutil.copy2(source_filename, target_path)
+            print(f"[@image_helpers] Copied image: {source_filename} -> {target_path}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"[@image_helpers] Error copying image: {e}")
+            return False
+    
+    def create_filtered_versions(self, image_path: str) -> None:
+        """Create greyscale and binary versions of an image."""
+        try:
+            # Get base path and extension
+            base_path, ext = os.path.splitext(image_path)
+            
+            # Create greyscale version
+            greyscale_path = f"{base_path}_greyscale{ext}"
+            shutil.copy2(image_path, greyscale_path)
+            if self.apply_image_filter(greyscale_path, 'greyscale'):
+                print(f"[@image_helpers] Created greyscale version: {greyscale_path}")
+            
+            # Create binary version
+            binary_path = f"{base_path}_binary{ext}"
+            shutil.copy2(image_path, binary_path)
+            if self.apply_image_filter(binary_path, 'binary'):
+                print(f"[@image_helpers] Created binary version: {binary_path}")
+                
+        except Exception as e:
+            print(f"[@image_helpers] Error creating filtered versions: {e}")
+    
+    # =============================================================================
+    # Utility Functions
+    # =============================================================================
+    
+    def validate_area(self, area: Dict[str, Any]) -> bool:
+        """Validate that area contains required coordinates."""
+        if not area:
+            return False
+        required_keys = ['x', 'y', 'width', 'height']
+        return all(key in area and isinstance(area[key], (int, float)) for key in required_keys)
+    
+    def get_unique_filename(self, base_name: str, extension: str = '.png') -> str:
+        """Generate unique filename with timestamp."""
+        timestamp = int(time.time() * 1000)
+        return f"{base_name}_{timestamp}{extension}"
+
+
+def create_image_helpers(device_id: str) -> ImageHelpers:
+    """Factory function to create ImageHelpers for standalone scripts."""
+    try:
+        from ..controller_config_factory import ControllerConfigFactory
+        
+        config_factory = ControllerConfigFactory()
+        controller_manager = config_factory.create_controller_manager(device_id)
+        
+        av_controller = controller_manager.get_controller('av')
+        if not av_controller:
+            raise ValueError("Failed to get AV controller for capture path")
+        
+        return ImageHelpers(av_controller.video_capture_path, av_controller)
+        
+    except Exception as e:
+        print(f"[@image_helpers] Error creating image helpers: {e}")
+        raise

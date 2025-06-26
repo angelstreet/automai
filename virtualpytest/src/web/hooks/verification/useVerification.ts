@@ -35,35 +35,59 @@ export const useVerification = ({
         '🔍 [useVerification] Loading verification types from device:',
         deviceVerificationTypes,
       );
+      console.log(
+        '🔍 [useVerification] Device verification types keys:',
+        Object.keys(deviceVerificationTypes),
+      );
+      console.log(
+        '🔍 [useVerification] Device verification types structure:',
+        JSON.stringify(deviceVerificationTypes, null, 2),
+      );
 
       // Transform the verification types into the format expected by the UI
       const transformedTypes: Record<string, any> = {};
 
       Object.entries(deviceVerificationTypes).forEach(([verType, verConfig]: [string, any]) => {
-        // Clean up parameter definitions to remove 'available_' prefix
-        const cleanedConfig = { ...verConfig };
+        console.log(`🔄 [useVerification] Processing verification type: ${verType}`, verConfig);
 
-        if (cleanedConfig.parameters) {
-          const cleanedParameters: Record<string, any> = {};
-
-          Object.entries(cleanedConfig.parameters).forEach(
-            ([paramKey, paramValue]: [string, any]) => {
-              // Remove 'available_' prefix from parameter keys
-              const cleanKey = paramKey.startsWith('available_')
-                ? paramKey.substring(10)
-                : paramKey;
-              cleanedParameters[cleanKey] = paramValue;
-            },
+        if (!Array.isArray(verConfig)) {
+          console.error(
+            `❌ [useVerification] Expected array for ${verType}, got:`,
+            typeof verConfig,
           );
-
-          cleanedConfig.parameters = cleanedParameters;
+          return;
         }
 
-        transformedTypes[verType] = cleanedConfig;
+        transformedTypes[verType] = verConfig.map((verification: any) => {
+          const transformed = {
+            command: verification.command || verification.type,
+            verification_type: verType,
+            params: {} as Record<string, any>,
+          };
+
+          if (verification.params && typeof verification.params === 'object') {
+            transformed.params = verification.params;
+          } else if (verification.parameters && Array.isArray(verification.parameters)) {
+            verification.parameters.forEach((paramName: string) => {
+              transformed.params[paramName] = '';
+            });
+          }
+
+          console.log(`✅ [useVerification] Transformed verification:`, transformed);
+          return transformed;
+        });
       });
 
       setVerificationTypes(transformedTypes);
       console.log('✅ [useVerification] Transformed verification types:', transformedTypes);
+      console.log(
+        '✅ [useVerification] Transformed verification types keys:',
+        Object.keys(transformedTypes),
+      );
+      console.log(
+        '✅ [useVerification] Transformed verification types structure:',
+        JSON.stringify(transformedTypes, null, 2),
+      );
     } else {
       console.log('⚠️ [useVerification] No device verification types found for device:', deviceId);
       setVerificationTypes({});
@@ -257,6 +281,7 @@ export const useVerification = ({
 
   return {
     verificationTypes,
+    availableVerificationTypes: verificationTypes, // Alias for compatibility
     verifications,
     loading,
     error,

@@ -1,29 +1,18 @@
 """
-Image Verification Controller Implementation
+Image Verification Controller
 
-Pure image processing controller - no URL building or path resolution.
+Clean image controller that uses helpers for all operations.
+Provides route interfaces and core domain logic.
 """
 
-import os
 import time
-from typing import Dict, Any, Optional
-from ..base_controller import VerificationControllerInterface
-from .image_lib.image_crop import ImageCrop
-from .image_lib.image_save import ImageSave
-from .image_lib.image_processing import ImageProcessing
-from .image_lib.image_matching import ImageMatching
-from .image_lib.image_utils import ImageUtils
+import os
+from typing import Dict, Any, Optional, Tuple
+from .image_helpers import ImageHelpers
 
 
-class ImageVerificationController(
-    VerificationControllerInterface,
-    ImageCrop,
-    ImageSave,
-    ImageProcessing,
-    ImageMatching,
-    ImageUtils
-):
-    """Image verification controller that uses template matching to detect images on screen."""
+class ImageVerificationController:
+    """Pure image verification controller that uses template matching to detect images on screen."""
     
     def __init__(self, av_controller, **kwargs):
         """
@@ -32,8 +21,6 @@ class ImageVerificationController(
         Args:
             av_controller: AV controller for capturing images (dependency injection)
         """
-        super().__init__("Image Verification", "image")
-        
         # Dependency injection
         self.av_controller = av_controller
         
@@ -43,12 +30,11 @@ class ImageVerificationController(
         # Set verification type for controller lookup
         self.verification_type = 'image'
         
-        # Validate required dependencies
-        if not self.av_controller:
-            raise ValueError("av_controller is required for ImageVerificationController")
-            
-        print(f"[@controller:ImageVerification] Initialized with captures path: {self.captures_path}")
+        # Initialize helpers
+        self.helpers = ImageHelpers(self.captures_path, av_controller)
 
+        print(f"[@controller:ImageVerification] Initialized with captures path: {self.captures_path}")
+        
         # Controller is always ready
         self.is_connected = True
         self.verification_session_id = f"image_verify_{int(time.time())}"
@@ -92,27 +78,13 @@ class ImageVerificationController(
             print(f"[@controller:ImageVerification] Waiting for image to appear: {image_path}")
             print(f"[@controller:ImageVerification] Timeout: {timeout}s, Confidence: {confidence}")
             
-            # Use the method for core functionality
-            found, location, screenshot_path = self._wait_for_image_to_appear(
+            # Use helpers for core functionality
+            found, location, screenshot_path = self.helpers.wait_for_image_to_appear(
                 image_path, timeout, confidence, area
             )
             
             if found:
                 print(f"[@controller:ImageVerification] Image found at location: {location}")
-                
-                # Save results if needed
-                if model and screenshot_path:
-                    # Save source image for comparison
-                    source_filename = self._save_source_image_for_comparison(
-                        screenshot_path, model, verification_index
-                    )
-                    
-                    # Save cropped version if area specified
-                    if area:
-                        cropped_path = self._save_cropped_source_image(
-                            screenshot_path, area, model, verification_index
-                        )
-                
                 return True, location, screenshot_path
             else:
                 print(f"[@controller:ImageVerification] Image not found within {timeout}s")
@@ -141,20 +113,13 @@ class ImageVerificationController(
         try:
             print(f"[@controller:ImageVerification] Waiting for image to disappear: {image_path}")
             
-            # Use the method for core functionality
-            disappeared, screenshot_path = self._wait_for_image_to_disappear(
+            # Use helpers for core functionality
+            disappeared, screenshot_path = self.helpers.wait_for_image_to_disappear(
                 image_path, timeout, confidence, area
             )
             
             if disappeared:
                 print(f"[@controller:ImageVerification] Image disappeared!")
-                
-                # Save results if needed
-                if model and screenshot_path:
-                    source_filename = self._save_source_image_for_comparison(
-                        screenshot_path, model, verification_index
-                    )
-                
                 return True, screenshot_path
             else:
                 print(f"[@controller:ImageVerification] Image did not disappear within {timeout}s")
@@ -165,146 +130,179 @@ class ImageVerificationController(
             return False, ""
 
     # =============================================================================
-    # Pure Image Processing Methods (No URL Building)
+    # Route Interface Methods (Required by host_verification_image_routes.py)
     # =============================================================================
 
-    def crop_image_file(self, source_filename: str, area: Dict[str, Any], output_filename: str) -> Optional[str]:
-        """
-        Pure image cropping - takes paths, returns path.
-        
-        Args:
-            source_filename: Path to source image
-            area: Crop area {x, y, width, height}
-            output_filename: Output filename
-            
-        Returns:
-            str: Output path if successful, None if failed
-        """
+    def crop_image(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Route interface for image cropping."""
         try:
-            # Generate output path
-            output_path = os.path.join(self.captures_path, output_filename)
+            # Get source filename from frontend
+            source_filename = data.get('source_filename', '')
+            area = data.get('area')
+            reference_name = data.get('reference_name', 'cropped_image')
             
-            # Crop the image
-            success = self._crop_reference_image(source_filename, output_path, area)
+            if not source_filename:
+                return {'success': False, 'message': 'source_filename is required'}
             
-            if success:
-                # Create filtered versions
-                self._create_filtered_versions(output_path)
-                return output_path
+            if not area:
+                return {'success': False, 'message': 'area is required for cropping'}
+            
+            # Build full path for local files, keep URLs as-is
+            if source_filename.startswith(('http://', 'https://')):
+                # URL case - download first
+                local_image_path = self.helpers.download_image(source_filename)
             else:
-                return None
+                # Local filename case - build full path directly
+                local_image_path = os.path.join(self.captures_path, source_filename)
                 
-        except Exception as e:
-            print(f"[@controller:ImageVerification] Error in crop_image_file: {e}")
-            return None
-
-    def process_image_file(self, image_path: str, remove_background: bool = False, 
-                          image_filter: str = 'none') -> str:
-        """
-        Pure image processing - takes path, modifies in place.
-        
-        Args:
-            image_path: Path to image to process
-            remove_background: Whether to remove background
-            image_filter: Filter to apply ('none', 'greyscale', 'binary')
+                if not os.path.exists(local_image_path):
+                    return {'success': False, 'message': f'Local file not found: {local_image_path}'}
             
-        Returns:
-            str: Path to processed image
-        """
+            # Generate unique filename for output
+            filename = self.helpers.get_unique_filename(reference_name)
+            output_path = os.path.join(self.captures_path, filename)
+            
+            # Crop image using helpers
+            success = self.helpers.crop_image_to_area(local_image_path, output_path, area)
+            
+            if not success:
+                return {'success': False, 'message': 'Image cropping failed'}
+            
+            # Create filtered versions
+            self.helpers.create_filtered_versions(output_path)
+            
+            return {
+                'success': True,
+                'message': f'Image cropped successfully: {filename}',
+                'local_path': output_path,
+                'filename': filename,
+                'area': area,
+                'source_was_url': source_filename.startswith(('http://', 'https://'))
+            }
+            
+        except Exception as e:
+            return {'success': False, 'message': f'Image crop failed: {str(e)}'}
+
+    def process_image(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Route interface for image processing."""
         try:
-            # Apply background removal processing
+            source_filename = data.get('source_filename', '')
+            remove_background = data.get('remove_background', False)
+            image_filter = data.get('image_filter', 'none')
+            
+            if not source_filename:
+                return {'success': False, 'message': 'source_filename is required'}
+            
+            # Build full path for local files, keep URLs as-is
+            if source_filename.startswith(('http://', 'https://')):
+                # URL case - download first
+                local_image_path = self.helpers.download_image(source_filename)
+                # Create a copy in captures directory
+                filename = self.helpers.get_unique_filename('processed_image')
+                output_path = os.path.join(self.captures_path, filename)
+                self.helpers.copy_image_file(local_image_path, output_path)
+                # Clean up temp file
+                try:
+                    os.unlink(local_image_path)
+                except:
+                    pass
+                local_image_path = output_path
+            else:
+                # Local filename case - build full path directly
+                local_image_path = os.path.join(self.captures_path, source_filename)
+                
+                if not os.path.exists(local_image_path):
+                    return {'success': False, 'message': f'Local file not found: {local_image_path}'}
+            
+            # Apply background removal if requested
             if remove_background:
-                self._process_reference_image(image_path, remove_background)
+                bg_success = self.helpers.remove_background(local_image_path)
+                if not bg_success:
+                    return {'success': False, 'message': 'Background removal failed'}
             
             # Apply filter
-            self._apply_image_filter(image_path, image_filter)
+            filter_success = self.helpers.apply_image_filter(local_image_path, image_filter)
+            if not filter_success:
+                return {'success': False, 'message': f'Filter application failed: {image_filter}'}
             
-            return image_path
-                
-        except Exception as e:
-            print(f"[@controller:ImageVerification] Error in process_image_file: {e}")
-            return image_path
-
-    def save_image_file(self, source_filename: str, output_filename: str) -> Optional[str]:
-        """
-        Pure image saving - takes paths, returns path.
-        
-        Args:
-            source_filename: Path to source image
-            output_filename: Output filename
-            
-        Returns:
-            str: Output path if successful, None if failed
-        """
-        try:
-            # Generate output path
-            output_path = os.path.join(self.captures_path, output_filename)
-            
-            # Save the image
-            success = self._copy_reference_image(source_filename, output_path)
-            
-            if success:
-                # Create filtered versions
-                self._create_filtered_versions(output_path)
-                return output_path
-            else:
-                return None
-                
-        except Exception as e:
-            print(f"[@controller:ImageVerification] Error in save_image_file: {e}")
-            return None
-
-    # =============================================================================
-    # Verification Interface Methods
-    # =============================================================================
-
-    def verify_image_appears(self, image_name: str, timeout: float = 10.0, confidence: float = 0.8) -> bool:
-        """Verify that an image appears on screen."""
-        found, _, _ = self.waitForImageToAppear(image_name, timeout, confidence)
-        return found
-
-    def verify_screen_state(self, expected_state: str, timeout: float = 5.0) -> bool:
-        """Verify screen state by looking for specific image."""
-        found, _, _ = self.waitForImageToAppear(expected_state, timeout)
-        return found
-
-    def wait_and_verify(self, verification_type: str, target: str, timeout: float = 10.0, **kwargs) -> bool:
-        """Generic wait and verify method."""
-        try:
-            if verification_type == 'image_appears':
-                found, _, _ = self.waitForImageToAppear(target, timeout, **kwargs)
-                return found
-            elif verification_type == 'image_disappears':
-                disappeared, _ = self.waitForImageToDisappear(target, timeout, **kwargs)
-                return disappeared
-            else:
-                print(f"[@controller:ImageVerification] Unknown verification type: {verification_type}")
-                return False
-        except Exception as e:
-            print(f"[@controller:ImageVerification] Error in wait_and_verify: {e}")
-            return False
-
-    def get_available_verifications(self) -> list:
-        """Get list of available verification types."""
-        return [
-            {
-                "type": "image_appears",
-                "name": "Wait for Image to Appear",
-                "description": "Wait for specific image to appear on screen",
-                "parameters": ["image_path", "timeout", "confidence", "area"]
-            },
-            {
-                "type": "image_disappears",
-                "name": "Wait for Image to Disappear", 
-                "description": "Wait for specific image to disappear from screen",
-                "parameters": ["image_path", "timeout", "confidence", "area"]
+            return {
+                'success': True,
+                'message': f'Image processed successfully',
+                'local_path': local_image_path,
+                'filename': os.path.basename(local_image_path),
+                'operations': {
+                    'remove_background': remove_background,
+                    'filter': image_filter
+                },
+                'source_was_url': source_filename.startswith(('http://', 'https://'))
             }
-        ]
+            
+        except Exception as e:
+            return {'success': False, 'message': f'Image processing failed: {str(e)}'}
 
-    def execute_verification(self, verification_config: Dict[str, Any], source_filename: str = None) -> Dict[str, Any]:
-        """Execute a verification based on configuration."""
+    def save_image(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Route interface for saving image references."""
         try:
-            verification_type = verification_config.get('type')
+            source_filename = data.get('source_filename', '')
+            reference_name = data.get('reference_name', 'image_reference')
+            area = data.get('area')
+            
+            if not source_filename:
+                return {'success': False, 'message': 'source_filename is required for saving reference'}
+            
+            # Build full path for local files, keep URLs as-is
+            if source_filename.startswith(('http://', 'https://')):
+                # URL case - download first
+                local_image_path = self.helpers.download_image(source_filename)
+            else:
+                # Local filename case - build full path directly
+                local_image_path = os.path.join(self.captures_path, source_filename)
+                
+                if not os.path.exists(local_image_path):
+                    return {'success': False, 'message': f'Local file not found: {local_image_path}'}
+            
+            # Generate unique filename for saved reference
+            filename = self.helpers.get_unique_filename(reference_name)
+            output_path = os.path.join(self.captures_path, filename)
+            
+            # Save image using helpers
+            success = self.helpers.copy_image_file(local_image_path, output_path)
+            
+            if not success:
+                return {'success': False, 'message': 'Image save failed'}
+            
+            # Create filtered versions
+            self.helpers.create_filtered_versions(output_path)
+            
+            # Save reference metadata locally (for local file backup)
+            saved_ref_path = self.helpers.save_image_reference(output_path, reference_name, area)
+            
+            # Clean up temp file if we downloaded it
+            if source_filename.startswith(('http://', 'https://')) and local_image_path.startswith('/tmp/'):
+                try:
+                    os.unlink(local_image_path)
+                except:
+                    pass
+            
+            return {
+                'success': bool(saved_ref_path),
+                'message': 'Image reference saved successfully' if saved_ref_path else 'Failed to save image reference',
+                'saved_path': saved_ref_path,
+                'local_path': output_path,
+                'filename': filename,
+                # Data for server step
+                'reference_name': reference_name,
+                'area': area,
+                'source_was_url': source_filename.startswith(('http://', 'https://'))
+            }
+            
+        except Exception as e:
+            return {'success': False, 'message': f'Image save failed: {str(e)}'}
+
+    def execute_verification(self, verification_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Route interface for executing verification."""
+        try:
+            verification_type = verification_config.get('type', 'image_appears')
             
             if verification_type == 'image_appears':
                 image_path = verification_config.get('image_path', '')
@@ -363,5 +361,52 @@ class ImageVerificationController(
                 'type': verification_config.get('type', 'unknown'),
                 'message': f"Verification failed: {str(e)}"
             }
+
+    # =============================================================================
+    # Verification Interface Methods (For compatibility)
+    # =============================================================================
+
+    def verify_image_appears(self, image_name: str, timeout: float = 10.0, confidence: float = 0.8) -> bool:
+        """Verify that an image appears on screen."""
+        found, _, _ = self.waitForImageToAppear(image_name, timeout, confidence)
+        return found
+
+    def verify_screen_state(self, expected_state: str, timeout: float = 5.0) -> bool:
+        """Verify screen state by looking for specific image."""
+        found, _, _ = self.waitForImageToAppear(expected_state, timeout)
+        return found
+
+    def wait_and_verify(self, verification_type: str, target: str, timeout: float = 10.0, **kwargs) -> bool:
+        """Generic wait and verify method."""
+        try:
+            if verification_type == 'image_appears':
+                found, _, _ = self.waitForImageToAppear(target, timeout, **kwargs)
+                return found
+            elif verification_type == 'image_disappears':
+                disappeared, _ = self.waitForImageToDisappear(target, timeout, **kwargs)
+                return disappeared
+            else:
+                print(f"[@controller:ImageVerification] Unknown verification type: {verification_type}")
+                return False
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error in wait_and_verify: {e}")
+            return False
+
+    def get_available_verifications(self) -> list:
+        """Get list of available verification types."""
+        return [
+            {
+                "type": "image_appears",
+                "name": "Wait for Image to Appear",
+                "description": "Wait for specific image to appear on screen",
+                "parameters": ["image_path", "timeout", "confidence", "area"]
+            },
+            {
+                "type": "image_disappears",
+                "name": "Wait for Image to Disappear", 
+                "description": "Wait for specific image to disappear from screen",
+                "parameters": ["image_path", "timeout", "confidence", "area"]
+            }
+        ]
 
  
