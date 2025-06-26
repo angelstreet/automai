@@ -270,7 +270,7 @@ class ImageVerificationController(
     # Route Interface Methods (Expected by Host Routes)
     # =============================================================================
 
-    def crop_image_for_verification(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+    def crop_image(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle image cropping from verification request."""
         try:
             # Extract data from request
@@ -313,7 +313,7 @@ class ImageVerificationController(
                 'error': f'Cropping error: {str(e)}'
             }
     
-    def process_image_for_verification(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+    def process_image(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle image processing from verification request."""
         try:
             # Extract data from request
@@ -357,7 +357,7 @@ class ImageVerificationController(
                 'error': f'Processing error: {str(e)}'
             }
     
-    def save_image_reference(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+    def save_image(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """Save image reference from verification request, upload to R2 and save to database."""
         try:
             # Extract data from request

@@ -373,7 +373,7 @@ export const useVerificationEditor = ({
         }
       } else {
         // Image references: Single call uploads to R2 and saves to database
-        const response = await fetch('/server/verification/image/save-image-reference', {
+        const response = await fetch('/server/verification/image/save-image', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

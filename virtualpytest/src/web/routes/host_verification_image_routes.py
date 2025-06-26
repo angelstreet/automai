@@ -37,7 +37,7 @@ def crop_area():
             }), 404
         
         # Controller handles everything
-        result = image_controller.crop_image_for_verification(data)
+        result = image_controller.crop_image(data)
         return jsonify(result)
         
     except Exception as e:
@@ -72,7 +72,7 @@ def process_area():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
-        result = image_controller.process_image_for_verification(data)
+        result = image_controller.process_image(data)
         return jsonify(result)
         
     except Exception as e:
@@ -82,7 +82,7 @@ def process_area():
             'error': f'Host processing error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/save-image-reference', methods=['POST'])
+@verification_image_host_bp.route('/save-image', methods=['POST'])
 def save_resource():
     """Save image verification reference"""
     try:
@@ -107,7 +107,7 @@ def save_resource():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
-        result = image_controller.save_image_reference(data)
+        result = image_controller.save_image(data)
         return jsonify(result)
         
     except Exception as e:

@@ -346,22 +346,22 @@ def crop_image():
             'error': str(e)
         }), 500
 
-@server_verification_common_bp.route('/image/save-image-reference', methods=['POST'])
-def save_image_reference():
-    """Proxy save image reference request to host"""
+@server_verification_common_bp.route('/image/save-image', methods=['POST'])
+def save_image():
+    """Proxy save image request to host"""
     try:
-        print("[@route:server_verification_common:save_image_reference] Proxying save image reference request to host")
+        print("[@route:server_verification_common:save_image] Proxying save image request to host")
         
         # Get request data
         request_data = request.get_json() or {}
         
         # Proxy to host verification image save endpoint
-        response_data, status_code = proxy_to_host('/host/verification/image/save-image-reference', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/image/save-image', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
     except Exception as e:
-        print(f"[@route:server_verification_common:save_image_reference] ERROR: {e}")
+        print(f"[@route:server_verification_common:save_image] ERROR: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
