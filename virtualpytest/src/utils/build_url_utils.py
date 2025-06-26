@@ -42,45 +42,42 @@ def buildHostUrl(host_info: dict, endpoint: str) -> str:
 # SPECIALIZED URL BUILDERS
 # =====================================================
 
-def buildCaptureUrl(host_info: dict, timestamp: str, device_id: str = None) -> str:
+def buildCaptureUrl(host_info: dict, timestamp: str, device_id: str) -> str:
     """
     Build URL for live screenshot captures
     
     Args:
         host_info: Host information from registry
         timestamp: Screenshot timestamp (YYYYMMDDHHMMSS format)
-        device_id: Optional device ID for multi-device hosts (e.g., 'device1', 'device2')
+        device_id: Device ID for multi-device hosts (required)
         
     Returns:
         Complete URL to screenshot capture
         
     Example:
-        buildCaptureUrl(host_info, '20250117134500')
-        -> 'https://host:444/host/stream/captures/capture_20250117134500.jpg'
-        
-        buildCaptureUrl(host_info, '20250117134500', 'device2')
-        -> 'https://host:444/host/stream/capture2/captures/capture_20250117134500.jpg'
+        buildCaptureUrl(host_info, '20250117134500', 'device1')
+        -> 'https://host:444/host/stream/capture1/captures/capture_20250117134500.jpg'
     """
     # Get device-specific capture path
     capture_path = _get_device_capture_path(host_info, device_id)
     
     return buildHostUrl(host_info, f'host{capture_path}/capture_{timestamp}.jpg')
 
-def buildCroppedImageUrl(host_info: dict, filename: str, device_id: str = None) -> str:
+def buildCroppedImageUrl(host_info: dict, filename: str, device_id: str) -> str:
     """
     Build URL for cropped images
     
     Args:
         host_info: Host information from registry
         filename: Cropped image filename
-        device_id: Optional device ID for multi-device hosts
+        device_id: Device ID for multi-device hosts (required)
         
     Returns:
         Complete URL to cropped image
         
     Example:
-        buildCroppedImageUrl(host_info, 'cropped_button_20250117134500.jpg')
-        -> 'https://host:444/host/stream/captures/cropped/cropped_button_20250117134500.jpg'
+        buildCroppedImageUrl(host_info, 'cropped_button_20250117134500.jpg', 'device1')
+        -> 'https://host:444/host/stream/capture1/captures/cropped/cropped_button_20250117134500.jpg'
     """
     # Get device-specific capture path
     capture_path = _get_device_capture_path(host_info, device_id)
@@ -125,23 +122,20 @@ def buildVerificationResultUrl(host_info: dict, results_path: str) -> str:
     # Add host/ prefix like other image URLs (cropping, captures, etc.)
     return buildHostUrl(host_info, f'host/{url_path}')
 
-def buildStreamUrl(host_info: dict, device_id: str = None) -> str:
+def buildStreamUrl(host_info: dict, device_id: str) -> str:
     """
     Build URL for HLS stream
     
     Args:
         host_info: Host information from registry
-        device_id: Optional device ID for multi-device hosts (e.g., 'device1', 'device2')
+        device_id: Device ID for multi-device hosts (required)
         
     Returns:
         Complete URL to HLS stream
         
     Example:
-        buildStreamUrl(host_info)
-        -> 'https://host:444/host/stream/output.m3u8'
-        
-        buildStreamUrl(host_info, 'device2')
-        -> 'https://host:444/host/stream/capture2/output.m3u8'
+        buildStreamUrl(host_info, 'device1')
+        -> 'https://host:444/host/stream/capture1/output.m3u8'
     """
     # Get device-specific stream path
     stream_path = _get_device_stream_path(host_info, device_id)
@@ -220,13 +214,13 @@ def buildServerUrl(endpoint: str) -> str:
 # MULTI-DEVICE HELPER FUNCTIONS
 # =====================================================
 
-def get_device_local_captures_path(host_info: dict, device_id: str = None) -> str:
+def get_device_local_captures_path(host_info: dict, device_id: str) -> str:
     """
     Get device-specific local captures path for file system operations.
     
     Args:
         host_info: Host information from registry
-        device_id: Optional device ID (e.g., 'device1', 'device2')
+        device_id: Device ID (required - no fallbacks)
         
     Returns:
         Local file system path for captures from device configuration (DEVICE1_VIDEO_CAPTURE_PATH)
@@ -238,13 +232,7 @@ def get_device_local_captures_path(host_info: dict, device_id: str = None) -> st
         raise ValueError("host_info is required for device path resolution")
     
     if not device_id:
-        # Get first device if no device_id specified
-        devices = host_info.get('devices', [])
-        if not devices:
-            raise ValueError("No devices configured in host_info")
-        device_id = devices[0].get('device_id')
-        if not device_id:
-            raise ValueError("First device has no device_id configured")
+        raise ValueError("device_id is required - no fallbacks allowed")
     
     # Get devices configuration from host_info
     devices = host_info.get('devices', [])
@@ -263,13 +251,13 @@ def get_device_local_captures_path(host_info: dict, device_id: str = None) -> st
     
     raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")
 
-def get_device_local_stream_path(host_info: dict, device_id: str = None) -> str:
+def get_device_local_stream_path(host_info: dict, device_id: str) -> str:
     """
     Get device-specific local stream path for file system operations.
     
     Args:
         host_info: Host information from registry
-        device_id: Optional device ID (e.g., 'device1', 'device2')
+        device_id: Device ID (required - no fallbacks)
         
     Returns:
         Local file system path for stream from device configuration (DEVICE1_VIDEO_STREAM_PATH)
@@ -281,13 +269,7 @@ def get_device_local_stream_path(host_info: dict, device_id: str = None) -> str:
         raise ValueError("host_info is required for device path resolution")
     
     if not device_id:
-        # Get first device if no device_id specified
-        devices = host_info.get('devices', [])
-        if not devices:
-            raise ValueError("No devices configured in host_info")
-        device_id = devices[0].get('device_id')
-        if not device_id:
-            raise ValueError("First device has no device_id configured")
+        raise ValueError("device_id is required - no fallbacks allowed")
     
     # Get devices configuration from host_info
     devices = host_info.get('devices', [])
@@ -317,7 +299,7 @@ def get_current_device_id() -> str:
     This helps routes determine which device they're working with.
     
     Returns:
-        Device ID (e.g., 'device1', 'device2') or None if not available
+        Device ID (e.g., 'device1', 'device2') or raises error if not available
     """
     try:
         from flask import current_app, request
@@ -334,30 +316,20 @@ def get_current_device_id() -> str:
                 if device_id:
                     return device_id
         
-        # Fallback: get from host device configuration
-        host_device = getattr(current_app, 'my_host_device', None)
-        if host_device and host_device.get('devices'):
-            devices = host_device['devices']
-            if len(devices) == 1:
-                # Single device host - return the device ID
-                return devices[0].get('device_id')
-            # Multi-device host - default to first device if no specific device requested
-            # This could be enhanced to be smarter about device selection
-            return devices[0].get('device_id')
-        
-        return None
+        # No fallbacks - device_id must be explicitly provided
+        raise ValueError("device_id is required in request parameters - no fallbacks allowed")
         
     except Exception as e:
         print(f"[@build_url_utils:get_current_device_id] Error getting device ID: {e}")
-        return None
+        raise ValueError("device_id is required in request parameters - no fallbacks allowed")
 
-def _get_device_stream_path(host_info: dict, device_id: str = None) -> str:
+def _get_device_stream_path(host_info: dict, device_id: str) -> str:
     """
     Get device-specific stream path from host configuration.
     
     Args:
         host_info: Host information from registry
-        device_id: Optional device ID (e.g., 'device1', 'device2')
+        device_id: Device ID (required - no fallbacks)
         
     Returns:
         Stream path for the device from device configuration (DEVICE1_VIDEO_STREAM_PATH)
@@ -369,13 +341,7 @@ def _get_device_stream_path(host_info: dict, device_id: str = None) -> str:
         raise ValueError("host_info is required for device path resolution")
     
     if not device_id:
-        # Get first device if no device_id specified
-        devices = host_info.get('devices', [])
-        if not devices:
-            raise ValueError("No devices configured in host_info")
-        device_id = devices[0].get('device_id')
-        if not device_id:
-            raise ValueError("First device has no device_id configured")
+        raise ValueError("device_id is required - no fallbacks allowed")
     
     # Get devices configuration from host_info
     devices = host_info.get('devices', [])
@@ -398,13 +364,13 @@ def _get_device_stream_path(host_info: dict, device_id: str = None) -> str:
     
     raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")
 
-def _get_device_capture_path(host_info: dict, device_id: str = None) -> str:
+def _get_device_capture_path(host_info: dict, device_id: str) -> str:
     """
     Get device-specific capture path from host configuration.
     
     Args:
         host_info: Host information from registry
-        device_id: Optional device ID (e.g., 'device1', 'device2')
+        device_id: Device ID (required - no fallbacks)
         
     Returns:
         Capture path for the device from device configuration (DEVICE1_VIDEO_STREAM_PATH + /captures)
@@ -416,13 +382,7 @@ def _get_device_capture_path(host_info: dict, device_id: str = None) -> str:
         raise ValueError("host_info is required for device path resolution")
     
     if not device_id:
-        # Get first device if no device_id specified
-        devices = host_info.get('devices', [])
-        if not devices:
-            raise ValueError("No devices configured in host_info")
-        device_id = devices[0].get('device_id')
-        if not device_id:
-            raise ValueError("First device has no device_id configured")
+        raise ValueError("device_id is required - no fallbacks allowed")
     
     # Get devices configuration from host_info
     devices = host_info.get('devices', [])
@@ -467,14 +427,14 @@ def get_device_by_id(host_info: dict, device_id: str) -> dict:
     
     return None
 
-def buildScreenshotUrlFromPath(host_info: dict, screenshot_path: str, device_id: str = None) -> str:
+def buildScreenshotUrlFromPath(host_info: dict, screenshot_path: str, device_id: str) -> str:
     """
     Build URL for screenshot from a local file path by extracting timestamp
     
     Args:
         host_info: Host information from registry
         screenshot_path: Local file path to screenshot (e.g., '/path/screenshot_20250117134500.jpg')
-        device_id: Optional device ID for multi-device hosts
+        device_id: Device ID for multi-device hosts (required)
         
     Returns:
         Complete URL to screenshot capture
@@ -483,8 +443,8 @@ def buildScreenshotUrlFromPath(host_info: dict, screenshot_path: str, device_id:
         ValueError: If timestamp cannot be extracted from path
         
     Example:
-        buildScreenshotUrlFromPath(host_info, '/tmp/screenshot_20250117134500.jpg')
-        -> 'https://host:444/host/stream/captures/capture_20250117134500.jpg'
+        buildScreenshotUrlFromPath(host_info, '/tmp/screenshot_20250117134500.jpg', 'device1')
+        -> 'https://host:444/host/stream/capture1/captures/capture_20250117134500.jpg'
     """
     import re
     
@@ -504,7 +464,7 @@ def buildStreamUrlForDevice(host_info: dict, device_id: str) -> str:
     
     Args:
         host_info: Host information from registry
-        device_id: Device ID (e.g., 'device1', 'device2')
+        device_id: Device ID (required)
         
     Returns:
         Complete URL to HLS stream for the device

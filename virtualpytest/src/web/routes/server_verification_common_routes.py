@@ -155,16 +155,16 @@ def execute_batch_verification():
         host = data.get('host', {})
         
         # Extract model from host device (required)
-        model = data.get('model') or host.get('device_model')
+        device_model = data.get('model') or host.get('device_model')
         
-        if not model:
+        if not device_model:
             return jsonify({
                 'success': False,
-                'error': 'Device model is required. Host device must have device_model specified.'
+                'error': 'device_model is required but not found in host object'
             }), 400
         
         print(f"[@route:server_verification_common:execute_batch_verification] Processing {len(verifications)} verifications")
-        print(f"[@route:server_verification_common:execute_batch_verification] Source: {source_filename}, Model: {model}")
+        print(f"[@route:server_verification_common:execute_batch_verification] Source: {source_filename}, Model: {device_model}")
         
         # Validate required parameters
         if not verifications:
@@ -188,7 +188,7 @@ def execute_batch_verification():
             individual_request = {
                 'verification': verification,
                 'source_filename': source_filename,
-                'model': model
+                'model': device_model
             }
             
             # Dispatch to appropriate host endpoint based on verification type
@@ -424,11 +424,35 @@ def save_text():
         
         # Extract data from host response and original request
         reference_name = host_response_data.get('reference_name')
-        model = request_data.get('model')  # Get model from original request, not host response
+        device_id = request_data.get('device_id')
+        
+        if not device_id:
+            return jsonify({
+                'success': False,
+                'error': 'device_id is required'
+            }), 400
+        
+        # Get device and extract device_model (same pattern as host routes)
+        from src.utils.host_utils import get_device_by_id
+        device = get_device_by_id(device_id)
+        
+        if not device:
+            return jsonify({
+                'success': False,
+                'error': f'Device {device_id} not found'
+            }), 404
+        
+        device_model = device.device_model
+        if not device_model:
+            return jsonify({
+                'success': False,
+                'error': f'Device {device_id} missing device_model'
+            }), 400
+        
         area = host_response_data.get('area')
         text_data = host_response_data.get('text_data', {})
         
-        print(f"[@route:server_verification_common:save_text] Saving to database: {reference_name} for model: {model}")
+        print(f"[@route:server_verification_common:save_text] Saving to database: {reference_name} for model: {device_model}")
         
         # Save text reference to database using save_reference function
         # For text references, we store text data in area field and use a placeholder R2 path
@@ -441,9 +465,9 @@ def save_text():
         
         db_result = save_reference(
             name=reference_name,
-            device_model=model,
+            device_model=device_model,
             reference_type='reference_text',  # Use reference_text type for text references
-            r2_path=f'text-references/{model}/{reference_name}',  # Placeholder path for consistency
+            r2_path=f'text-references/{device_model}/{reference_name}',  # Placeholder path for consistency
             r2_url='',  # No R2 URL needed for text references
             team_id=team_id,
             area=extended_area  # Store text data in area field
@@ -455,7 +479,7 @@ def save_text():
                 'success': True,
                 'message': f'Text reference saved: {reference_name}',
                 'reference_name': reference_name,
-                'model': model,
+                'model': device_model,
                 'text': text_data.get('text', ''),
                 'image_id': db_result.get('image_id')
             })

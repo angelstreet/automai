@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+
 import { Host } from '../../types/common/Host_Types';
 import { NodeForm } from '../../types/pages/Navigation_Types';
 import { Verification } from '../../types/verification/VerificationTypes';
@@ -7,6 +8,7 @@ interface UseNodeOperationsProps {
   selectedHost?: Host;
   isControlActive?: boolean;
   nodeForm?: NodeForm;
+  selectedDeviceId?: string;
 }
 
 interface ExecutionRecord {
@@ -32,6 +34,7 @@ export const useNodeOperations = ({
   selectedHost,
   isControlActive,
   nodeForm,
+  selectedDeviceId,
 }: UseNodeOperationsProps) => {
   const [isRunningGoto, setIsRunningGoto] = useState(false);
   const [gotoResult, setGotoResult] = useState<string | null>(null);
@@ -40,18 +43,26 @@ export const useNodeOperations = ({
   // Utility function for delays
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Helper to get device model from host
+  // Helper to get device model from host and selected device
   const getDeviceModel = useCallback(() => {
     if (!selectedHost) return 'unknown';
 
-    // If the host has devices array and at least one device with model
-    if (selectedHost.devices && selectedHost.devices.length > 0 && selectedHost.devices[0].model) {
-      return selectedHost.devices[0].model;
+    // This hook should receive selectedDeviceId from context - no fallbacks allowed
+    if (!selectedHost.devices || selectedHost.devices.length === 0) {
+      throw new Error('No devices available in selected host');
     }
 
-    // Fallback for older host structure
-    return (selectedHost as any).device_model || 'android_mobile';
-  }, [selectedHost]);
+    // Find the specific device by device_id - no fallbacks
+    const selectedDevice = selectedHost.devices.find(
+      (device) => device.device_id === selectedDeviceId,
+    );
+
+    if (!selectedDevice) {
+      throw new Error(`Device ${selectedDeviceId} not found in host ${selectedHost.host_name}`);
+    }
+
+    return selectedDevice.device_model || 'unknown';
+  }, [selectedHost, selectedDeviceId]);
 
   // Handle successful save
   const handleSaveSuccess = useCallback(() => {
@@ -101,8 +112,8 @@ export const useNodeOperations = ({
               },
               body: JSON.stringify({
                 host_name: selectedHost.host_name,
+                device_id: selectedDeviceId, // Server extracts device_model from this
                 node_label: nodeForm?.label || '',
-                model: deviceModel,
               }),
             });
 
@@ -274,7 +285,7 @@ export const useNodeOperations = ({
                     pathname,
                     capture_filename,
                   });
-                } catch (urlError) {
+                } catch {
                   // Fallback: extract filename directly from URL string
                   capture_filename = screenshotUrl.split('/').pop()?.split('?')[0];
                   console.log(
@@ -546,12 +557,12 @@ export const useNodeOperations = ({
         setIsRunningGoto(false);
       }
     },
-    [selectedHost, isControlActive, nodeForm, getDeviceModel],
+    [selectedHost, isControlActive, nodeForm, selectedDeviceId, getDeviceModel],
   );
 
   // Run verifications for a node
   const runVerifications = useCallback(
-    async (verifications: Verification[], nodeId?: string) => {
+    async (verifications: Verification[], _nodeId?: string) => {
       if (!selectedHost || !isControlActive || !verifications || verifications.length === 0) {
         return { success: false, message: 'Cannot run verifications - missing required data' };
       }
@@ -592,7 +603,7 @@ export const useNodeOperations = ({
             pathname,
             capture_filename,
           });
-        } catch (urlError) {
+        } catch {
           // Fallback: extract filename directly from URL string
           capture_filename = screenshotUrl.split('/').pop()?.split('?')[0];
           console.log('[@hook:useNodeOperations] Fallback filename extraction:', capture_filename);
@@ -698,8 +709,7 @@ export const useNodeOperations = ({
         return { success: false, message: 'Device control not active or host not available' };
       }
 
-      // Get device model
-      const deviceModel = getDeviceModel();
+      // Device model will be extracted by server from device_id
 
       try {
         const response = await fetch('/server/navigation/save-screenshot', {
@@ -709,8 +719,8 @@ export const useNodeOperations = ({
           },
           body: JSON.stringify({
             host: selectedHost,
+            device_id: selectedDeviceId, // Server extracts device_model from this
             filename: nodeName, // Use node name as filename
-            device_model: deviceModel, // Add device model
           }),
         });
 
@@ -766,7 +776,7 @@ export const useNodeOperations = ({
         };
       }
     },
-    [isControlActive, selectedHost, getDeviceModel],
+    [isControlActive, selectedHost, selectedDeviceId],
   );
 
   return {

@@ -674,6 +674,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                         onUpdateNode={handleUpdateNode}
                         isControlActive={isControlActive}
                         selectedHost={selectedHost || undefined}
+                        selectedDeviceId={selectedDeviceId || undefined}
                         treeId={treeId}
                         currentNodeId={selectedNode.id}
                       />

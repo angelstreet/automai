@@ -37,6 +37,7 @@ interface NodeSelectionPanelProps {
   // Device control props
   isControlActive?: boolean;
   selectedHost?: Host; // Full host object for API calls
+  selectedDeviceId?: string; // Required for device-specific operations
   // Navigation props
   treeId?: string;
   currentNodeId?: string;
@@ -55,6 +56,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     onUpdateNode,
     isControlActive = false,
     selectedHost,
+    selectedDeviceId,
     treeId = '',
     currentNodeId,
     // ❌ DELETED: Obsolete verification props removed
@@ -71,6 +73,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     const nodeOperations = useNodeOperations({
       selectedHost,
       isControlActive,
+      selectedDeviceId,
       nodeForm: {
         id: selectedNode.id,
         label: selectedNode.data.label,
@@ -132,15 +135,15 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     };
 
     const handleScreenshotConfirm = async () => {
+      const selectedDevice = selectedHost?.devices?.find((d) => d.device_id === selectedDeviceId);
+
       console.log('[@component:NodeSelectionPanel] Screenshot button clicked - DEBUG INFO:', {
         isControlActive,
         selectedHost: selectedHost
           ? {
               host_name: selectedHost.host_name,
-              device_model:
-                selectedHost.devices && selectedHost.devices.length > 0
-                  ? selectedHost.devices[0].model
-                  : 'unknown',
+              device_id: selectedDeviceId,
+              device_model: selectedDevice?.device_model || 'unknown',
             }
           : null,
         selectedNodeLabel: selectedNode.data.label,
@@ -151,6 +154,12 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         console.warn(
           '[@component:NodeSelectionPanel] Cannot take screenshot - device control not active or host not available',
         );
+        setShowScreenshotConfirm(false);
+        return;
+      }
+
+      if (!selectedDeviceId) {
+        console.warn('[@component:NodeSelectionPanel] Cannot take screenshot - no device selected');
         setShowScreenshotConfirm(false);
         return;
       }

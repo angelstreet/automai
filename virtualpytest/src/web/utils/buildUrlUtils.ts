@@ -151,21 +151,13 @@ export const buildImageUrl = buildHostImageUrl;
  * Get device-specific stream URL path from host configuration.
  * Mirrors the Python _get_device_stream_path function.
  */
-const getDeviceStreamUrlPath = (host: any, deviceId?: string): string => {
+const getDeviceStreamUrlPath = (host: any, deviceId: string): string => {
   if (!host) {
     throw new Error('Host information is required for device stream path resolution');
   }
 
   if (!deviceId) {
-    // Get first device if no device_id specified
-    const devices = host?.devices || [];
-    if (!devices.length) {
-      throw new Error('No devices configured in host configuration');
-    }
-    deviceId = devices[0]?.device_id;
-    if (!deviceId) {
-      throw new Error('First device has no device_id configured');
-    }
+    throw new Error('deviceId is required - no fallbacks allowed');
   }
 
   // Get devices configuration from host
@@ -198,21 +190,13 @@ const getDeviceStreamUrlPath = (host: any, deviceId?: string): string => {
  * Get device-specific capture URL path from host configuration.
  * Uses video_capture_path from device configuration.
  */
-const getDeviceCaptureUrlPath = (host: any, deviceId?: string): string => {
+const getDeviceCaptureUrlPath = (host: any, deviceId: string): string => {
   if (!host) {
     throw new Error('Host information is required for device capture path resolution');
   }
 
   if (!deviceId) {
-    // Get first device if no device_id specified
-    const devices = host?.devices || [];
-    if (!devices.length) {
-      throw new Error('No devices configured in host configuration');
-    }
-    deviceId = devices[0]?.device_id;
-    if (!deviceId) {
-      throw new Error('First device has no device_id configured');
-    }
+    throw new Error('deviceId is required - no fallbacks allowed');
   }
 
   // Get devices configuration from host

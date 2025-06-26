@@ -298,8 +298,8 @@ export const useVerificationEditor = ({
           },
           body: JSON.stringify({
             host: selectedHost,
+            device_id: selectedDeviceId,
             reference_name: referenceName,
-            model: deviceModel,
             area: selectedArea,
             text: referenceText,
             processed_image_path: detectedTextData?.processed_image_path || '', // Use processed image from detect-text

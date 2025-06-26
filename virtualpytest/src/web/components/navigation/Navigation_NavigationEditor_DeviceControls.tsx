@@ -101,39 +101,9 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
           {availableHosts.map((host) => {
             const devices = host.devices || [];
 
-            // If host has no devices, show the host itself as an option with 'default' device_id
+            // Skip hosts with no devices - no fallbacks allowed
             if (devices.length === 0) {
-              const deviceKey = createDeviceKey(host.host_name, 'default');
-              const hostIsLocked = isDeviceLocked(deviceKey);
-
-              return (
-                <MenuItem
-                  key={deviceKey}
-                  value={deviceKey}
-                  disabled={hostIsLocked}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    opacity: hostIsLocked ? 0.6 : 1,
-                  }}
-                >
-                  {hostIsLocked && <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />}
-                  <span>{host.host_name} (No devices)</span>
-                  {hostIsLocked && (
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        ml: 'auto',
-                        color: 'warning.main',
-                        fontSize: '0.65rem',
-                      }}
-                    >
-                      (Locked)
-                    </Typography>
-                  )}
-                </MenuItem>
-              );
+              return null;
             }
 
             // If host has multiple devices, group them under the host name
@@ -183,41 +153,43 @@ export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceCont
               ];
             }
 
-            // If host has exactly one device, show it directly with host name
-            const device = devices[0];
-            const deviceKey = createDeviceKey(host.host_name, device.device_id);
-            const deviceIsLocked = isDeviceLocked(deviceKey);
+            return devices.map((device) => {
+              const deviceKey = createDeviceKey(host.host_name, device.device_id);
+              const deviceIsLocked = isDeviceLocked(deviceKey);
 
-            return (
-              <MenuItem
-                key={deviceKey}
-                value={deviceKey}
-                disabled={deviceIsLocked}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1,
-                  opacity: deviceIsLocked ? 0.6 : 1,
-                }}
-              >
-                {deviceIsLocked && <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />}
-                <span>
-                  {device.device_name} ({host.host_name})
-                </span>
-                {deviceIsLocked && (
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      ml: 'auto',
-                      color: 'warning.main',
-                      fontSize: '0.65rem',
-                    }}
-                  >
-                    (Locked)
-                  </Typography>
-                )}
-              </MenuItem>
-            );
+              return (
+                <MenuItem
+                  key={deviceKey}
+                  value={deviceKey}
+                  disabled={deviceIsLocked}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    opacity: deviceIsLocked ? 0.6 : 1,
+                  }}
+                >
+                  {deviceIsLocked && (
+                    <LockIcon sx={{ fontSize: '0.8rem', color: 'warning.main' }} />
+                  )}
+                  <span>
+                    {device.device_name} ({host.host_name})
+                  </span>
+                  {deviceIsLocked && (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        ml: 'auto',
+                        color: 'warning.main',
+                        fontSize: '0.65rem',
+                      }}
+                    >
+                      (Locked)
+                    </Typography>
+                  )}
+                </MenuItem>
+              );
+            });
           })}
         </Select>
       </FormControl>

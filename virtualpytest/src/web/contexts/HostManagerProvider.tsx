@@ -74,16 +74,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
           `[@context:HostManagerProvider] Successfully received ${rawHosts.length} hosts from server`,
         );
 
-        // DEBUG: Log first host's device structure to verify correct format
-        if (rawHosts.length > 0 && rawHosts[0].devices?.length > 0) {
-          console.log('[@context:HostManagerProvider] Device data received:', {
-            device_id: rawHosts[0].devices[0].device_id,
-            device_name: rawHosts[0].devices[0].device_name,
-            device_model: rawHosts[0].devices[0].device_model,
-            has_capabilities: !!rawHosts[0].devices[0].device_capabilities,
-          });
-        }
-
         return { hosts: rawHosts, error: null };
       } else {
         throw new Error(result.error || 'Server returned success: false');
@@ -233,17 +223,27 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
             );
 
             // Reclaim each device lock - now supports device-oriented locking
-            for (const [deviceKey, lockInfo] of userLockedDevices) {
-              // deviceKey can be either "hostname" (legacy) or "hostname:device_id" (new)
-              const [hostName, deviceId] = deviceKey.includes(':')
-                ? deviceKey.split(':')
-                : [deviceKey, 'device1'];
+            for (const [deviceKey, _lockInfo] of userLockedDevices) {
+              // deviceKey must be "hostname:device_id" format - no fallbacks
+              if (!deviceKey.includes(':')) {
+                console.warn(
+                  `[@context:HostManagerProvider] Skipping legacy lock key without device_id: ${deviceKey}`,
+                );
+                continue;
+              }
+
+              const [hostName, deviceId] = deviceKey.split(':');
+              if (!deviceId) {
+                console.warn(
+                  `[@context:HostManagerProvider] Skipping lock key with empty device_id: ${deviceKey}`,
+                );
+                continue;
+              }
+
               console.log(
-                `[@context:HostManagerProvider] Reclaiming lock for device: ${hostName}:${deviceId || 'device1'}`,
+                `[@context:HostManagerProvider] Reclaiming lock for device: ${hostName}:${deviceId}`,
               );
-              setActiveLocks((prev) =>
-                new Map(prev).set(`${hostName}:${deviceId || 'device1'}`, userId),
-              );
+              setActiveLocks((prev) => new Map(prev).set(`${hostName}:${deviceId}`, userId));
             }
           } else {
             console.log(`[@context:HostManagerProvider] No devices locked by current user found`);
