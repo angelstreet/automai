@@ -490,6 +490,17 @@ export const useVerificationEditor = ({
         // Pre-fill the text input with detected text
         setReferenceText(result.extracted_text || '');
 
+        // Display the original source image in the drag area (like image cropping does)
+        if (captureSourcePath) {
+          const timestamp = new Date().getTime();
+          const imageUrl = `${captureSourcePath}?t=${timestamp}`;
+          console.log(
+            '[@hook:useVerificationEditor] Text detection using source image URL:',
+            imageUrl,
+          );
+          setCapturedReferenceImage(imageUrl);
+        }
+
         // Mark as captured
         setHasCaptured(true);
       } else {
