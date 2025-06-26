@@ -32,22 +32,22 @@ class TextHelpers:
         self.text_references_dir = os.path.join(captures_path, 'text_references')
         os.makedirs(self.text_references_dir, exist_ok=True)
     
-    def download_image(self, source_path: str) -> str:
+    def download_image(self, source_filename: str) -> str:
         """Download image if URL, otherwise return path."""
         try:
-            parsed = urlparse(source_path)
+            parsed = urlparse(source_filename)
             if parsed.scheme in ['http', 'https']:
-                response = requests.get(source_path, timeout=30)
+                response = requests.get(source_filename, timeout=30)
                 response.raise_for_status()
                 
                 with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
                     tmp.write(response.content)
                     return tmp.name
             else:
-                if os.path.exists(source_path):
-                    return source_path
+                if os.path.exists(source_filename):
+                    return source_filename
                 else:
-                    raise FileNotFoundError(f"Local file not found: {source_path}")
+                    raise FileNotFoundError(f"Local file not found: {source_filename}")
                     
         except Exception as e:
             print(f"[@text_helpers] Error downloading/accessing image: {e}")

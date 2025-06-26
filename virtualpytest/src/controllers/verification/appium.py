@@ -628,7 +628,7 @@ class AppiumVerificationController(VerificationControllerInterface):
             }
         ]
 
-    def execute_verification(self, verification_config: Dict[str, Any], source_path: str = None) -> Dict[str, Any]:
+    def execute_verification(self, verification_config: Dict[str, Any], source_filename: str = None) -> Dict[str, Any]:
         """
         Unified verification execution interface for centralized controller.
         
@@ -642,7 +642,7 @@ class AppiumVerificationController(VerificationControllerInterface):
                     'check_interval': 1.0
                 }
             }
-            source_path: Not used for Appium verification (Appium doesn't need screenshots)
+            source_filename: Not used for Appium verification (Appium doesn't need screenshots)
             
         Returns:
             {

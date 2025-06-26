@@ -103,7 +103,7 @@ class ImageVerificationController(
                 # Save results if needed
                 if model and screenshot_path:
                     # Save source image for comparison
-                    source_path = self._save_source_image_for_comparison(
+                    source_filename = self._save_source_image_for_comparison(
                         screenshot_path, model, verification_index
                     )
                     
@@ -151,7 +151,7 @@ class ImageVerificationController(
                 
                 # Save results if needed
                 if model and screenshot_path:
-                    source_path = self._save_source_image_for_comparison(
+                    source_filename = self._save_source_image_for_comparison(
                         screenshot_path, model, verification_index
                     )
                 
@@ -168,12 +168,12 @@ class ImageVerificationController(
     # Pure Image Processing Methods (No URL Building)
     # =============================================================================
 
-    def crop_image_file(self, source_path: str, area: Dict[str, Any], output_filename: str) -> Optional[str]:
+    def crop_image_file(self, source_filename: str, area: Dict[str, Any], output_filename: str) -> Optional[str]:
         """
         Pure image cropping - takes paths, returns path.
         
         Args:
-            source_path: Path to source image
+            source_filename: Path to source image
             area: Crop area {x, y, width, height}
             output_filename: Output filename
             
@@ -185,7 +185,7 @@ class ImageVerificationController(
             output_path = os.path.join(self.captures_path, output_filename)
             
             # Crop the image
-            success = self._crop_reference_image(source_path, output_path, area)
+            success = self._crop_reference_image(source_filename, output_path, area)
             
             if success:
                 # Create filtered versions
@@ -225,12 +225,12 @@ class ImageVerificationController(
             print(f"[@controller:ImageVerification] Error in process_image_file: {e}")
             return image_path
 
-    def save_image_file(self, source_path: str, output_filename: str) -> Optional[str]:
+    def save_image_file(self, source_filename: str, output_filename: str) -> Optional[str]:
         """
         Pure image saving - takes paths, returns path.
         
         Args:
-            source_path: Path to source image
+            source_filename: Path to source image
             output_filename: Output filename
             
         Returns:
@@ -241,7 +241,7 @@ class ImageVerificationController(
             output_path = os.path.join(self.captures_path, output_filename)
             
             # Save the image
-            success = self._copy_reference_image(source_path, output_path)
+            success = self._copy_reference_image(source_filename, output_path)
             
             if success:
                 # Create filtered versions
@@ -301,7 +301,7 @@ class ImageVerificationController(
             }
         ]
 
-    def execute_verification(self, verification_config: Dict[str, Any], source_path: str = None) -> Dict[str, Any]:
+    def execute_verification(self, verification_config: Dict[str, Any], source_filename: str = None) -> Dict[str, Any]:
         """Execute a verification based on configuration."""
         try:
             verification_type = verification_config.get('type')

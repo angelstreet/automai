@@ -183,7 +183,7 @@ export const useVerificationEditor = ({
             host: selectedHost, // Send full host object
             device_id: selectedDeviceId, // Send device ID
             area: selectedArea,
-            source_path: captureSourcePath,
+            source_filename: captureSourcePath,
             reference_name: referenceName || 'temp_capture',
             model: deviceModel,
             autocrop: imageProcessingOptions.autocrop,
@@ -201,7 +201,7 @@ export const useVerificationEditor = ({
             host: selectedHost, // Send full host object
             device_id: selectedDeviceId, // Send device ID
             area: selectedArea,
-            source_path: captureSourcePath,
+            source_filename: captureSourcePath,
             reference_name: referenceName || 'temp_capture',
             model: deviceModel,
           }),
@@ -304,7 +304,7 @@ export const useVerificationEditor = ({
             host: selectedHost,
             device_id: selectedDeviceId,
             area: selectedArea,
-            source_path: captureSourcePath,
+            source_filename: captureSourcePath,
             reference_name: referenceName,
             model: deviceModel,
             autocrop: imageProcessingOptions.autocrop,
@@ -322,7 +322,7 @@ export const useVerificationEditor = ({
             host: selectedHost,
             device_id: selectedDeviceId,
             area: selectedArea,
-            source_path: captureSourcePath,
+            source_filename: captureSourcePath,
             reference_name: referenceName,
             model: deviceModel,
           }),

@@ -105,8 +105,8 @@ result = text_utils.detect_text('/path/to/image.jpg', area)
 
 ```python
 # Image Controller - Pure Methods (No Saving Parameters)
-result = image_controller.crop_image_file(source_path, crop_area, output_path)
-result = image_controller.process_image_file(source_path, settings, output_path)
+result = image_controller.crop_image_file(source_filename, crop_area, output_path)
+result = image_controller.process_image_file(source_filename, settings, output_path)
 saved_path = image_controller.save_image_file(image_data, output_path)
 
 # Text Controller - Pure Methods (No Model/Verification_Index Parameters)

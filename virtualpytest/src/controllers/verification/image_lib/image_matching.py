@@ -108,13 +108,13 @@ class ImageMatching:
         print(f"[@matching] Image did not disappear within {timeout}s")
         return False
     
-    def _match_template_in_area(self, source_path: str, template_path: str, 
+    def _match_template_in_area(self, source_filename: str, template_path: str, 
                                area: Dict[str, Any], threshold: float = 0.8) -> Dict[str, Any]:
         """
         Match a template image within a specific area of a source image.
         
         Args:
-            source_path: Path to source image
+            source_filename: Path to source image
             template_path: Path to template image
             area: Area to search within
             threshold: Matching threshold (0.0 to 1.0)
@@ -124,7 +124,7 @@ class ImageMatching:
         """
         try:
             # Load images
-            source_img = cv2.imread(source_path)
+            source_img = cv2.imread(source_filename)
             template_img = cv2.imread(template_path)
             
             if source_img is None or template_img is None:
@@ -195,13 +195,13 @@ class ImageMatching:
                 'confidence': 0.0
             }
     
-    def _find_all_matches(self, source_path: str, template_path: str, 
+    def _find_all_matches(self, source_filename: str, template_path: str, 
                          threshold: float = 0.8) -> List[Dict[str, Any]]:
         """
         Find all occurrences of a template in a source image.
         
         Args:
-            source_path: Path to source image
+            source_filename: Path to source image
             template_path: Path to template image
             threshold: Matching threshold (0.0 to 1.0)
             
@@ -210,7 +210,7 @@ class ImageMatching:
         """
         try:
             # Load images
-            source_img = cv2.imread(source_path)
+            source_img = cv2.imread(source_filename)
             template_img = cv2.imread(template_path)
             
             if source_img is None or template_img is None:

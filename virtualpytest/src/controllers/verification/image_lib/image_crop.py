@@ -14,14 +14,14 @@ from typing import Dict, Any, Optional
 class ImageCrop:
     """ providing image cropping operations."""
     
-    def _crop_reference_image(self, source_path: str, target_path: str, area: Dict[str, Any]) -> bool:
+    def _crop_reference_image(self, source_filename: str, target_path: str, area: Dict[str, Any]) -> bool:
         """
         Crop an image to a specific area and save it.
         
         Note: Filtered versions should be created by the controller separately.
         
         Args:
-            source_path: Path to source image
+            source_filename: Path to source image
             target_path: Path to save cropped image
             area: Dictionary with x, y, width, height coordinates
             
@@ -29,8 +29,8 @@ class ImageCrop:
             bool: True if successful, False otherwise
         """
         try:
-            if not os.path.exists(source_path):
-                print(f"[@crop] Source image not found: {source_path}")
+            if not os.path.exists(source_filename):
+                print(f"[@crop] Source image not found: {source_filename}")
                 return False
             
             if not self._validate_area(area):
@@ -38,9 +38,9 @@ class ImageCrop:
                 return False
             
             # Load image
-            img = cv2.imread(source_path)
+            img = cv2.imread(source_filename)
             if img is None:
-                print(f"[@crop] Failed to load image: {source_path}")
+                print(f"[@crop] Failed to load image: {source_filename}")
                 return False
             
             # Extract coordinates

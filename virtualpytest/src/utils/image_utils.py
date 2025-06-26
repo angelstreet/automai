@@ -27,45 +27,45 @@ class ImageUtils:
         self.device_id = device_id
         self.controller = image_controller
     
-    def download_image_if_url(self, source_path: str) -> str:
+    def download_image_if_url(self, source_filename: str) -> str:
         """
         Download image if it's a URL, otherwise return path as-is.
         
         Args:
-            source_path: Local path or HTTP URL
+            source_filename: Local path or HTTP URL
             
         Returns:
             str: Local file path
         """
-        if not source_path.startswith('http'):
-            return source_path
+        if not source_filename.startswith('http'):
+            return source_filename
         
         try:
-            response = requests.get(source_path, timeout=30)
+            response = requests.get(source_filename, timeout=30)
             response.raise_for_status()
             
             # Create temp file with proper extension
             extension = '.png'
-            if source_path.lower().endswith(('.jpg', '.jpeg')):
+            if source_filename.lower().endswith(('.jpg', '.jpeg')):
                 extension = '.jpg'
             
             with tempfile.NamedTemporaryFile(delete=False, suffix=extension) as tmp:
                 tmp.write(response.content)
                 temp_path = tmp.name
             
-            print(f"[@image_utils] Downloaded: {source_path} -> {temp_path}")
+            print(f"[@image_utils] Downloaded: {source_filename} -> {temp_path}")
             return temp_path
             
         except Exception as e:
-            raise Exception(f"Failed to download image from {source_path}: {e}")
+            raise Exception(f"Failed to download image from {source_filename}: {e}")
     
-    def crop_image(self, source_path: str, area: Dict[str, Any], 
+    def crop_image(self, source_filename: str, area: Dict[str, Any], 
                    reference_name: str = "cropped_image") -> Dict[str, Any]:
         """
         Complete crop operation with URL handling and URL building.
         
         Args:
-            source_path: Source image path or URL
+            source_filename: Source image path or URL
             area: Crop area {x, y, width, height}
             reference_name: Base name for output file
             
@@ -74,7 +74,7 @@ class ImageUtils:
         """
         try:
             # Download if URL
-            local_source = self.download_image_if_url(source_path)
+            local_source = self.download_image_if_url(source_filename)
             
             # Generate unique filename
             filename = f"{reference_name}_{int(time.time())}.png"
@@ -89,7 +89,7 @@ class ImageUtils:
             public_url = buildHostImageUrl(self.host, output_path)
             
             # Clean up temp file if we downloaded it
-            if local_source != source_path and local_source.startswith('/tmp/'):
+            if local_source != source_filename and local_source.startswith('/tmp/'):
                 try:
                     os.unlink(local_source)
                 except:
@@ -106,7 +106,7 @@ class ImageUtils:
         except Exception as e:
             return {"success": False, "error": str(e)}
     
-    def process_image(self, source_path: str, autocrop: bool = False,
+    def process_image(self, source_filename: str, autocrop: bool = False,
                      remove_background: bool = False, 
                      image_filter: str = 'none') -> Dict[str, Any]:
         """
@@ -114,7 +114,7 @@ class ImageUtils:
         """
         try:
             # Download if URL
-            local_source = self.download_image_if_url(source_path)
+            local_source = self.download_image_if_url(source_filename)
             
             # Controller does pure processing
             processed_path = self.controller.process_image_file(
@@ -125,7 +125,7 @@ class ImageUtils:
             public_url = buildHostImageUrl(self.host, processed_path)
             
             # Clean up temp file if we downloaded it
-            if local_source != source_path and local_source.startswith('/tmp/'):
+            if local_source != source_filename and local_source.startswith('/tmp/'):
                 try:
                     os.unlink(local_source)
                 except:
@@ -145,14 +145,14 @@ class ImageUtils:
         except Exception as e:
             return {"success": False, "error": str(e)}
     
-    def save_image(self, source_path: str, reference_name: str = "image_reference",
+    def save_image(self, source_filename: str, reference_name: str = "image_reference",
                    area: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Complete save operation with URL handling.
         """
         try:
             # Download if URL
-            local_source = self.download_image_if_url(source_path)
+            local_source = self.download_image_if_url(source_filename)
             
             # Generate unique filename
             filename = f"{reference_name}_{int(time.time())}.png"
@@ -167,7 +167,7 @@ class ImageUtils:
             public_url = buildHostImageUrl(self.host, output_path)
             
             # Clean up temp file if we downloaded it
-            if local_source != source_path and local_source.startswith('/tmp/'):
+            if local_source != source_filename and local_source.startswith('/tmp/'):
                 try:
                     os.unlink(local_source)
                 except:

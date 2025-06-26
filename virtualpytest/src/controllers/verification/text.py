@@ -136,14 +136,20 @@ class TextVerificationController:
         try:
             helpers = TextHelpers(self.captures_path)
             
-            source_path = data.get('source_path', '')
+            # Handle both source_filename (full path/URL) and source_filename (just filename)
+            source_filename = data.get('source_filename', '')
+            source_filename = data.get('source_filename', '')
             area = data.get('area')
             
-            if not source_path:
-                return {'success': False, 'message': 'source_path is required'}
+            # Build full path from filename if needed
+            if not source_filename and source_filename:
+                source_filename = os.path.join(self.captures_path, source_filename)
+            
+            if not source_filename:
+                return {'success': False, 'message': 'source_filename or source_filename is required'}
             
             # Download if URL, otherwise use local path
-            local_image_path = helpers.download_image(source_path)
+            local_image_path = helpers.download_image(source_filename)
             
             if not os.path.exists(local_image_path):
                 return {'success': False, 'message': 'Invalid or missing image path'}
@@ -156,7 +162,7 @@ class TextVerificationController:
             
             return {
                 'success': True,
-                'source_was_url': source_path.startswith(('http://', 'https://')),
+                'source_was_url': source_filename.startswith(('http://', 'https://')),
                 'local_image_path': local_image_path,
                 **result
             }
@@ -194,7 +200,7 @@ class TextVerificationController:
             
             if verification_type == 'text_detection':
                 return self.detect_text({
-                    'source_path': verification_config.get('source_path', ''),
+                    'source_filename': verification_config.get('source_filename', ''),
                     'area': verification_config.get('area')
                 })
             else:

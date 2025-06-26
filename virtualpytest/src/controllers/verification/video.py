@@ -645,7 +645,7 @@ class VideoVerificationController(VerificationControllerInterface):
             }
         ]
 
-    def execute_verification(self, verification_config: Dict[str, Any], source_path: str = None) -> Dict[str, Any]:
+    def execute_verification(self, verification_config: Dict[str, Any], source_filename: str = None) -> Dict[str, Any]:
         """
         Unified verification execution interface for centralized controller.
         
@@ -659,7 +659,7 @@ class VideoVerificationController(VerificationControllerInterface):
                     'timeout': 10.0
                 }
             }
-            source_path: Optional source image path (video controller can use screenshots)
+            source_filename: Optional source image path (video controller can use screenshots)
             
         Returns:
             {

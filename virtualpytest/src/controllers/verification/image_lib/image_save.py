@@ -13,22 +13,22 @@ from typing import Dict, Any, Optional
 class ImageSave:
     """ providing image saving and reference operations."""
     
-    def _copy_reference_image(self, source_path: str, target_path: str) -> bool:
+    def _copy_reference_image(self, source_filename: str, target_path: str) -> bool:
         """
         Copy a reference image to target location.
         
         Note: Filtered versions should be created by the controller separately.
         
         Args:
-            source_path: Path to source image
+            source_filename: Path to source image
             target_path: Path to save image
             
         Returns:
             bool: True if successful, False otherwise
         """
         try:
-            if not os.path.exists(source_path):
-                print(f"[@save] Source image not found: {source_path}")
+            if not os.path.exists(source_filename):
+                print(f"[@save] Source image not found: {source_filename}")
                 return False
             
             # Ensure target directory exists
@@ -36,8 +36,8 @@ class ImageSave:
             self._ensure_directory_exists(target_dir)
             
             # Copy the image
-            shutil.copy2(source_path, target_path)
-            print(f"[@save] Copied reference image: {source_path} -> {target_path}")
+            shutil.copy2(source_filename, target_path)
+            print(f"[@save] Copied reference image: {source_filename} -> {target_path}")
             
             return True
             
