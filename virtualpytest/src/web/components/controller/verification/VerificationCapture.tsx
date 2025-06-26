@@ -66,6 +66,7 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
     pendingSave,
     handleSaveReference,
     allowSelection,
+    saveSuccess,
   } = verification;
 
   // Process image URLs with HTTP to HTTPS proxy logic (same as ScreenshotCapture)
@@ -636,18 +637,20 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
               onClick={handleSaveReference}
               disabled={!canSave || pendingSave}
               sx={{
-                bgcolor: '#4caf50',
+                bgcolor: saveSuccess ? '#4caf50' : pendingSave ? '#666' : '#4caf50',
                 fontSize: '0.75rem',
+                color: saveSuccess ? '#fff' : pendingSave ? 'rgba(255,255,255,0.7)' : '#fff',
                 '&:hover': {
-                  bgcolor: '#45a049',
+                  bgcolor: saveSuccess ? '#4caf50' : pendingSave ? '#666' : '#45a049',
                 },
                 '&:disabled': {
                   bgcolor: '#333',
                   color: 'rgba(255,255,255,0.3)',
                 },
+                transition: 'all 0.3s ease',
               }}
             >
-              {pendingSave ? 'Saving...' : 'Save'}
+              {saveSuccess ? '✓ Saved!' : pendingSave ? 'Saving...' : 'Save'}
             </Button>
           </Box>
         </Box>

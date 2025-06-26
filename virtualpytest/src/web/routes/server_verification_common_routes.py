@@ -473,7 +473,7 @@ def save_text():
                 'reference_name': reference_name,
                 'model': device_model,
                 'text': text_data.get('text', ''),
-                'image_id': db_result.get('image_id')
+                'reference_id': db_result.get('reference_id')
             })
         else:
             print(f"[@route:server_verification_common:save_text] Database save failed: {db_result.get('error')}")

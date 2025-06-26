@@ -74,6 +74,7 @@ export const useVerificationEditor = ({
   const [capturedReferenceImage, setCapturedReferenceImage] = useState<string | null>(null);
   const [hasCaptured, setHasCaptured] = useState<boolean>(false);
   const [pendingSave, setPendingSave] = useState<boolean>(false);
+  const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
   const [referenceSaveCounter, setReferenceSaveCounter] = useState<number>(0);
 
@@ -316,6 +317,12 @@ export const useVerificationEditor = ({
           setCapturedReferenceImage(null);
           setHasCaptured(false);
           setReferenceSaveCounter((prev) => prev + 1);
+          setSaveSuccess(true);
+
+          // Clear success state after 2 seconds
+          setTimeout(() => {
+            setSaveSuccess(false);
+          }, 2000);
         } else {
           console.error(
             '[@hook:useVerificationEditor] Failed to save text reference:',
@@ -398,6 +405,12 @@ export const useVerificationEditor = ({
           // Don't clear UI state - keep the captured image and name for user reference
           // Only increment counter to refresh reference list
           setReferenceSaveCounter((prev) => prev + 1);
+          setSaveSuccess(true);
+
+          // Clear success state after 2 seconds
+          setTimeout(() => {
+            setSaveSuccess(false);
+          }, 2000);
         } else {
           console.error(
             '[@hook:useVerificationEditor] Failed to save reference to database:',
@@ -559,6 +572,7 @@ export const useVerificationEditor = ({
     capturedReferenceImage,
     hasCaptured,
     pendingSave,
+    saveSuccess,
     showConfirmDialog,
     referenceSaveCounter,
     referenceText,
