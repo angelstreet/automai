@@ -18,7 +18,7 @@ import platform
 from typing import Dict, Any, Optional, List
 from datetime import datetime
 
-from ..controllers.system.system_info import get_host_system_stats
+from .system_info_utils import get_host_system_stats
 from ..controllers.controller_manager import get_host
 from .build_url_utils import buildServerUrl
 

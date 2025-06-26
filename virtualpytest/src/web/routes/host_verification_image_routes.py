@@ -33,16 +33,29 @@ RESOURCES_PATH = '/var/www/html/stream/resources'  # Resources are still shared 
 def crop_area():
     """Crop area from image for verification"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        if not host_device:
+        print(f"[@route:host_crop_area] Host cropping request for device: {device_id}")
+        
+        # Get image verification controller for the specified device
+        image_controller = get_controller(device_id, 'verification_image')
+        
+        if not image_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
+                'error': f'No image verification controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        data = request.get_json()
         source_filename = data.get('source_filename')
         source_path = data.get('source_path')
         area = data.get('area')
@@ -59,10 +72,11 @@ def crop_area():
             }), 400
         
         # Get device-specific paths
-        from src.utils.build_url_utils import get_device_local_captures_path, get_current_device_id
+        from src.utils.build_url_utils import get_device_local_captures_path
         
-        device_id = get_current_device_id()
-        captures_path = get_device_local_captures_path(host_device, device_id)
+        # Get device data for path building
+        device = get_device_by_id(device_id)
+        captures_path = get_device_local_captures_path(device.get_device_config(), device_id)
         cropped_dir = f'{captures_path}/cropped'
         
         print(f"[@route:host_crop_area] Using device_id: {device_id}")
@@ -111,15 +125,6 @@ def crop_area():
         
         # Use image controller for cropping
         try:
-            # Get image verification controller for device
-            image_controller = get_controller(device_id, 'verification_image')
-            if not image_controller:
-                print(f"[@route:host_crop_area] Image controller not available")
-                return jsonify({
-                    'success': False,
-                    'error': 'Image controller not available'
-                }), 500
-            
             # Crop the image using controller
             success = image_controller.crop_image(final_source_path, target_path, area)
             
@@ -128,8 +133,8 @@ def crop_area():
                 
                 # Build complete URL for the cropped image (for temporary preview)
                 from src.utils.build_url_utils import buildCroppedImageUrl
-                host_info = host_device
-                cropped_image_url = buildCroppedImageUrl(host_info, target_filename)
+                device_config = device.get_device_config()
+                cropped_image_url = buildCroppedImageUrl(device_config, target_filename)
                 print(f"[@route:host_crop_area] Built cropped image URL: {cropped_image_url}")
                 
                 return jsonify({
@@ -163,16 +168,29 @@ def crop_area():
 def process_area():
     """Process image for verification"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        if not host_device:
+        print(f"[@route:host_process_area] Host processing request for device: {device_id}")
+        
+        # Get image verification controller for the specified device
+        image_controller = get_controller(device_id, 'verification_image')
+        
+        if not image_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
+                'error': f'No image verification controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        data = request.get_json()
         source_filename = data.get('source_filename')
         source_path = data.get('source_path')
         area = data.get('area')
@@ -192,10 +210,11 @@ def process_area():
             }), 400
         
         # Get device-specific paths
-        from src.utils.build_url_utils import get_device_local_captures_path, get_current_device_id
+        from src.utils.build_url_utils import get_device_local_captures_path
         
-        device_id = get_current_device_id()
-        captures_path = get_device_local_captures_path(host_device, device_id)
+        # Get device data for path building
+        device = get_device_by_id(device_id)
+        captures_path = get_device_local_captures_path(device.get_device_config(), device_id)
         cropped_dir = f'{captures_path}/cropped'
         
         print(f"[@route:host_process_area] Using device_id: {device_id}")
@@ -244,15 +263,6 @@ def process_area():
         
         # Use image controller for processing
         try:
-            # Get image verification controller for device
-            image_controller = get_controller(device_id, 'verification_image')
-            if not image_controller:
-                print(f"[@route:host_process_area] Image controller not available")
-                return jsonify({
-                    'success': False,
-                    'error': 'Image controller not available'
-                }), 500
-            
             # First crop the image using controller
             success = image_controller.crop_image(final_source_path, target_path, area)
             
@@ -283,8 +293,8 @@ def process_area():
             
             # Build complete URL for the processed image (for temporary preview)
             from src.utils.build_url_utils import buildCroppedImageUrl
-            host_info = host_device
-            processed_image_url = buildCroppedImageUrl(host_info, target_filename)
+            device_config = device.get_device_config()
+            processed_image_url = buildCroppedImageUrl(device_config, target_filename)
             print(f"[@route:host_process_area] Built processed image URL: {processed_image_url}")
             
             return jsonify({
@@ -317,20 +327,24 @@ def process_area():
 def save_resource():
     """Save image verification reference"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        if not host_device:
+        print(f"[@route:host_save_resource] Save image reference request for device: {device_id}")
+        
+        # Get device data for validation and path building
+        device = get_device_by_id(device_id)
+        if not device:
             return jsonify({
                 'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
+                'error': f'Device {device_id} not found'
             }), 404
         
         # ✅ GET TEAM_ID FROM REQUEST HEADERS LIKE OTHER WORKING ROUTES
         from src.utils.app_utils import get_team_id
         team_id = get_team_id()
         
-        data = request.get_json()
         cropped_filename = data.get('cropped_filename')  # e.g., "cropped_capture_capture_20250103..."
         reference_name = data.get('reference_name') or data.get('name')  # Handle both parameter names
         model = data.get('model')
@@ -356,10 +370,10 @@ def save_resource():
             }), 400
         
         # Get device-specific paths
-        from src.utils.build_url_utils import get_device_local_captures_path, get_current_device_id
+        from src.utils.build_url_utils import get_device_local_captures_path
         
-        device_id = get_current_device_id()
-        captures_path = get_device_local_captures_path(host_device, device_id)
+        device_config = device.get_device_config()
+        captures_path = get_device_local_captures_path(device_config, device_id)
         cropped_dir = f'{captures_path}/cropped'
         
         print(f"[@route:host_save_resource] Using device_id: {device_id}")
@@ -472,16 +486,29 @@ def save_resource():
 def execute_image_verification():
     """Execute single image verification on host"""
     try:
-        # ✅ USE OWN STORED HOST_DEVICE OBJECT
-        host_device = getattr(current_app, 'my_host_device', None)
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
-        if not host_device:
+        print(f"[@route:host_verification_image:execute] Executing image verification for device: {device_id}")
+        
+        # Get image verification controller for the specified device
+        verification_controller = get_controller(device_id, 'verification_image')
+        
+        if not verification_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
             return jsonify({
                 'success': False,
-                'error': 'Host device object not initialized. Host may need to re-register.'
+                'error': f'No image verification controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
             }), 404
         
-        data = request.get_json()
         verification = data.get('verification')
         source_filename = data.get('source_filename')  # Optional - controller will take screenshot if None
         
@@ -494,16 +521,6 @@ def execute_image_verification():
                 'success': False,
                 'error': 'verification is required'
             }), 400
-        
-        # Execute verification using specific image verification controller
-        from src.utils.host_utils import get_controller
-        
-        verification_controller = get_controller('device1', 'verification_image')
-        if not verification_controller:
-            return jsonify({
-                'success': False,
-                'error': 'Image verification controller not available'
-            }), 500
         
         result = verification_controller.execute_verification(verification)
         

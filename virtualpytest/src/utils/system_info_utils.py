@@ -1,8 +1,7 @@
 """
-System Information Controller
+System Information Utilities
 
-System-level operations for host machines including system monitoring,
-process management, and environment validation.
+Utility functions for system monitoring, process management, and environment validation.
 """
 
 import os
@@ -31,6 +30,4 @@ def get_host_system_stats():
             'platform': 'unknown',
             'architecture': 'unknown',
             'python_version': 'unknown'
-        }
-
-
+        } 
