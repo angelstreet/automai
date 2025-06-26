@@ -32,25 +32,18 @@ class TextHelpers:
         self.text_references_dir = os.path.join(captures_path, 'text_references')
         os.makedirs(self.text_references_dir, exist_ok=True)
     
-    def download_image(self, source_filename: str) -> str:
-        """Download image if URL, otherwise return path."""
+    def download_image(self, source_url: str) -> str:
+        """Download image from URL only."""
         try:
-            parsed = urlparse(source_filename)
-            if parsed.scheme in ['http', 'https']:
-                response = requests.get(source_filename, timeout=30)
-                response.raise_for_status()
+            response = requests.get(source_url, timeout=30)
+            response.raise_for_status()
+            
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+                tmp.write(response.content)
+                return tmp.name
                 
-                with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
-                    tmp.write(response.content)
-                    return tmp.name
-            else:
-                if os.path.exists(source_filename):
-                    return source_filename
-                else:
-                    raise FileNotFoundError(f"Local file not found: {source_filename}")
-                    
         except Exception as e:
-            print(f"[@text_helpers] Error downloading/accessing image: {e}")
+            print(f"[@text_helpers] Error downloading image from URL: {e}")
             raise
     
     def save_text_reference(self, text: str, reference_name: str, 
