@@ -975,28 +975,42 @@ class ImageVerificationController(VerificationControllerInterface):
             source_url = None
             try:
                 # Check if verification controller has the original screenshot URL
-                from flask import current_app
-                host_device = getattr(current_app, 'my_host_device', None)
-                if host_device:
-                    # Get the verification controller to check for original URL
-                    controller_objects = host_device.get('controller_objects', {})
-                    verification_controller = controller_objects.get('verification')
-                    if verification_controller and hasattr(verification_controller, '_last_screenshot_url'):
-                        source_url = verification_controller._last_screenshot_url
-                        print(f"[@controller:ImageVerification] Using original R2 URL for source: {source_url}")
+                from src.controllers.controller_config_factory import get_controller
+                from flask import request
+                
+                # Get device_id from request data
+                data = request.get_json() if request and hasattr(request, 'get_json') else {}
+                device_id = data.get('device_id', 'device1')
+                
+                # Get verification controller for device
+                verification_controller = get_controller(device_id, 'verification')
+                if verification_controller and hasattr(verification_controller, '_last_screenshot_url'):
+                    source_url = verification_controller._last_screenshot_url
+                    print(f"[@controller:ImageVerification] Using original R2 URL for source: {source_url}")
             except Exception as e:
                 print(f"[@controller:ImageVerification] Could not get original R2 URL: {e}")
             
             # Get host device info for URL building
             try:
                 from src.utils.build_url_utils import buildVerificationResultUrl
-                from flask import current_app
+                from src.controllers.controller_config_factory import get_controller
+                from flask import request
                 
-                # Get host info from current app context
-                host_device = getattr(current_app, 'my_host_device', None)
+                # Get device_id from request data
+                data = request.get_json() if request and hasattr(request, 'get_json') else {}
+                device_id = data.get('device_id', 'device1')
+                
+                # Get verification controller for device (this provides device context)
+                verification_controller = get_controller(device_id, 'verification')
+                if not verification_controller:
+                    print(f"[@controller:ImageVerification] ERROR: No verification controller found for device {device_id}")
+                    raise ValueError("Verification controller not available for URL building")
+                
+                # Get host device from verification controller
+                host_device = getattr(verification_controller, 'host_device', None)
                 if not host_device:
-                    print(f"[@controller:ImageVerification] ERROR: No host device found for URL building")
-                    raise ValueError("Host device context required for URL building - ensure proper request context")
+                    print(f"[@controller:ImageVerification] ERROR: No host device found in verification controller")
+                    raise ValueError("Host device context required for URL building")
                 
                 # Build public URLs - use R2 URL for source if available, build URLs for reference and overlay
                 if not source_url:
