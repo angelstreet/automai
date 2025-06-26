@@ -13,15 +13,15 @@ from typing import Dict, Any, Optional
 class ImageSave:
     """ providing image saving and reference operations."""
     
-    def _copy_reference_with_filtered_versions(self, source_path: str, target_path: str, 
-                                              create_filtered_versions: bool = True) -> bool:
+    def _copy_reference_image(self, source_path: str, target_path: str) -> bool:
         """
-        Copy a reference image and optionally create filtered versions.
+        Copy a reference image to target location.
+        
+        Note: Filtered versions should be created by the controller separately.
         
         Args:
             source_path: Path to source image
             target_path: Path to save image
-            create_filtered_versions: Whether to create greyscale/binary versions
             
         Returns:
             bool: True if successful, False otherwise
@@ -38,10 +38,6 @@ class ImageSave:
             # Copy the image
             shutil.copy2(source_path, target_path)
             print(f"[@save] Copied reference image: {source_path} -> {target_path}")
-            
-            # Create filtered versions if requested
-            if create_filtered_versions:
-                self._create_filtered_versions(target_path)
             
             return True
             

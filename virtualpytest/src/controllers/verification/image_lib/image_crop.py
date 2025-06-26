@@ -14,16 +14,16 @@ from typing import Dict, Any, Optional
 class ImageCrop:
     """ providing image cropping operations."""
     
-    def _crop_reference_image(self, source_path: str, target_path: str, area: Dict[str, Any], 
-                             create_filtered_versions: bool = True) -> bool:
+    def _crop_reference_image(self, source_path: str, target_path: str, area: Dict[str, Any]) -> bool:
         """
         Crop an image to a specific area and save it.
+        
+        Note: Filtered versions should be created by the controller separately.
         
         Args:
             source_path: Path to source image
             target_path: Path to save cropped image
             area: Dictionary with x, y, width, height coordinates
-            create_filtered_versions: Whether to create filtered versions
             
         Returns:
             bool: True if successful, False otherwise
@@ -66,11 +66,6 @@ class ImageCrop:
             success = cv2.imwrite(target_path, cropped_img)
             if success:
                 print(f"[@crop] Successfully cropped image: {target_path}")
-                
-                # Create filtered versions if requested
-                if create_filtered_versions:
-                    self._create_filtered_versions(target_path)
-                
                 return True
             else:
                 print(f"[@crop] Failed to save cropped image: {target_path}")

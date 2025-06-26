@@ -94,35 +94,29 @@ class ImageProcessing:
             print(f"[@processing] Error in background removal: {e}")
             return False
     
-    def _process_reference_image(self, image_path: str, autocrop: bool = False, 
-                                remove_background: bool = False) -> Optional[Dict[str, int]]:
+    def _process_reference_image(self, image_path: str, remove_background: bool = False) -> bool:
         """
-        Process a reference image with various operations.
+        Process a reference image with background removal.
+        
+        Note: Auto-crop should be handled by the controller separately.
         
         Args:
             image_path: Path to the image to process
-            autocrop: Whether to auto-crop the image
             remove_background: Whether to remove background
             
         Returns:
-            Dict with processed area if autocrop was used, None otherwise
+            bool: True if successful, False otherwise
         """
         try:
-            processed_area = None
-            
-            # Auto-crop if requested
-            if autocrop:
-                processed_area = self._auto_crop_image(image_path)
-            
             # Remove background if requested
             if remove_background:
-                self._remove_background(image_path)
+                return self._remove_background(image_path)
             
-            return processed_area
+            return True  # No processing needed
             
         except Exception as e:
             print(f"[@processing] Error processing reference image: {e}")
-            return None
+            return False
     
     def _create_filtered_versions(self, image_path: str) -> None:
         """Create greyscale and binary versions of an image."""

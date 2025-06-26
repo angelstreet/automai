@@ -290,6 +290,9 @@ class ImageVerificationController(
             success = self._crop_reference_image(source_path, target_path, area)
             
             if success:
+                # Create filtered versions (controller orchestrates this)
+                self._create_filtered_versions(target_path)
+                
                 # Build URL for access
                 cropped_url = self._build_cropped_image_url(host, filename)
                 
@@ -329,12 +332,13 @@ class ImageVerificationController(
                 temp_path = tmp.name
             shutil.copy2(source_path, temp_path)
             
-            # Apply processing
-            processed_area = self._process_reference_image(
-                temp_path, 
-                autocrop=autocrop, 
-                remove_background=remove_background
-            )
+            # Handle auto-crop first (controller orchestrates this)
+            processed_area = None
+            if autocrop:
+                processed_area = self._auto_crop_image(temp_path)
+            
+            # Apply background removal processing
+            process_success = self._process_reference_image(temp_path, remove_background)
             
             # Apply filter
             filter_success = self._apply_image_filter(temp_path, image_filter)
@@ -375,7 +379,11 @@ class ImageVerificationController(
             target_path = os.path.join(captures_path, filename)
             
             # Save the image
-            success = self._copy_reference_with_filtered_versions(source_path, target_path)
+            success = self._copy_reference_image(source_path, target_path)
+            
+            # Create filtered versions (controller orchestrates this)
+            if success:
+                self._create_filtered_versions(target_path)
             
             if success:
                 # Upload to R2 (if configured)
