@@ -36,8 +36,17 @@ def detect_text():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
+        # Get device info for response
+        device = get_device_by_id(device_id)
+        
         # Controller handles everything
         result = text_controller.detect_text(data)
+        
+        # Add device_model to response for server route (following established pattern)
+        if device:
+            result['device_model'] = device.model
+            result['device_name'] = device.name
+        
         return jsonify(result)
         
     except Exception as e:
@@ -72,7 +81,16 @@ def save_text():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
+        # Get device info for response
+        device = get_device_by_id(device_id)
+        
         result = text_controller.save_text(data)
+        
+        # Add device_model to response for server route (following established pattern)
+        if device:
+            result['device_model'] = device.model
+            result['device_name'] = device.name
+        
         return jsonify(result)
         
     except Exception as e:
@@ -107,13 +125,23 @@ def execute_text_verification():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
+        # Get device info for response
+        device = get_device_by_id(device_id)
+        
         verification = data.get('verification')
         result = text_controller.execute_verification(verification)
         
-        return jsonify({
+        # Add device_model to response for server route (following established pattern)
+        response = {
             'success': True,
             'verification_result': result
-        })
+        }
+        
+        if device:
+            response['device_model'] = device.model
+            response['device_name'] = device.name
+        
+        return jsonify(response)
         
     except Exception as e:
         print(f"[@route:host_verification_text:execute] Error: {str(e)}")

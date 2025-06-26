@@ -36,8 +36,17 @@ def crop_area():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
+        # Get device info for response
+        device = get_device_by_id(device_id)
+        
         # Controller handles everything
         result = image_controller.crop_image(data)
+        
+        # Add device_model to response for server route (following established pattern)
+        if device:
+            result['device_model'] = device.model
+            result['device_name'] = device.name
+        
         return jsonify(result)
         
     except Exception as e:
@@ -72,7 +81,16 @@ def process_area():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
+        # Get device info for response
+        device = get_device_by_id(device_id)
+        
         result = image_controller.process_image(data)
+        
+        # Add device_model to response for server route (following established pattern)
+        if device:
+            result['device_model'] = device.model
+            result['device_name'] = device.name
+        
         return jsonify(result)
         
     except Exception as e:
@@ -107,7 +125,16 @@ def save_resource():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
+        # Get device info for response
+        device = get_device_by_id(device_id)
+        
         result = image_controller.save_image(data)
+        
+        # Add device_model to response for server route (following established pattern)
+        if device:
+            result['device_model'] = device.model
+            result['device_name'] = device.name
+        
         return jsonify(result)
         
     except Exception as e:
@@ -142,13 +169,23 @@ def execute_image_verification():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
+        # Get device info for response
+        device = get_device_by_id(device_id)
+        
         verification = data.get('verification')
         result = image_controller.execute_verification(verification)
         
-        return jsonify({
+        # Add device_model to response for server route (following established pattern)
+        response = {
             'success': True,
             'verification_result': result
-        })
+        }
+        
+        if device:
+            response['device_model'] = device.model
+            response['device_name'] = device.name
+        
+        return jsonify(response)
         
     except Exception as e:
         print(f"[@route:host_verification_image:execute] Error: {str(e)}")

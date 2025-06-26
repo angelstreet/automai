@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import { Verifications, Verification } from '../../types/verification/VerificationTypes';
+import { Verification } from '../../types/verification/VerificationTypes';
 
 // Define interfaces for verification data structures
 
@@ -17,7 +17,7 @@ export const useVerification = ({
   captureSourcePath,
 }: UseVerificationProps) => {
   // State for verification types and verifications
-  const [availableVerificationTypes, setAvailableVerificationTypes] = useState<Verifications>({});
+  const [verificationTypes, setVerificationTypes] = useState<Record<string, any>>({});
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,55 +28,45 @@ export const useVerification = ({
   useEffect(() => {
     // Get verification types from the selected device
     const device = selectedHost?.devices?.find((d) => d.device_id === deviceId);
-    const deviceVerificationTypes = device?.available_verification_types;
+    const deviceVerificationTypes = device?.device_verification_types;
 
     if (deviceVerificationTypes) {
-      console.log('[@hook:useVerification] Loading verification types from device data');
+      console.log(
+        '🔍 [useVerification] Loading verification types from device:',
+        deviceVerificationTypes,
+      );
 
-      // Clean parameter definitions in available verification types
-      const cleanedVerificationTypes: Verifications = {};
-      Object.entries(deviceVerificationTypes).forEach(([controllerType, verifications]) => {
-        if (Array.isArray(verifications)) {
-          cleanedVerificationTypes[controllerType] = verifications.map((verification: any) => {
-            if (!verification.params) return verification;
+      // Transform the verification types into the format expected by the UI
+      const transformedTypes: Record<string, any> = {};
 
-            const cleanParams: any = {};
-            Object.entries(verification.params).forEach(([key, value]: [string, any]) => {
-              if (typeof value === 'object' && value !== null && 'default' in value) {
-                // Extract default value from parameter definition
-                cleanParams[key] = value.default;
-              } else {
-                // Keep actual values as-is
-                cleanParams[key] = value;
-              }
-            });
+      Object.entries(deviceVerificationTypes).forEach(([verType, verConfig]: [string, any]) => {
+        // Clean up parameter definitions to remove 'available_' prefix
+        const cleanedConfig = { ...verConfig };
 
-            // Add verification_type based on controller type
-            let verification_type: 'text' | 'image' | 'adb' = 'text';
-            if (controllerType.toLowerCase().includes('image')) {
-              verification_type = 'image';
-            } else if (controllerType.toLowerCase().includes('adb')) {
-              verification_type = 'adb';
-            }
+        if (cleanedConfig.parameters) {
+          const cleanedParameters: Record<string, any> = {};
 
-            return {
-              command: verification.command,
-              params: cleanParams,
-              verification_type,
-            } as Verification;
-          });
-        } else {
-          cleanedVerificationTypes[controllerType] = verifications as Verification[];
+          Object.entries(cleanedConfig.parameters).forEach(
+            ([paramKey, paramValue]: [string, any]) => {
+              // Remove 'available_' prefix from parameter keys
+              const cleanKey = paramKey.startsWith('available_')
+                ? paramKey.substring(10)
+                : paramKey;
+              cleanedParameters[cleanKey] = paramValue;
+            },
+          );
+
+          cleanedConfig.parameters = cleanedParameters;
         }
+
+        transformedTypes[verType] = cleanedConfig;
       });
 
-      setAvailableVerificationTypes(cleanedVerificationTypes);
-      setError(null); // Clear any previous errors
-    } else if (selectedHost && deviceId) {
-      console.log(
-        '[@hook:useVerification] No verification types available in device data - using empty object',
-      );
-      setAvailableVerificationTypes({});
+      setVerificationTypes(transformedTypes);
+      console.log('✅ [useVerification] Transformed verification types:', transformedTypes);
+    } else {
+      console.log('⚠️ [useVerification] No device verification types found for device:', deviceId);
+      setVerificationTypes({});
     }
   }, [selectedHost, deviceId]);
 
@@ -266,7 +256,7 @@ export const useVerification = ({
   );
 
   return {
-    availableVerificationTypes,
+    verificationTypes,
     verifications,
     loading,
     error,

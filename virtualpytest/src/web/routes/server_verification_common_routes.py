@@ -432,14 +432,13 @@ def save_text():
                 'error': 'device_id is required'
             }), 400
         
-        # Extract device_model from original request payload (host contains device info)
-        host_info = request_data.get('host', {})
-        device_model = host_info.get('device_model')
+        # Get device_model from host response (host route includes it following established pattern)
+        device_model = host_response_data.get('device_model')
         
         if not device_model:
             return jsonify({
                 'success': False,
-                'error': 'device_model is required in host object'
+                'error': 'device_model not provided by host'
             }), 400
         
         area = host_response_data.get('area')
