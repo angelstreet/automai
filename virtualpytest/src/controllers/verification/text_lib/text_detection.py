@@ -1,5 +1,5 @@
 """
-Text Detection Operations Mixin
+Text Detection Operations 
 
 Provides text matching, verification logic, and wait operations.
 """
@@ -9,8 +9,8 @@ import os
 from typing import Dict, Any, Tuple, List
 
 
-class TextDetectionMixin:
-    """Mixin providing text detection and matching operations."""
+class TextDetection:
+    """ providing text detection and matching operations."""
     
     def _text_matches(self, extracted_text: str, target_text: str, case_sensitive: bool = False) -> bool:
         """

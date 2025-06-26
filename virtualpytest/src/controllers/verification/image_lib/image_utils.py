@@ -1,5 +1,5 @@
 """
-Image Verification Utilities Mixin
+Image Verification Utilities 
 
 Provides shared utilities for path handling, validation, and common operations.
 """
@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 
 
-class ImageUtilsMixin:
-    """Mixin providing utility functions for image verification operations."""
+class ImageUtils:
+    """ providing utility functions for image verification operations."""
     
     def _get_captures_path(self, host: Dict[str, Any]) -> str:
         """Get the captures directory path for a host."""

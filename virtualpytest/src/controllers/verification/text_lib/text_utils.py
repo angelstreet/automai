@@ -1,5 +1,5 @@
 """
-Text Verification Utilities Mixin
+Text Verification Utilities 
 
 Provides shared utilities for path handling, URL building, and common operations.
 """
@@ -8,8 +8,8 @@ import os
 from typing import Dict, Any
 
 
-class TextUtilsMixin:
-    """Mixin providing utility functions for text verification operations."""
+class TextUtils:
+    """ providing utility functions for text verification operations."""
     
     def _get_captures_path(self, host_info: Dict[str, Any], device_id: str) -> str:
         """Get the captures directory path for a host and device."""

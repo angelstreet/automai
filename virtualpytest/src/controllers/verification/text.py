@@ -1,7 +1,7 @@
 """
 Text Verification Controller Implementation
 
-Modular text verification controller using mixin architecture for better maintainability.
+Modular text verification controller using  architecture for better maintainability.
 """
 
 import time
@@ -11,21 +11,21 @@ import re
 import requests
 from typing import Dict, Any, Optional, Tuple, List
 from pathlib import Path
-from .base_controller import VerificationControllerInterface
-from .text.text_utils import TextUtilsMixin
-from .text.text_ocr import TextOCRMixin
-from .text.text_processing import TextProcessingMixin
-from .text.text_detection import TextDetectionMixin
-from .text.text_save import TextSaveMixin
+from ..base_controller import VerificationControllerInterface
+from .text_lib.text_utils import TextUtils
+from .text_lib.text_ocr import TextOCR
+from .text_lib.text_processing import TextProcessing
+from .text_lib.text_detection import TextDetection
+from .text_lib.text_save import TextSave
 
 
 class TextVerificationController(
     VerificationControllerInterface,
-    TextUtilsMixin,
-    TextOCRMixin,
-    TextProcessingMixin,
-    TextDetectionMixin,
-    TextSaveMixin
+    TextUtils,
+    TextOCR,
+    TextProcessing,
+    TextDetection,
+    TextSave
 ):
     """Text verification controller that uses OCR to detect text on screen."""
     
@@ -100,7 +100,7 @@ class TextVerificationController(
             if image_filter:
                 print(f"[@controller:TextVerification] Using filter: {image_filter}")
             
-            # Use the mixin method for core functionality
+            # Use the  method for core functionality
             found, capture_path, info = self._wait_for_text_to_appear(
                 text, timeout, case_sensitive, area, image_filter
             )
@@ -168,7 +168,7 @@ class TextVerificationController(
             if image_filter:
                 print(f"[@controller:TextVerification] Using filter: {image_filter}")
             
-            # Use the mixin method for core functionality
+            # Use the  method for core functionality
             disappeared, capture_path, info = self._wait_for_text_to_disappear(
                 text, timeout, case_sensitive, area, image_filter
             )

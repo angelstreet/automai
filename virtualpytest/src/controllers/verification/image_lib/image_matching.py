@@ -1,5 +1,5 @@
 """
-Image Matching Operations Mixin
+Image Matching Operations 
 
 Provides template matching, image comparison, and verification operations.
 """
@@ -11,8 +11,8 @@ import time
 from typing import Dict, Any, Optional, Tuple, List
 
 
-class ImageMatchingMixin:
-    """Mixin providing image matching and comparison operations."""
+class ImageMatching:
+    """ providing image matching and comparison operations."""
     
     def _wait_for_image_to_appear(self, reference_path: str, area: Dict[str, Any], 
                                  timeout: float = 10.0, threshold: float = 0.8) -> bool:

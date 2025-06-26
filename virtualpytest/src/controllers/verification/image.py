@@ -1,27 +1,27 @@
 """
 Image Verification Controller Implementation
 
-Modular image verification controller using mixin architecture for better maintainability.
+Modular image verification controller using  architecture for better maintainability.
 """
 
 import os
 import time
 from typing import Dict, Any, Optional
-from .base_controller import VerificationControllerInterface
-from .image.image_crop import ImageCropMixin
-from .image.image_save import ImageSaveMixin
-from .image.image_processing import ImageProcessingMixin
-from .image.image_matching import ImageMatchingMixin
-from .image.image_utils import ImageUtilsMixin
+from ..base_controller import VerificationControllerInterface
+from .image_lib.image_crop import ImageCrop
+from .image_lib.image_save import ImageSave
+from .image_lib.image_processing import ImageProcessing
+from .image_lib.image_matching import ImageMatching
+from .image_lib.image_utils import ImageUtils
 
 
 class ImageVerificationController(
     VerificationControllerInterface,
-    ImageCropMixin,
-    ImageSaveMixin,
-    ImageProcessingMixin,
-    ImageMatchingMixin,
-    ImageUtilsMixin
+    ImageCrop,
+    ImageSave,
+    ImageProcessing,
+    ImageMatching,
+    ImageUtils
 ):
     """Image verification controller that uses template matching to detect images on screen."""
     
@@ -85,7 +85,7 @@ class ImageVerificationController(
             print(f"[@controller:ImageVerification] Waiting for image to appear: {image_path}")
             print(f"[@controller:ImageVerification] Timeout: {timeout}s, Confidence: {confidence}")
             
-            # Use the mixin method for core functionality
+            # Use the  method for core functionality
             found, location, screenshot_path = self._wait_for_image_to_appear(
                 image_path, timeout, confidence, area
             )
@@ -134,7 +134,7 @@ class ImageVerificationController(
         try:
             print(f"[@controller:ImageVerification] Waiting for image to disappear: {image_path}")
             
-            # Use the mixin method for core functionality
+            # Use the  method for core functionality
             disappeared, screenshot_path = self._wait_for_image_to_disappear(
                 image_path, timeout, confidence, area
             )
@@ -305,7 +305,7 @@ class ImageVerificationController(
                     'message': 'Invalid or missing screenshot path'
                 }
             
-            # Use mixin method to detect images
+            # Use  method to detect images
             detected_images = self._detect_images_in_area(screenshot_path, area)
             
             return {

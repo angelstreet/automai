@@ -1,5 +1,5 @@
 """
-Image Cropping Operations Mixin
+Image Cropping Operations 
 
 Provides image cropping functionality including reference cropping,
 auto-cropping, and coordinate calculations.
@@ -11,8 +11,8 @@ import numpy as np
 from typing import Dict, Any, Optional
 
 
-class ImageCropMixin:
-    """Mixin providing image cropping operations."""
+class ImageCrop:
+    """ providing image cropping operations."""
     
     def _crop_reference_image(self, source_path: str, target_path: str, area: Dict[str, Any], 
                              create_filtered_versions: bool = True) -> bool:

@@ -1,5 +1,5 @@
 """
-Image Saving Operations Mixin
+Image Saving Operations 
 
 Provides saving reference images, uploading to R2, and database operations.
 """
@@ -10,8 +10,8 @@ import shutil
 from typing import Dict, Any, Optional
 
 
-class ImageSaveMixin:
-    """Mixin providing image saving and reference operations."""
+class ImageSave:
+    """ providing image saving and reference operations."""
     
     def _copy_reference_with_filtered_versions(self, source_path: str, target_path: str, 
                                               create_filtered_versions: bool = True) -> bool:

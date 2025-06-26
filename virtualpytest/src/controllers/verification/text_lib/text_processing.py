@@ -1,5 +1,5 @@
 """
-Text Processing Operations Mixin
+Text Processing Operations 
 
 Provides image filtering and processing specifically for text recognition optimization.
 """
@@ -11,8 +11,8 @@ import shutil
 from typing import Dict, Any
 
 
-class TextProcessingMixin:
-    """Mixin providing image processing operations for text recognition."""
+class TextProcessing:
+    """ providing image processing operations for text recognition."""
     
     def _apply_image_filter(self, image_path: str, filter_type: str) -> bool:
         """

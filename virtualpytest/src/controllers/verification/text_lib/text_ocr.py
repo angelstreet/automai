@@ -1,5 +1,5 @@
 """
-Text OCR Operations Mixin
+Text OCR Operations 
 
 Provides OCR functionality, text extraction, and language detection.
 """
@@ -12,8 +12,8 @@ from typing import Dict, Any, Optional, Tuple
 from pathlib import Path
 
 
-class TextOCRMixin:
-    """Mixin providing OCR and text extraction operations."""
+class TextOCR:
+    """ providing OCR and text extraction operations."""
     
     def _extract_text_from_image(self, image_path: str) -> str:
         """

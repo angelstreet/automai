@@ -1,5 +1,5 @@
 """
-Image Processing Operations Mixin
+Image Processing Operations 
 
 Provides image filtering, background removal, and various processing effects.
 """
@@ -11,8 +11,8 @@ import subprocess
 from typing import Dict, Any, Optional
 
 
-class ImageProcessingMixin:
-    """Mixin providing image processing operations."""
+class ImageProcessing:
+    """ providing image processing operations."""
     
     def _apply_image_filter(self, image_path: str, filter_type: str) -> bool:
         """

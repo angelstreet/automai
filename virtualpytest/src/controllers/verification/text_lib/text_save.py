@@ -1,5 +1,5 @@
 """
-Text Saving Operations Mixin
+Text Saving Operations 
 
 Provides saving reference images and text verification results.
 """
@@ -11,8 +11,8 @@ import time
 from typing import Dict, Any
 
 
-class TextSaveMixin:
-    """Mixin providing text verification saving operations."""
+class TextSave:
+    """ providing text verification saving operations."""
     
     def _save_cropped_source_image(self, source_image_path: str, area: dict, model: str, verification_index: int) -> str:
         """
