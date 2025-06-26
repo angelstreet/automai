@@ -11,7 +11,7 @@ import re
 import requests
 from typing import Dict, Any, Optional, Tuple, List
 from pathlib import Path
-from ..base_controller import VerificationControllerInterface
+from .base_controller import VerificationControllerInterface
 from .text.text_utils import TextUtilsMixin
 from .text.text_ocr import TextOCRMixin
 from .text.text_processing import TextProcessingMixin
