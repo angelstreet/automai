@@ -175,6 +175,7 @@ class ImageVerificationController:
                 'success': True,
                 'message': f'Image cropped successfully: {filename}',
                 'local_path': output_path,
+                'processed_image_path': output_path,  # Frontend expects this field for preview
                 'filename': filename,
                 'area': area,
                 'source_was_url': source_filename.startswith(('http://', 'https://'))
@@ -229,6 +230,7 @@ class ImageVerificationController:
                 'success': True,
                 'message': f'Image processed successfully',
                 'local_path': local_image_path,
+                'processed_image_path': local_image_path,  # Frontend expects this field for preview
                 'filename': os.path.basename(local_image_path),
                 'operations': {
                     'remove_background': remove_background,
