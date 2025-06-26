@@ -338,7 +338,7 @@ export const useVerificationEditor = ({
       // Step 2: Upload to R2 (HOST) and then save to database (SERVER)
       if (referenceType === 'text') {
         // Text references use the old single-call pattern
-        const response = await fetch('/server/verification/text/save-text-reference', {
+        const response = await fetch('/server/verification/text/save-text', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -446,7 +446,7 @@ export const useVerificationEditor = ({
       const sourceFilename = captureSourcePath.split('/').pop() || '';
       console.log('[@hook:useVerificationEditor] Extracted source filename:', sourceFilename);
 
-      const response = await fetch(`/server/verification/text/auto-detect-text`, {
+      const response = await fetch(`/server/verification/text/detect-text`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

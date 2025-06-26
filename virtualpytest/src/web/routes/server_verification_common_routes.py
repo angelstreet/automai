@@ -371,17 +371,17 @@ def save_image():
 # TEXT VERIFICATION SPECIFIC ENDPOINTS
 # =====================================================
 
-@server_verification_common_bp.route('/text/auto-detect-text', methods=['POST'])
-def auto_detect_text():
+@server_verification_common_bp.route('/text/detect-text', methods=['POST'])
+def detect_text():
     """Proxy text auto-detection request to host"""
     try:
-        print("[@route:server_verification_common:auto_detect_text] Proxying OCR detection request")
+        print("[@route:server_verification_common:detect_text] Proxying OCR detection request")
         
         # Get request data
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/text/auto-detect-text', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/text/detect-text', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -391,25 +391,25 @@ def auto_detect_text():
             'error': str(e)
         }), 500
 
-@server_verification_common_bp.route('/text/save-text-reference', methods=['POST'])
-def save_text_reference():
+@server_verification_common_bp.route('/text/save-text', methods=['POST'])
+def save_text():
     """Save text reference to database - Two-step process like image references"""
     try:
-        print("[@route:server_verification_common:save_text_reference] Processing text reference save request")
+        print("[@route:server_verification_common:save_text] Processing text reference save request")
         
         # Get request data
         request_data = request.get_json() or {}
         
         # Step 1: Get text data from host (fast, no git operations)
-        print("[@route:server_verification_common:save_text_reference] Step 1: Getting text data from host")
-        host_response_data, host_status_code = proxy_to_host('/host/verification/text/save-text-reference', 'POST', request_data)
+        print("[@route:server_verification_common:save_text] Step 1: Getting text data from host")
+        host_response_data, host_status_code = proxy_to_host('/host/verification/text/save-text', 'POST', request_data)
         
         if host_status_code != 200 or not host_response_data.get('success'):
-            print(f"[@route:server_verification_common:save_text_reference] Host step failed: {host_response_data}")
+            print(f"[@route:server_verification_common:save_text] Host step failed: {host_response_data}")
             return jsonify(host_response_data), host_status_code
         
         # Step 2: Save text reference to database
-        print("[@route:server_verification_common:save_text_reference] Step 2: Saving text reference to database")
+        print("[@route:server_verification_common:save_text] Step 2: Saving text reference to database")
         
         from src.lib.supabase.verifications_references_db import save_reference
         from src.utils.app_utils import get_team_id
@@ -428,7 +428,7 @@ def save_text_reference():
         area = host_response_data.get('area')
         text_data = host_response_data.get('text_data', {})
         
-        print(f"[@route:server_verification_common:save_text_reference] Saving to database: {reference_name} for model: {model}")
+        print(f"[@route:server_verification_common:save_text] Saving to database: {reference_name} for model: {model}")
         
         # Save text reference to database using save_reference function
         # For text references, we store text data in area field and use a placeholder R2 path
@@ -450,7 +450,7 @@ def save_text_reference():
         )
         
         if db_result['success']:
-            print(f"[@route:server_verification_common:save_text_reference] Successfully saved text reference to database")
+            print(f"[@route:server_verification_common:save_text] Successfully saved text reference to database")
             return jsonify({
                 'success': True,
                 'message': f'Text reference saved: {reference_name}',
@@ -460,14 +460,14 @@ def save_text_reference():
                 'image_id': db_result.get('image_id')
             })
         else:
-            print(f"[@route:server_verification_common:save_text_reference] Database save failed: {db_result.get('error')}")
+            print(f"[@route:server_verification_common:save_text] Database save failed: {db_result.get('error')}")
             return jsonify({
                 'success': False,
                 'error': f"Database save failed: {db_result.get('error')}"
             }), 500
         
     except Exception as e:
-        print(f"[@route:server_verification_common:save_text_reference] Error: {str(e)}")
+        print(f"[@route:server_verification_common:save_text] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)

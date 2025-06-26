@@ -1,7 +1,7 @@
 """
 Image Verification Controller Implementation
 
-Modular image verification controller using  architecture for better maintainability.
+Modular image verification controller using centralized URL building architecture.
 """
 
 import os
@@ -13,6 +13,11 @@ from .image_lib.image_save import ImageSave
 from .image_lib.image_processing import ImageProcessing
 from .image_lib.image_matching import ImageMatching
 from .image_lib.image_utils import ImageUtils
+from src.utils.build_url_utils import (
+    buildCroppedImageUrl, 
+    buildHostImageUrl, 
+    get_device_local_captures_path
+)
 
 
 class ImageVerificationController(
@@ -25,23 +30,30 @@ class ImageVerificationController(
 ):
     """Image verification controller that uses template matching to detect images on screen."""
     
-    def __init__(self, av_controller, **kwargs):
+    def __init__(self, av_controller, host_info=None, device_id=None, **kwargs):
         """
         Initialize the Image Verification controller.
         
         Args:
             av_controller: AV controller for capturing images (dependency injection)
+            host_info: Host information from device registration
+            device_id: Device ID from device registration
         """
         super().__init__("Image Verification", "image")
         
         # Dependency injection
         self.av_controller = av_controller
+        self.host_info = host_info
+        self.device_id = device_id
         
-        # Validate required dependency
+        # Validate required dependencies
         if not self.av_controller:
             raise ValueError("av_controller is required for ImageVerificationController")
+        
+        if not self.host_info:
+            print(f"[@controller:ImageVerification] Warning: No host_info provided, URL building may fail")
             
-        print(f"[@controller:ImageVerification] Initialized with AV controller")
+        print(f"[@controller:ImageVerification] Initialized with AV controller for device: {device_id}")
 
         # Controller is always ready
         self.is_connected = True
@@ -62,7 +74,9 @@ class ImageVerificationController(
         return {
             "connected": self.is_connected,
             "av_controller": self.av_controller.device_name if self.av_controller else None,
-            "controller_type": "image"
+            "controller_type": "image",
+            "device_id": self.device_id,
+            "host_info": bool(self.host_info)
         }
 
     def waitForImageToAppear(self, image_path: str, timeout: float = 10.0, confidence: float = 0.8,
@@ -267,6 +281,45 @@ class ImageVerificationController(
             }
 
     # =============================================================================
+    # Path Resolution Methods (Using Centralized Utilities)
+    # =============================================================================
+
+    def _get_captures_path(self) -> str:
+        """Get the captures directory path using centralized device configuration."""
+        if not self.host_info:
+            raise ValueError("host_info is required for path resolution")
+        return get_device_local_captures_path(self.host_info, self.device_id)
+
+    def _resolve_source_path(self, request_data: Dict[str, Any]) -> str:
+        """Resolve the source image path from request data."""
+        if request_data.get('source') == 'last_capture':
+            captures_path = self._get_captures_path()
+            capture_files = [f for f in os.listdir(captures_path) if f.endswith('.png')]
+            if not capture_files:
+                raise FileNotFoundError("No capture files found")
+            
+            latest_file = max(capture_files, key=lambda f: os.path.getctime(os.path.join(captures_path, f)))
+            return os.path.join(captures_path, latest_file)
+        
+        elif request_data.get('source_path'):
+            return request_data['source_path']
+        
+        else:
+            raise ValueError("No valid source specified")
+
+    def _build_image_url(self, local_path: str) -> str:
+        """Build URL for accessing images using centralized URL builder."""
+        if not self.host_info:
+            raise ValueError("host_info is required for URL building")
+        return buildHostImageUrl(self.host_info, local_path)
+
+    def _build_cropped_image_url(self, filename: str) -> str:
+        """Build URL for accessing cropped images using centralized URL builder."""
+        if not self.host_info:
+            raise ValueError("host_info is required for URL building")
+        return buildCroppedImageUrl(self.host_info, filename, self.device_id)
+
+    # =============================================================================
     # Route Interface Methods (Expected by Host Routes)
     # =============================================================================
 
@@ -282,7 +335,7 @@ class ImageVerificationController(
             source_path = self._resolve_source_path(request_data)
             
             # Build target path
-            captures_path = self._get_captures_path(host)
+            captures_path = self._get_captures_path()
             filename = self._get_unique_filename(reference_name)
             target_path = os.path.join(captures_path, filename)
             
@@ -294,7 +347,7 @@ class ImageVerificationController(
                 self._create_filtered_versions(target_path)
                 
                 # Build URL for access
-                cropped_url = self._build_cropped_image_url(host, filename)
+                cropped_url = self._build_cropped_image_url(filename)
                 
                 return {
                     'success': True,
@@ -374,7 +427,7 @@ class ImageVerificationController(
             source_path = self._resolve_source_path(request_data)
             
             # Build target path
-            captures_path = self._get_captures_path(host)
+            captures_path = self._get_captures_path()
             filename = self._get_unique_filename(reference_name)
             target_path = os.path.join(captures_path, filename)
             
@@ -400,7 +453,7 @@ class ImageVerificationController(
                 )
                 
                 # Build local URL for access
-                local_url = self._build_cropped_image_url(host, filename)
+                local_url = self._build_cropped_image_url(filename)
                 
                 return {
                     'success': True,

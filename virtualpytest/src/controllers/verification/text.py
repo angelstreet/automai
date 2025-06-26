@@ -1,7 +1,7 @@
 """
 Text Verification Controller Implementation
 
-Modular text verification controller using  architecture for better maintainability.
+Modular text verification controller using centralized URL building architecture.
 """
 
 import time
@@ -17,6 +17,11 @@ from .text_lib.text_ocr import TextOCR
 from .text_lib.text_processing import TextProcessing
 from .text_lib.text_detection import TextDetection
 from .text_lib.text_save import TextSave
+from src.utils.build_url_utils import (
+    buildCroppedImageUrl, 
+    buildHostImageUrl, 
+    get_device_local_captures_path
+)
 
 
 class TextVerificationController(
@@ -29,23 +34,30 @@ class TextVerificationController(
 ):
     """Text verification controller that uses OCR to detect text on screen."""
     
-    def __init__(self, av_controller, **kwargs):
+    def __init__(self, av_controller, host_info=None, device_id=None, **kwargs):
         """
         Initialize the Text Verification controller.
         
         Args:
             av_controller: AV controller for capturing images (dependency injection)
+            host_info: Host information from device registration
+            device_id: Device ID from device registration
         """
         super().__init__("Text Verification", "text")
         
         # Dependency injection
         self.av_controller = av_controller
+        self.host_info = host_info
+        self.device_id = device_id
         
-        # Validate required dependency
+        # Validate required dependencies
         if not self.av_controller:
             raise ValueError("av_controller is required for TextVerificationController")
             
-        print(f"[@controller:TextVerification] Initialized with AV controller")
+        if not self.host_info:
+            print(f"[@controller:TextVerification] Warning: No host_info provided, URL building may fail")
+            
+        print(f"[@controller:TextVerification] Initialized with AV controller for device: {device_id}")
         
         # Temporary files for analysis
         self.temp_image_path = Path("/tmp/text_verification")
@@ -72,6 +84,162 @@ class TextVerificationController(
             "av_controller": self.av_controller.device_name if self.av_controller else None,
             "controller_type": "text"
         }
+
+    # =============================================================================
+    # Context Methods (Get host info from existing architecture)
+    # =============================================================================
+
+    def _get_host_info(self):
+        """Get host info from controller manager context."""
+        from src.controllers.controller_manager import get_host
+        host = get_host()
+        return host.to_dict()
+
+    def _get_device_id(self) -> str:
+        """Get device ID from av_controller context."""
+        if hasattr(self.av_controller, 'device_name'):
+            # Extract device_id from device_name like "device1"
+            device_name = self.av_controller.device_name
+            if 'device' in device_name.lower():
+                return device_name.lower()
+            return f"device1"  # fallback
+        return 'device1'  # fallback
+
+    # =============================================================================
+    # Controller Orchestration Methods (Coordinate Library Workflows)
+    # =============================================================================
+
+    def _detect_and_process_text(self, image_path: str, area: dict = None, 
+                                include_language_detection: bool = True, 
+                                apply_filters: bool = False) -> Dict[str, Any]:
+        """
+        Orchestrate complete text detection workflow.
+        
+        Controller coordinates: OCR → Language Detection → Filtering (if requested)
+        
+        Args:
+            image_path: Path to image to process
+            area: Optional area to focus on
+            include_language_detection: Whether to detect language
+            apply_filters: Whether to create filtered versions
+            
+        Returns:
+            dict: Complete detection results
+        """
+        try:
+            # Step 1: Extract text from image/area (OCR library)
+            extracted_text, temp_path = self._extract_text_from_area(image_path, area)
+            
+            result = {
+                'extracted_text': extracted_text,
+                'character_count': len(extracted_text) if extracted_text else 0,
+                'word_count': len(extracted_text.split()) if extracted_text else 0,
+                'temp_image_path': temp_path,
+                'area': area
+            }
+            
+            # Step 2: Language detection (if requested and text found)
+            if include_language_detection and extracted_text:
+                primary_lang, primary_conf, secondary_lang, secondary_conf = self._detect_text_language(
+                    temp_path or image_path
+                )
+                result.update({
+                    'primary_language': primary_lang,
+                    'primary_language_name': self._get_language_name(primary_lang),
+                    'primary_confidence': primary_conf,
+                    'secondary_language': secondary_lang,
+                    'secondary_confidence': secondary_conf,
+                    'tesseract_language': self._convert_to_tesseract_lang(primary_lang)
+                })
+            
+            # Step 3: Create filtered versions (if requested)
+            if apply_filters and temp_path:
+                self._create_filtered_versions(temp_path)
+                print(f"[@controller:TextVerification] Created filtered versions for text processing")
+            
+            return result
+            
+        except Exception as e:
+            print(f"[@controller:TextVerification] Error in text detection workflow: {e}")
+            return {
+                'extracted_text': '',
+                'character_count': 0,
+                'word_count': 0,
+                'error': str(e)
+            }
+
+    def _save_and_process_text_reference(self, text: str, reference_name: str, 
+                                       model: str, area: dict, 
+                                       font_size: float = 12.0, 
+                                       confidence: float = 0.8,
+                                       create_processed_versions: bool = False) -> Dict[str, Any]:
+        """
+        Orchestrate complete text reference saving workflow.
+        
+        Controller coordinates: Save Reference → Create Processed Versions (if requested)
+        
+        Args:
+            text: Reference text
+            reference_name: Name for reference
+            model: Device model
+            area: Area where text was found
+            font_size: Font size
+            confidence: Detection confidence
+            create_processed_versions: Whether to create processed versions
+            
+        Returns:
+            dict: Save operation results
+        """
+        try:
+            # Step 1: Save basic text reference (Save library)
+            saved_path = self._save_text_reference(
+                text, reference_name, model, area, font_size, confidence
+            )
+            
+            result = {
+                'success': bool(saved_path),
+                'reference_path': saved_path,
+                'text': text,
+                'reference_name': reference_name,
+                'model': model
+            }
+            
+            # Step 2: Create processed versions if requested
+            if create_processed_versions and saved_path:
+                # Could add additional processing steps here
+                # For example: create different text formats, validations, etc.
+                print(f"[@controller:TextVerification] Created processed versions for text reference")
+                result['processed_versions_created'] = True
+            
+            return result
+            
+        except Exception as e:
+            print(f"[@controller:TextVerification] Error in text reference save workflow: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+    # =============================================================================
+    # Path Resolution Methods (Using Centralized Utilities)
+    # =============================================================================
+
+    def _get_captures_path(self) -> str:
+        """Get the captures directory path using centralized device configuration."""
+        host_info = self._get_host_info()
+        device_id = self._get_device_id()
+        return get_device_local_captures_path(host_info, device_id)
+
+    def _build_image_url(self, local_path: str) -> str:
+        """Build URL for accessing images using centralized URL builder."""
+        host_info = self._get_host_info()
+        return buildHostImageUrl(host_info, local_path)
+
+    def _build_cropped_preview_url(self, filename: str) -> str:
+        """Build URL for accessing cropped preview images using centralized URL builder."""
+        host_info = self._get_host_info()
+        device_id = self._get_device_id()
+        return buildCroppedImageUrl(host_info, filename, device_id)
 
     def waitForTextToAppear(self, text: str, timeout: float = 10.0, case_sensitive: bool = False, 
                            area: dict = None, image_list: List[str] = None, model: str = None,
@@ -255,9 +423,9 @@ class TextVerificationController(
                 "parameters": ["text", "timeout", "case_sensitive", "area", "image_filter"]
             },
             {
-                "type": "text_language_detection",
-                "name": "Detect Text Language",
-                "description": "Detect the language of text in an image",
+                "type": "text_detection",
+                "name": "Detect Text",
+                "description": "Detect and extract text from an image",
                 "parameters": ["image_path"]
             }
         ]
@@ -380,9 +548,11 @@ class TextVerificationController(
         """
         return self._save_text_reference(text, reference_name, model, area, font_size, confidence)
 
-    def auto_detect_text(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+    def detect_text(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Auto-detect text in an image with language detection and enhancement.
+        Detect text in an image with language detection and enhancement.
+        
+        Uses controller orchestration to coordinate OCR → Language Detection → Filtering.
         
         Args:
             request_data: Request containing image path and parameters
@@ -394,6 +564,7 @@ class TextVerificationController(
             image_path = request_data.get('image_path')
             area = request_data.get('area')
             enhance_image = request_data.get('enhance_image', False)
+            apply_filters = request_data.get('apply_filters', False)
             
             if not image_path or not os.path.exists(image_path):
                 return {
@@ -401,54 +572,48 @@ class TextVerificationController(
                     'message': 'Invalid or missing image path'
                 }
             
-            # Extract text from area or full image
-            extracted_text, temp_path = self._extract_text_from_area(image_path, area)
+            # Use controller orchestration for complete workflow
+            detection_result = self._detect_and_process_text(
+                image_path=image_path,
+                area=area,
+                include_language_detection=True,
+                apply_filters=apply_filters
+            )
             
-            if not extracted_text:
+            # Check if detection was successful
+            if not detection_result.get('extracted_text'):
                 return {
                     'success': False,
                     'message': 'No text detected in image',
                     'extracted_text': '',
-                    'temp_image_path': temp_path
+                    'temp_image_path': detection_result.get('temp_image_path')
                 }
             
-            # Detect language
-            primary_lang, primary_conf, secondary_lang, secondary_conf = self._detect_text_language(
-                temp_path or image_path
-            )
-            
-            # Build result
+            # Build successful result
             result = {
                 'success': True,
-                'extracted_text': extracted_text,
-                'character_count': len(extracted_text),
-                'word_count': len(extracted_text.split()),
-                'primary_language': primary_lang,
-                'primary_language_name': self._get_language_name(primary_lang),
-                'primary_confidence': primary_conf,
-                'secondary_language': secondary_lang,
-                'secondary_confidence': secondary_conf,
-                'tesseract_language': self._convert_to_tesseract_lang(primary_lang),
-                'temp_image_path': temp_path,
-                'area': area
+                **detection_result  # Include all orchestrated results
             }
             
             # Add image URL for display
+            temp_path = detection_result.get('temp_image_path')
             if temp_path:
                 result['temp_image_url'] = self._build_image_url(temp_path)
             
             return result
             
         except Exception as e:
-            print(f"[@controller:TextVerification] Error in auto_detect_text: {e}")
+            print(f"[@controller:TextVerification] Error in detect_text: {e}")
             return {
                 'success': False,
                 'message': f'Text detection failed: {str(e)}'
             }
 
-    def save_text_reference_from_request(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
+    def save_text(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Save a text reference from request data.
+        
+        Uses controller orchestration to coordinate Save → Process (if requested).
         
         Args:
             request_data: Request containing reference details
@@ -463,6 +628,7 @@ class TextVerificationController(
             area = request_data.get('area', {})
             font_size = request_data.get('font_size', 12.0)
             confidence = request_data.get('confidence', 0.8)
+            create_processed_versions = request_data.get('create_processed_versions', False)
             
             if not text or not reference_name:
                 return {
@@ -470,28 +636,36 @@ class TextVerificationController(
                     'message': 'Text and reference name are required'
                 }
             
-            # Save the reference
-            saved_path = self.save_text_reference(
-                text, reference_name, model, area, font_size, confidence
+            # Use controller orchestration for complete workflow
+            save_result = self._save_and_process_text_reference(
+                text=text,
+                reference_name=reference_name,
+                model=model,
+                area=area,
+                font_size=font_size,
+                confidence=confidence,
+                create_processed_versions=create_processed_versions
             )
             
-            if saved_path:
+            # Format response message
+            if save_result.get('success'):
+                message = f'Text reference "{reference_name}" saved successfully'
+                if save_result.get('processed_versions_created'):
+                    message += ' with processed versions'
+                
                 return {
                     'success': True,
-                    'message': f'Text reference "{reference_name}" saved successfully',
-                    'reference_path': saved_path,
-                    'text': text,
-                    'reference_name': reference_name,
-                    'model': model
+                    'message': message,
+                    **save_result  # Include all orchestrated results
                 }
             else:
                 return {
                     'success': False,
-                    'message': 'Failed to save text reference'
+                    'message': save_result.get('error', 'Failed to save text reference')
                 }
                 
         except Exception as e:
-            print(f"[@controller:TextVerification] Error saving text reference: {e}")
+            print(f"[@controller:TextVerification] Error in save_text: {e}")
             return {
                 'success': False,
                 'message': f'Failed to save reference: {str(e)}'

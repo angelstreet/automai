@@ -10,14 +10,14 @@ from src.utils.host_utils import get_controller, get_device_by_id
 # Create blueprint
 verification_text_host_bp = Blueprint('verification_text_host', __name__, url_prefix='/host/verification/text')
 
-@verification_text_host_bp.route('/auto-detect-text', methods=['POST'])
-def text_auto_detect():
+@verification_text_host_bp.route('/detect-text', methods=['POST'])
+def detect_text():
     """Auto-detect text elements in the current screen"""
     try:
         data = request.get_json() or {}
         device_id = data.get('device_id', 'device1')
         
-        print(f"[@route:host_text_auto_detect] Text auto-detection request for device: {device_id}")
+        print(f"[@route:host_detect_text] Text detection request for device: {device_id}")
         
         # Get text verification controller for the specified device
         text_controller = get_controller(device_id, 'verification_text')
@@ -37,24 +37,24 @@ def text_auto_detect():
             }), 404
         
         # Controller handles everything
-        result = text_controller.auto_detect_text(data)
+        result = text_controller.detect_text(data)
         return jsonify(result)
         
     except Exception as e:
-        print(f"[@route:host_text_auto_detect] Error: {str(e)}")
+        print(f"[@route:host_detect_text] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Text auto-detection error: {str(e)}'
+            'error': f'Text detection error: {str(e)}'
         }), 500
 
-@verification_text_host_bp.route('/save-text-reference', methods=['POST'])
-def save_text_resource():
+@verification_text_host_bp.route('/save-text', methods=['POST'])
+def save_text():
     """Save text verification reference"""
     try:
         data = request.get_json() or {}
         device_id = data.get('device_id', 'device1')
         
-        print(f"[@route:host_save_text_resource] Save text reference request for device: {device_id}")
+        print(f"[@route:host_save_text] Save text request for device: {device_id}")
         
         text_controller = get_controller(device_id, 'verification_text')
         
@@ -72,14 +72,14 @@ def save_text_resource():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
-        result = text_controller.save_text_reference_from_request(data)
+        result = text_controller.save_text(data)
         return jsonify(result)
         
     except Exception as e:
-        print(f"[@route:host_save_text_resource] Error: {str(e)}")
+        print(f"[@route:host_save_text] Error: {str(e)}")
         return jsonify({
             'success': False,
-            'error': f'Text reference save error: {str(e)}'
+            'error': f'Text save error: {str(e)}'
         }), 500
 
 @verification_text_host_bp.route('/execute', methods=['POST'])

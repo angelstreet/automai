@@ -1,65 +1,15 @@
 """
 Text Verification Utilities 
 
-Provides shared utilities for path handling, URL building, and common operations.
+Provides shared utilities for text processing and language operations.
+Domain-specific utilities only - no URL building or path resolution.
 """
 
-import os
 from typing import Dict, Any
 
 
 class TextUtils:
-    """ providing utility functions for text verification operations."""
-    
-    def _get_captures_path(self, host_info: Dict[str, Any], device_id: str) -> str:
-        """Get the captures directory path for a host and device."""
-        return os.path.join(
-            os.getcwd(),
-            "virtualpytest", 
-            "captures",
-            host_info.get('friendly_name', 'unknown_host'),
-            device_id or 'unknown_device'
-        )
-    
-    def _build_cropped_preview_url(self, host_info: Dict[str, Any], filename: str, device_id: str) -> str:
-        """Build URL for accessing cropped preview images."""
-        host_instance = f"{host_info.get('host', 'localhost')}:{host_info.get('port', 8000)}"
-        return f"http://{host_instance}/captures/{device_id}/{filename}"
-    
-    def _build_image_url(self, local_path: str) -> str:
-        """
-        Build URL for accessing images from local path.
-        
-        Args:
-            local_path: Local file path to the image
-            
-        Returns:
-            str: URL for accessing the image
-        """
-        try:
-            # Convert absolute path to relative URL path
-            if '/var/www/html/stream/' in local_path:
-                # Extract the part after /var/www/html/stream/
-                url_path = local_path.split('/var/www/html/stream/')[-1]
-                
-                # Get host instance
-                host_instance = self._get_host_instance()
-                
-                return f"http://{host_instance}/stream/{url_path}"
-            else:
-                # For other paths, use the filename with captures
-                filename = os.path.basename(local_path)
-                host_instance = self._get_host_instance()
-                return f"http://{host_instance}/captures/{filename}"
-                
-        except Exception as e:
-            print(f"[@text_utils] Error building image URL: {e}")
-            return local_path  # Fallback to local path
-    
-    def _get_host_instance(self) -> str:
-        """Get host instance for URL building."""
-        # This would be injected from request context in real implementation
-        return "localhost:8000"
+    """Providing utility functions for text verification operations."""
     
     def _get_language_name(self, language_code: str) -> str:
         """Convert language code to readable name."""
