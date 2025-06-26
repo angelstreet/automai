@@ -640,6 +640,7 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
                 bgcolor: saveSuccess ? '#4caf50' : pendingSave ? '#666' : '#4caf50',
                 fontSize: '0.75rem',
                 color: saveSuccess ? '#fff' : pendingSave ? 'rgba(255,255,255,0.7)' : '#fff',
+                fontWeight: saveSuccess ? 'bold' : 'normal',
                 '&:hover': {
                   bgcolor: saveSuccess ? '#4caf50' : pendingSave ? '#666' : '#45a049',
                 },
@@ -648,6 +649,8 @@ export const VerificationCapture: React.FC<VerificationCaptureProps> = ({
                   color: 'rgba(255,255,255,0.3)',
                 },
                 transition: 'all 0.3s ease',
+                minWidth: '80px', // Ensure consistent width
+                boxShadow: saveSuccess ? '0 0 8px rgba(76, 175, 80, 0.6)' : 'none',
               }}
             >
               {saveSuccess ? '✓ Saved!' : pendingSave ? 'Saving...' : 'Save'}

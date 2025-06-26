@@ -318,11 +318,13 @@ export const useVerificationEditor = ({
           setHasCaptured(false);
           setReferenceSaveCounter((prev) => prev + 1);
           setSaveSuccess(true);
+          console.log('[@hook:useVerificationEditor] ✅ SUCCESS STATE SET TO TRUE');
 
-          // Clear success state after 2 seconds
+          // Clear success state after 3 seconds (increased from 2)
           setTimeout(() => {
             setSaveSuccess(false);
-          }, 2000);
+            console.log('[@hook:useVerificationEditor] ⏰ SUCCESS STATE CLEARED AFTER 3s');
+          }, 3000);
         } else {
           console.error(
             '[@hook:useVerificationEditor] Failed to save text reference:',
@@ -407,10 +409,10 @@ export const useVerificationEditor = ({
           setReferenceSaveCounter((prev) => prev + 1);
           setSaveSuccess(true);
 
-          // Clear success state after 2 seconds
+          // Clear success state after 3 seconds (increased from 2)
           setTimeout(() => {
             setSaveSuccess(false);
-          }, 2000);
+          }, 3000);
         } else {
           console.error(
             '[@hook:useVerificationEditor] Failed to save reference to database:',
