@@ -149,8 +149,6 @@ export const useVerificationEditor = ({
   // Handle capture reference
   const handleCaptureReference = useCallback(async () => {
     if (!selectedArea || !captureSourcePath) {
-      verification.setSuccessMessage(null);
-      // Use verification's error state through a custom handler if needed
       console.error('[@hook:useVerificationEditor] Please select an area on the screenshot first');
       return;
     }
@@ -259,7 +257,6 @@ export const useVerificationEditor = ({
     referenceType,
     imageProcessingOptions,
     _onAreaSelected,
-    verification,
     deviceModel,
   ]);
 
@@ -360,7 +357,10 @@ export const useVerificationEditor = ({
 
         const result = await response.json();
         if (result.success) {
-          verification.setSuccessMessage(`Reference "${referenceName}" saved successfully`);
+          console.log(
+            '[@hook:useVerificationEditor] Text reference saved successfully:',
+            referenceName,
+          );
           setReferenceName('');
           setCapturedReferenceImage(null);
           setHasCaptured(false);
@@ -394,8 +394,11 @@ export const useVerificationEditor = ({
         const result = await response.json();
 
         if (result.success) {
-          console.log('[@hook:useVerificationEditor] Reference saved successfully:', result);
-          verification.setSuccessMessage(`Reference "${referenceName}" saved successfully`);
+          console.log(
+            '[@hook:useVerificationEditor] Image reference saved successfully:',
+            referenceName,
+            result,
+          );
           // Don't clear UI state - keep the captured image and name for user reference
           // Only increment counter to refresh reference list
           setReferenceSaveCounter((prev) => prev + 1);
@@ -420,7 +423,6 @@ export const useVerificationEditor = ({
     referenceType,
     referenceText,
     imageProcessingOptions,
-    verification,
     deviceModel,
   ]);
 
@@ -466,16 +468,16 @@ export const useVerificationEditor = ({
         console.log('[@hook:useVerificationEditor] Text auto-detection successful:', result);
 
         setDetectedTextData({
-          text: result.detected_text || '',
+          text: result.extracted_text || '',
           fontSize: result.font_size || 0,
           confidence: result.confidence || 0,
-          detectedLanguage: result.detected_language,
+          detectedLanguage: result.language || result.detected_language,
           detectedLanguageName: result.detected_language_name,
           languageConfidence: result.language_confidence,
         });
 
         // Pre-fill the text input with detected text
-        setReferenceText(result.detected_text || '');
+        setReferenceText(result.extracted_text || '');
 
         // Mark as captured
         setHasCaptured(true);
