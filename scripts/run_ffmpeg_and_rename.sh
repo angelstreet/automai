@@ -3,9 +3,6 @@
 # Configuration array for four grabbers
 declare -A GRABBERS=(
   ["0"]="/dev/video0:/var/www/html/stream/capture1"
-  ["1"]="/dev/video2:/var/www/html/stream/capture2"
-  ["2"]="/dev/video4:/var/www/html/stream/capture3"
-  ["3"]="/dev/video6:/var/www/html/stream/capture4"
 )
 
 # Function to kill existing processes for a specific grabber (simplified like older script)

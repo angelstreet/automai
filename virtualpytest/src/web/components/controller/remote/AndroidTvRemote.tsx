@@ -11,8 +11,12 @@ interface AndroidTvRemoteProps {
   onDisconnectComplete?: () => void;
   sx?: any;
   isCollapsed: boolean;
-  panelWidth: string;
-  panelHeight: string;
+  streamContainerDimensions?: {
+    width: number;
+    height: number;
+    x: number;
+    y: number;
+  };
 }
 
 export const AndroidTvRemote = React.memo(
@@ -23,8 +27,7 @@ export const AndroidTvRemote = React.memo(
     onDisconnectComplete,
     sx = {},
     isCollapsed,
-    panelWidth: _panelWidth,
-    panelHeight: _panelHeight,
+    streamContainerDimensions,
   }: AndroidTvRemoteProps) {
     const {
       session,
@@ -59,15 +62,32 @@ export const AndroidTvRemote = React.memo(
 
     // Calculate responsive remote scale based on available space
     const calculateRemoteScale = () => {
-      // Base remote dimensions
+      // Base remote dimensions from config
       const baseHeight = 1800;
 
-      // First calculate the expanded scale (window-based)
-      const availableHeight = window.innerHeight - 120; // Reserve space for disconnect button
-      const expandedScale = availableHeight / baseHeight;
+      // Determine available height based on context
+      let availableHeight: number;
+
+      if (streamContainerDimensions) {
+        // Modal context: use the modal's stream container height
+        // Reserve space for disconnect button (60px) and some padding
+        availableHeight = streamContainerDimensions.height - 120;
+        console.log(
+          `[@component:AndroidTvRemote] Using modal container height: ${streamContainerDimensions.height}, available: ${availableHeight}`,
+        );
+      } else {
+        // Floating panel context: use window height
+        availableHeight = window.innerHeight - 120; // Reserve space for disconnect button
+        console.log(
+          `[@component:AndroidTvRemote] Using window height: ${window.innerHeight}, available: ${availableHeight}`,
+        );
+      }
+
+      // Calculate the base scale from available height
+      const baseScale = availableHeight / baseHeight;
 
       if (isCollapsed) {
-        // For collapsed state, apply panel ratio reduction to the expanded scale
+        // For collapsed state, apply panel ratio reduction to the base scale
         const collapsedHeight = parseInt(
           layoutConfig.panel_layout.collapsed.height.replace('px', ''),
           10,
@@ -92,11 +112,13 @@ export const AndroidTvRemote = React.memo(
         // Use the smaller ratio to ensure remote fits in collapsed panel
         const panelReductionRatio = Math.min(heightRatio, widthRatio);
 
-        // Apply the reduction ratio to the expanded scale
-        const collapsedScale = expandedScale * panelReductionRatio;
+        // Apply the reduction ratio to the base scale
+        const collapsedScale = baseScale * panelReductionRatio;
 
         console.log(`[@component:AndroidTvRemote] Collapsed scale calculation:`, {
-          expandedScale,
+          context: streamContainerDimensions ? 'modal' : 'floating',
+          availableHeight,
+          baseScale,
           panelReductionRatio,
           collapsedScale,
           collapsedDimensions: { width: collapsedWidth, height: collapsedHeight },
@@ -106,8 +128,14 @@ export const AndroidTvRemote = React.memo(
         return collapsedScale;
       }
 
-      // For expanded state, use original window-based scaling (unchanged)
-      return expandedScale;
+      // For expanded state, use the base scale calculated from available height
+      console.log(`[@component:AndroidTvRemote] Expanded scale calculation:`, {
+        context: streamContainerDimensions ? 'modal' : 'floating',
+        availableHeight,
+        baseScale,
+      });
+
+      return baseScale;
     };
 
     const remoteScale = calculateRemoteScale();
@@ -295,8 +323,8 @@ export const AndroidTvRemote = React.memo(
       prevProps.onDisconnectComplete === nextProps.onDisconnectComplete &&
       JSON.stringify(prevProps.sx) === JSON.stringify(nextProps.sx) &&
       prevProps.isCollapsed === nextProps.isCollapsed &&
-      prevProps.panelWidth === nextProps.panelWidth &&
-      prevProps.panelHeight === nextProps.panelHeight
+      JSON.stringify(prevProps.streamContainerDimensions) ===
+        JSON.stringify(nextProps.streamContainerDimensions)
     );
   },
 );

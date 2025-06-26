@@ -56,7 +56,6 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
   verificationResults,
   verificationPassCondition,
   lastVerifiedNodeId,
-  nodes,
   selectedNode,
   selectedEdge,
   onReleaseControl,
@@ -195,7 +194,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
           </Box>
           <VerificationResultsDisplay
             results={verificationResults}
-            passCondition={verificationPassCondition}
+            passCondition={verificationPassCondition as 'all' | 'any' | undefined}
             onSetPassCondition={onSetVerificationPassCondition}
           />
         </Box>
@@ -209,7 +208,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
         isRemotePanelOpen && (
           <>
             {/* Android Mobile Remote - Special handling for mobile devices with AV overlay */}
-            {remoteConfig.type === 'android_mobile' && hasAVCapabilities ? (
+            {remoteConfig?.type === 'android_mobile' && hasAVCapabilities ? (
               <AndroidMobileRemote
                 host={selectedHost}
                 deviceId={selectedDeviceId}
@@ -250,13 +249,13 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                   }}
                 >
                   <Typography variant="h6" component="div">
-                    {remoteConfig.type === 'android_tv'
+                    {remoteConfig?.type === 'android_tv'
                       ? 'Android TV Remote'
-                      : remoteConfig.type === 'ir_remote'
+                      : remoteConfig?.type === 'ir_remote'
                         ? 'IR Remote'
-                        : remoteConfig.type === 'bluetooth_remote'
+                        : remoteConfig?.type === 'bluetooth_remote'
                           ? 'Bluetooth Remote'
-                          : `${remoteConfig.device_name} Remote`}
+                          : `${remoteConfig?.device_name} Remote`}
                   </Typography>
                   <IconButton onClick={onReleaseControl} size="small">
                     <CloseIcon />
@@ -267,7 +266,7 @@ export const NavigationEditorDeviceControl: React.FC<NavigationEditorDeviceContr
                 <RemotePanel
                   host={selectedHost}
                   deviceId={selectedDeviceId}
-                  deviceModel={remoteConfig.type}
+                  deviceModel={remoteConfig?.type || 'unknown'}
                   isConnected={isControlActive}
                   onReleaseControl={onReleaseControl}
                   initialCollapsed={false}

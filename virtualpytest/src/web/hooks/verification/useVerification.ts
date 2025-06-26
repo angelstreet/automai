@@ -77,20 +77,6 @@ export const useVerification = ({
         '[@hook:useVerification] No verification types available in device data - using empty object',
       );
       setAvailableVerificationTypes({});
-      // Don't show error for missing verification types - they're optional
-    }
-  }, [selectedHost, deviceId]);
-
-  // Effect to check if selectedHost and deviceId are provided
-  useEffect(() => {
-    const device = selectedHost?.devices?.find((d) => d.device_id === deviceId);
-    if (!selectedHost || !deviceId || !device?.model || device.model.trim() === '') {
-      console.error(
-        '[@hook:useVerification] Host, device ID, and device with model are required but not provided',
-      );
-      setError('Host, device ID, and device with model are required for verification');
-    } else {
-      console.log(`[@hook:useVerification] Using model: ${device.model}`);
     }
   }, [selectedHost, deviceId]);
 
@@ -221,7 +207,7 @@ export const useVerification = ({
 
         const batchPayload = {
           verifications: validVerifications, // Use filtered verifications
-          model: device?.model || 'unknown',
+          model: device?.device_model || 'unknown',
           node_id: 'verification-editor',
           tree_id: 'verification-tree',
           capture_filename: capture_filename, // Send specific capture filename
