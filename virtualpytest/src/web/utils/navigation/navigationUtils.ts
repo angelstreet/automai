@@ -201,10 +201,3 @@ function sanitizeEdge(edge: any): any {
     data: edge.data || {},
   };
 }
-
-/**
- * Execute edge actions sequentially with retry logic
- */
-// ✅ REMOVED: executeEdgeActions function - replaced with batch API calls
-// This function was using local controller proxies which are not available in all contexts
-// Both EdgeEditDialog and EdgeSelectionPanel now use /server/actions/batch/execute endpoint
