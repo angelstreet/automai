@@ -63,24 +63,20 @@ def execute_adb_verification():
         # Execute based on command type
         if command == 'waitForElementToAppear':
             search_term = params.get('search_term', '')
-            timeout = params.get('timeout', 10.0)
-            check_interval = params.get('check_interval', 0.0)
+            timeout = params.get('timeout', 0.0)
             
             success, message, result_data = adb_controller.waitForElementToAppear(
                 search_term=search_term,
-                timeout=timeout,
-                check_interval=check_interval
+                timeout=timeout
             )
             
         elif command == 'waitForElementToDisappear':
             search_term = params.get('search_term', '')
-            timeout = params.get('timeout', 10.0)
-            check_interval = params.get('check_interval', 1.0)
+            timeout = params.get('timeout', 0.0)
             
             success, message, result_data = adb_controller.waitForElementToDisappear(
                 search_term=search_term,
-                timeout=timeout,
-                check_interval=check_interval
+                timeout=timeout
             )
             
         else:
@@ -117,8 +113,7 @@ def wait_for_element_to_appear():
         # Get request data
         data = request.get_json() or {}
         search_term = data.get('search_term')
-        timeout = data.get('timeout', 10.0)
-        check_interval = data.get('check_interval', 1.0)
+        timeout = data.get('timeout', 0.0)
         device_id = data.get('device_id', 'device1')
         
         # Validate required parameters
@@ -147,8 +142,7 @@ def wait_for_element_to_appear():
         # Execute the verification
         success, message, result_data = adb_controller.waitForElementToAppear(
             search_term=search_term,
-            timeout=timeout,
-            check_interval=check_interval
+            timeout=timeout
         )
         
         return jsonify({
@@ -176,8 +170,7 @@ def wait_for_element_to_disappear():
         # Get request data
         data = request.get_json() or {}
         search_term = data.get('search_term')
-        timeout = data.get('timeout', 10.0)
-        check_interval = data.get('check_interval', 1.0)
+        timeout = data.get('timeout', 0.0)
         device_id = data.get('device_id', 'device1')
         
         # Validate required parameters
@@ -206,8 +199,7 @@ def wait_for_element_to_disappear():
         # Execute the verification
         success, message, result_data = adb_controller.waitForElementToDisappear(
             search_term=search_term,
-            timeout=timeout,
-            check_interval=check_interval
+            timeout=timeout
         )
         
         return jsonify({

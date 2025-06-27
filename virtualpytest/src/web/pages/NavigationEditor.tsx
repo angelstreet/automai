@@ -277,8 +277,18 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
 
     // Centralized verification references management
     const [referenceSaveCounter, setReferenceSaveCounter] = useState<number>(0);
-    const { availableReferences, referencesLoading, getModelReferences } =
+    const { availableReferences, referencesLoading, getModelReferences, fetchAvailableReferences } =
       useVerificationReferences(referenceSaveCounter, stableSelectedHost);
+
+    // Fetch verification references when control becomes active
+    useEffect(() => {
+      if (isControlActive && stableSelectedHost) {
+        console.log(
+          '[@component:NavigationEditor] Control is active, fetching verification references',
+        );
+        fetchAvailableReferences();
+      }
+    }, [isControlActive, stableSelectedHost, fetchAvailableReferences]);
 
     // Memoize model references for current device to prevent unnecessary re-renders
     const currentModelReferences = useMemo(() => {
@@ -324,6 +334,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           ? stableSelectedHost?.devices?.find((d) => d.device_id === selectedDeviceId)
               ?.device_model || stableSelectedHost?.device_model
           : undefined,
+        isControlActive,
         onCollapsedChange: handleAVPanelCollapsedChange,
         onMinimizedChange: handleAVPanelMinimizedChange,
         onCaptureModeChange: handleCaptureModeChange,
@@ -331,6 +342,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       [
         stableSelectedHost,
         selectedDeviceId,
+        isControlActive,
         handleAVPanelCollapsedChange,
         handleAVPanelMinimizedChange,
         handleCaptureModeChange,

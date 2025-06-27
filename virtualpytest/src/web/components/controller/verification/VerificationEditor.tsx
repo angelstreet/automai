@@ -32,6 +32,7 @@ interface VerificationEditorProps {
   onAreaSelected?: (area: DragArea) => void;
   onClearSelection?: () => void;
   isCaptureActive: boolean;
+  isControlActive?: boolean;
   layoutConfig?: VerificationEditorLayoutConfig;
   sx?: any;
 }
@@ -46,6 +47,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
     onAreaSelected,
     onClearSelection,
     isCaptureActive,
+    isControlActive = false,
     layoutConfig,
     sx = {},
   }) => {
@@ -83,6 +85,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
       onAreaSelected,
       onClearSelection,
       isCaptureActive,
+      isControlActive,
     });
 
     // Debug logging for component mount/unmount
@@ -244,6 +247,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
     const selectedAreaChanged =
       JSON.stringify(prevProps.selectedArea) !== JSON.stringify(nextProps.selectedArea);
     const isCaptureActiveChanged = prevProps.isCaptureActive !== nextProps.isCaptureActive;
+    const isControlActiveChanged = prevProps.isControlActive !== nextProps.isControlActive;
     const layoutConfigChanged =
       JSON.stringify(prevProps.layoutConfig) !== JSON.stringify(nextProps.layoutConfig);
     const sxChanged = JSON.stringify(prevProps.sx) !== JSON.stringify(nextProps.sx);
@@ -258,6 +262,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
       captureSourcePathChanged ||
       selectedAreaChanged ||
       isCaptureActiveChanged ||
+      isControlActiveChanged ||
       layoutConfigChanged ||
       sxChanged ||
       onAreaSelectedChanged ||
@@ -271,6 +276,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
         captureSourcePathChanged,
         selectedAreaChanged,
         isCaptureActiveChanged,
+        isControlActiveChanged,
         layoutConfigChanged,
         sxChanged,
         onAreaSelectedChanged,

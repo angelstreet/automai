@@ -40,15 +40,13 @@ export interface TextVerificationParams {
 // ADB verification parameters
 export interface AdbVerificationParams {
   search_term: string; // Required: element search term
-  timeout?: number; // Optional: timeout in seconds, default 10.0
-  check_interval?: number; // Optional: check interval in seconds, default 1.0
+  timeout?: number; // Optional: timeout in seconds, default 0.0 (single check)
 }
 
 // Appium verification parameters
 export interface AppiumVerificationParams {
   search_term: string; // Required: element search term
-  timeout?: number; // Optional: timeout in seconds, default 10.0
-  check_interval?: number; // Optional: check interval in seconds, default 1.0
+  timeout?: number; // Optional: timeout in seconds, default 0.0 (single check)
 }
 
 // Audio verification parameters

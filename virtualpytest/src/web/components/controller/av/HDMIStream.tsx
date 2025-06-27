@@ -27,6 +27,7 @@ interface HDMIStreamProps {
   host: Host;
   deviceId: string;
   deviceModel?: string;
+  isControlActive?: boolean;
   onCollapsedChange?: (isCollapsed: boolean) => void;
   onMinimizedChange?: (isMinimized: boolean) => void;
   onCaptureModeChange?: (mode: 'stream' | 'screenshot' | 'video') => void;
@@ -38,6 +39,7 @@ export const HDMIStream = React.memo(
     host,
     deviceId,
     deviceModel,
+    isControlActive = false,
     onCollapsedChange,
     onMinimizedChange,
     onCaptureModeChange,
@@ -546,6 +548,7 @@ export const HDMIStream = React.memo(
               onClearSelection={() => handleAreaSelected({ x: 0, y: 0, width: 0, height: 0 })}
               selectedHost={host}
               selectedDeviceId={deviceId}
+              isControlActive={isControlActive}
               sx={{
                 width: '100%',
                 height: '100%',

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 
@@ -42,6 +42,7 @@ interface UseVerificationEditorProps {
   onAreaSelected?: (area: DragArea) => void;
   onClearSelection?: () => void;
   isCaptureActive?: boolean;
+  isControlActive?: boolean; // Add control state to trigger reference fetching
 }
 
 export const useVerificationEditor = ({
@@ -53,6 +54,7 @@ export const useVerificationEditor = ({
   onAreaSelected: _onAreaSelected,
   onClearSelection: _onClearSelection,
   isCaptureActive,
+  isControlActive = false, // Default to false if not provided
 }: UseVerificationEditorProps) => {
   // Get the selected device from the host's devices array
   const selectedDevice = useMemo(() => {
@@ -86,6 +88,16 @@ export const useVerificationEditor = ({
   const modelReferences = useMemo(() => {
     return getModelReferences(deviceModel || '');
   }, [getModelReferences, deviceModel]);
+
+  // Fetch references when control becomes active
+  useEffect(() => {
+    if (isControlActive && selectedHost) {
+      console.log(
+        '[@hook:useVerificationEditor] Control is active, fetching verification references',
+      );
+      fetchAvailableReferences();
+    }
+  }, [isControlActive, selectedHost, fetchAvailableReferences]);
 
   // State for reference type and details
   const [referenceText, setReferenceText] = useState<string>('');

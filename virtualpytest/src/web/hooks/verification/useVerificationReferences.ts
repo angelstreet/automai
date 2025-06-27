@@ -183,9 +183,16 @@ export const useVerificationReferences = (
     [availableReferences],
   );
 
-  // Fetch references on mount and when reload trigger changes
+  // REMOVED: Automatic fetching on mount - now only fetch when explicitly called
+  // We only fetch when reloadTrigger changes (e.g., after saving a new reference)
   useEffect(() => {
-    fetchAvailableReferences();
+    if (reloadTrigger > 0) {
+      console.log(
+        '[@hook:useVerificationReferences] Reload trigger changed, fetching references:',
+        reloadTrigger,
+      );
+      fetchAvailableReferences();
+    }
   }, [reloadTrigger, fetchAvailableReferences]);
 
   return {
