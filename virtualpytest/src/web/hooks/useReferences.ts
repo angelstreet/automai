@@ -28,6 +28,12 @@ export const useReferences = (
   const [actionsLoading, setActionsLoading] = useState(false);
 
   const fetchAvailableReferences = useCallback(async () => {
+    if (!isControlActive) {
+      console.log('[@hook:useReferences] Control not active, skipping references fetch');
+      setAvailableReferences({});
+      return;
+    }
+
     setReferencesLoading(true);
     try {
       console.log('[@hook:useReferences] Fetching verification references...');
@@ -121,7 +127,7 @@ export const useReferences = (
     } finally {
       setReferencesLoading(false);
     }
-  }, [selectedHost]);
+  }, [selectedHost, isControlActive]);
 
   const fetchAvailableActions = useCallback(async () => {
     if (!isControlActive) {
@@ -239,38 +245,28 @@ export const useReferences = (
   );
 
   useEffect(() => {
-    if (selectedHost) {
+    if (isControlActive && selectedHost) {
       console.log(
-        '[@hook:useReferences] Selected host changed, fetching references:',
+        '[@hook:useReferences] Control active, fetching references and actions:',
         selectedHost.host_name,
       );
       fetchAvailableReferences();
-    }
-  }, [selectedHost, fetchAvailableReferences]);
-
-  useEffect(() => {
-    if (isControlActive && selectedHost) {
-      console.log(
-        '[@hook:useReferences] Control active, fetching actions:',
-        selectedHost.host_name,
-      );
       fetchAvailableActions();
     } else if (!isControlActive) {
-      console.log('[@hook:useReferences] Control lost, clearing actions');
+      console.log('[@hook:useReferences] Control lost, clearing references and actions');
+      setAvailableReferences({});
       setAvailableActions({});
     }
-  }, [isControlActive, selectedHost, fetchAvailableActions]);
+  }, [isControlActive, selectedHost, fetchAvailableReferences, fetchAvailableActions]);
 
   useEffect(() => {
-    if (reloadTrigger > 0) {
+    if (reloadTrigger > 0 && isControlActive) {
       console.log(
         '[@hook:useReferences] Reload trigger changed, fetching references and actions:',
         reloadTrigger,
       );
       fetchAvailableReferences();
-      if (isControlActive) {
-        fetchAvailableActions();
-      }
+      fetchAvailableActions();
     }
   }, [reloadTrigger, fetchAvailableReferences, fetchAvailableActions, isControlActive]);
 
