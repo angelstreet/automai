@@ -20,6 +20,7 @@ export { useUserSession } from './useUserSession';
 export { useToast } from './useToast';
 export { useVerification } from './verification/useVerification';
 export { useVerificationEditor } from './verification/useVerificationEditor';
+export { useAction } from './actions/useAction';
 export { useStreamCoordinates } from './useStreamCoordinates';
 
 // Navigation hooks

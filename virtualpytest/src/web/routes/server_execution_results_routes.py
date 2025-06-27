@@ -136,7 +136,7 @@ def get_team_stats():
 
 # Convenience endpoints for specific execution types
 @execution_results_bp.route('/server/execution-results/record-verification', methods=['POST'])
-def record_verification_result():
+def execution_results_record_verification():
     """Convenience endpoint for recording verification executions."""
     try:
         data = request.get_json()
@@ -180,11 +180,11 @@ def record_verification_result():
             return jsonify({'success': False, 'error': 'Failed to record verification'}), 500
             
     except Exception as e:
-        print(f"[@routes:execution_results:record_verification_result] Error: {str(e)}")
+        print(f"[@routes:execution_results:execution_results_record_verification] Error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @execution_results_bp.route('/server/execution-results/record-action', methods=['POST'])
-def record_action_result():
+def execution_results_record_action():
     """Convenience endpoint for recording action executions."""
     try:
         data = request.get_json()
@@ -224,5 +224,5 @@ def record_action_result():
             return jsonify({'success': False, 'error': 'Failed to record action'}), 500
             
     except Exception as e:
-        print(f"[@routes:execution_results:record_action_result] Error: {str(e)}")
+        print(f"[@routes:execution_results:execution_results_record_action] Error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500 

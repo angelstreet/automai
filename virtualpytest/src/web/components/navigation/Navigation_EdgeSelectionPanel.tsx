@@ -2,6 +2,7 @@ import { Close as CloseIcon } from '@mui/icons-material';
 import { Box, Typography, Button, IconButton, Paper, LinearProgress } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
+import { useAction } from '../../hooks/actions';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationEdge, EdgeAction, EdgeForm } from '../../types/pages/Navigation_Types';
 // ❌ REMOVED: Direct database access - using API endpoints instead
@@ -32,7 +33,12 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
     isControlActive = false,
     selectedHost,
   }) => {
-    const [isRunning, setIsRunning] = useState(false);
+    // Use centralized action hook
+    const actionHook = useAction({
+      selectedHost: selectedHost || null,
+      deviceId: undefined, // EdgeSelectionPanel doesn't have specific device selection
+    });
+
     const [runResult, setRunResult] = useState<string | null>(null);
     // ❌ REMOVED: Local action updates for confidence tracking
 
@@ -73,7 +79,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
     const actions = getActions();
     const retryActions = getRetryActions();
     const hasActions = actions.length > 0;
-    const canRunActions = isControlActive && selectedHost && hasActions && !isRunning;
+    const canRunActions = isControlActive && selectedHost && hasActions && !actionHook.loading;
 
     // Clear run results when edge selection changes
     useEffect(() => {
@@ -109,65 +115,38 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
 
     // ❌ REMOVED: Action result updates moved to database
 
-    // Execute all edge actions using batch API (same as EdgeEditDialog)
+    // Execute all edge actions using centralized hook
     const handleRunActions = async () => {
       if (actions.length === 0) {
         console.log('[@component:EdgeSelectionPanel] No actions to run');
         return;
       }
 
-      setIsRunning(true);
+      if (actionHook.loading) {
+        console.log(
+          '[@component:EdgeSelectionPanel] Execution already in progress, ignoring duplicate request',
+        );
+        return;
+      }
+
       setRunResult(null);
       console.log(
         `[@component:EdgeSelectionPanel] Starting batch execution of ${actions.length} actions with ${retryActions.length} retry actions`,
       );
 
       try {
-        // Use batch execution endpoint (same as EdgeEditDialog)
-        const response = await fetch('/server/actions/batch/execute', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            host: selectedHost,
-            actions: actions,
-            retry_actions: retryActions,
-            final_wait_time: selectedEdge.data?.finalWaitTime || 2000,
-          }),
-        });
+        const result = await actionHook.executeActions(
+          actions,
+          retryActions,
+          selectedEdge.data?.finalWaitTime || 2000,
+        );
 
-        const result = await response.json();
-        console.log('[@component:EdgeSelectionPanel] Batch execution result:', result);
-
-        // Process results (same format as EdgeEditDialog)
-        if (result.success !== undefined) {
-          const successMessages =
-            result.results?.filter((r: any) => r.success).map((r: any) => `✅ ${r.message}`) || [];
-
-          const failMessages =
-            result.results
-              ?.filter((r: any) => !r.success)
-              .map((r: any) => `❌ ${r.message}${r.error ? `: ${r.error}` : ''}`) || [];
-
-          const allMessages = [...successMessages, ...failMessages];
-          allMessages.push(''); // Empty line
-
-          if (result.success) {
-            allMessages.push(`✅ OVERALL RESULT: SUCCESS`);
-            allMessages.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
-          } else {
-            allMessages.push(`❌ OVERALL RESULT: FAILED`);
-            allMessages.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
-          }
-
-          setRunResult(allMessages.join('\n'));
-        } else {
-          setRunResult(`❌ Batch execution failed: ${result.error || 'Unknown error'}`);
-        }
+        // Format the result for display
+        const formattedResult = actionHook.formatExecutionResults(result);
+        setRunResult(formattedResult);
       } catch (err: any) {
         console.error('[@component:EdgeSelectionPanel] Error executing actions:', err);
         setRunResult(`❌ Network error: ${err.message}`);
-      } finally {
-        setIsRunning(false);
       }
     };
 
@@ -324,12 +303,12 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
                   !isControlActive || !selectedHost ? 'Device control required to test actions' : ''
                 }
               >
-                {isRunning ? 'Running...' : 'Run'}
+                {actionHook.loading ? 'Running...' : 'Run'}
               </Button>
             )}
 
             {/* Linear Progress - shown when running */}
-            {isRunning && <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />}
+            {actionHook.loading && <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />}
 
             {/* Run result display - with scrolling */}
             {runResult && (

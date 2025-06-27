@@ -228,7 +228,7 @@ export const useVerification = ({
 
         console.log('[@hook:useVerification] Batch payload:', batchPayload);
 
-        const response = await fetch('/server/verification/batch/test', {
+        const response = await fetch('/server/verification/execute_batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -239,7 +239,7 @@ export const useVerification = ({
         });
 
         console.log(
-          `[@hook:useVerification] Fetching from: /server/verification/batch/test with host: ${selectedHost?.host_name} and device: ${deviceId}`,
+          `[@hook:useVerification] Fetching from: /server/verification/execute_batch with host: ${selectedHost?.host_name} and device: ${deviceId}`,
         );
 
         if (!response.ok) {

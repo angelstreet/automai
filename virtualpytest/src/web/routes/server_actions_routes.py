@@ -28,11 +28,11 @@ server_actions_bp = Blueprint('server_actions', __name__)
 # BATCH ACTION EXECUTION (MIRRORS VERIFICATION WORKFLOW)
 # =====================================================
 
-@server_actions_bp.route('/server/actions/batch/execute', methods=['POST'])
-def execute_batch_actions():
+@server_actions_bp.route('/server/action/execute_batch', methods=['POST'])
+def action_execute_batch():
     """Execute batch of actions - mirrors verification batch execution"""
     try:
-        print("[@route:server_actions:execute_batch_actions] Starting batch action execution")
+        print("[@route:server_actions:action_execute_batch] Starting batch action execution")
         
         # Get request data (same structure as verification)
         data = request.get_json() or {}
@@ -41,8 +41,8 @@ def execute_batch_actions():
         final_wait_time = data.get('final_wait_time', 2000)
         retry_actions = data.get('retry_actions', [])
         
-        print(f"[@route:server_actions:execute_batch_actions] Processing {len(actions)} main actions, {len(retry_actions)} retry actions")
-        print(f"[@route:server_actions:execute_batch_actions] Host: {host.get('host_name')}, Device: {host.get('device_model')}")
+        print(f"[@route:server_actions:action_execute_batch] Processing {len(actions)} main actions, {len(retry_actions)} retry actions")
+        print(f"[@route:server_actions:action_execute_batch] Host: {host.get('host_name')}, Device: {host.get('device_model')}")
         
         # Validate
         if not actions:
@@ -57,7 +57,7 @@ def execute_batch_actions():
         execution_order = 1
         
         # Execute main actions
-        print(f"[@route:server_actions:execute_batch_actions] Executing {len(actions)} main actions")
+        print(f"[@route:server_actions:action_execute_batch] Executing {len(actions)} main actions")
         for i, action in enumerate(actions):
             result = execute_single_action(action, host, execution_order, i+1, 'main')
             results.append(result)
@@ -74,7 +74,7 @@ def execute_batch_actions():
         # Execute retry actions if main actions failed
         main_actions_failed = passed_count < len(actions)
         if main_actions_failed and retry_actions:
-            print(f"[@route:server_actions:execute_batch_actions] Main actions failed, executing {len(retry_actions)} retry actions")
+            print(f"[@route:server_actions:action_execute_batch] Main actions failed, executing {len(retry_actions)} retry actions")
             for i, retry_action in enumerate(retry_actions):
                 result = execute_single_action(retry_action, host, execution_order, i+1, 'retry')
                 results.append(result)
@@ -90,13 +90,13 @@ def execute_batch_actions():
         
         # Record to database (like verification)
         if execution_records:
-            print(f"[@route:server_actions:execute_batch_actions] Recording {len(execution_records)} executions to database")
+            print(f"[@route:server_actions:action_execute_batch] Recording {len(execution_records)} executions to database")
             record_executions_to_database(execution_records)
         
         # Return aggregated results (same format as verification)
         overall_success = passed_count >= len(actions)  # Main actions must pass
         
-        print(f"[@route:server_actions:execute_batch_actions] Batch completed: {passed_count}/{len(actions)} main actions passed, overall success: {overall_success}")
+        print(f"[@route:server_actions:action_execute_batch] Batch completed: {passed_count}/{len(actions)} main actions passed, overall success: {overall_success}")
         
         return jsonify({
             'success': overall_success,
@@ -108,8 +108,15 @@ def execute_batch_actions():
         })
         
     except Exception as e:
-        print(f"[@route:server_actions:execute_batch_actions] Error: {str(e)}")
+        print(f"[@route:server_actions:action_execute_batch] Error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# LEGACY ROUTE - for backward compatibility during transition
+@server_actions_bp.route('/server/actions/batch/execute', methods=['POST'])
+def execute_batch_actions():
+    """LEGACY: Execute batch actions - redirects to new naming convention"""
+    print("[@route:server_actions:execute_batch_actions] LEGACY route called - redirecting to action_execute_batch")
+    return action_execute_batch()
 
 def execute_single_action(action, host, execution_order, action_number, action_category):
     """Execute single action and return standardized result"""

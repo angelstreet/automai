@@ -306,7 +306,7 @@ export const useNodeOperations = ({
                 console.log('[@hook:useNodeOperations] Using capture filename:', capture_filename);
 
                 // Step 2: Execute verification using the same pattern as the editor
-                const response = await fetch(`/server/verification/batch/execute`, {
+                const response = await fetch(`/server/verification/execute_batch`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -625,7 +625,7 @@ export const useNodeOperations = ({
         }));
 
         // Step 3: Execute verifications using the same pattern as the editor
-        const verificationResponse = await fetch('/server/verification/batch/execute', {
+        const verificationResponse = await fetch('/server/verification/execute_batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

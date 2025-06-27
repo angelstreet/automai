@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
+import { useAction } from '../../hooks/actions';
 import { Host } from '../../types/common/Host_Types';
 import type { Actions, EdgeAction } from '../../types/controller/ActionTypes';
 import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
@@ -45,12 +46,16 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     return null;
   }
 
-  const [isRunningActions, setIsRunningActions] = useState(false);
-  const [actionResult, setActionResult] = useState<string | null>(null);
+  // Use centralized action hook
+  const actionHook = useAction({
+    selectedHost: selectedHost || null,
+    deviceId: selectedDeviceId,
+  });
 
   // Local state for actions to mirror verification pattern
   const [localActions, setLocalActions] = useState<EdgeAction[]>([]);
   const [localRetryActions, setLocalRetryActions] = useState<EdgeAction[]>([]);
+  const [actionResult, setActionResult] = useState<string | null>(null);
 
   // Extract controller actions from selected device data and flatten the structure
   const controllerActions: Actions = useMemo(() => {
@@ -61,8 +66,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       return {};
     }
 
-    const rawActions = device.available_action_types || {};
-    console.log('[@component:EdgeEditDialog] Raw available_action_types from device:', rawActions);
+    const rawActions = device.device_action_types || {};
+    console.log('[@component:EdgeEditDialog] Raw device_action_types from device:', rawActions);
     console.log(
       '[@component:EdgeEditDialog] Available action types keys:',
       Object.keys(rawActions),
@@ -104,7 +109,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   }, [selectedHost?.devices, selectedDeviceId]);
 
   const canRunActions =
-    isControlActive && selectedHost && localActions.length > 0 && !isRunningActions;
+    isControlActive && selectedHost && localActions.length > 0 && !actionHook.loading;
 
   // Initialize actions from edgeForm when dialog opens (mirrors verification pattern)
   useEffect(() => {
@@ -186,65 +191,31 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const handleRunActions = async () => {
     if (!localActions || localActions.length === 0) return;
 
-    if (isRunningActions) {
+    if (actionHook.loading) {
       console.log(
         '[@component:EdgeEditDialog] Execution already in progress, ignoring duplicate request',
       );
       return;
     }
 
-    setIsRunningActions(true);
     setActionResult(null);
     console.log(
       `[@component:EdgeEditDialog] Starting batch execution of ${localActions.length} actions with ${localRetryActions.length} retry actions`,
     );
 
     try {
-      // Use batch execution endpoint (same as verification)
-      const response = await fetch('/server/actions/batch/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          host: selectedHost,
-          actions: localActions,
-          retry_actions: localRetryActions,
-          final_wait_time: edgeForm?.finalWaitTime || 2000,
-        }),
-      });
+      const result = await actionHook.executeActions(
+        localActions,
+        localRetryActions,
+        edgeForm?.finalWaitTime || 2000,
+      );
 
-      const result = await response.json();
-      console.log('[@component:EdgeEditDialog] Batch execution result:', result);
-
-      // Process results (same format as verification)
-      if (result.success !== undefined) {
-        const successMessages =
-          result.results?.filter((r: any) => r.success).map((r: any) => `✅ ${r.message}`) || [];
-
-        const failMessages =
-          result.results
-            ?.filter((r: any) => !r.success)
-            .map((r: any) => `❌ ${r.message}${r.error ? `: ${r.error}` : ''}`) || [];
-
-        const allMessages = [...successMessages, ...failMessages];
-        allMessages.push(''); // Empty line
-
-        if (result.success) {
-          allMessages.push(`✅ OVERALL RESULT: SUCCESS`);
-          allMessages.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
-        } else {
-          allMessages.push(`❌ OVERALL RESULT: FAILED`);
-          allMessages.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
-        }
-
-        setActionResult(allMessages.join('\n'));
-      } else {
-        setActionResult(`❌ Batch execution failed: ${result.error || 'Unknown error'}`);
-      }
+      // Format the result for display
+      const formattedResult = actionHook.formatExecutionResults(result);
+      setActionResult(formattedResult);
     } catch (err: any) {
       console.error('[@component:EdgeEditDialog] Error executing actions:', err);
       setActionResult(`❌ Network error: ${err.message}`);
-    } finally {
-      setIsRunningActions(false);
     }
   };
 
@@ -333,7 +304,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           disabled={!canRunActions}
           sx={{ opacity: !canRunActions ? 0.5 : 1 }}
         >
-          {isRunningActions ? 'Running...' : 'Run'}
+          {actionHook.loading ? 'Running...' : 'Run'}
         </Button>
       </DialogActions>
     </Dialog>
