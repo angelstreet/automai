@@ -48,12 +48,6 @@ if ! command -v convert >/dev/null 2>&1; then
   exit 1
 fi
 
-# Check if clock is synchronized
-if ! timedatectl | grep -q "System clock synchronized: yes"; then
-  echo "System clock not synchronized, exiting..." >> /tmp/rename.log
-  exit 1
-fi
-
 # Filter existing directories
 EXISTING_DIRS=()
 for CAPTURE_DIR in "${CAPTURE_DIRS[@]}"; do
