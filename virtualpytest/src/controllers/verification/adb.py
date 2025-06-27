@@ -205,15 +205,14 @@ class ADBVerificationController(VerificationControllerInterface):
             print(f"[@controller:ADBVerification:getElementListsWithSmartSearch] ERROR: {error_msg}")
             return False, {}, error_msg
 
-    def waitForElementToAppear(self, search_term: str, timeout: float = 10.0, check_interval: float = 0.0) -> Tuple[bool, str, Dict[str, Any]]:
+    def waitForElementToAppear(self, search_term: str, timeout: float = 0.0) -> Tuple[bool, str, Dict[str, Any]]:
         """
         Wait for an element matching search_term to appear. Supports pipe-separated terms for fallback (e.g., "BBC ONE|SRF 1|RTS 1").
         
         Args:
             search_term: The term to search for (case-insensitive, searches all attributes)
                         Can use pipe-separated terms: "text1|text2|text3"
-            timeout: Maximum time to wait in seconds (default: 10.0)
-            check_interval: Time between checks in seconds (default: 0.0 = check only once, no polling)
+            timeout: Maximum time to wait in seconds (default: 0.0 = check only once, no polling)
         
         Returns:
             Tuple of (success, message, result_data)
@@ -235,22 +234,18 @@ class ADBVerificationController(VerificationControllerInterface):
             consecutive_infrastructure_failures = 0
             max_consecutive_failures = 3  # After 3 consecutive infrastructure failures, give up
             
-            # If check_interval is 0, only check once (no polling)
-            if check_interval <= 0:
-                print(f"[@controller:ADBVerification:waitForElementToAppear] Single check mode (no polling)")
-                max_iterations = 1
-            else:
-                print(f"[@controller:ADBVerification:waitForElementToAppear] Polling mode: check every {check_interval}s")
-                max_iterations = float('inf')
+            # Initialize variables outside loop to avoid scope issues
+            found_match = False
+            successful_term = None
+            final_matches = []
+            final_error = None
             
-            iteration = 0
-            while iteration < max_iterations and time.time() - start_time < timeout:
-                iteration += 1
+            # Always do at least one check, then continue if timeout > 0
+            while True:
                 # Try each term in sequence until one succeeds
                 found_match = False
                 successful_term = None
                 final_matches = []
-                final_error = None
                 
                 for i, term in enumerate(terms):
                     if len(terms) > 1:
@@ -328,12 +323,14 @@ class ADBVerificationController(VerificationControllerInterface):
                     
                     return True, message, result_data
                 
-                # Only sleep if we're in polling mode (check_interval > 0)
-                if check_interval > 0:
-                    time.sleep(check_interval)
-                else:
-                    # In single-check mode, break after first iteration
+                # Check if we should continue polling
+                elapsed = time.time() - start_time
+                if timeout <= 0 or elapsed >= timeout:
+                    # Either single check mode (timeout=0) or timeout reached
                     break
+                
+                # Sleep before next check
+                time.sleep(1.0)  # Simple 1-second polling interval
             
             elapsed = time.time() - start_time
             message = f"Element '{search_term}' did not appear within {elapsed:.1f}s"
@@ -367,15 +364,14 @@ class ADBVerificationController(VerificationControllerInterface):
             
             return False, error_msg, result_data
 
-    def waitForElementToDisappear(self, search_term: str, timeout: float = 10.0, check_interval: float = 0.0) -> Tuple[bool, str, Dict[str, Any]]:
+    def waitForElementToDisappear(self, search_term: str, timeout: float = 0.0) -> Tuple[bool, str, Dict[str, Any]]:
         """
         Wait for an element matching search_term to disappear. Supports pipe-separated terms for fallback (e.g., "BBC ONE|SRF 1|RTS 1").
         
         Args:
             search_term: The term to search for (case-insensitive, searches all attributes)
                         Can use pipe-separated terms: "text1|text2|text3"
-            timeout: Maximum time to wait in seconds (default: 10.0)
-            check_interval: Time between checks in seconds (default: 1.0)
+            timeout: Maximum time to wait in seconds (default: 0.0 = check only once, no polling)
         
         Returns:
             Tuple of (success, message, result_data)
@@ -395,12 +391,18 @@ class ADBVerificationController(VerificationControllerInterface):
             consecutive_infrastructure_failures = 0
             max_consecutive_failures = 3  # After 3 consecutive infrastructure failures, give up
             
-            while time.time() - start_time < timeout:
+            # Initialize variables outside loop to avoid scope issues
+            any_term_found = False
+            successful_term = None
+            final_matches = []
+            final_error = None
+            
+            # Always do at least one check, then continue if timeout > 0
+            while True:
                 # Check if ANY of the terms still exist (element disappears when NONE are found)
                 any_term_found = False
                 successful_term = None
                 final_matches = []
-                final_error = None
                 
                 for i, term in enumerate(terms):
                     if len(terms) > 1:
@@ -472,7 +474,14 @@ class ADBVerificationController(VerificationControllerInterface):
                     
                     return True, message, result_data
                 
-                time.sleep(check_interval)
+                # Check if we should continue polling
+                elapsed = time.time() - start_time
+                if timeout <= 0 or elapsed >= timeout:
+                    # Either single check mode (timeout=0) or timeout reached
+                    break
+                
+                # Sleep before next check
+                time.sleep(1.0)  # Simple 1-second polling interval
             
             elapsed = time.time() - start_time
             message = f"Element '{search_term}' still present after {elapsed:.1f}s"
@@ -527,8 +536,7 @@ class ADBVerificationController(VerificationControllerInterface):
                 'command': 'waitForElementToAppear',
                 'params': {
                     'search_term': '',      # Empty string for user input
-                    'timeout': 10.0,        # Default value
-                    'check_interval': 0.0   # Default value
+                    'timeout': 0.0,         # Default: single check, no polling
                 },
                 'verification_type': 'adb'
             },
@@ -536,8 +544,7 @@ class ADBVerificationController(VerificationControllerInterface):
                 'command': 'waitForElementToDisappear',
                 'params': {
                     'search_term': '',      # Empty string for user input
-                    'timeout': 10.0,        # Default value
-                    'check_interval': 0.0   # Default value
+                    'timeout': 0.0,         # Default: single check, no polling
                 },
                 'verification_type': 'adb'
             }
@@ -582,24 +589,21 @@ class ADBVerificationController(VerificationControllerInterface):
                 }
             
             # Optional parameters with defaults
-            timeout = params.get('timeout', 10.0)
-            check_interval = params.get('check_interval', 1.0)
+            timeout = params.get('timeout', 0.0)
             
             print(f"[@controller:ADBVerification] Executing {command} with search term: '{search_term}'")
-            print(f"[@controller:ADBVerification] Parameters: timeout={timeout}, check_interval={check_interval}")
+            print(f"[@controller:ADBVerification] Parameters: timeout={timeout}")
             
             # Execute verification based on command
             if command == 'waitForElementToAppear':
                 success, message, details = self.waitForElementToAppear(
                     search_term=search_term,
-                    timeout=timeout,
-                    check_interval=check_interval
+                    timeout=timeout
                 )
             elif command == 'waitForElementToDisappear':
                 success, message, details = self.waitForElementToDisappear(
                     search_term=search_term,
-                    timeout=timeout,
-                    check_interval=check_interval
+                    timeout=timeout
                 )
             else:
                 return {
