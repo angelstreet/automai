@@ -493,9 +493,9 @@ export const useVerificationEditor = ({
         setReferenceText(result.extracted_text || '');
 
         // Display the cropped area image in the drag area (like image cropping does)
-        if (result.processed_image_url) {
+        if (result.image_url) {
           const timestamp = new Date().getTime();
-          const imageUrl = `${result.processed_image_url}?t=${timestamp}`;
+          const imageUrl = `${result.image_url}?t=${timestamp}`;
           console.log(
             '[@hook:useVerificationEditor] Text detection using cropped image URL:',
             imageUrl,

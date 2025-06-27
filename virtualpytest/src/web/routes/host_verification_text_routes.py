@@ -46,10 +46,10 @@ def detect_text():
         # If successful, create a cropped image URL like image cropping does
         if result.get('success') and result.get('processed_image_path'):
             # Build proper URL for the processed (cropped) image
-            processed_image_url = buildHostImageUrl(data.get('host', {}), result['processed_image_path'])
-            result['processed_image_url'] = processed_image_url
+            image_url = buildHostImageUrl(data.get('host', {}), result['processed_image_path'])
+            result['image_url'] = image_url
             
-            print(f"[@route:host_detect_text] Built processed image URL: {processed_image_url}")
+            print(f"[@route:host_detect_text] Built processed image URL: {image_url}")
         
         # Add device_model to response for server route (following established pattern)
         if device:

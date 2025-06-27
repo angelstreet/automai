@@ -6,6 +6,7 @@ Host-side image verification endpoints that execute using instantiated image ver
 
 from flask import Blueprint, request, jsonify
 from src.utils.host_utils import get_controller, get_device_by_id
+from src.utils.build_url_utils import buildHostImageUrl
 
 # Create blueprint
 verification_image_host_bp = Blueprint('verification_image_host', __name__, url_prefix='/host/verification/image')
@@ -41,6 +42,12 @@ def crop_area():
         
         # Controller handles everything
         result = image_controller.crop_image(data)
+        
+        # Build image URL for frontend preview (following text route pattern)
+        if result.get('success') and result.get('processed_image_path'):
+            image_url = buildHostImageUrl(data.get('host', {}), result['processed_image_path'])
+            result['image_url'] = image_url
+            print(f"[@route:host_crop_area] Built image URL: {image_url}")
         
         # Add device_model to response for server route (following established pattern)
         if device:
@@ -85,6 +92,12 @@ def process_area():
         device = get_device_by_id(device_id)
         
         result = image_controller.process_image(data)
+        
+        # Build image URL for frontend preview (following text route pattern)
+        if result.get('success') and result.get('processed_image_path'):
+            image_url = buildHostImageUrl(data.get('host', {}), result['processed_image_path'])
+            result['image_url'] = image_url
+            print(f"[@route:host_process_area] Built image URL: {image_url}")
         
         # Add device_model to response for server route (following established pattern)
         if device:
