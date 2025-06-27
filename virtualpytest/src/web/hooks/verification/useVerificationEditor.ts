@@ -320,18 +320,16 @@ export const useVerificationEditor = ({
           console.log(
             '[@hook:useVerificationEditor] Text reference saved successfully:',
             referenceName,
+            result,
           );
-          setReferenceName('');
-          setCapturedReferenceImage(null);
-          setHasCaptured(false);
+          // Don't clear UI state - keep the captured image and name for user reference
+          // Only increment counter to refresh reference list
           setReferenceSaveCounter((prev) => prev + 1);
           setSaveSuccess(true);
-          console.log('[@hook:useVerificationEditor] ✅ SUCCESS STATE SET TO TRUE');
 
           // Clear success state after 3 seconds (increased from 2)
           setTimeout(() => {
             setSaveSuccess(false);
-            console.log('[@hook:useVerificationEditor] ⏰ SUCCESS STATE CLEARED AFTER 3s');
           }, 3000);
         } else {
           console.error(

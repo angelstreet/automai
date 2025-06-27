@@ -98,6 +98,7 @@ export const AndroidMobileRemote = React.memo(
       console.log('[@component:AndroidMobileRemote] Elements state changed:', {
         elementsCount: androidElements.length,
         elements: androidElements
+          .filter((el) => el && el.id) // Filter out invalid elements
           .slice(0, 3)
           .map((el) => ({ id: el.id, contentDesc: el.contentDesc, text: el.text })),
       });
@@ -228,11 +229,16 @@ export const AndroidMobileRemote = React.memo(
       }
     };
 
-    const getElementDisplayName = (el: AndroidElement) => {
+    const getElementDisplayName = (el: AndroidElement): string => {
       let displayName = '';
 
+      // Ensure el and el.id are valid
+      if (!el || !el.id) {
+        return 'Invalid Element';
+      }
+
       // Debug logging for first few elements
-      if (parseInt(el.id) <= 3) {
+      if (parseInt(String(el.id)) <= 3) {
         console.log(`[@component:AndroidMobileRemote] Element ${el.id} debug:`, {
           contentDesc: el.contentDesc,
           text: el.text,
@@ -241,20 +247,31 @@ export const AndroidMobileRemote = React.memo(
       }
 
       // Priority: ContentDesc → Text → Class Name (same as UIElementsOverlay)
+      // Ensure we're working with strings and handle null/undefined safely
       if (
         el.contentDesc &&
+        typeof el.contentDesc === 'string' &&
         el.contentDesc !== '<no content-desc>' &&
         el.contentDesc.trim() !== ''
       ) {
-        displayName = `${el.contentDesc}`;
-      } else if (el.text && el.text !== '<no text>' && el.text.trim() !== '') {
-        displayName = `"${el.text}"`;
+        displayName = String(el.contentDesc);
+      } else if (
+        el.text &&
+        typeof el.text === 'string' &&
+        el.text !== '<no text>' &&
+        el.text.trim() !== ''
+      ) {
+        displayName = `"${String(el.text)}"`;
       } else {
-        displayName = `${el.className?.split('.').pop() || 'Unknown'}`;
+        const className =
+          el.className && typeof el.className === 'string'
+            ? el.className.split('.').pop()
+            : 'Unknown';
+        displayName = String(className || 'Unknown');
       }
 
-      // Prepend element ID with compact format
-      const fullDisplayName = `${el.id}.${displayName}`;
+      // Prepend element ID with compact format, ensuring both parts are strings
+      const fullDisplayName = `${String(el.id)}.${String(displayName)}`;
 
       // Limit display name length
       if (fullDisplayName.length > 30) {
@@ -425,7 +442,7 @@ export const AndroidMobileRemote = React.memo(
                     console.log('[@component:AndroidMobileRemote] Dropdown selection changed:', {
                       elementId,
                       availableElements: androidElements.length,
-                      elementIds: androidElements.map((el) => el.id),
+                      elementIds: androidElements.filter((el) => el?.id).map((el) => el.id),
                     });
                     const element = androidElements.find((el) => el.id === elementId);
                     if (element) {
@@ -446,29 +463,31 @@ export const AndroidMobileRemote = React.memo(
                     keepMounted: false,
                   }}
                 >
-                  {androidElements.map((element) => {
-                    console.log('[@component:AndroidMobileRemote] Rendering dropdown item:', {
-                      id: element.id,
-                      displayName: getElementDisplayName(element),
-                    });
-                    return (
-                      <MenuItem
-                        key={element.id}
-                        value={element.id}
-                        sx={{
-                          fontSize: '0.75rem',
-                          py: 0.5,
-                          px: 1,
-                          minHeight: 'auto',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {getElementDisplayName(element)}
-                      </MenuItem>
-                    );
-                  })}
+                  {androidElements
+                    .filter((element) => element && element.id) // Filter out invalid elements
+                    .map((element) => {
+                      console.log('[@component:AndroidMobileRemote] Rendering dropdown item:', {
+                        id: element.id,
+                        displayName: getElementDisplayName(element),
+                      });
+                      return (
+                        <MenuItem
+                          key={element.id}
+                          value={element.id}
+                          sx={{
+                            fontSize: '0.75rem',
+                            py: 0.5,
+                            px: 1,
+                            minHeight: 'auto',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {getElementDisplayName(element)}
+                        </MenuItem>
+                      );
+                    })}
                 </Select>
               </FormControl>
             </Box>

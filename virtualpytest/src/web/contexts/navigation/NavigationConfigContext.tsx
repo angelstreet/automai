@@ -318,15 +318,18 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
               );
 
               // Load verifications by their IDs
-              const verificationsResponse = await fetch(`/server/verifications/load-by-ids`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
+              const verificationsResponse = await fetch(
+                `/server/verifications/load-verification-by-ids`,
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    verification_ids: Array.from(allVerificationIds),
+                  }),
                 },
-                body: JSON.stringify({
-                  verification_ids: Array.from(allVerificationIds),
-                }),
-              });
+              );
 
               if (verificationsResponse.ok) {
                 const verificationsData = await verificationsResponse.json();

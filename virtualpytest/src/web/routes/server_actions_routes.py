@@ -475,27 +475,4 @@ def get_all_actions_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_actions_bp.route('/server/actions/health', methods=['GET'])
-def health_check():
-    """
-    Health check endpoint for actions service.
-    """
-    try:
-        return jsonify({
-            'success': True,
-            'message': 'Actions service is healthy',
-            'endpoints': [
-                '/server/actions/save',
-                '/server/actions/load-by-ids',
-                '/server/actions/list',
-                '/server/actions/all',
-                '/server/actions/delete',
-                '/server/actions/health'
-            ]
-        })
-    except Exception as e:
-        print(f"[@server_actions_routes:health_check] Error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Server error: {str(e)}'
-        }), 500 
+ 
