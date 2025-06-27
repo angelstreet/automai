@@ -305,10 +305,7 @@ export const useVerificationEditor = ({
             reference_name: referenceName,
             area: selectedArea,
             text: referenceText,
-            image_textdetected_path:
-              detectedTextData?.image_textdetected_path ||
-              detectedTextData?.processed_image_path ||
-              '', // Use processed image from detect-text
+            image_textdetected_path: detectedTextData?.image_textdetected_path || '', // Use processed image from detect-text
           }),
         });
 
@@ -319,8 +316,6 @@ export const useVerificationEditor = ({
             referenceName,
             result,
           );
-          // Don't clear UI state - keep the captured image and name for user reference
-          // Only increment counter to refresh reference list
           setReferenceSaveCounter((prev) => prev + 1);
           setSaveSuccess(true);
 
@@ -407,8 +402,6 @@ export const useVerificationEditor = ({
             referenceName,
             result,
           );
-          // Don't clear UI state - keep the captured image and name for user reference
-          // Only increment counter to refresh reference list
           setReferenceSaveCounter((prev) => prev + 1);
           setSaveSuccess(true);
 
