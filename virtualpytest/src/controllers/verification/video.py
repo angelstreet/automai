@@ -645,7 +645,7 @@ class VideoVerificationController(VerificationControllerInterface):
             }
         ]
 
-    def execute_verification(self, verification_config: Dict[str, Any], image_source_url: str = None, source_filename: str = None) -> Dict[str, Any]:
+    def execute_verification(self, verification_config: Dict[str, Any], image_source_url: str = None) -> Dict[str, Any]:
         """
         Unified verification execution interface for centralized controller.
         
@@ -660,7 +660,6 @@ class VideoVerificationController(VerificationControllerInterface):
                 }
             }
             image_source_url: Optional source image path (video controller can use screenshots)
-        source_filename: Legacy parameter for backward compatibility
             
         Returns:
             {

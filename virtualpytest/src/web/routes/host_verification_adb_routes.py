@@ -27,7 +27,7 @@ def execute_adb_verification():
         
         data = request.get_json()
         verification = data.get('verification')
-        image_source_url = data.get('image_source_url') or data.get('source_filename')  # Not used for ADB but kept for consistency
+        image_source_url = data.get('image_source_url')  # Not used for ADB but kept for consistency
         model = data.get('model', 'default')
         device_id = data.get('device_id', 'device1')
         

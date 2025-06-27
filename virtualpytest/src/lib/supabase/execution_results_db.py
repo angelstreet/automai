@@ -34,7 +34,7 @@ def record_execution(execution: Dict, team_id: str) -> Optional[str]:
             'device_model': execution.get('device_model'),
             'command': execution['command'],
             'parameters': execution.get('parameters'),
-            'image_source_url': execution.get('image_source_url') or execution.get('source_filename'),  # Support both old and new field names
+            'image_source_url': execution.get('image_source_url'),
             'execution_order': execution.get('execution_order'),
             'success': execution['success'],
             'execution_time_ms': execution.get('execution_time_ms'),
@@ -82,7 +82,7 @@ def record_batch_executions(executions: List[Dict], team_id: str) -> List[str]:
                 'device_model': execution.get('device_model'),
                 'command': execution['command'],
                 'parameters': execution.get('parameters'),
-                'image_source_url': execution.get('image_source_url') or execution.get('source_filename'),  # Support both old and new field names
+                'image_source_url': execution.get('image_source_url'),
                 'execution_order': execution.get('execution_order'),
                 'success': execution['success'],
                 'execution_time_ms': execution.get('execution_time_ms'),
@@ -245,19 +245,15 @@ def record_verification(
     verification_type: str,
     command: str,
     parameters: Dict,
-    image_source_url: str = None,  # New field name
+    image_source_url: str = None,
     success: bool = True,
     execution_time_ms: int = 0,
     message: str = "",
     error_details: Optional[Dict] = None,
     confidence_score: Optional[float] = None,
-    execution_order: Optional[int] = None,
-    source_filename: str = None  # Backward compatibility
+    execution_order: Optional[int] = None
 ) -> Optional[str]:
     """Convenience function for recording verification executions."""
-    # Support both old and new field names
-    final_image_source_url = image_source_url or source_filename
-    
     execution = {
         'execution_category': 'verification',
         'execution_type': verification_type,
@@ -268,8 +264,7 @@ def record_verification(
         'device_model': device_model,
         'command': command,
         'parameters': parameters,
-        'image_source_url': final_image_source_url,
-        'source_filename': final_image_source_url,  # Backward compatibility
+        'image_source_url': image_source_url,
         'success': success,
         'execution_time_ms': execution_time_ms,
         'message': message,

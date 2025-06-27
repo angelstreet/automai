@@ -136,8 +136,8 @@ class ImageVerificationController:
     def crop_image(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for image cropping."""
         try:
-            # Get source filename from frontend (support both old and new field names)
-            image_source_url = data.get('image_source_url', '') or data.get('source_filename', '')
+            # Get source filename from frontend
+            image_source_url = data.get('image_source_url', '')
             area = data.get('area')
             reference_name = data.get('reference_name', 'cropped_image')
             
@@ -179,14 +179,14 @@ class ImageVerificationController:
                 'area': area,
                 'source_was_url': image_source_url.startswith(('http://', 'https://'))
             }
-            
+                
         except Exception as e:
             return {'success': False, 'message': f'Image crop failed: {str(e)}'}
 
     def process_image(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for image processing."""
         try:
-            image_source_url = data.get('image_source_url', '') or data.get('source_filename', '')
+            image_source_url = data.get('image_source_url', '')
             remove_background = data.get('remove_background', False)
             image_filter = data.get('image_filter', 'none')
             
@@ -241,14 +241,14 @@ class ImageVerificationController:
                 },
                 'source_was_url': image_source_url.startswith(('http://', 'https://'))
             }
-            
+                
         except Exception as e:
             return {'success': False, 'message': f'Image processing failed: {str(e)}'}
 
     def save_image(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for saving image references."""
         try:
-            image_source_url = data.get('image_source_url', '') or data.get('source_filename', '')
+            image_source_url = data.get('image_source_url', '')
             reference_name = data.get('reference_name', 'image_reference')
             area = data.get('area')
             

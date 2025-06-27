@@ -62,9 +62,3 @@ class PowerControllerInterface(BaseController):
     
     def __init__(self, device_name: str = "Unknown Device"):
         super().__init__("power", device_name)
-
-
-# Backward compatibility aliases
-BaseRemoteController = RemoteControllerInterface
-BaseAVController = AVControllerInterface
-BaseVerificationController = VerificationControllerInterface 

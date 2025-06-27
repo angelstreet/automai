@@ -129,15 +129,13 @@ class TextVerificationController:
             print(f"[@text_controller] Error in waitForTextToDisappear: {e}")
             return False, ""
 
-
-
     def detect_text(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for text detection."""
         try:
             helpers = TextHelpers(self.captures_path)
             
-            # Get source filename from frontend (support both old and new field names)
-            image_source_url = data.get('image_source_url', '') or data.get('source_filename', '')
+            # Get source filename from frontend
+            image_source_url = data.get('image_source_url', '')
             area = data.get('area')
             
             if not image_source_url:
@@ -176,7 +174,7 @@ class TextVerificationController:
             text = data.get('text', '')
             reference_name = data.get('reference_name', 'text_reference')
             area = data.get('area')
-            image_textdetected_path = data.get('image_textdetected_path', '') or data.get('processed_image_path', '')
+            image_textdetected_path = data.get('image_textdetected_path', '')
             
             if not text:
                 return {'success': False, 'message': 'text is required for saving reference'}

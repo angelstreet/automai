@@ -164,7 +164,8 @@ def record_verification_result():
             verification_type=data['verification_type'],
             command=data['command'],
             parameters=data['parameters'],
-            image_source_url=data.get('image_source_url') or data.get('source_filename'),  # Support both old and new field names
+
+            image_source_url=data.get('image_source_url'),
             success=data['success'],
             execution_time_ms=data['execution_time_ms'],
             message=data['message'],

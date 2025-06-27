@@ -504,7 +504,7 @@ class AudioVerificationController(VerificationControllerInterface):
             }
         ]
 
-    def execute_verification(self, verification_config: Dict[str, Any], image_source_url: str = None, source_filename: str = None) -> Dict[str, Any]:
+    def execute_verification(self, verification_config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Unified verification execution interface for centralized controller.
         
@@ -517,8 +517,6 @@ class AudioVerificationController(VerificationControllerInterface):
                     'duration': 2.0
                 }
             }
-            image_source_url: Not used for audio verification (audio is captured live)
-        source_filename: Legacy parameter for backward compatibility
             
         Returns:
             {

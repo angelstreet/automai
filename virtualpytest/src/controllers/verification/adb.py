@@ -31,12 +31,8 @@ class ADBVerificationController(VerificationControllerInterface):
         """
         super().__init__("ADB Verification", "adb")
         
-        # AV controller is optional for ADB verification (ADB doesn't need screenshots)
-        self.av_controller = av_controller
-        
-        # Set verification type for controller lookup
+       
         self.verification_type = 'adb'
-        
         self.device_id = f"adb_verification"  # Internal device identifier
         self.adb_utils = ADBUtils()
         self.is_connected = True  # Assume connected since we're using direct ADB
@@ -545,7 +541,7 @@ class ADBVerificationController(VerificationControllerInterface):
             }
         ]
 
-    def execute_verification(self, verification_config: Dict[str, Any], image_source_url: str = None, source_filename: str = None) -> Dict[str, Any]:
+    def execute_verification(self, verification_config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Unified verification execution interface for centralized controller.
         
@@ -559,8 +555,6 @@ class ADBVerificationController(VerificationControllerInterface):
                     'check_interval': 1.0
                 }
             }
-            image_source_url: Not used for ADB verification (ADB doesn't need screenshots)
-        source_filename: Legacy parameter for backward compatibility
             
         Returns:
             {
