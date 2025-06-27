@@ -10,8 +10,6 @@ import { useNavigationConfig } from '../../contexts';
 import { useHostManager } from '../../contexts/index';
 
 export const useNavigationActionsHook = () => {
-  console.log('[@hook:useNavigationActionsHook] Initializing actions hook');
-
   // Use the focused contexts
   const actionsContext = useNavigationActions();
   const nodesContext = useNavigationNodes();
@@ -23,7 +21,6 @@ export const useNavigationActionsHook = () => {
   try {
     configHook = useNavigationConfig();
   } catch (error) {
-    console.log('[@hook:useNavigationActionsHook] NavigationConfig context not available');
     configHook = null;
   }
 
@@ -31,7 +28,6 @@ export const useNavigationActionsHook = () => {
   try {
     hostManagerHook = useHostManager();
   } catch (error) {
-    console.log('[@hook:useNavigationActionsHook] HostManager context not available');
     hostManagerHook = null;
   }
 

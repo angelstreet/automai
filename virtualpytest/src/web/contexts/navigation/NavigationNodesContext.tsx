@@ -50,8 +50,6 @@ interface NavigationNodesProviderProps {
 const NavigationNodesContext = createContext<NavigationNodesContextType | null>(null);
 
 export const NavigationNodesProvider: React.FC<NavigationNodesProviderProps> = ({ children }) => {
-  console.log('[@context:NavigationNodesProvider] Initializing navigation nodes context');
-
   // ========================================
   // STATE
   // ========================================
@@ -86,7 +84,6 @@ export const NavigationNodesProvider: React.FC<NavigationNodesProviderProps> = (
   // ========================================
 
   const resetToInitialState = useCallback(() => {
-    console.log('[@context:NavigationNodesProvider] Resetting to initial state');
     if (initialState) {
       setNodes(initialState.nodes);
       setEdges(initialState.edges);
@@ -94,7 +91,6 @@ export const NavigationNodesProvider: React.FC<NavigationNodesProviderProps> = (
   }, [initialState, setNodes, setEdges]);
 
   const resetSelection = useCallback(() => {
-    console.log('[@context:NavigationNodesProvider] Resetting selection');
     setSelectedNode(null);
     setSelectedEdge(null);
   }, []);
@@ -106,7 +102,6 @@ export const NavigationNodesProvider: React.FC<NavigationNodesProviderProps> = (
   const stableAvailableFocusNodes = useMemo(() => availableFocusNodes, [availableFocusNodes]);
 
   const contextValue: NavigationNodesContextType = useMemo(() => {
-    console.log(`[@context:NavigationNodesProvider] Creating new context value`);
     return {
       // React Flow state
       nodes: stableNodes,

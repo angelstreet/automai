@@ -61,13 +61,11 @@ interface NavigationUIProviderProps {
 const NavigationUIContext = createContext<NavigationUIContextType | null>(null);
 
 export const NavigationUIProvider: React.FC<NavigationUIProviderProps> = ({ children }) => {
-  console.log('[@context:NavigationUIProvider] Initializing navigation UI context');
-
   // ========================================
   // STATE
   // ========================================
 
-  // Dialog states
+  // Dialog state
   const [isNodeDialogOpen, setIsNodeDialogOpen] = useState(false);
   const [isEdgeDialogOpen, setIsEdgeDialogOpen] = useState(false);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
@@ -137,7 +135,6 @@ export const NavigationUIProvider: React.FC<NavigationUIProviderProps> = ({ chil
   const stableEdgeForm = useMemo(() => edgeForm, [edgeForm]);
 
   const contextValue: NavigationUIContextType = useMemo(() => {
-    console.log(`[@context:NavigationUIProvider] Creating new context value`);
     return {
       // Dialog states
       isNodeDialogOpen,

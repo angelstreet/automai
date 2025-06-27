@@ -42,12 +42,7 @@ const NavigationActionsContext = createContext<NavigationActionsContextType | nu
 export const NavigationActionsProvider: React.FC<NavigationActionsProviderProps> = ({
   children,
 }) => {
-  console.log('[@context:NavigationActionsProvider] Initializing navigation actions context');
-
-  // ========================================
-  // CONSUME OTHER CONTEXTS
-  // ========================================
-
+  // Use the focused contexts
   const nodesContext = useNavigationNodes();
   const uiContext = useNavigationUI();
   const flowContext = useNavigationFlow();

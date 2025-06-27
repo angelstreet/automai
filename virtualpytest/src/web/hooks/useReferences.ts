@@ -18,6 +18,7 @@ interface UseReferencesReturn {
 export const useReferences = (
   reloadTrigger: number = 0,
   selectedHost: Host | null,
+  isControlActive: boolean = false,
 ): UseReferencesReturn => {
   const [availableReferences, setAvailableReferences] = useState<{
     [deviceModel: string]: ModelReferences;
@@ -123,6 +124,12 @@ export const useReferences = (
   }, [selectedHost]);
 
   const fetchAvailableActions = useCallback(async () => {
+    if (!isControlActive) {
+      console.log('[@hook:useReferences] Control not active, skipping actions fetch');
+      setAvailableActions({});
+      return;
+    }
+
     setActionsLoading(true);
     try {
       console.log('[@hook:useReferences] Fetching available actions...');
@@ -153,7 +160,6 @@ export const useReferences = (
         console.log('[@hook:useReferences] Actions response:', result);
 
         if (result.success && result.actions && Array.isArray(result.actions)) {
-          // Transform flat action list to categorized structure
           const categorizedActions: Actions = {};
 
           result.actions.forEach((action: any) => {
@@ -187,6 +193,11 @@ export const useReferences = (
           console.log('[@hook:useReferences] No actions found');
           setAvailableActions({});
         }
+      } else if (response.status === 404) {
+        console.warn(
+          '[@hook:useReferences] Actions endpoint not found (404) - actions may not be available for this host',
+        );
+        setAvailableActions({});
       } else {
         console.error('[@hook:useReferences] Failed to fetch actions:', response.status);
         setAvailableActions({});
@@ -197,9 +208,8 @@ export const useReferences = (
     } finally {
       setActionsLoading(false);
     }
-  }, [selectedHost]);
+  }, [selectedHost, isControlActive]);
 
-  // Get references for a specific model
   const getModelReferences = useCallback(
     (model?: string): ModelReferences => {
       if (!model || !availableReferences[model]) {
@@ -217,10 +227,8 @@ export const useReferences = (
     [availableReferences],
   );
 
-  // Get actions for a specific model
   const getModelActions = useCallback(
-    (model?: string): Actions => {
-      // Actions are not model-specific, return all available actions
+    (_model?: string): Actions => {
       console.log(
         `[@hook:useReferences] Found ${Object.keys(availableActions).length} action categories`,
         Object.keys(availableActions),
@@ -230,8 +238,29 @@ export const useReferences = (
     [availableActions],
   );
 
-  // REMOVED: Automatic fetching on mount - now only fetch when explicitly called
-  // We only fetch when reloadTrigger changes (e.g., after saving a new reference)
+  useEffect(() => {
+    if (selectedHost) {
+      console.log(
+        '[@hook:useReferences] Selected host changed, fetching references:',
+        selectedHost.host_name,
+      );
+      fetchAvailableReferences();
+    }
+  }, [selectedHost, fetchAvailableReferences]);
+
+  useEffect(() => {
+    if (isControlActive && selectedHost) {
+      console.log(
+        '[@hook:useReferences] Control active, fetching actions:',
+        selectedHost.host_name,
+      );
+      fetchAvailableActions();
+    } else if (!isControlActive) {
+      console.log('[@hook:useReferences] Control lost, clearing actions');
+      setAvailableActions({});
+    }
+  }, [isControlActive, selectedHost, fetchAvailableActions]);
+
   useEffect(() => {
     if (reloadTrigger > 0) {
       console.log(
@@ -239,9 +268,11 @@ export const useReferences = (
         reloadTrigger,
       );
       fetchAvailableReferences();
-      fetchAvailableActions();
+      if (isControlActive) {
+        fetchAvailableActions();
+      }
     }
-  }, [reloadTrigger, fetchAvailableReferences, fetchAvailableActions]);
+  }, [reloadTrigger, fetchAvailableReferences, fetchAvailableActions, isControlActive]);
 
   return {
     availableReferences,

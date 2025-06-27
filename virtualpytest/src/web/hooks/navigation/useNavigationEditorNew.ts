@@ -9,8 +9,6 @@ import { useNavigationActionsHook } from './useNavigationActionsHook';
 import { useNodeEdgeManagement } from '../../contexts/navigation/NodeEdgeManagementContext';
 
 export const useNavigationEditorNew = () => {
-  console.log('[@hook:useNavigationEditorNew] Initializing new navigation editor hook');
-
   // Use all focused hooks
   const nodesHook = useNavigationNodesHook();
   const uiHook = useNavigationUIHook();
@@ -23,7 +21,6 @@ export const useNavigationEditorNew = () => {
     nodeEdgeHook = useNodeEdgeManagement();
   } catch (error) {
     // NodeEdgeManagementProvider not available - this is expected in some contexts
-    console.log('[@hook:useNavigationEditorNew] NodeEdgeManagement context not available');
     nodeEdgeHook = null;
   }
 

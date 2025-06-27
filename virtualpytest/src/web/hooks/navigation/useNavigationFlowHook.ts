@@ -5,16 +5,13 @@ import { MarkerType } from 'reactflow';
 import { useNavigationFlow } from '../../contexts/navigation';
 
 export const useNavigationFlowHook = () => {
-  console.log('[@hook:useNavigationFlowHook] Initializing flow hook');
-
-  const navigate = useNavigate();
-
   // Use the focused context
   const flowContext = useNavigationFlow();
 
+  const navigate = useNavigate();
+
   // Fit view to current nodes
   const fitView = useCallback(() => {
-    console.log('[@hook:useNavigationFlowHook] Fitting view');
     if (flowContext.reactFlowInstance) {
       flowContext.reactFlowInstance.fitView({
         padding: 0.1,
@@ -26,7 +23,6 @@ export const useNavigationFlowHook = () => {
   // Navigate back in breadcrumb
   const navigateToTreeLevel = useCallback(
     (index: number) => {
-      console.log('[@hook:useNavigationFlowHook] Navigating to tree level:', index);
       const newPath = flowContext.navigationPath.slice(0, index + 1);
       const newNamePath = flowContext.navigationNamePath.slice(0, index + 1);
       const targetTreeId = newPath[newPath.length - 1];
@@ -57,7 +53,6 @@ export const useNavigationFlowHook = () => {
 
   // Go back to parent tree
   const goBackToParent = useCallback(() => {
-    console.log('[@hook:useNavigationFlowHook] Going back to parent');
     if (flowContext.navigationPath.length > 1) {
       const newPath = flowContext.navigationPath.slice(0, -1);
       const newNamePath = flowContext.navigationNamePath.slice(0, -1);
@@ -83,7 +78,6 @@ export const useNavigationFlowHook = () => {
   // Navigate to parent view (breadcrumb click)
   const navigateToParentView = useCallback(
     (targetIndex: number) => {
-      console.log('[@hook:useNavigationFlowHook] Navigating to parent view:', targetIndex);
       if (targetIndex < 0 || targetIndex >= flowContext.viewPath.length) return;
 
       const targetView = flowContext.viewPath[targetIndex];
@@ -95,14 +89,12 @@ export const useNavigationFlowHook = () => {
 
   // Navigate back to parent interface
   const navigateToParent = useCallback(() => {
-    console.log('[@hook:useNavigationFlowHook] Navigating to parent interface');
     navigate('/configuration/interface');
   }, [navigate]);
 
   // Set user interface from props
   const setUserInterfaceFromProps = useCallback(
     (userInterfaceData: any) => {
-      console.log('[@hook:useNavigationFlowHook] Setting user interface from props');
       if (userInterfaceData) {
         flowContext.setUserInterface(userInterfaceData);
         // Note: isLoadingInterface is managed by NavigationUI context

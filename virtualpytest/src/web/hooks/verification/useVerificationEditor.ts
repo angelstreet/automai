@@ -76,23 +76,19 @@ export const useVerificationEditor = ({
   const [referenceSaveCounter, setReferenceSaveCounter] = useState<number>(0);
 
   // Add references management after referenceSaveCounter is declared
-  const { availableReferences, referencesLoading, fetchAvailableReferences, getModelReferences } =
-    useReferences(referenceSaveCounter, selectedHost);
+  const { availableReferences, referencesLoading, getModelReferences } = useReferences(
+    referenceSaveCounter,
+    selectedHost,
+    isControlActive,
+  );
 
   // Get model references using the device model
   const modelReferences = useMemo(() => {
     return getModelReferences(deviceModel || '');
   }, [getModelReferences, deviceModel]);
 
-  // Fetch references when control becomes active
-  useEffect(() => {
-    if (isControlActive && selectedHost) {
-      console.log(
-        '[@hook:useVerificationEditor] Control is active, fetching verification references',
-      );
-      fetchAvailableReferences();
-    }
-  }, [isControlActive, selectedHost, fetchAvailableReferences]);
+  // Note: Reference fetching is now handled automatically by useReferences hook
+  // when selectedHost changes - no need for manual fetching here
 
   // State for reference type and details
   const [referenceText, setReferenceText] = useState<string>('');
@@ -580,7 +576,6 @@ export const useVerificationEditor = ({
     // References functionality
     availableReferences,
     referencesLoading,
-    fetchAvailableReferences,
     getModelReferences,
     modelReferences,
 

@@ -38,8 +38,6 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
   children,
   userInterfaceId,
 }) => {
-  console.log('[@context:NodeEdgeManagementProvider] Initializing node edge management context');
-
   // Get contexts directly - single source of truth
   const nodesContext = useNavigationNodes();
   const uiContext = useNavigationUI();

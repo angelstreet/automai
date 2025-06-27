@@ -54,8 +54,6 @@ interface NavigationConfigProviderProps {
 const NavigationConfigContext = createContext<NavigationConfigContextType | null>(null);
 
 export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> = ({ children }) => {
-  console.log('[@context:NavigationConfigProvider] Initializing navigation config context');
-
   // ========================================
   // USER SESSION
   // ========================================
@@ -294,10 +292,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
           // Load verification definitions from database using stored verification IDs
           try {
-            console.log(
-              `[@context:NavigationConfigProvider:loadFromConfig] Loading verification definitions for tree: ${tree.name}`,
-            );
-
             // Collect all verification IDs from all nodes
             const allVerificationIds = new Set<string>();
             nodes.forEach((node: UINavigationNode) => {
@@ -313,10 +307,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
             });
 
             if (allVerificationIds.size > 0) {
-              console.log(
-                `[@context:NavigationConfigProvider:loadFromConfig] Found ${allVerificationIds.size} verification IDs to load`,
-              );
-
               // Load verifications by their IDs
               const verificationsResponse = await fetch(
                 `/server/verifications/load-verification-by-ids`,
@@ -335,10 +325,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
                 const verificationsData = await verificationsResponse.json();
 
                 if (verificationsData.success && verificationsData.verifications.length > 0) {
-                  console.log(
-                    `[@context:NavigationConfigProvider:loadFromConfig] Loaded ${verificationsData.verifications.length} verification definitions from database`,
-                  );
-
                   // Create a map of verification ID to verification data
                   const verificationsById = new Map<string, any>();
                   for (const verification of verificationsData.verifications) {
@@ -364,10 +350,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
                         .filter(Boolean);
 
                       if (nodeVerifications.length > 0) {
-                        console.log(
-                          `[@context:NavigationConfigProvider:loadFromConfig] Adding ${nodeVerifications.length} verifications to node: ${node.data?.label}`,
-                        );
-
                         return {
                           ...node,
                           data: {
@@ -379,32 +361,16 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
                     }
                     return node;
                   });
-
-                  console.log(
-                    `[@context:NavigationConfigProvider:loadFromConfig] Successfully merged verification definitions with nodes`,
-                  );
-                } else {
-                  console.log(
-                    `[@context:NavigationConfigProvider:loadFromConfig] No verification definitions found in database`,
-                  );
                 }
               } else {
                 console.warn(
                   `[@context:NavigationConfigProvider:loadFromConfig] Failed to load verification definitions: ${verificationsResponse.status}`,
                 );
               }
-            } else {
-              console.log(
-                `[@context:NavigationConfigProvider:loadFromConfig] No verification IDs found in tree nodes`,
-              );
             }
 
             // Load action definitions from database using stored action IDs
             if (allActionIds.size > 0) {
-              console.log(
-                `[@context:NavigationConfigProvider:loadFromConfig] Found ${allActionIds.size} action IDs to load`,
-              );
-
               // Load actions by their IDs
               const actionsResponse = await fetch(`/server/actions/load-by-ids`, {
                 method: 'POST',
@@ -420,10 +386,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
                 const actionsData = await actionsResponse.json();
 
                 if (actionsData.success && actionsData.actions.length > 0) {
-                  console.log(
-                    `[@context:NavigationConfigProvider:loadFromConfig] Loaded ${actionsData.actions.length} action definitions from database`,
-                  );
-
                   // Create a map of action ID to action data
                   const actionsById = new Map<string, any>();
                   for (const action of actionsData.actions) {
@@ -452,10 +414,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
                         .filter(Boolean);
 
                       if (edgeActions.length > 0) {
-                        console.log(
-                          `[@context:NavigationConfigProvider:loadFromConfig] Adding ${edgeActions.length} actions to edge: ${edge.id}`,
-                        );
-
                         return {
                           ...edge,
                           data: {
@@ -467,24 +425,12 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
                     }
                     return edge;
                   });
-
-                  console.log(
-                    `[@context:NavigationConfigProvider:loadFromConfig] Successfully merged action definitions with edges`,
-                  );
-                } else {
-                  console.log(
-                    `[@context:NavigationConfigProvider:loadFromConfig] No action definitions found in database`,
-                  );
                 }
               } else {
                 console.warn(
                   `[@context:NavigationConfigProvider:loadFromConfig] Failed to load action definitions: ${actionsResponse.status}`,
                 );
               }
-            } else {
-              console.log(
-                `[@context:NavigationConfigProvider:loadFromConfig] No action IDs found in tree edges`,
-              );
             }
           } catch (verificationError) {
             console.error(
@@ -511,10 +457,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           setIsCheckingLock(false);
           setShowReadOnlyOverlay(false);
         } else {
-          console.log(
-            `[@context:NavigationConfigProvider:loadFromConfig] No trees found for userInterface: ${userInterfaceId}, creating empty tree`,
-          );
-
           // Create empty tree structure
           state.setNodes([]);
           state.setEdges([]);
@@ -544,28 +486,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   const saveToConfig = useCallback(
     async (userInterfaceId: string, state: NavigationConfigState) => {
       try {
-        console.log('[@context:NavigationConfigProvider:saveToConfig] === STARTING TREE SAVE ===');
-        console.log(
-          '[@context:NavigationConfigProvider:saveToConfig] UserInterface ID:',
-          userInterfaceId,
-        );
-        console.log(
-          '[@context:NavigationConfigProvider:saveToConfig] Current nodes count:',
-          state.nodes.length,
-        );
-        console.log(
-          '[@context:NavigationConfigProvider:saveToConfig] Current edges count:',
-          state.edges.length,
-        );
-        console.log(
-          '[@context:NavigationConfigProvider:saveToConfig] Full nodes data:',
-          state.nodes,
-        );
-        console.log(
-          '[@context:NavigationConfigProvider:saveToConfig] Full edges data:',
-          state.edges,
-        );
-
         state.setIsLoading(true);
         state.setError(null);
 
@@ -593,11 +513,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           })),
         };
 
-        console.log(
-          '[@context:NavigationConfigProvider:saveToConfig] Tree data prepared for saving:',
-          treeDataForSaving,
-        );
-
         const requestBody = {
           name: 'root', // Always use 'root' as the name
           userinterface_id: userInterfaceId,
@@ -607,8 +522,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           changes_summary: 'Updated navigation tree from editor',
         };
 
-        console.log('[@context:NavigationConfigProvider:saveToConfig] Request body:', requestBody);
-
         const response = await fetch(`/server/navigation-trees/save`, {
           method: 'POST',
           headers: {
@@ -616,12 +529,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           },
           body: JSON.stringify(requestBody),
         });
-
-        console.log(
-          '[@context:NavigationConfigProvider:saveToConfig] Response status:',
-          response.status,
-        );
-        console.log('[@context:NavigationConfigProvider:saveToConfig] Response ok:', response.ok);
 
         if (!response.ok) {
           const errorText = await response.text();
@@ -633,18 +540,11 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         }
 
         const data = await response.json();
-        console.log('[@context:NavigationConfigProvider:saveToConfig] Response data:', data);
 
         if (data.success) {
           // Update initial state to reflect saved state
           state.setInitialState({ nodes: [...state.nodes], edges: [...state.edges] });
           state.setHasUnsavedChanges(false);
-          console.log(
-            `[@context:NavigationConfigProvider:saveToConfig] Successfully saved tree for userInterface: ${userInterfaceId}`,
-          );
-          console.log(
-            '[@context:NavigationConfigProvider:saveToConfig] === TREE SAVE COMPLETED SUCCESSFULLY ===',
-          );
         } else {
           console.error('[@context:NavigationConfigProvider:saveToConfig] Save failed:', data);
           throw new Error(data.message || 'Failed to save navigation tree to database');

@@ -3,8 +3,6 @@ import { useCallback, useMemo } from 'react';
 import { useNavigationUI } from '../../contexts/navigation';
 
 export const useNavigationUIHook = () => {
-  console.log('[@hook:useNavigationUIHook] Initializing UI hook');
-
   // Use the focused context
   const uiContext = useNavigationUI();
 

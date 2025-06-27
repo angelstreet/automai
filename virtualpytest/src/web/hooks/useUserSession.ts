@@ -12,7 +12,6 @@ export const useUserSession = () => {
   // Use singleton pattern to ensure only one session is created
   const [sessionData] = useState(() => {
     if (globalSessionData) {
-      console.log(`[@hook:useUserSession] Using existing session: ${globalSessionData.sessionId}`);
       return globalSessionData;
     }
 
@@ -28,21 +27,10 @@ export const useUserSession = () => {
           const user = JSON.parse(storedUser);
           if (user.id && user.id !== 'browser-user') {
             userId = user.id;
-            console.log(`[@hook:useUserSession] Using stored user ID: ${userId}`);
-          } else {
-            console.log(
-              `[@hook:useUserSession] Invalid stored user ID, using default: ${DEFAULT_USER_ID}`,
-            );
           }
         } catch (e) {
-          console.log(
-            `[@hook:useUserSession] Failed to parse cached user, using default: ${DEFAULT_USER_ID}`,
-          );
+          // Use default user ID
         }
-      } else {
-        console.log(
-          `[@hook:useUserSession] No cached user found, using default: ${DEFAULT_USER_ID}`,
-        );
       }
     }
 
@@ -50,8 +38,6 @@ export const useUserSession = () => {
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 8);
     const sessionId = `${userId}-${timestamp}-${random}`;
-
-    console.log(`[@hook:useUserSession] Generated session ID: ${sessionId}`);
 
     // Store in singleton
     globalSessionData = {
@@ -72,14 +58,6 @@ export const useUserSession = () => {
         lockInfo.lockedBy || lockInfo.locked_by || lockInfo.session_id || lockInfo.user_id;
 
       const isOurs = lockOwner === sessionData.userId;
-
-      if (isOurs) {
-        console.log(`[@hook:useUserSession] Lock belongs to current user: ${sessionData.userId}`);
-      } else {
-        console.log(
-          `[@hook:useUserSession] Lock belongs to different user: ${lockOwner} (current: ${sessionData.userId})`,
-        );
-      }
 
       return isOurs;
     },

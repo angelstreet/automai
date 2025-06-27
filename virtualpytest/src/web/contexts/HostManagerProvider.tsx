@@ -20,8 +20,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   children,
   userInterface,
 }) => {
-  console.log('[@context:HostManagerProvider] Initializing host manager context');
-
   // ========================================
   // STATE
   // ========================================
@@ -57,8 +55,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // Host loading logic (simplified architecture - no more RegistrationContext)
   const loadHosts = useCallback(async (): Promise<{ hosts: Host[]; error: string | null }> => {
     try {
-      console.log('[@context:HostManagerProvider] Starting to fetch hosts from server');
-
       const fullUrl = '/server/system/getAllHosts';
       const response = await fetch(fullUrl);
 
@@ -70,9 +66,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
       if (result.success) {
         const rawHosts = result.hosts || [];
-        console.log(
-          `[@context:HostManagerProvider] Successfully received ${rawHosts.length} hosts from server`,
-        );
 
         return { hosts: rawHosts, error: null };
       } else {
@@ -106,9 +99,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
   // Get all hosts without filtering (raw data from server)
   const getAllHosts = useCallback((): Host[] => {
-    console.log(
-      `[@context:HostManagerProvider] getAllHosts() called, returning ${availableHosts.length} hosts`,
-    );
     return availableHosts;
   }, [availableHosts]);
 
@@ -123,12 +113,8 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // Get hosts filtered by device models
   const getHostsByModel = useCallback(
     (models: string[]): Host[] => {
-      console.log(`[@context:HostManagerProvider] getHostsByModel() called with models:`, models);
       const filtered = availableHosts.filter((host) =>
         host.devices?.some((device) => models.includes(device.device_model)),
-      );
-      console.log(
-        `[@context:HostManagerProvider] getHostsByModel() returning ${filtered.length}/${availableHosts.length} hosts`,
       );
       return filtered;
     },
@@ -246,7 +232,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
               setActiveLocks((prev) => new Map(prev).set(`${hostName}:${deviceId}`, userId));
             }
           } else {
-            console.log(`[@context:HostManagerProvider] No devices locked by current user found`);
           }
         }
       }
@@ -498,11 +483,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
   // Handle device selection
   const handleDeviceSelect = useCallback((host: Host | null, deviceId: string | null) => {
-    console.log(`[@context:HostManagerProvider] Device selected:`, {
-      hostName: host?.host_name || 'null',
-      deviceId: deviceId || 'null',
-    });
-
     if (!host || !deviceId) {
       setSelectedHost(null);
       setSelectedDeviceId(null);
@@ -522,14 +502,10 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
     setSelectedHost(host);
     setSelectedDeviceId(deviceId);
-    console.log(
-      `[@context:HostManagerProvider] Device selected: ${device.device_name} (${device.device_model}) on host ${host.host_name}`,
-    );
   }, []);
 
   // Handle control state changes (called from header after successful device control)
   const handleControlStateChange = useCallback((active: boolean) => {
-    console.log(`[@context:HostManagerProvider] Control state changed to: ${active}`);
     setIsControlActive(active);
 
     if (active) {
@@ -537,13 +513,11 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       setShowRemotePanel(true);
       setShowAVPanel(true);
       setIsRemotePanelOpen(true);
-      console.log(`[@context:HostManagerProvider] Panels shown after control activation`);
     } else {
       // Hide panels when control is inactive
       setShowRemotePanel(false);
       setShowAVPanel(false);
       setIsRemotePanelOpen(false);
-      console.log(`[@context:HostManagerProvider] Panels hidden after control deactivation`);
     }
   }, []);
 
@@ -551,20 +525,15 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   const handleToggleRemotePanel = useCallback(() => {
     const newState = !isRemotePanelOpen;
     setIsRemotePanelOpen(newState);
-    console.log(
-      `[@context:HostManagerProvider] Remote panel toggled: ${newState ? 'open' : 'closed'}`,
-    );
   }, [isRemotePanelOpen]);
 
   // Handle connection change (for panels)
   const handleConnectionChange = useCallback((connected: boolean) => {
-    console.log(`[@context:HostManagerProvider] Connection state changed: ${connected}`);
     // Could update UI state based on connection status
   }, []);
 
   // Handle disconnect complete (for panels)
   const handleDisconnectComplete = useCallback(() => {
-    console.log(`[@context:HostManagerProvider] Disconnect complete`);
     setIsControlActive(false);
     setShowRemotePanel(false);
     setShowAVPanel(false);
@@ -609,33 +578,14 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
   // Update filtered hosts when availableHosts changes
   useEffect(() => {
-    console.log(
-      `[@context:HostManagerProvider] Filtering hosts - availableHosts: ${availableHosts.length}, interface models:`,
-      stableUserInterface?.models,
-    );
-
     if (stableUserInterface?.models && availableHosts.length > 0) {
-      console.log(
-        `[@context:HostManagerProvider] Available hosts for filtering:`,
-        availableHosts.map((h) => ({
-          host_name: h.host_name,
-          device_models: h.devices?.map((d) => d.device_model) || [],
-        })),
-      );
-
       // Fix model filtering to check device models
       const compatibleHosts = availableHosts.filter((host) =>
         host.devices?.some((device) => stableUserInterface.models!.includes(device.device_model)),
       );
 
-      console.log(
-        `[@context:HostManagerProvider] Filtered result: ${compatibleHosts.length}/${availableHosts.length} hosts`,
-      );
       setFilteredAvailableHosts(compatibleHosts);
     } else {
-      console.log(
-        `[@context:HostManagerProvider] No filtering - showing all ${availableHosts.length} hosts`,
-      );
       setFilteredAvailableHosts(availableHosts);
     }
   }, [availableHosts, stableUserInterface?.models]);

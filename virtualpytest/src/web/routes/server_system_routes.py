@@ -387,7 +387,7 @@ class Host(TypedDict):
     lockedBy: Optional[str]
     lockedAt: Optional[float]
 
-@system_bp.route('/server/system/getAvailableActions', methods=['POST'])
+@system_bp.route('/getAvailableActions', methods=['POST'])
 def get_available_actions():
     """Get available actions for a specific host."""
     try:

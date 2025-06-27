@@ -10,8 +10,6 @@ import {
 import { useConnectionRules } from './useConnectionRules';
 
 export const useNavigationNodesHook = () => {
-  console.log('[@hook:useNavigationNodesHook] Initializing nodes hook');
-
   // Use the focused context
   const nodesContext = useNavigationNodes();
 
@@ -36,7 +34,6 @@ export const useNavigationNodesHook = () => {
   // Simplified onNodesChange with change tracking
   const customOnNodesChange = useCallback(
     (changes: any[]) => {
-      console.log('[@hook:useNavigationNodesHook] Nodes changed:', changes);
       // Apply changes to nodes
       nodesContext.onNodesChange(changes);
     },
@@ -46,7 +43,6 @@ export const useNavigationNodesHook = () => {
   // Handle edge changes
   const onEdgesChange = useCallback(
     (changes: any[]) => {
-      console.log('[@hook:useNavigationNodesHook] Edges changed:', changes);
       nodesContext.onEdgesChange(changes);
     },
     [nodesContext.onEdgesChange],
@@ -55,7 +51,6 @@ export const useNavigationNodesHook = () => {
   // Handle new connections
   const onConnect = useCallback(
     (params: Connection) => {
-      console.log('[@hook:useNavigationNodesHook] New connection:', params);
       if (!params.source || !params.target) return;
 
       const sourceNode = nodesContext.nodes.find((n) => n.id === params.source);
@@ -134,7 +129,6 @@ export const useNavigationNodesHook = () => {
   // Handle node selection
   const onNodeClick = useCallback(
     (event: React.MouseEvent, node: UINavigationNode) => {
-      console.log(`[@hook:useNavigationNodesHook] Node clicked: ${node.id}`);
       event.stopPropagation();
       nodesContext.setSelectedNode(node as UINavigationNode);
       nodesContext.setSelectedEdge(null);
@@ -145,7 +139,6 @@ export const useNavigationNodesHook = () => {
   // Handle edge selection
   const onEdgeClick = useCallback(
     (event: React.MouseEvent, edge: UINavigationEdge) => {
-      console.log(`[@hook:useNavigationNodesHook] Edge clicked: ${edge.id}`);
       event.stopPropagation();
       nodesContext.setSelectedEdge(edge as UINavigationEdge);
       nodesContext.setSelectedNode(null);
@@ -155,7 +148,6 @@ export const useNavigationNodesHook = () => {
 
   // Handle pane click (deselect)
   const onPaneClick = useCallback(() => {
-    console.log('[@hook:useNavigationNodesHook] Pane clicked - deselecting');
     nodesContext.setSelectedNode(null);
     nodesContext.setSelectedEdge(null);
   }, [nodesContext.setSelectedNode, nodesContext.setSelectedEdge]);
@@ -163,7 +155,6 @@ export const useNavigationNodesHook = () => {
   // Handle double-click on node for focus
   const onNodeDoubleClick = useCallback(
     (event: React.MouseEvent, node: UINavigationNode) => {
-      console.log(`[@hook:useNavigationNodesHook] Node double-clicked: ${node.id}`);
       event.stopPropagation();
       const uiNode = node as UINavigationNode;
 

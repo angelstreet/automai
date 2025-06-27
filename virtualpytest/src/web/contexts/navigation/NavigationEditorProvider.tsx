@@ -26,10 +26,6 @@ export const NavigationEditorProvider: React.FC<NavigationEditorProviderProps> =
   children,
   userInterface,
 }) => {
-  console.log(
-    '[@context:NavigationEditorProvider] Initializing navigation editor provider with device-oriented architecture',
-  );
-
   return (
     <HostManagerProvider userInterface={userInterface}>
       <NavigationFlowProvider>

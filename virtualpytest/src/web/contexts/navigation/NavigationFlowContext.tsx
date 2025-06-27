@@ -55,8 +55,6 @@ interface NavigationFlowProviderProps {
 const NavigationFlowContext = createContext<NavigationFlowContextType | null>(null);
 
 export const NavigationFlowProvider: React.FC<NavigationFlowProviderProps> = ({ children }) => {
-  console.log('[@context:NavigationFlowProvider] Initializing navigation flow context');
-
   // ========================================
   // ROUTE PARAMS
   // ========================================
@@ -129,7 +127,6 @@ export const NavigationFlowProvider: React.FC<NavigationFlowProviderProps> = ({ 
   const stableViewPath = useMemo(() => viewPath, [viewPath]);
 
   const contextValue: NavigationFlowContextType = useMemo(() => {
-    console.log(`[@context:NavigationFlowProvider] Creating new context value`);
     return {
       // Route params
       treeId,

@@ -104,9 +104,6 @@ const miniMapNodeColor = (node: any) => {
 
 const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.memo(
   ({ userInterfaceId }) => {
-    // DEBUG: Track re-renders
-    console.log('[@component:NavigationEditorContent] Re-rendering...');
-
     // ========================================
     // 1. INITIALIZATION & SETUP
     // ========================================
@@ -213,22 +210,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     // Use the correct userInterfaceId - prefer prop over URL param
     const actualUserInterfaceId = userInterfaceId || interfaceId;
 
-    console.log('[@component:NavigationEditorContent] UserInterface ID resolution:', {
-      userInterfaceIdProp: userInterfaceId,
-      interfaceIdFromURL: interfaceId,
-      actualUserInterfaceId,
-    });
-
-    // DEBUG: Log lock state information
-    console.log('[@component:NavigationEditorContent] Lock state DEBUG:', {
-      isLocked,
-      lockInfo,
-      showReadOnlyOverlay,
-      sessionId,
-      userInterfaceId: actualUserInterfaceId,
-      userInterfaceFromState: userInterfaceFromState?.id,
-    });
-
     // Get host manager from context
     const {
       selectedHost,
@@ -260,15 +241,11 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
 
     // Handle minimized state changes from HDMIStream
     const handleAVPanelMinimizedChange = useCallback((isMinimized: boolean) => {
-      console.log(
-        `[@component:NavigationEditor] AV panel minimized state changed to: ${isMinimized}`,
-      );
       setIsAVPanelMinimized(isMinimized);
     }, []);
 
     // Handle capture mode changes from HDMIStream
     const handleCaptureModeChange = useCallback((mode: 'stream' | 'screenshot' | 'video') => {
-      console.log(`[@component:NavigationEditor] Capture mode changed to: ${mode}`);
       setCaptureMode(mode);
     }, []);
 
@@ -284,20 +261,10 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       actionsLoading,
       getModelReferences,
       getModelActions,
-      fetchAvailableReferences,
-      fetchAvailableActions,
-    } = useReferences(referenceSaveCounter, stableSelectedHost);
+    } = useReferences(referenceSaveCounter, stableSelectedHost, isControlActive);
 
-    // Fetch both verification references and actions when control becomes active
-    useEffect(() => {
-      if (isControlActive && stableSelectedHost) {
-        console.log(
-          '[@component:NavigationEditor] Control is active, fetching verification references and actions',
-        );
-        fetchAvailableReferences();
-        fetchAvailableActions();
-      }
-    }, [isControlActive, stableSelectedHost, fetchAvailableReferences, fetchAvailableActions]);
+    // Note: Reference fetching is now handled automatically by useReferences hook
+    // when selectedHost changes - no need for manual fetching here
 
     // Memoize model references for current device to prevent unnecessary re-renders
     const currentModelReferences = useMemo(() => {
@@ -362,9 +329,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const wasControlActiveRef = useRef(false);
     useEffect(() => {
       if (isControlActive && !wasControlActiveRef.current) {
-        console.log(
-          '[@component:NavigationEditor] Control activated - resetting AV panel to collapsed state',
-        );
         setIsAVPanelCollapsed(true);
         setIsAVPanelMinimized(false); // Also reset minimized state
         setCaptureMode('stream'); // Also reset capture mode
@@ -388,7 +352,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     // Show message if tree ID is missing
     useEffect(() => {
       if (!treeId && !interfaceId) {
-        console.log('[@component:NavigationEditor] Missing tree ID in URL');
+        console.warn('[@component:NavigationEditor] Missing tree ID in URL');
       }
     }, [treeId, interfaceId]);
 
@@ -398,16 +362,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       if (userInterface?.id && !isLoadingInterface) {
         // Check if we already loaded this userInterface to prevent infinite loops
         if (lastLoadedTreeId.current === userInterface.id) {
-          console.log(
-            `[@component:NavigationEditor] DEBUG: Skipping reload for userInterface: ${userInterface.id} (already loaded)`,
-          );
           return;
         }
         lastLoadedTreeId.current = userInterface.id;
-
-        console.log(
-          `[@component:NavigationEditor] DEBUG: Starting lock acquisition process for userInterface: ${userInterface.id}`,
-        );
 
         // Fix race condition: Set checking state immediately
         if (setCheckingLockState) {
@@ -418,13 +375,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         if (lockNavigationTree) {
           lockNavigationTree(userInterface.id)
             .then((lockSuccess) => {
-              console.log(
-                `[@component:NavigationEditor] DEBUG: Lock acquisition result for userInterface: ${userInterface.id}, success: ${lockSuccess}`,
-              );
               if (lockSuccess) {
-                console.log(
-                  `[@component:NavigationEditor] Lock acquired successfully for userInterface: ${userInterface.id}`,
-                );
                 // STEP 2: If lock acquired, load the tree data (nodes/edges only, not interface metadata)
                 if (loadFromConfig) {
                   loadFromConfig(userInterface.id);
@@ -462,10 +413,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
 
         // Return cleanup function
         return cleanup;
-      } else {
-        console.log(
-          `[@component:NavigationEditor] DEBUG: Not loading tree - userInterface.id: ${userInterface?.id}, isLoadingInterface: ${isLoadingInterface}`,
-        );
       }
     }, [
       userInterface?.id,

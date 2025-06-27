@@ -22,22 +22,55 @@ from ..base_controller import VerificationControllerInterface
 class ADBVerificationController(VerificationControllerInterface):
     """ADB verification controller that uses direct ADB commands to verify UI elements."""
     
-    def __init__(self, av_controller=None, **kwargs):
+    def __init__(self, av_controller=None, device_ip: str = None, device_port: int = 5555, **kwargs):
         """
         Initialize the ADB Verification controller.
         
         Args:
             av_controller: AV controller for capturing screenshots (optional, not used by ADB)
+            device_ip: Android device IP address (required for ADB connection)
+            device_port: ADB port (default: 5555)
         """
         super().__init__("ADB Verification", "adb")
         
-       
+        # Store device connection parameters
+        self.device_ip = device_ip
+        self.device_port = device_port
         self.verification_type = 'adb'
-        self.device_id = f"adb_verification"  # Internal device identifier
+        
+        # Create device identifier for ADB operations
+        if self.device_ip:
+            self.device_id = f"{self.device_ip}:{self.device_port}"
+        else:
+            # Fallback for cases where device_ip is not provided
+            print(f"[@controller:ADBVerification] WARNING: No device_ip provided, using fallback device_id")
+            self.device_id = "adb_verification"
+        
         self.adb_utils = ADBUtils()
         self.is_connected = True  # Assume connected since we're using direct ADB
         
-        print(f"[@controller:ADBVerification] Initialized for direct ADB communication")
+        print(f"[@controller:ADBVerification] Initialized for device {self.device_id}")
+
+    def connect(self) -> bool:
+        """Connect to the ADB device if device_ip is provided."""
+        if not self.device_ip:
+            print(f"[@controller:ADBVerification] No device IP provided, skipping ADB connection")
+            return True  # Return True for fallback mode
+        
+        try:
+            print(f"[@controller:ADBVerification] Connecting to ADB device {self.device_id}")
+            success = self.adb_utils.connect_device(self.device_id)
+            if success:
+                print(f"[@controller:ADBVerification] Successfully connected to {self.device_id}")
+                self.is_connected = True
+            else:
+                print(f"[@controller:ADBVerification] Failed to connect to {self.device_id}")
+                self.is_connected = False
+            return success
+        except Exception as e:
+            print(f"[@controller:ADBVerification] Connection error: {e}")
+            self.is_connected = False
+            return False
 
     def getElementLists(self) -> Tuple[bool, List[Dict[str, Any]], str]:
         """
