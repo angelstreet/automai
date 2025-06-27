@@ -294,60 +294,6 @@ class DeviceControllerSet:
             'power': self.power.get_status()
         }
 
-
-# Convenience functions for backward compatibility
-def create_device_controllers(
-    device_name: str,
-    device_type: str = "android_tv",
-    **kwargs
-) -> DeviceControllerSet:
-    """
-    Create a complete set of controllers for a device.
-    
-    Args:
-        device_name: Name of the device
-        device_type: Type of device (determines default controller types)
-        **kwargs: Override specific controller types
-    
-    Returns:
-        DeviceControllerSet: Complete controller set
-    """
-    # Default controller mappings for different device types
-    device_defaults = {
-        'android_tv': {
-            'remote_type': 'android_tv',  # ADBAndroid TV controller
-            'av_type': 'hdmi_stream',
-            'verification_type': 'ocr',
-            'power_type': 'usb',  # USB hub power control via SSH + uhubctl
-        },
-        'android_mobile': {
-            'remote_type': 'android_mobile',  # ADBAndroid mobile controller
-            'av_type': 'hdmi_stream',
-            'verification_type': 'ocr',
-            'power_type': 'usb',  # USB hub power control via SSH + uhubctl
-        },
-        'ir_tv': {
-            'remote_type': 'ir_remote',
-            'av_type': 'hdmi',
-            'verification_type': 'image',
-            'power_type': 'usb'
-        },
-        'bluetooth_device': {
-            'remote_type': 'bluetooth_remote',
-            'av_type': 'hdmi_stream',
-            'verification_type': 'ocr',
-            'power_type': 'usb'  # USB hub power control via SSH + uhubctl
-        }
-    }
-    
-    defaults = device_defaults.get(device_type, device_defaults['android_tv'])
-    
-    # Override with any provided kwargs
-    config = {**defaults, **kwargs}
-    
-    return DeviceControllerSet(device_name=device_name, **config)
-
-
 # Export main classes and functions
 __all__ = [
     'BaseController',
@@ -357,6 +303,5 @@ __all__ = [
     'PowerControllerInterface',
     'ControllerFactory',
     'DeviceControllerSet',
-    'create_device_controllers',
     'CONTROLLER_REGISTRY'
 ]

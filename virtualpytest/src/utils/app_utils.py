@@ -137,7 +137,7 @@ def validate_core_environment(mode='server'):
 def lazy_load_controllers():
     """Lazy load controllers when first needed"""
     try:
-        from src.controllers import ControllerFactory, CONTROLLER_REGISTRY, create_device_controllers
+        from src.controllers import ControllerFactory, CONTROLLER_REGISTRY
         from src.controllers.base_controller import (
             RemoteControllerInterface, 
             AVControllerInterface, 

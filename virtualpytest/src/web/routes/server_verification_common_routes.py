@@ -151,7 +151,7 @@ def execute_batch_verification():
         # Get request data
         data = request.get_json() or {}
         verifications = data.get('verifications', [])
-        image_source_url = data.get('image_source_url') or data.get('source_filename')  # Support both old and new field names
+        image_source_url = data.get('image_source_url')
         host = data.get('host', {})
         
         # Extract model from host device (required)
@@ -188,7 +188,6 @@ def execute_batch_verification():
             individual_request = {
                 'verification': verification,
                 'image_source_url': image_source_url,
-                'source_filename': image_source_url,  # Backward compatibility
                 'model': device_model
             }
             

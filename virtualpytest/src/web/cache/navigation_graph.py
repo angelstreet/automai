@@ -118,36 +118,6 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
                     }
                     retry_actions_list.append(action_info)
         
-        # Handle legacy single action format (backward compatibility)
-        elif edge_data.get('action'):
-            legacy_action = edge_data['action']
-            if isinstance(legacy_action, dict) and legacy_action.get('id'):
-                action_info = {
-                    'id': legacy_action.get('id'),
-                    'label': legacy_action.get('label', legacy_action.get('id', 'Unknown Action')),
-                    'command': legacy_action.get('command', legacy_action.get('id')),
-                    'params': legacy_action.get('params', {}),
-                    'requiresInput': legacy_action.get('requiresInput', False),
-                    'inputValue': legacy_action.get('inputValue', ''),
-                    'waitTime': legacy_action.get('waitTime', 1000)
-                }
-                actions_list.append(action_info)
-        
-        # Fallback: try to get action directly from go_action field
-        if not actions_list:
-            go_action = edge_data.get('go_action')
-            if go_action:
-                action_info = {
-                    'id': go_action,
-                    'label': go_action.replace('_', ' ').title(),
-                    'command': go_action,
-                    'params': {},
-                    'requiresInput': False,
-                    'inputValue': '',
-                    'waitTime': 1000
-                }
-                actions_list.append(action_info)
-        
         # Get the primary action for pathfinding (first action or fallback)
         primary_action = actions_list[0]['command'] if actions_list else None
         

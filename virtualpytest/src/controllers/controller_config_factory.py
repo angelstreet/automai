@@ -177,7 +177,3 @@ def _get_verification_params(implementation: str, device_config: dict) -> dict:
             'appium_server_url': device_config.get('appium_server_url', 'http://localhost:4723')
         }
     return {}
-
-# ✅ PHASE 6 CLEANUP: Removed backward compatibility functions
-# - get_device_capabilities_from_model() - REMOVED
-# - get_controller_types_from_model() - REMOVED 

@@ -421,16 +421,6 @@ class VideoVerificationController(VerificationControllerInterface):
         print(f"VideoVerify[{self.device_name}]: Use AudioVerificationController for audio verification")
         return False
         
-    def verify_video_playing(self, motion_threshold: float = 5.0, duration: float = 3.0) -> bool:
-        """
-        Legacy method - calls waitForVideoToAppear for backward compatibility.
-        
-        Args:
-            motion_threshold: Minimum motion percentage to consider as "playing"
-            duration: Duration to check for motion in seconds
-        """
-        return self.waitForVideoToAppear(motion_threshold, duration, timeout=10.0)
-        
     def verify_color_present(self, color: str, tolerance: float = 10.0) -> bool:
         """
         Verify that a specific color is present on screen.

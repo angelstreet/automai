@@ -185,7 +185,7 @@ export function useHdmiStream({
             host_name: host.host_name,
             area: selectedArea,
             image_source_url: captureSourcePath,
-            source_filename: captureSourcePath, // Backward compatibility
+
             reference_name: referenceName,
             model: deviceModel,
             autocrop: imageProcessingOptions.autocrop,
@@ -203,7 +203,7 @@ export function useHdmiStream({
             host_name: host.host_name,
             area: selectedArea,
             image_source_url: captureSourcePath,
-            source_filename: captureSourcePath, // Backward compatibility
+
             reference_name: referenceName,
             model: deviceModel,
           }),
@@ -301,7 +301,6 @@ export function useHdmiStream({
           model: deviceModel,
           area: selectedArea,
           image_source_url: captureSourcePath,
-          source_filename: captureSourcePath, // Backward compatibility
           image_filter: 'none',
         }),
       });

@@ -21,7 +21,6 @@ interface DetectedTextData {
   detectedLanguageName?: string;
   languageConfidence?: number;
   image_textdetected_path?: string;
-  processed_image_path?: string; // Backward compatibility
 }
 
 interface ImageProcessingOptions {
@@ -185,7 +184,6 @@ export const useVerificationEditor = ({
             device_id: selectedDeviceId, // Send device ID
             area: selectedArea,
             image_source_url: captureSourcePath,
-            source_filename: captureSourcePath, // Backward compatibility
             reference_name: referenceName || 'temp_capture',
             model: deviceModel,
             autocrop: imageProcessingOptions.autocrop,
@@ -204,7 +202,6 @@ export const useVerificationEditor = ({
             device_id: selectedDeviceId, // Send device ID
             area: selectedArea,
             image_source_url: captureSourcePath,
-            source_filename: captureSourcePath, // Backward compatibility
             reference_name: referenceName || 'temp_capture',
             model: deviceModel,
           }),
@@ -353,7 +350,6 @@ export const useVerificationEditor = ({
               device_id: selectedDeviceId,
               area: selectedArea,
               image_source_url: captureSourcePath,
-              source_filename: captureSourcePath, // Backward compatibility
               reference_name: referenceName,
               model: deviceModel,
               autocrop: imageProcessingOptions.autocrop,
@@ -372,7 +368,6 @@ export const useVerificationEditor = ({
               device_id: selectedDeviceId,
               area: selectedArea,
               image_source_url: captureSourcePath,
-              source_filename: captureSourcePath, // Backward compatibility
               reference_name: referenceName,
               model: deviceModel,
             }),
@@ -399,7 +394,7 @@ export const useVerificationEditor = ({
               imageProcessingOptions.autocrop && captureResult.processed_area
                 ? captureResult.processed_area
                 : selectedArea,
-            cropped_filename: captureResult.filename,
+            image_source_url: captureResult.filename, // Use cropped filename as source
             reference_type: referenceType === 'image' ? 'reference_image' : 'screenshot',
           }),
         });
@@ -478,7 +473,6 @@ export const useVerificationEditor = ({
           model: deviceModel,
           area: selectedArea,
           image_source_url: sourceFilename,
-          source_filename: sourceFilename, // Backward compatibility
           image_filter: textImageFilter,
         }),
       });
@@ -496,7 +490,6 @@ export const useVerificationEditor = ({
           detectedLanguageName: result.detected_language_name,
           languageConfidence: result.language_confidence,
           image_textdetected_path: result.image_textdetected_path || result.processed_image_path,
-          processed_image_path: result.processed_image_path, // Backward compatibility
         });
 
         // Pre-fill the text input with detected text

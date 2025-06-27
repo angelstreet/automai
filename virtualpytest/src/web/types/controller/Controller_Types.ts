@@ -93,10 +93,3 @@ export type {
   ControllerConfigMap,
   DeviceFormData as CommonDeviceFormData, // Alias to avoid conflict with local DeviceFormData
 } from '../common/Common_BaseTypes';
-
-// Import types for creating aliases
-import type { ControllerConfiguration } from '../common/Common_BaseTypes';
-
-// Additional type aliases for backward compatibility
-export type ControllerImplementation = ControllerConfiguration;
-export type ControllerConfig = ControllerConfiguration;

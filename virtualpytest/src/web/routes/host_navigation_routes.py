@@ -104,7 +104,7 @@ def save_navigation_screenshot():
             return jsonify({
                 'success': True,
                 'screenshot_url': r2_url,  # R2 URL for permanent storage
-                'screenshot_path': local_screenshot_path,  # Keep for backward compatibility
+                'screenshot_path': local_screenshot_path, 
                 'device_id': device_id
             })
             

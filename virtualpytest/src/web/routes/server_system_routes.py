@@ -56,38 +56,16 @@ def register_host():
         print(f"   Host Port: {host_port}")
         print(f"   Devices: {len(devices)} devices")
         
-        # Process each device and build combined capabilities
-        all_capabilities = set()
-        all_controller_types = set()
+        # Process each device
         devices_with_controllers = []
         
         for device in devices:
             device_name = device.get('device_name')
             device_model = device.get('device_model') 
-            device_capabilities = device.get('device_capabilities', {})  # Use host-sent detailed capabilities
+            device_capabilities = device.get('device_capabilities', {})
             
             print(f"[@route:register_host] Processing device: {device_name} ({device_model})")
-            print(f"[@route:register_host] Host-sent capabilities: {device_capabilities}")
-            
-            # Extract capability types for backward compatibility
-            capability_list = []
-            controller_types = []
-            
-            if device_capabilities.get('av'):
-                capability_list.append('av')
-                controller_types.append(f"av_{device_capabilities['av']}")
-            
-            if device_capabilities.get('remote'):
-                capability_list.append('remote')
-                controller_types.append(f"remote_{device_capabilities['remote']}")
-            
-            if device_capabilities.get('verification'):
-                capability_list.extend(device_capabilities['verification'])
-                for verification_type in device_capabilities['verification']:
-                    controller_types.append(f"verification_{verification_type}")
-            
-            print(f"[@route:register_host] Processed capability list: {capability_list}")
-            print(f"[@route:register_host] Controller types: {controller_types}")
+            print(f"[@route:register_host] Device capabilities: {device_capabilities}")
             
             # Check for device-level verification and action types
             device_verification_types = device.get('device_verification_types', {})
@@ -98,27 +76,18 @@ def register_host():
             if device_action_types:
                 print(f"[@route:register_host] Device {device_name} has {len(device_action_types)} action categories")
             
-            # Add device with processed info (keep the device data as sent by host)
+            # Add device with processed info
             device_with_controllers = {
                 'device_id': device.get('device_id'),
                 'device_name': device_name,
                 'device_model': device_model,
                 'device_ip': device.get('device_ip'),
                 'device_port': device.get('device_port'),
-                'device_capabilities': device_capabilities,  # Detailed format: {av: 'hdmi_stream', remote: 'android_mobile', verification: ['image', 'text']}
-                'device_capability_list': capability_list,   # Flat list for backward compatibility: ['av', 'remote', 'image', 'text']
-                'device_controller_types': controller_types, # Implementation types: ['av_hdmi_stream', 'remote_android_mobile', 'verification_image', 'verification_text']
-                'device_verification_types': device_verification_types,  # Device-level verification types (removed 'available_' prefix)
-                'device_action_types': device_action_types  # Device-level action types (removed 'available_' prefix)
+                'device_capabilities': device_capabilities,
+                'device_verification_types': device_verification_types,
+                'device_action_types': device_action_types
             }
             devices_with_controllers.append(device_with_controllers)
-            
-            # Collect all capabilities and controller types
-            all_capabilities.update(capability_list)
-            all_controller_types.update(controller_types)
-        
-        print(f"[@route:register_host] Combined capabilities: {list(all_capabilities)}")
-        print(f"[@route:register_host] Combined controller types: {list(all_controller_types)}")
         
         # Create host object with multi-device support
         host_object: Host = {
@@ -139,10 +108,6 @@ def register_host():
             'last_seen': time.time(),
             'registered_at': datetime.now().isoformat(),
             'system_stats': host_info.get('system_stats', get_system_stats()),
-            
-                    # === HOST CAPABILITIES (COMBINED FROM ALL DEVICES) ===
-        'capabilities': list(all_capabilities),
-        'controller_types': list(all_controller_types),
             
             # === DEVICE LOCK MANAGEMENT ===
             'isLocked': False,
@@ -416,10 +381,6 @@ class Host(TypedDict):
     last_seen: float
     registered_at: str
     system_stats: Any  # SystemStats type
-    
-    # === HOST CAPABILITIES (COMBINED FROM ALL DEVICES) ===
-    capabilities: List[str]
-    controller_types: Optional[List[str]]
     
     # === DEVICE LOCK MANAGEMENT ===
     isLocked: bool

@@ -283,8 +283,3 @@ export function useRemoteConfigs({
     refreshConfig,
   };
 }
-
-// Helper function to get config by type (kept for backward compatibility)
-export function getRemoteConfig(remoteType: string): RemoteDeviceConfig | null {
-  return REMOTE_CONFIGS[remoteType as keyof typeof REMOTE_CONFIGS] || null;
-}

@@ -566,13 +566,7 @@ def analyze_validation_sequence_efficiency(validation_sequence: List[Dict]) -> D
         efficiency_rating = "Average"
     else:
         efficiency_rating = "Needs improvement"
-    
-    # Add analysis section for backward compatibility
-    analysis = {
-        'very_efficient': efficiency_ratio > 0.8 and total_navigation_cost < edge_validations * 0.2,
-        'efficient': efficiency_ratio > 0.6,
-        'needs_improvement': efficiency_ratio < 0.4 or total_navigation_cost > edge_validations
-    }
+
     
     # Use only primitive types in the returned dictionary
     return {
@@ -582,14 +576,12 @@ def analyze_validation_sequence_efficiency(validation_sequence: List[Dict]) -> D
         'bidirectional_optimizations': bidirectional_optimizations,
         'bidirectional_pairs': bidirectional_pairs,
         'optimization_types': list(str(opt) for opt in optimization_types),  # Convert to strings
-        'optimizations_used': optimizations_used,  # For backward compatibility
         'optimization_counts': {str(k): v for k, v in optimization_counts.items()},  # Ensure keys are strings
         'total_navigation_cost': total_navigation_cost,
         'efficiency_ratio': efficiency_ratio,
         'bidirectional_efficiency': bidirectional_efficiency,
         'position_changes': position_changes,
         'efficiency_rating': efficiency_rating,
-        'analysis': analysis  # For backward compatibility
     }
 
 def _create_simple_networkx_validation_sequence(G: nx.DiGraph, edges_to_validate: List[Tuple]) -> List[Dict]:

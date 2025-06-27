@@ -785,32 +785,3 @@ def execute_navigation_host(tree_id, node_id):
     """Execute navigation to a specific node on host device (legacy endpoint)"""
     # Redirect to the new endpoint
     return execute_navigation_to_node(tree_id, node_id)
-
-# =====================================================
-# LEGACY ENDPOINTS (for backward compatibility)
-# =====================================================
-
-@navigation_bp.route('/trees', methods=['GET'])
-def get_navigation_trees_legacy():
-    """Legacy endpoint - redirects to new endpoint"""
-    return get_all_navigation_trees()
-
-@navigation_bp.route('/trees', methods=['POST'])
-def create_navigation_tree_legacy():
-    """Legacy endpoint - redirects to new endpoint"""
-    return create_navigation_tree_route()
-
-@navigation_bp.route('/trees/<tree_id>', methods=['GET'])
-def get_navigation_tree_by_id_legacy(tree_id):
-    """Legacy endpoint - redirects to new endpoint"""
-    return get_navigation_tree_by_id(tree_id)
-
-@navigation_bp.route('/trees/<tree_id>', methods=['PUT'])
-def update_navigation_tree_legacy(tree_id):
-    """Legacy endpoint - redirects to new endpoint"""
-    return update_navigation_tree_route(tree_id)
-
-@navigation_bp.route('/trees/<tree_id>', methods=['DELETE'])
-def delete_navigation_tree_legacy(tree_id):
-    """Legacy endpoint - redirects to new endpoint"""
-    return delete_navigation_tree_route(tree_id) 
