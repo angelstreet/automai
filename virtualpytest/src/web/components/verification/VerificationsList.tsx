@@ -9,9 +9,8 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// Removed useVerificationReferences import - now uses passed props only
 import { Host } from '../../types/common/Host_Types';
 import {
   Verification,
@@ -20,8 +19,8 @@ import {
 } from '../../types/verification/VerificationTypes';
 
 import { VerificationImageComparisonDialog } from './VerificationImageComparisonDialog';
-import { VerificationTextComparisonDialog } from './VerificationTextComparisonDialog';
 import { VerificationItem } from './VerificationItem';
+import { VerificationTextComparisonDialog } from './VerificationTextComparisonDialog';
 
 export interface VerificationsListProps {
   verifications: Verification[];
@@ -51,9 +50,9 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
     model,
     onTest,
     testResults = [],
-    reloadTrigger = 0,
+    reloadTrigger: _reloadTrigger = 0,
     onReferenceSelected,
-    selectedHost,
+    selectedHost: _selectedHost,
     modelReferences,
     referencesLoading,
     showCollapsible = false,
@@ -298,18 +297,6 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
         matchingResult,
         resultType,
         imageFilter,
-      });
-    };
-
-    const handleSourceImageClick = (sourceUrl: string, resultType: 'PASS' | 'FAIL' | 'ERROR') => {
-      setImageComparisonDialog({
-        open: true,
-        sourceUrl,
-        referenceUrl: '',
-        resultType,
-        userThreshold: undefined,
-        matchingResult: undefined,
-        imageFilter: undefined,
       });
     };
 

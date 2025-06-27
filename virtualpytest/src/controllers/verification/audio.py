@@ -480,27 +480,30 @@ class AudioVerificationController(VerificationControllerInterface):
         """Get available verifications for audio controller."""
         return [
             {
-                'command': 'detect_silence',
+                'command': 'DetectSilence',
                 'params': {
                     'threshold': {'type': 'float', 'required': False},
                     'duration': {'type': 'float', 'required': False},
                     'audio_file': {'type': 'string', 'required': False}
-                }
+                },
+                'verification_type': 'audio'
             },
             {
-                'command': 'verify_audio_playing',
+                'command': 'WaitForAudioToAppear',
                 'params': {
                     'min_level': {'type': 'float', 'required': False, 'default': 10.0},
                     'duration': {'type': 'float', 'required': False, 'default': 2.0}
-                }
+                },
+                'verification_type': 'audio'
             },
             {
-                'command': 'verify_audio_contains_frequency',
+                'command': 'VerifyAudioContainsFrequency',
                 'params': {
                     'target_freq': {'type': 'float', 'required': True},
                     'tolerance': {'type': 'float', 'required': False, 'default': 50.0},
                     'duration': {'type': 'float', 'required': False}
-                }
+                },
+                'verification_type': 'audio'
             }
         ]
 
@@ -529,13 +532,13 @@ class AudioVerificationController(VerificationControllerInterface):
         try:
             # Extract parameters
             params = verification_config.get('params', {})
-            command = verification_config.get('command', 'verify_audio_playing')
+            command = verification_config.get('command', 'WaitForAudioToAppear')
             
             print(f"[@controller:AudioVerification] Executing {command}")
             print(f"[@controller:AudioVerification] Parameters: {params}")
             
             # Execute verification based on command
-            if command == 'detect_silence':
+            if command == 'DetectSilence':
                 threshold = params.get('threshold', self.silence_threshold)
                 duration = params.get('duration', self.analysis_duration)
                 audio_file = params.get('audio_file')
@@ -548,7 +551,7 @@ class AudioVerificationController(VerificationControllerInterface):
                     'audio_file': audio_file
                 }
                 
-            elif command == 'verify_audio_playing':
+            elif command == 'WaitForAudioToAppear':
                 min_level = params.get('min_level', 10.0)
                 duration = params.get('duration', 2.0)
                 
@@ -559,7 +562,7 @@ class AudioVerificationController(VerificationControllerInterface):
                     'duration': duration
                 }
                 
-            elif command == 'verify_audio_contains_frequency':
+            elif command == 'VerifyAudioContainsFrequency':
                 target_freq = params.get('target_freq')
                 if not target_freq:
                     return {

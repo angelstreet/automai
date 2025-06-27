@@ -208,9 +208,9 @@ class TextVerificationController:
     def execute_verification(self, verification_config: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for executing verification."""
         try:
-            verification_type = verification_config.get('type', 'text_appears')
+            command = verification_config.get('command', 'WaitForTextToAppear')
             
-            if verification_type == 'text_appears':
+            if command == 'WaitForTextToAppear':
                 text = verification_config.get('text', '')
                 timeout = verification_config.get('timeout', 10.0)
                 area = verification_config.get('area')
@@ -221,14 +221,14 @@ class TextVerificationController:
                 
                 return {
                     'success': found,
-                    'type': verification_type,
+                    'command': command,
                     'text': text,
                     'screenshot_path': screenshot_path,
                     'extracted_info': extracted_info,
                     'message': f"Text {'found' if found else 'not found'}"
                 }
                 
-            elif verification_type == 'text_disappears':
+            elif command == 'WaitForTextToDisappear':
                 text = verification_config.get('text', '')
                 timeout = verification_config.get('timeout', 10.0)
                 area = verification_config.get('area')
@@ -239,20 +239,14 @@ class TextVerificationController:
                 
                 return {
                     'success': disappeared,
-                    'type': verification_type,
+                    'command': command,
                     'text': text,
                     'screenshot_path': screenshot_path,
                     'message': f"Text {'disappeared' if disappeared else 'did not disappear'}"
                 }
                 
-            elif verification_type == 'text_detection':
-                # Keep backward compatibility for text detection
-                return self.detect_text({
-                    'image_source_url': verification_config.get('image_source_url', ''),
-                    'area': verification_config.get('area')
-                })
             else:
-                return {'success': False, 'message': f'Unsupported verification type: {verification_type}'}
+                return {'success': False, 'message': f'Unsupported verification command: {command}'}
                 
         except Exception as e:
             return {'success': False, 'message': f'Verification execution failed: {str(e)}'}
@@ -261,15 +255,21 @@ class TextVerificationController:
         """Get list of available verification types."""
         return [
             {
-                "type": "text_appears",
-                "name": "Wait for Text to Appear",
-                "description": "Wait for specific text to appear on screen using OCR",
-                "parameters": ["text", "timeout", "area"]
+                "command": "WaitForTextToAppear",
+                "params": {
+                    "text": {"type": "string", "required": True},
+                    "timeout": {"type": "float", "required": False, "default": 10.0},
+                    "area": {"type": "object", "required": False}
+                },
+                "verification_type": "text"
             },
             {
-                "type": "text_disappears",
-                "name": "Wait for Text to Disappear",
-                "description": "Wait for specific text to disappear from screen using OCR",
-                "parameters": ["text", "timeout", "area"]
+                "command": "WaitForTextToDisappear",
+                "params": {
+                    "text": {"type": "string", "required": True},
+                    "timeout": {"type": "float", "required": False, "default": 10.0},
+                    "area": {"type": "object", "required": False}
+                },
+                "verification_type": "text"
             }
         ] 

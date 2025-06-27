@@ -307,9 +307,9 @@ class ImageVerificationController:
     def execute_verification(self, verification_config: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for executing verification."""
         try:
-            verification_type = verification_config.get('type', 'image_appears')
+            command = verification_config.get('command', 'WaitForImageToAppear')
             
-            if verification_type == 'image_appears':
+            if command == 'WaitForImageToAppear':
                 image_path = verification_config.get('image_path', '')
                 timeout = verification_config.get('timeout', 10.0)
                 confidence = verification_config.get('confidence', 0.8)
@@ -323,7 +323,7 @@ class ImageVerificationController:
                 
                 return {
                     'success': found,
-                    'type': verification_type,
+                    'command': command,
                     'image_path': image_path,
                     'screenshot_path': screenshot_path,
                     'match_location': location,
@@ -331,7 +331,7 @@ class ImageVerificationController:
                     'message': f"Image {'found' if found else 'not found'}"
                 }
                 
-            elif verification_type == 'image_disappears':
+            elif command == 'WaitForImageToDisappear':
                 image_path = verification_config.get('image_path', '')
                 timeout = verification_config.get('timeout', 10.0)
                 confidence = verification_config.get('confidence', 0.8)
@@ -345,7 +345,7 @@ class ImageVerificationController:
                 
                 return {
                     'success': disappeared,
-                    'type': verification_type,
+                    'command': command,
                     'image_path': image_path,
                     'screenshot_path': screenshot_path,
                     'confidence': confidence,
@@ -355,62 +355,40 @@ class ImageVerificationController:
             else:
                 return {
                     'success': False,
-                    'type': verification_type,
-                    'message': f"Unknown verification type: {verification_type}"
+                    'command': command,
+                    'message': f"Unknown verification command: {command}"
                 }
                 
         except Exception as e:
             print(f"[@controller:ImageVerification] Error in execute_verification: {e}")
             return {
                 'success': False,
-                'type': verification_config.get('type', 'unknown'),
+                'command': verification_config.get('command', 'unknown'),
                 'message': f"Verification failed: {str(e)}"
             }
-
-    # =============================================================================
-    # Verification Interface Methods (For compatibility)
-    # =============================================================================
-
-    def verify_image_appears(self, image_name: str, timeout: float = 10.0, confidence: float = 0.8) -> bool:
-        """Verify that an image appears on screen."""
-        found, _, _ = self.waitForImageToAppear(image_name, timeout, confidence)
-        return found
-
-    def verify_screen_state(self, expected_state: str, timeout: float = 5.0) -> bool:
-        """Verify screen state by looking for specific image."""
-        found, _, _ = self.waitForImageToAppear(expected_state, timeout)
-        return found
-
-    def wait_and_verify(self, verification_type: str, target: str, timeout: float = 10.0, **kwargs) -> bool:
-        """Generic wait and verify method."""
-        try:
-            if verification_type == 'image_appears':
-                found, _, _ = self.waitForImageToAppear(target, timeout, **kwargs)
-                return found
-            elif verification_type == 'image_disappears':
-                disappeared, _ = self.waitForImageToDisappear(target, timeout, **kwargs)
-                return disappeared
-            else:
-                print(f"[@controller:ImageVerification] Unknown verification type: {verification_type}")
-                return False
-        except Exception as e:
-            print(f"[@controller:ImageVerification] Error in wait_and_verify: {e}")
-            return False
 
     def get_available_verifications(self) -> list:
         """Get list of available verification types."""
         return [
             {
-                "type": "image_appears",
-                "name": "Wait for Image to Appear",
-                "description": "Wait for specific image to appear on screen",
-                "parameters": ["image_path", "timeout", "confidence", "area"]
+                "command": "WaitForImageToAppear",
+                "params": {
+                    "image_path": {"type": "string", "required": True},
+                    "timeout": {"type": "float", "required": False, "default": 10.0},
+                    "confidence": {"type": "float", "required": False, "default": 0.8},
+                    "area": {"type": "object", "required": False}
+                },
+                "verification_type": "image"
             },
             {
-                "type": "image_disappears",
-                "name": "Wait for Image to Disappear", 
-                "description": "Wait for specific image to disappear from screen",
-                "parameters": ["image_path", "timeout", "confidence", "area"]
+                "command": "WaitForImageToDisappear",
+                "params": {
+                    "image_path": {"type": "string", "required": True},
+                    "timeout": {"type": "float", "required": False, "default": 10.0},
+                    "confidence": {"type": "float", "required": False, "default": 0.8},
+                    "area": {"type": "object", "required": False}
+                },
+                "verification_type": "image"
             }
         ]
 

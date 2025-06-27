@@ -117,7 +117,6 @@ interface BaseVerification {
   // Language detection for text verifications
   detectedLanguage?: string;
   languageConfidence?: number;
-  // ❌ REMOVED: Confidence tracking moved to database
 
   // ADB-specific result data
   search_term?: string;

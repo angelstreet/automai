@@ -590,48 +590,54 @@ class VideoVerificationController(VerificationControllerInterface):
         """Get available verifications for video controller."""
         return [
             {
-                'command': 'waitForVideoToAppear',
+                'command': 'WaitForVideoToAppear',
                 'params': {
                     'motion_threshold': {'type': 'float', 'required': False, 'default': 5.0},
                     'duration': {'type': 'float', 'required': False, 'default': 3.0},
                     'timeout': {'type': 'float', 'required': False, 'default': 10.0}
-                }
+                },
+                'verification_type': 'video'
             },
             {
-                'command': 'waitForVideoToDisappear',
+                'command': 'WaitForVideoToDisappear',
                 'params': {
                     'motion_threshold': {'type': 'float', 'required': False, 'default': 5.0},
                     'duration': {'type': 'float', 'required': False, 'default': 3.0},
                     'timeout': {'type': 'float', 'required': False, 'default': 10.0}
-                }
+                },
+                'verification_type': 'video'
             },
             {
-                'command': 'detect_motion',
+                'command': 'DetectMotion',
                 'params': {
                     'duration': {'type': 'float', 'required': False, 'default': 3.0},
                     'threshold': {'type': 'float', 'required': False}
-                }
+                },
+                'verification_type': 'video'
             },
             {
-                'command': 'wait_for_video_change',
+                'command': 'WaitForVideoChange',
                 'params': {
                     'timeout': {'type': 'float', 'required': False, 'default': 10.0},
                     'threshold': {'type': 'float', 'required': False}
-                }
+                },
+                'verification_type': 'video'
             },
             {
-                'command': 'verify_color_present',
+                'command': 'VerifyColorPresent',
                 'params': {
                     'color': {'type': 'string', 'required': True},
                     'tolerance': {'type': 'float', 'required': False, 'default': 10.0}
-                }
+                },
+                'verification_type': 'video'
             },
             {
-                'command': 'verify_screen_state',
+                'command': 'VerifyScreenState',
                 'params': {
                     'expected_state': {'type': 'string', 'required': True},
                     'timeout': {'type': 'float', 'required': False, 'default': 5.0}
-                }
+                },
+                'verification_type': 'video'
             }
         ]
 
@@ -662,13 +668,13 @@ class VideoVerificationController(VerificationControllerInterface):
         try:
             # Extract parameters
             params = verification_config.get('params', {})
-            command = verification_config.get('command', 'waitForVideoToAppear')
+            command = verification_config.get('command', 'WaitForVideoToAppear')
             
             print(f"[@controller:VideoVerification] Executing {command}")
             print(f"[@controller:VideoVerification] Parameters: {params}")
             
             # Execute verification based on command
-            if command == 'waitForVideoToAppear':
+            if command == 'WaitForVideoToAppear':
                 motion_threshold = params.get('motion_threshold', 5.0)
                 duration = params.get('duration', 3.0)
                 timeout = params.get('timeout', 10.0)
@@ -681,7 +687,7 @@ class VideoVerificationController(VerificationControllerInterface):
                     'timeout': timeout
                 }
                 
-            elif command == 'waitForVideoToDisappear':
+            elif command == 'WaitForVideoToDisappear':
                 motion_threshold = params.get('motion_threshold', 5.0)
                 duration = params.get('duration', 3.0)
                 timeout = params.get('timeout', 10.0)
@@ -694,7 +700,7 @@ class VideoVerificationController(VerificationControllerInterface):
                     'timeout': timeout
                 }
                 
-            elif command == 'detect_motion':
+            elif command == 'DetectMotion':
                 duration = params.get('duration', 3.0)
                 threshold = params.get('threshold', self.motion_threshold)
                 
@@ -705,7 +711,7 @@ class VideoVerificationController(VerificationControllerInterface):
                     'threshold': threshold
                 }
                 
-            elif command == 'wait_for_video_change':
+            elif command == 'WaitForVideoChange':
                 timeout = params.get('timeout', 10.0)
                 threshold = params.get('threshold', self.frame_comparison_threshold)
                 
@@ -716,7 +722,7 @@ class VideoVerificationController(VerificationControllerInterface):
                     'threshold': threshold
                 }
                 
-            elif command == 'verify_color_present':
+            elif command == 'VerifyColorPresent':
                 color = params.get('color')
                 if not color:
                     return {
@@ -735,7 +741,7 @@ class VideoVerificationController(VerificationControllerInterface):
                     'tolerance': tolerance
                 }
                 
-            elif command == 'verify_screen_state':
+            elif command == 'VerifyScreenState':
                 expected_state = params.get('expected_state')
                 if not expected_state:
                     return {

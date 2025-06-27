@@ -524,20 +524,22 @@ class ADBVerificationController(VerificationControllerInterface):
         """Get available verifications for ADB controller."""
         return [
             {
-                'command': 'waitForElementToAppear',
+                'command': 'WaitForElementToAppear',
                 'params': {
                     'search_term': {'type': 'string', 'required': True},
                     'timeout': {'type': 'float', 'required': False, 'default': 10.0},
                     'check_interval': {'type': 'float', 'required': False, 'default': 0.0}
-                }
+                },
+                'verification_type': 'adb'
             },
             {
-                'command': 'waitForElementToDisappear',
+                'command': 'WaitForElementToDisappear',
                 'params': {
                     'search_term': {'type': 'string', 'required': True},
                     'timeout': {'type': 'float', 'required': False, 'default': 10.0},
                     'check_interval': {'type': 'float', 'required': False, 'default': 0.0}
-                }
+                },
+                'verification_type': 'adb'
             }
         ]
 
@@ -567,7 +569,7 @@ class ADBVerificationController(VerificationControllerInterface):
         try:
             # Extract parameters
             params = verification_config.get('params', {})
-            command = verification_config.get('command', 'waitForElementToAppear')
+            command = verification_config.get('command', 'WaitForElementToAppear')
             
             # Required parameters
             search_term = params.get('search_term', '')
@@ -587,13 +589,13 @@ class ADBVerificationController(VerificationControllerInterface):
             print(f"[@controller:ADBVerification] Parameters: timeout={timeout}, check_interval={check_interval}")
             
             # Execute verification based on command
-            if command == 'waitForElementToAppear':
+            if command == 'WaitForElementToAppear':
                 success, message, details = self.waitForElementToAppear(
                     search_term=search_term,
                     timeout=timeout,
                     check_interval=check_interval
                 )
-            elif command == 'waitForElementToDisappear':
+            elif command == 'WaitForElementToDisappear':
                 success, message, details = self.waitForElementToDisappear(
                     search_term=search_term,
                     timeout=timeout,
