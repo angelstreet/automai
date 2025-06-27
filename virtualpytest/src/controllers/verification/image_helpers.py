@@ -145,13 +145,13 @@ class ImageHelpers:
             print(f"[@image_helpers] Error in wait_for_image_to_disappear: {e}")
             return False, ""
     
-    def match_template_in_area(self, source_filename: str, template_path: str, 
+    def match_template_in_area(self, image_source_path: str, template_path: str, 
                               area: Dict[str, Any] = None, threshold: float = 0.8) -> Dict[str, Any]:
         """
         Template matching within a specific area of source image.
         
         Args:
-            source_filename: Path to source image
+            image_source_path: Path to source image
             template_path: Path to template image
             area: Area to search within (optional, searches full image if None)
             threshold: Matching threshold (0.0 to 1.0)
@@ -161,7 +161,7 @@ class ImageHelpers:
         """
         try:
             # Load images
-            source_img = cv2.imread(source_filename)
+            source_img = cv2.imread(image_source_path)
             template_img = cv2.imread(template_path)
             
             if source_img is None or template_img is None:
@@ -242,7 +242,7 @@ class ImageHelpers:
     # Core Operation 2: Image Cropping
     # =============================================================================
     
-    def crop_image_to_area(self, source_filename: str, target_path: str, area: Dict[str, Any]) -> bool:
+    def crop_image_to_area(self, image_source_path: str, image_cropped_path: str, area: Dict[str, Any]) -> bool:
         """
         Core function: Crop image to specific area.
         1. Load source image
@@ -250,8 +250,8 @@ class ImageHelpers:
         3. Crop and save to target path
         """
         try:
-            if not os.path.exists(source_filename):
-                print(f"[@image_helpers] Source image not found: {source_filename}")
+            if not os.path.exists(image_source_path):
+                print(f"[@image_helpers] Source image not found: {image_source_path}")
                 return False
             
             if not self.validate_area(area):
@@ -259,9 +259,9 @@ class ImageHelpers:
                 return False
             
             # Load image
-            img = cv2.imread(source_filename)
+            img = cv2.imread(image_source_path)
             if img is None:
-                print(f"[@image_helpers] Failed to load image: {source_filename}")
+                print(f"[@image_helpers] Failed to load image: {image_source_path}")
                 return False
             
             # Extract coordinates
@@ -280,16 +280,16 @@ class ImageHelpers:
             cropped_img = img[y:y+height, x:x+width]
             
             # Ensure target directory exists
-            target_dir = os.path.dirname(target_path)
+            target_dir = os.path.dirname(image_cropped_path)
             os.makedirs(target_dir, exist_ok=True)
             
             # Save cropped image
-            success = cv2.imwrite(target_path, cropped_img)
+            success = cv2.imwrite(image_cropped_path, cropped_img)
             if success:
-                print(f"[@image_helpers] Successfully cropped image: {target_path}")
+                print(f"[@image_helpers] Successfully cropped image: {image_cropped_path}")
                 return True
             else:
-                print(f"[@image_helpers] Failed to save cropped image: {target_path}")
+                print(f"[@image_helpers] Failed to save cropped image: {image_cropped_path}")
                 return False
                 
         except Exception as e:
@@ -441,7 +441,7 @@ class ImageHelpers:
     # Core Operation 4: Image Saving/Copying
     # =============================================================================
     
-    def copy_image_file(self, source_filename: str, target_path: str) -> bool:
+    def copy_image_file(self, image_source_path: str, image_target_path: str) -> bool:
         """
         Core function: Copy image file.
         1. Validate source exists
@@ -449,17 +449,17 @@ class ImageHelpers:
         3. Copy file
         """
         try:
-            if not os.path.exists(source_filename):
-                print(f"[@image_helpers] Source image not found: {source_filename}")
+            if not os.path.exists(image_source_path):
+                print(f"[@image_helpers] Source image not found: {image_source_path}")
                 return False
             
             # Ensure target directory exists
-            target_dir = os.path.dirname(target_path)
+            target_dir = os.path.dirname(image_target_path)
             os.makedirs(target_dir, exist_ok=True)
             
             # Copy the image
-            shutil.copy2(source_filename, target_path)
-            print(f"[@image_helpers] Copied image: {source_filename} -> {target_path}")
+            shutil.copy2(image_source_path, image_target_path)
+            print(f"[@image_helpers] Copied image: {image_source_path} -> {image_target_path}")
             
             return True
             

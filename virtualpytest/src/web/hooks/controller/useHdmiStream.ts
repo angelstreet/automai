@@ -34,7 +34,7 @@ export function useHdmiStream({
     width: number;
     height: number;
   } | null>(null);
-  const [captureSourcePath, setCaptureSourcePath] = useState<string>('');
+  const [captureSourcePath, setCaptureSourcePath] = useState<string>(''); // TODO: Rename to imageSourceUrl
   const [selectedArea, setSelectedArea] = useState<DragArea | null>(null);
 
   // Screenshot state
@@ -184,7 +184,8 @@ export function useHdmiStream({
           body: JSON.stringify({
             host_name: host.host_name,
             area: selectedArea,
-            source_filename: captureSourcePath,
+            image_source_url: captureSourcePath,
+            source_filename: captureSourcePath, // Backward compatibility
             reference_name: referenceName,
             model: deviceModel,
             autocrop: imageProcessingOptions.autocrop,
@@ -201,7 +202,8 @@ export function useHdmiStream({
           body: JSON.stringify({
             host_name: host.host_name,
             area: selectedArea,
-            source_filename: captureSourcePath,
+            image_source_url: captureSourcePath,
+            source_filename: captureSourcePath, // Backward compatibility
             reference_name: referenceName,
             model: deviceModel,
           }),
@@ -213,12 +215,14 @@ export function useHdmiStream({
 
       if (result.success) {
         const timestamp = new Date().getTime();
-        const imageUrl = `${result.image_url}?t=${timestamp}`;
+        // Use new field names with fallback to old ones
+        const imageUrl = result.image_cropped_url || result.image_filtered_url || result.image_url;
+        const finalImageUrl = `${imageUrl}?t=${timestamp}`;
         console.log(
           '[@hook:useHdmiStream] Temporary capture created successfully, setting image URL:',
-          imageUrl,
+          finalImageUrl,
         );
-        setCapturedReferenceImage(imageUrl);
+        setCapturedReferenceImage(finalImageUrl);
         setHasCaptured(true);
 
         // If autocrop was applied and new area dimensions are provided, update the selected area
@@ -296,7 +300,8 @@ export function useHdmiStream({
           host_name: host.host_name,
           model: deviceModel,
           area: selectedArea,
-          source_filename: captureSourcePath,
+          image_source_url: captureSourcePath,
+          source_filename: captureSourcePath, // Backward compatibility
           image_filter: 'none',
         }),
       });

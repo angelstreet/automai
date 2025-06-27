@@ -8,7 +8,7 @@ import { Verification } from '../../types/verification/VerificationTypes';
 interface UseVerificationProps {
   selectedHost: Host | null;
   deviceId?: string | null;
-  captureSourcePath?: string;
+  captureSourcePath?: string; // TODO: Rename to image_source_url
 }
 
 export const useVerification = ({
@@ -198,7 +198,6 @@ export const useVerification = ({
       try {
         setLoading(true);
         setError(null);
-        // Clear previous test results
         setTestResults([]);
 
         // Extract capture filename from captureSourcePath for specific capture selection

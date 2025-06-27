@@ -146,7 +146,7 @@ def record_verification_result():
         # Validate required fields for verification
         required_fields = [
             'initiator_type', 'initiator_id', 'initiator_name', 'host_name', 'device_model',
-            'verification_type', 'command', 'parameters', 'source_filename', 'success',
+            'verification_type', 'command', 'parameters', 'image_source_url', 'success',
             'execution_time_ms', 'message'
         ]
         for field in required_fields:
@@ -164,7 +164,7 @@ def record_verification_result():
             verification_type=data['verification_type'],
             command=data['command'],
             parameters=data['parameters'],
-            source_filename=data['source_filename'],
+            image_source_url=data.get('image_source_url') or data.get('source_filename'),  # Support both old and new field names
             success=data['success'],
             execution_time_ms=data['execution_time_ms'],
             message=data['message'],

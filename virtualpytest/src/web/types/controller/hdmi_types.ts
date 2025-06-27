@@ -16,7 +16,7 @@ export interface HdmiStreamState {
   captureImageRef: React.RefObject<HTMLImageElement> | null;
   captureImageDimensions: { width: number; height: number } | null;
   originalImageDimensions: { width: number; height: number } | null;
-  captureSourcePath: string;
+  captureSourcePath: string; // TODO: Rename to image_source_url
   selectedArea: DragArea | null;
 
   // Screenshot state

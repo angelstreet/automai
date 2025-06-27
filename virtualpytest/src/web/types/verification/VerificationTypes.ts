@@ -108,7 +108,7 @@ interface BaseVerification {
   error?: string;
   threshold?: number;
   resultType?: 'PASS' | 'FAIL' | 'ERROR';
-  sourceImageUrl?: string;
+  sourceImageUrl?: string; // TODO: Rename to image_source_url for consistency
   referenceImageUrl?: string;
   resultOverlayUrl?: string; // Added: overlay image URL for visual analysis
   extractedText?: string;

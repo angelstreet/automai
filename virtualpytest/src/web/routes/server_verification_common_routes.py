@@ -151,7 +151,7 @@ def execute_batch_verification():
         # Get request data
         data = request.get_json() or {}
         verifications = data.get('verifications', [])
-        source_filename = data.get('source_filename')
+        image_source_url = data.get('image_source_url') or data.get('source_filename')  # Support both old and new field names
         host = data.get('host', {})
         
         # Extract model from host device (required)
@@ -164,7 +164,7 @@ def execute_batch_verification():
             }), 400
         
         print(f"[@route:server_verification_common:execute_batch_verification] Processing {len(verifications)} verifications")
-        print(f"[@route:server_verification_common:execute_batch_verification] Source: {source_filename}, Model: {device_model}")
+        print(f"[@route:server_verification_common:execute_batch_verification] Source: {image_source_url}, Model: {device_model}")
         
         # Validate required parameters
         if not verifications:
@@ -173,7 +173,7 @@ def execute_batch_verification():
                 'error': 'verifications are required'
             }), 400
         
-        # Note: source_filename is optional - controllers will take screenshots automatically when needed
+        # Note: image_source_url is optional - controllers will take screenshots automatically when needed
         # ADB verifications don't need screenshots, image/text verifications will capture if no source provided
         
         results = []
@@ -187,7 +187,8 @@ def execute_batch_verification():
             # Prepare individual request data
             individual_request = {
                 'verification': verification,
-                'source_filename': source_filename,
+                'image_source_url': image_source_url,
+                'source_filename': image_source_url,  # Backward compatibility
                 'model': device_model
             }
             

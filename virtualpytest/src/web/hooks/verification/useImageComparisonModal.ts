@@ -2,8 +2,8 @@ import { useState } from 'react';
 
 interface ImageComparisonDialogData {
   open: boolean;
-  sourceUrl: string;
-  referenceUrl: string;
+  sourceUrl: string; // TODO: Rename to image_source_url
+  referenceUrl: string; // TODO: Rename to image_reference_url
   userThreshold?: number;
   matchingResult?: number;
   resultType?: 'PASS' | 'FAIL' | 'ERROR';

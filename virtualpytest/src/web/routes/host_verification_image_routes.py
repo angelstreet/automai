@@ -44,10 +44,10 @@ def crop_area():
         result = image_controller.crop_image(data)
         
         # Build image URL for frontend preview (following text route pattern)
-        if result.get('success') and result.get('processed_image_path'):
-            image_url = buildHostImageUrl(data.get('host', {}), result['processed_image_path'])
-            result['image_url'] = image_url
-            print(f"[@route:host_crop_area] Built image URL: {image_url}")
+        if result.get('success') and result.get('image_cropped_path'):
+            image_cropped_url = buildHostImageUrl(data.get('host', {}), result['image_cropped_path'])
+            result['image_cropped_url'] = image_cropped_url
+            print(f"[@route:host_crop_area] Built image cropped URL: {image_cropped_url}")
         
         # Add device_model to response for server route (following established pattern)
         if device:
@@ -94,10 +94,10 @@ def process_area():
         result = image_controller.process_image(data)
         
         # Build image URL for frontend preview (following text route pattern)
-        if result.get('success') and result.get('processed_image_path'):
-            image_url = buildHostImageUrl(data.get('host', {}), result['processed_image_path'])
-            result['image_url'] = image_url
-            print(f"[@route:host_process_area] Built image URL: {image_url}")
+        if result.get('success') and result.get('image_filtered_path'):
+            image_filtered_url = buildHostImageUrl(data.get('host', {}), result['image_filtered_path'])
+            result['image_filtered_url'] = image_filtered_url
+            print(f"[@route:host_process_area] Built image filtered URL: {image_filtered_url}")
         
         # Add device_model to response for server route (following established pattern)
         if device:

@@ -26,7 +26,8 @@ interface ExecutionRecord {
   execution_time_ms?: number;
   message: string;
   error_details?: any;
-  source_filename?: string;
+  image_source_url?: string;
+  source_filename?: string; // Backward compatibility
   confidence_score?: number;
 }
 
@@ -314,7 +315,8 @@ export const useNodeOperations = ({
                   body: JSON.stringify({
                     host: selectedHost, // Use full host object (same as editor)
                     verifications: [verificationToExecute], // Send verifications directly (same as editor)
-                    source_filename: capture_filename, // Use extracted filename (same as editor)
+                    image_source_url: capture_filename, // Use extracted filename (same as editor)
+                    source_filename: capture_filename, // Backward compatibility
                   }),
                 });
 
@@ -346,7 +348,8 @@ export const useNodeOperations = ({
                     device_model: deviceModel,
                     command: verificationItem.command,
                     parameters: verificationItem.params || {},
-                    source_filename: capture_filename,
+                    image_source_url: capture_filename,
+                    source_filename: capture_filename, // Backward compatibility
                     execution_order: executionOrder++,
                     success: verificationResult.success,
                     execution_time_ms: verificationTime,
@@ -397,7 +400,8 @@ export const useNodeOperations = ({
                     device_model: deviceModel,
                     command: verificationItem.command,
                     parameters: verificationItem.params || {},
-                    source_filename: capture_filename,
+                    image_source_url: capture_filename,
+                    source_filename: capture_filename, // Backward compatibility
                     execution_order: executionOrder++,
                     success: false,
                     execution_time_ms: verificationTime,
@@ -427,7 +431,8 @@ export const useNodeOperations = ({
                     device_model: deviceModel,
                     command: verificationItem.command,
                     parameters: verificationItem.params || {},
-                    source_filename: capture_filename,
+                    image_source_url: capture_filename,
+                    source_filename: capture_filename, // Backward compatibility
                     execution_order: executionOrder++,
                     success: false,
                     execution_time_ms: verificationTime,
@@ -458,7 +463,8 @@ export const useNodeOperations = ({
                 device_model: deviceModel,
                 command: verificationItem.command,
                 parameters: verificationItem.params || {},
-                source_filename: capture_filename || 'unknown',
+                image_source_url: capture_filename || 'unknown',
+                source_filename: capture_filename || 'unknown', // Backward compatibility
                 execution_order: executionOrder++,
                 success: false,
                 execution_time_ms: Date.now() - startTime,
@@ -631,7 +637,8 @@ export const useNodeOperations = ({
           body: JSON.stringify({
             host: selectedHost, // Send full host object (same as editor)
             verifications: verificationsToExecute, // Send verifications directly (same as editor)
-            source_filename: capture_filename, // Use extracted filename (same as editor)
+            image_source_url: capture_filename, // Use extracted filename (same as editor)
+            source_filename: capture_filename, // Backward compatibility
           }),
         });
 

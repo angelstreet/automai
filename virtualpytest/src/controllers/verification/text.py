@@ -136,34 +136,34 @@ class TextVerificationController:
         try:
             helpers = TextHelpers(self.captures_path)
             
-            # Get source filename from frontend
-            source_filename = data.get('source_filename', '')
+            # Get source filename from frontend (support both old and new field names)
+            image_source_url = data.get('image_source_url', '') or data.get('source_filename', '')
             area = data.get('area')
             
-            if not source_filename:
-                return {'success': False, 'message': 'source_filename is required'}
+            if not image_source_url:
+                return {'success': False, 'message': 'image_source_url is required'}
             
             # Build full path for local files, keep URLs as-is
-            if source_filename.startswith(('http://', 'https://')):
+            if image_source_url.startswith(('http://', 'https://')):
                 # URL case - pass to helpers for downloading
-                local_image_path = helpers.download_image(source_filename)
+                image_source_path = helpers.download_image(image_source_url)
             else:
                 # Local filename case - build full path directly
-                local_image_path = os.path.join(self.captures_path, source_filename)
+                image_source_path = os.path.join(self.captures_path, image_source_url)
                 
-                if not os.path.exists(local_image_path):
-                    return {'success': False, 'message': f'Local file not found: {local_image_path}'}
+                if not os.path.exists(image_source_path):
+                    return {'success': False, 'message': f'Local file not found: {image_source_path}'}
             
             # Detect text in area (includes crop, filter, OCR, language detection)
-            result = helpers.detect_text_in_area(local_image_path, area)
+            result = helpers.detect_text_in_area(image_source_path, area)
             
             if not result.get('extracted_text'):
                 return {'success': False, 'message': 'No text detected in image', **result}
             
             return {
                 'success': True,
-                'source_was_url': source_filename.startswith(('http://', 'https://')),
-                'local_image_path': local_image_path,
+                'source_was_url': image_source_url.startswith(('http://', 'https://')),
+                'image_source_path': image_source_path,
                 **result
             }
             
@@ -176,13 +176,13 @@ class TextVerificationController:
             text = data.get('text', '')
             reference_name = data.get('reference_name', 'text_reference')
             area = data.get('area')
-            processed_image_path = data.get('processed_image_path', '')
+            image_textdetected_path = data.get('image_textdetected_path', '') or data.get('processed_image_path', '')
             
             if not text:
                 return {'success': False, 'message': 'text is required for saving reference'}
             
-            if not processed_image_path or not os.path.exists(processed_image_path):
-                return {'success': False, 'message': 'processed image not found'}
+            if not image_textdetected_path or not os.path.exists(image_textdetected_path):
+                return {'success': False, 'message': 'text detected image not found'}
             
             # Save text reference locally (for local file backup)
             helpers = TextHelpers(self.captures_path)
@@ -193,7 +193,7 @@ class TextVerificationController:
                 'success': bool(saved_path),
                 'message': 'Text reference saved successfully' if saved_path else 'Failed to save text reference',
                 'saved_path': saved_path,
-                'processed_image_path': processed_image_path,
+                'image_textdetected_path': image_textdetected_path,
                 # Data for server step
                 'reference_name': reference_name,
                 'area': area,
@@ -214,7 +214,7 @@ class TextVerificationController:
             
             if verification_type == 'text_detection':
                 return self.detect_text({
-                    'source_filename': verification_config.get('source_filename', ''),
+                    'image_source_url': verification_config.get('image_source_url', ''),
                     'area': verification_config.get('area')
                 })
             else:

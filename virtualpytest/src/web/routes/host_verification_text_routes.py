@@ -43,13 +43,13 @@ def detect_text():
         # Get text detection result
         result = text_controller.detect_text(data)
         
-        # If successful, create a cropped image URL like image cropping does
-        if result.get('success') and result.get('processed_image_path'):
-            # Build proper URL for the processed (cropped) image
-            image_url = buildHostImageUrl(data.get('host', {}), result['processed_image_path'])
-            result['image_url'] = image_url
+        # If successful, create a text detected image URL like image cropping does
+        if result.get('success') and result.get('image_textdetected_path'):
+            # Build proper URL for the text detected image
+            image_textdetected_url = buildHostImageUrl(data.get('host', {}), result['image_textdetected_path'])
+            result['image_textdetected_url'] = image_textdetected_url
             
-            print(f"[@route:host_detect_text] Built processed image URL: {image_url}")
+            print(f"[@route:host_detect_text] Built text detected image URL: {image_textdetected_url}")
         
         # Add device_model to response for server route (following established pattern)
         if device:

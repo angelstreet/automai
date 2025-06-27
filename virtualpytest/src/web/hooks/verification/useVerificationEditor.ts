@@ -20,7 +20,8 @@ interface DetectedTextData {
   detectedLanguage?: string;
   detectedLanguageName?: string;
   languageConfidence?: number;
-  processed_image_path?: string;
+  image_textdetected_path?: string;
+  processed_image_path?: string; // Backward compatibility
 }
 
 interface ImageProcessingOptions {
@@ -37,7 +38,7 @@ interface UseVerificationEditorProps {
   isVisible: boolean;
   selectedHost: Host;
   selectedDeviceId: string;
-  captureSourcePath?: string;
+  captureSourcePath?: string; // TODO: Rename to image_source_url
   selectedArea?: DragArea | null;
   onAreaSelected?: (area: DragArea) => void;
   onClearSelection?: () => void;
@@ -183,7 +184,8 @@ export const useVerificationEditor = ({
             host: selectedHost, // Send full host object
             device_id: selectedDeviceId, // Send device ID
             area: selectedArea,
-            source_filename: captureSourcePath,
+            image_source_url: captureSourcePath,
+            source_filename: captureSourcePath, // Backward compatibility
             reference_name: referenceName || 'temp_capture',
             model: deviceModel,
             autocrop: imageProcessingOptions.autocrop,
@@ -201,7 +203,8 @@ export const useVerificationEditor = ({
             host: selectedHost, // Send full host object
             device_id: selectedDeviceId, // Send device ID
             area: selectedArea,
-            source_filename: captureSourcePath,
+            image_source_url: captureSourcePath,
+            source_filename: captureSourcePath, // Backward compatibility
             reference_name: referenceName || 'temp_capture',
             model: deviceModel,
           }),
@@ -213,13 +216,15 @@ export const useVerificationEditor = ({
 
       if (result.success) {
         const timestamp = new Date().getTime();
-        const imageUrl = `${result.image_url}?t=${timestamp}`;
+        // Use new field names with fallback to old ones
+        const imageUrl = result.image_cropped_url || result.image_filtered_url || result.image_url;
+        const finalImageUrl = `${imageUrl}?t=${timestamp}`;
         console.log(
           '[@hook:useVerificationEditor] Temporary capture created successfully, setting image URL:',
-          imageUrl,
+          finalImageUrl,
         );
 
-        setCapturedReferenceImage(imageUrl);
+        setCapturedReferenceImage(finalImageUrl);
         setHasCaptured(true);
 
         // If autocrop was applied and new area dimensions are provided, update the selected area
@@ -303,7 +308,10 @@ export const useVerificationEditor = ({
             reference_name: referenceName,
             area: selectedArea,
             text: referenceText,
-            processed_image_path: detectedTextData?.processed_image_path || '', // Use processed image from detect-text
+            image_textdetected_path:
+              detectedTextData?.image_textdetected_path ||
+              detectedTextData?.processed_image_path ||
+              '', // Use processed image from detect-text
           }),
         });
 
@@ -346,7 +354,8 @@ export const useVerificationEditor = ({
               host: selectedHost,
               device_id: selectedDeviceId,
               area: selectedArea,
-              source_filename: captureSourcePath,
+              image_source_url: captureSourcePath,
+              source_filename: captureSourcePath, // Backward compatibility
               reference_name: referenceName,
               model: deviceModel,
               autocrop: imageProcessingOptions.autocrop,
@@ -364,7 +373,8 @@ export const useVerificationEditor = ({
               host: selectedHost,
               device_id: selectedDeviceId,
               area: selectedArea,
-              source_filename: captureSourcePath,
+              image_source_url: captureSourcePath,
+              source_filename: captureSourcePath, // Backward compatibility
               reference_name: referenceName,
               model: deviceModel,
             }),
@@ -469,7 +479,8 @@ export const useVerificationEditor = ({
           host: selectedHost, // Send full host object
           model: deviceModel,
           area: selectedArea,
-          source_filename: sourceFilename,
+          image_source_url: sourceFilename,
+          source_filename: sourceFilename, // Backward compatibility
           image_filter: textImageFilter,
         }),
       });
@@ -486,21 +497,23 @@ export const useVerificationEditor = ({
           detectedLanguage: result.language || result.detected_language,
           detectedLanguageName: result.detected_language_name,
           languageConfidence: result.language_confidence,
-          processed_image_path: result.processed_image_path,
+          image_textdetected_path: result.image_textdetected_path || result.processed_image_path,
+          processed_image_path: result.processed_image_path, // Backward compatibility
         });
 
         // Pre-fill the text input with detected text
         setReferenceText(result.extracted_text || '');
 
         // Display the cropped area image in the drag area (like image cropping does)
-        if (result.image_url) {
+        const imageUrl = result.image_textdetected_url || result.image_url;
+        if (imageUrl) {
           const timestamp = new Date().getTime();
-          const imageUrl = `${result.image_url}?t=${timestamp}`;
+          const finalImageUrl = `${imageUrl}?t=${timestamp}`;
           console.log(
-            '[@hook:useVerificationEditor] Text detection using cropped image URL:',
-            imageUrl,
+            '[@hook:useVerificationEditor] Text detection using text detected image URL:',
+            finalImageUrl,
           );
-          setCapturedReferenceImage(imageUrl);
+          setCapturedReferenceImage(finalImageUrl);
         }
 
         // Mark as captured

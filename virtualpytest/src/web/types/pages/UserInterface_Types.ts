@@ -73,7 +73,7 @@ export interface ScreenEditorState {
   selectedArea: SelectedArea | null;
   captureImageRef: React.RefObject<HTMLImageElement> | undefined;
   captureImageDimensions: { width: number; height: number } | undefined;
-  captureSourcePath: string | undefined;
+  captureSourcePath: string | undefined; // TODO: Rename to image_source_url for consistency
 
   // Resolution state
   resolutionInfo: ResolutionInfo;

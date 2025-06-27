@@ -136,49 +136,48 @@ class ImageVerificationController:
     def crop_image(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for image cropping."""
         try:
-            # Get source filename from frontend
-            source_filename = data.get('source_filename', '')
+            # Get source filename from frontend (support both old and new field names)
+            image_source_url = data.get('image_source_url', '') or data.get('source_filename', '')
             area = data.get('area')
             reference_name = data.get('reference_name', 'cropped_image')
             
-            if not source_filename:
-                return {'success': False, 'message': 'source_filename is required'}
+            if not image_source_url:
+                return {'success': False, 'message': 'image_source_url is required'}
             
             if not area:
                 return {'success': False, 'message': 'area is required for cropping'}
             
             # Build full path for local files, keep URLs as-is
-            if source_filename.startswith(('http://', 'https://')):
+            if image_source_url.startswith(('http://', 'https://')):
                 # URL case - download first
-                local_image_path = self.helpers.download_image(source_filename)
+                image_source_path = self.helpers.download_image(image_source_url)
             else:
                 # Local filename case - build full path directly
-                local_image_path = os.path.join(self.captures_path, source_filename)
+                image_source_path = os.path.join(self.captures_path, image_source_url)
                 
-                if not os.path.exists(local_image_path):
-                    return {'success': False, 'message': f'Local file not found: {local_image_path}'}
+                if not os.path.exists(image_source_path):
+                    return {'success': False, 'message': f'Local file not found: {image_source_path}'}
             
             # Generate unique filename for output
             filename = self.helpers.get_unique_filename(reference_name)
-            output_path = os.path.join(self.captures_path, filename)
+            image_cropped_path = os.path.join(self.captures_path, filename)
             
             # Crop image using helpers
-            success = self.helpers.crop_image_to_area(local_image_path, output_path, area)
+            success = self.helpers.crop_image_to_area(image_source_path, image_cropped_path, area)
             
             if not success:
                 return {'success': False, 'message': 'Image cropping failed'}
             
             # Create filtered versions
-            self.helpers.create_filtered_versions(output_path)
+            self.helpers.create_filtered_versions(image_cropped_path)
             
             return {
                 'success': True,
                 'message': f'Image cropped successfully: {filename}',
-                'local_path': output_path,
-                'processed_image_path': output_path,  # Frontend expects this field for preview
+                'image_cropped_path': image_cropped_path,
                 'filename': filename,
                 'area': area,
-                'source_was_url': source_filename.startswith(('http://', 'https://'))
+                'source_was_url': image_source_url.startswith(('http://', 'https://'))
             }
             
         except Exception as e:
@@ -187,56 +186,60 @@ class ImageVerificationController:
     def process_image(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for image processing."""
         try:
-            source_filename = data.get('source_filename', '')
+            image_source_url = data.get('image_source_url', '') or data.get('source_filename', '')
             remove_background = data.get('remove_background', False)
             image_filter = data.get('image_filter', 'none')
             
-            if not source_filename:
-                return {'success': False, 'message': 'source_filename is required'}
+            if not image_source_url:
+                return {'success': False, 'message': 'image_source_url is required'}
             
             # Build full path for local files, keep URLs as-is
-            if source_filename.startswith(('http://', 'https://')):
+            if image_source_url.startswith(('http://', 'https://')):
                 # URL case - download first
-                local_image_path = self.helpers.download_image(source_filename)
+                image_source_path = self.helpers.download_image(image_source_url)
                 # Create a copy in captures directory
-                filename = self.helpers.get_unique_filename('processed_image')
-                output_path = os.path.join(self.captures_path, filename)
-                self.helpers.copy_image_file(local_image_path, output_path)
+                filename = self.helpers.get_unique_filename('filtered_image')
+                image_filtered_path = os.path.join(self.captures_path, filename)
+                self.helpers.copy_image_file(image_source_path, image_filtered_path)
                 # Clean up temp file
                 try:
-                    os.unlink(local_image_path)
+                    os.unlink(image_source_path)
                 except:
                     pass
-                local_image_path = output_path
+                image_filtered_path = image_filtered_path
             else:
                 # Local filename case - build full path directly
-                local_image_path = os.path.join(self.captures_path, source_filename)
+                image_source_path = os.path.join(self.captures_path, image_source_url)
                 
-                if not os.path.exists(local_image_path):
-                    return {'success': False, 'message': f'Local file not found: {local_image_path}'}
+                if not os.path.exists(image_source_path):
+                    return {'success': False, 'message': f'Local file not found: {image_source_path}'}
+                
+                # Create copy for filtering
+                filename = self.helpers.get_unique_filename('filtered_image')
+                image_filtered_path = os.path.join(self.captures_path, filename)
+                self.helpers.copy_image_file(image_source_path, image_filtered_path)
             
             # Apply background removal if requested
             if remove_background:
-                bg_success = self.helpers.remove_background(local_image_path)
+                bg_success = self.helpers.remove_background(image_filtered_path)
                 if not bg_success:
                     return {'success': False, 'message': 'Background removal failed'}
             
             # Apply filter
-            filter_success = self.helpers.apply_image_filter(local_image_path, image_filter)
+            filter_success = self.helpers.apply_image_filter(image_filtered_path, image_filter)
             if not filter_success:
                 return {'success': False, 'message': f'Filter application failed: {image_filter}'}
             
             return {
                 'success': True,
-                'message': f'Image processed successfully',
-                'local_path': local_image_path,
-                'processed_image_path': local_image_path,  # Frontend expects this field for preview
-                'filename': os.path.basename(local_image_path),
+                'message': f'Image filtered successfully',
+                'image_filtered_path': image_filtered_path,
+                'filename': os.path.basename(image_filtered_path),
                 'operations': {
                     'remove_background': remove_background,
                     'filter': image_filter
                 },
-                'source_was_url': source_filename.startswith(('http://', 'https://'))
+                'source_was_url': image_source_url.startswith(('http://', 'https://'))
             }
             
         except Exception as e:
@@ -245,44 +248,44 @@ class ImageVerificationController:
     def save_image(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for saving image references."""
         try:
-            source_filename = data.get('source_filename', '')
+            image_source_url = data.get('image_source_url', '') or data.get('source_filename', '')
             reference_name = data.get('reference_name', 'image_reference')
             area = data.get('area')
             
-            if not source_filename:
-                return {'success': False, 'message': 'source_filename is required for saving reference'}
+            if not image_source_url:
+                return {'success': False, 'message': 'image_source_url is required for saving reference'}
             
             # Build full path for local files, keep URLs as-is
-            if source_filename.startswith(('http://', 'https://')):
+            if image_source_url.startswith(('http://', 'https://')):
                 # URL case - download first
-                local_image_path = self.helpers.download_image(source_filename)
+                image_source_path = self.helpers.download_image(image_source_url)
             else:
                 # Local filename case - build full path directly
-                local_image_path = os.path.join(self.captures_path, source_filename)
+                image_source_path = os.path.join(self.captures_path, image_source_url)
                 
-                if not os.path.exists(local_image_path):
-                    return {'success': False, 'message': f'Local file not found: {local_image_path}'}
+                if not os.path.exists(image_source_path):
+                    return {'success': False, 'message': f'Local file not found: {image_source_path}'}
             
             # Generate unique filename for saved reference
             filename = self.helpers.get_unique_filename(reference_name)
-            output_path = os.path.join(self.captures_path, filename)
+            image_saved_path = os.path.join(self.captures_path, filename)
             
             # Save image using helpers
-            success = self.helpers.copy_image_file(local_image_path, output_path)
+            success = self.helpers.copy_image_file(image_source_path, image_saved_path)
             
             if not success:
                 return {'success': False, 'message': 'Image save failed'}
             
             # Create filtered versions
-            self.helpers.create_filtered_versions(output_path)
+            self.helpers.create_filtered_versions(image_saved_path)
             
             # Save reference metadata locally (for local file backup)
-            saved_ref_path = self.helpers.save_image_reference(output_path, reference_name, area)
+            saved_ref_path = self.helpers.save_image_reference(image_saved_path, reference_name, area)
             
             # Clean up temp file if we downloaded it
-            if source_filename.startswith(('http://', 'https://')) and local_image_path.startswith('/tmp/'):
+            if image_source_url.startswith(('http://', 'https://')) and image_source_path.startswith('/tmp/'):
                 try:
-                    os.unlink(local_image_path)
+                    os.unlink(image_source_path)
                 except:
                     pass
             
@@ -290,12 +293,12 @@ class ImageVerificationController:
                 'success': bool(saved_ref_path),
                 'message': 'Image reference saved successfully' if saved_ref_path else 'Failed to save image reference',
                 'saved_path': saved_ref_path,
-                'local_path': output_path,
+                'image_saved_path': image_saved_path,
                 'filename': filename,
                 # Data for server step
                 'reference_name': reference_name,
                 'area': area,
-                'source_was_url': source_filename.startswith(('http://', 'https://'))
+                'source_was_url': image_source_url.startswith(('http://', 'https://'))
             }
             
         except Exception as e:
