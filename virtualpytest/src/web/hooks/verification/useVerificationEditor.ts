@@ -1,18 +1,13 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
+import { DragArea } from '../../types/controller/hdmi_types';
+import { Verification } from '../../types/verification/VerificationTypes';
+import { useReferences } from '../useReferences';
 
 import { useVerification } from './useVerification';
-import { useVerificationReferences } from './useVerificationReferences';
 
 // Define interfaces for editor-specific data structures
-interface DragArea {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
 interface DetectedTextData {
   text: string;
   fontSize: number;
@@ -82,7 +77,7 @@ export const useVerificationEditor = ({
 
   // Add references management after referenceSaveCounter is declared
   const { availableReferences, referencesLoading, fetchAvailableReferences, getModelReferences } =
-    useVerificationReferences(referenceSaveCounter, selectedHost);
+    useReferences(referenceSaveCounter, selectedHost);
 
   // Get model references using the device model
   const modelReferences = useMemo(() => {

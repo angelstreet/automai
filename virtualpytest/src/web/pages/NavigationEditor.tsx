@@ -37,7 +37,7 @@ import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfi
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { NodeEdgeManagementProvider } from '../contexts/navigation/NodeEdgeManagementContext';
 import { useNavigationEditorNew } from '../hooks/navigation/useNavigationEditorNew';
-import { useVerificationReferences } from '../hooks/verification/useVerificationReferences';
+import { useReferences } from '../hooks/useReferences';
 import { NodeForm, EdgeForm } from '../types/pages/Navigation_Types';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
@@ -275,20 +275,29 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     // Memoize the selectedHost to prevent unnecessary re-renders
     const stableSelectedHost = useMemo(() => selectedHost, [selectedHost]);
 
-    // Centralized verification references management
+    // Centralized reference management - both verification references and actions
     const [referenceSaveCounter, setReferenceSaveCounter] = useState<number>(0);
-    const { availableReferences, referencesLoading, getModelReferences, fetchAvailableReferences } =
-      useVerificationReferences(referenceSaveCounter, stableSelectedHost);
+    const {
+      availableReferences,
+      availableActions,
+      referencesLoading,
+      actionsLoading,
+      getModelReferences,
+      getModelActions,
+      fetchAvailableReferences,
+      fetchAvailableActions,
+    } = useReferences(referenceSaveCounter, stableSelectedHost);
 
-    // Fetch verification references when control becomes active
+    // Fetch both verification references and actions when control becomes active
     useEffect(() => {
       if (isControlActive && stableSelectedHost) {
         console.log(
-          '[@component:NavigationEditor] Control is active, fetching verification references',
+          '[@component:NavigationEditor] Control is active, fetching verification references and actions',
         );
         fetchAvailableReferences();
+        fetchAvailableActions();
       }
-    }, [isControlActive, stableSelectedHost, fetchAvailableReferences]);
+    }, [isControlActive, stableSelectedHost, fetchAvailableReferences, fetchAvailableActions]);
 
     // Memoize model references for current device to prevent unnecessary re-renders
     const currentModelReferences = useMemo(() => {
@@ -752,6 +761,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
             isControlActive={isControlActive}
             selectedHost={selectedHost}
             selectedDeviceId={selectedDeviceId}
+            availableActions={availableActions}
           />
         )}
 

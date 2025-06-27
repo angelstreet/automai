@@ -28,6 +28,7 @@ interface EdgeEditDialogProps {
   isControlActive?: boolean;
   selectedHost?: Host | null; // The selected host
   selectedDeviceId?: string | null; // The selected device ID
+  availableActions?: Actions; // Pass actions from parent instead of computing them
 }
 
 export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
@@ -40,6 +41,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   isControlActive = false,
   selectedHost,
   selectedDeviceId,
+  availableActions = {}, // Default to empty object
 }) => {
   // Early return if edgeForm is null or undefined - MUST be before any hooks
   if (!edgeForm) {
@@ -57,56 +59,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [localRetryActions, setLocalRetryActions] = useState<EdgeAction[]>([]);
   const [actionResult, setActionResult] = useState<string | null>(null);
 
-  // Extract controller actions from selected device data and flatten the structure
-  const controllerActions: Actions = useMemo(() => {
-    // Get actions from the selected device
-    const device = selectedHost?.devices?.find((d) => d.device_id === selectedDeviceId);
-    if (!device) {
-      console.log('[@component:EdgeEditDialog] No device selected');
-      return {};
-    }
-
-    const rawActions = device.device_action_types || {};
-    console.log('[@component:EdgeEditDialog] Raw device_action_types from device:', rawActions);
-    console.log(
-      '[@component:EdgeEditDialog] Available action types keys:',
-      Object.keys(rawActions),
-    );
-
-    // Flatten the action structure from controller-based to category-based
-    // Transform from: { "action_remote_android": { "remote": [...], "control": [...] } }
-    // To: { "remote": [...], "control": [...] }
-    const flattenedActions: Actions = {};
-
-    for (const [_controllerKey, controllerData] of Object.entries(rawActions)) {
-      if (controllerData && typeof controllerData === 'object') {
-        for (const [category, categoryActions] of Object.entries(controllerData)) {
-          if (Array.isArray(categoryActions)) {
-            // Merge actions from multiple controllers into the same category
-            if (!flattenedActions[category]) {
-              flattenedActions[category] = [];
-            }
-            flattenedActions[category] = [...flattenedActions[category], ...categoryActions];
-          }
-        }
-      }
-    }
-
-    console.log('[@component:EdgeEditDialog] Flattened actions structure:', flattenedActions);
-    console.log(
-      '[@component:EdgeEditDialog] Flattened action categories:',
-      Object.keys(flattenedActions),
-    );
-    console.log(
-      '[@component:EdgeEditDialog] Total action count:',
-      Object.values(flattenedActions).reduce(
-        (sum, actions) => sum + (Array.isArray(actions) ? actions.length : 0),
-        0,
-      ),
-    );
-
-    return flattenedActions;
-  }, [selectedHost?.devices, selectedDeviceId]);
+  // Use availableActions passed from parent (NavigationEditor)
+  const controllerActions: Actions = availableActions;
 
   const canRunActions =
     isControlActive && selectedHost && localActions.length > 0 && !actionHook.loading;
@@ -169,14 +123,15 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      console.log('[@component:EdgeEditDialog] Dialog opened with device:', {
+      console.log('[@component:EdgeEditDialog] Dialog opened with available actions:', {
         hostName: selectedHost?.host_name,
         deviceId: selectedDeviceId,
         availableActionsCount: Object.keys(controllerActions).length,
+        actionCategories: Object.keys(controllerActions),
       });
 
       if (Object.keys(controllerActions).length === 0) {
-        console.log('[@component:EdgeEditDialog] No remote actions available in device data');
+        console.log('[@component:EdgeEditDialog] No actions available - control may not be active');
       }
     }
   }, [isOpen, selectedHost, selectedDeviceId, controllerActions]);
