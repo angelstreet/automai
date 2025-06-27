@@ -66,6 +66,7 @@ export const useVerification = ({
           };
 
           if (verification.params && typeof verification.params === 'object') {
+            // Direct assignment - backend now sends actual parameter values
             transformed.params = verification.params;
           } else if (verification.parameters && Array.isArray(verification.parameters)) {
             verification.parameters.forEach((paramName: string) => {

@@ -373,20 +373,20 @@ class ImageVerificationController:
             {
                 "command": "WaitForImageToAppear",
                 "params": {
-                    "image_path": {"type": "string", "required": True},
-                    "timeout": {"type": "float", "required": False, "default": 10.0},
-                    "confidence": {"type": "float", "required": False, "default": 0.8},
-                    "area": {"type": "object", "required": False}
+                    "image_path": "",       # Empty string for user input
+                    "timeout": 10.0,        # Default value
+                    "confidence": 0.8,      # Default value
+                    "area": None            # Optional area
                 },
                 "verification_type": "image"
             },
             {
                 "command": "WaitForImageToDisappear",
                 "params": {
-                    "image_path": {"type": "string", "required": True},
-                    "timeout": {"type": "float", "required": False, "default": 10.0},
-                    "confidence": {"type": "float", "required": False, "default": 0.8},
-                    "area": {"type": "object", "required": False}
+                    "image_path": "",       # Empty string for user input
+                    "timeout": 10.0,        # Default value
+                    "confidence": 0.8,      # Default value
+                    "area": None            # Optional area
                 },
                 "verification_type": "image"
             }

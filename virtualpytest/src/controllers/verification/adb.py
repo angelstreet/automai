@@ -526,18 +526,18 @@ class ADBVerificationController(VerificationControllerInterface):
             {
                 'command': 'waitForElementToAppear',
                 'params': {
-                    'search_term': {'type': 'string', 'required': True},
-                    'timeout': {'type': 'float', 'required': False, 'default': 10.0},
-                    'check_interval': {'type': 'float', 'required': False, 'default': 0.0}
+                    'search_term': '',      # Empty string for user input
+                    'timeout': 10.0,        # Default value
+                    'check_interval': 0.0   # Default value
                 },
                 'verification_type': 'adb'
             },
             {
                 'command': 'waitForElementToDisappear',
                 'params': {
-                    'search_term': {'type': 'string', 'required': True},
-                    'timeout': {'type': 'float', 'required': False, 'default': 10.0},
-                    'check_interval': {'type': 'float', 'required': False, 'default': 0.0}
+                    'search_term': '',      # Empty string for user input
+                    'timeout': 10.0,        # Default value
+                    'check_interval': 0.0   # Default value
                 },
                 'verification_type': 'adb'
             }

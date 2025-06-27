@@ -257,18 +257,18 @@ class TextVerificationController:
             {
                 "command": "WaitForTextToAppear",
                 "params": {
-                    "text": {"type": "string", "required": True},
-                    "timeout": {"type": "float", "required": False, "default": 10.0},
-                    "area": {"type": "object", "required": False}
+                    "text": "",             # Empty string for user input
+                    "timeout": 10.0,        # Default value
+                    "area": None            # Optional area
                 },
                 "verification_type": "text"
             },
             {
                 "command": "WaitForTextToDisappear",
                 "params": {
-                    "text": {"type": "string", "required": True},
-                    "timeout": {"type": "float", "required": False, "default": 10.0},
-                    "area": {"type": "object", "required": False}
+                    "text": "",             # Empty string for user input
+                    "timeout": 10.0,        # Default value
+                    "area": None            # Optional area
                 },
                 "verification_type": "text"
             }

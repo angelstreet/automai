@@ -592,50 +592,50 @@ class VideoVerificationController(VerificationControllerInterface):
             {
                 'command': 'WaitForVideoToAppear',
                 'params': {
-                    'motion_threshold': {'type': 'float', 'required': False, 'default': 5.0},
-                    'duration': {'type': 'float', 'required': False, 'default': 3.0},
-                    'timeout': {'type': 'float', 'required': False, 'default': 10.0}
+                    'motion_threshold': 5.0,    # Default motion threshold
+                    'duration': 3.0,            # Default duration
+                    'timeout': 10.0             # Default timeout
                 },
                 'verification_type': 'video'
             },
             {
                 'command': 'WaitForVideoToDisappear',
                 'params': {
-                    'motion_threshold': {'type': 'float', 'required': False, 'default': 5.0},
-                    'duration': {'type': 'float', 'required': False, 'default': 3.0},
-                    'timeout': {'type': 'float', 'required': False, 'default': 10.0}
+                    'motion_threshold': 5.0,    # Default motion threshold
+                    'duration': 3.0,            # Default duration
+                    'timeout': 10.0             # Default timeout
                 },
                 'verification_type': 'video'
             },
             {
                 'command': 'DetectMotion',
                 'params': {
-                    'duration': {'type': 'float', 'required': False, 'default': 3.0},
-                    'threshold': {'type': 'float', 'required': False}
+                    'duration': 3.0,            # Default duration
+                    'threshold': 5.0            # Default threshold
                 },
                 'verification_type': 'video'
             },
             {
                 'command': 'WaitForVideoChange',
                 'params': {
-                    'timeout': {'type': 'float', 'required': False, 'default': 10.0},
-                    'threshold': {'type': 'float', 'required': False}
+                    'timeout': 10.0,            # Default timeout
+                    'threshold': 10.0           # Default threshold
                 },
                 'verification_type': 'video'
             },
             {
                 'command': 'VerifyColorPresent',
                 'params': {
-                    'color': {'type': 'string', 'required': True},
-                    'tolerance': {'type': 'float', 'required': False, 'default': 10.0}
+                    'color': '',                # Empty string for user input
+                    'tolerance': 10.0           # Default tolerance
                 },
                 'verification_type': 'video'
             },
             {
                 'command': 'VerifyScreenState',
                 'params': {
-                    'expected_state': {'type': 'string', 'required': True},
-                    'timeout': {'type': 'float', 'required': False, 'default': 5.0}
+                    'expected_state': '',       # Empty string for user input
+                    'timeout': 5.0              # Default timeout
                 },
                 'verification_type': 'video'
             }

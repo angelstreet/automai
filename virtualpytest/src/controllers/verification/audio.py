@@ -482,26 +482,26 @@ class AudioVerificationController(VerificationControllerInterface):
             {
                 'command': 'DetectSilence',
                 'params': {
-                    'threshold': {'type': 'float', 'required': False},
-                    'duration': {'type': 'float', 'required': False},
-                    'audio_file': {'type': 'string', 'required': False}
+                    'threshold': 10.0,      # Default threshold percentage
+                    'duration': 2.0,        # Default duration in seconds
+                    'audio_file': ''        # Optional audio file path
                 },
                 'verification_type': 'audio'
             },
             {
                 'command': 'WaitForAudioToAppear',
                 'params': {
-                    'min_level': {'type': 'float', 'required': False, 'default': 10.0},
-                    'duration': {'type': 'float', 'required': False, 'default': 2.0}
+                    'min_level': 10.0,      # Default minimum level
+                    'duration': 2.0         # Default duration
                 },
                 'verification_type': 'audio'
             },
             {
                 'command': 'VerifyAudioContainsFrequency',
                 'params': {
-                    'target_freq': {'type': 'float', 'required': True},
-                    'tolerance': {'type': 'float', 'required': False, 'default': 50.0},
-                    'duration': {'type': 'float', 'required': False}
+                    'target_freq': 0.0,     # Empty value for user input
+                    'tolerance': 50.0,      # Default tolerance
+                    'duration': 2.0         # Default duration
                 },
                 'verification_type': 'audio'
             }
