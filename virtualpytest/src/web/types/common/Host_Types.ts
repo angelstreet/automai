@@ -10,9 +10,9 @@
  *
  * NO DATA TRANSFORMATION should occur between these layers.
  */
-import type { Actions } from '../controller/ActionTypes';
+import type { Actions } from '../controller/Action_Types';
 import { SystemStats } from '../pages/Dashboard_Types';
-import type { Verifications } from '../verification/VerificationTypes';
+import type { Verifications } from '../verification/Verification_Types';
 
 /**
  * Controller object interfaces

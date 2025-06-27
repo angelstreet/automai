@@ -1,25 +1,7 @@
 // Export all types from organized structure
 
 // Common types - Base types first, then specific types
-export * from './common/Common_BaseTypes';
-
-// Export specific types from Common_ActionTypes to avoid conflicts with Navigation_Types
-export type {
-  RemoteType,
-  BaseAction,
-  KeyPressAction,
-  TextInputAction,
-  AppLaunchAction,
-  ElementClickAction,
-  CoordinateTapAction,
-  SequenceAction,
-  NavigationAction,
-  EdgeActionData,
-  ControllerCapabilities,
-  RemoteActionExecutionResult,
-  COMMON_KEYS,
-  createNavigationAction,
-} from './common/Common_ActionTypes';
+export * from './common/Common_Base_Types'; // Only WizardStep and ServerResponse now
 
 // Host types
 export type {

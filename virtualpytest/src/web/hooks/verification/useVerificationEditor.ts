@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import { DragArea } from '../../types/controller/hdmi_types';
-import { Verification } from '../../types/verification/VerificationTypes';
+import { DragArea } from '../../types/controller/Hdmi_Types';
+import { Verification } from '../../types/verification/Verification_Types';
 import { useReferences } from '../useReferences';
 
 import { useVerification } from './useVerification';

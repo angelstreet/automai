@@ -1,7 +1,7 @@
 import { Box, TextField } from '@mui/material';
 import React from 'react';
 
-import type { EdgeAction } from '../../types/controller/ActionTypes';
+import type { EdgeAction } from '../../types/controller/Action_Types';
 
 interface ActionControlsProps {
   action: EdgeAction;

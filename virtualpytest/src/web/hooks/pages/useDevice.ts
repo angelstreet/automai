@@ -8,7 +8,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { Model, ModelCreateData } from '../../types/common/Common_BaseTypes';
+import { Model, ModelCreatePayload as ModelCreateData } from '../../types/pages/Models_Types';
 
 // Server Response interface
 export interface ServerResponse<T> {

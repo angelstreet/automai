@@ -6,7 +6,7 @@ import {
 import { Box, FormControl, Select, MenuItem, IconButton, TextField } from '@mui/material';
 import React from 'react';
 
-import type { Actions, EdgeAction } from '../../types/controller/ActionTypes';
+import type { Actions, EdgeAction } from '../../types/controller/Action_Types';
 
 import { ActionControls } from './ActionControls';
 import { ActionTestResults } from './ActionTestResults';

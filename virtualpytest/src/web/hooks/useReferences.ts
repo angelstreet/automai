@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 
 import { Host } from '../types/common/Host_Types';
-import { ModelReferences } from '../types/verification/VerificationTypes';
-import type { Actions } from '../types/controller/ActionTypes';
-
-type ReferenceType = 'verification' | 'action';
+import type { Actions } from '../types/controller/Action_Types';
+import { ModelReferences } from '../types/verification/Verification_Types';
 
 interface UseReferencesReturn {
   availableReferences: { [deviceModel: string]: ModelReferences };

@@ -18,7 +18,7 @@ import {
 import React, { useState, useEffect } from 'react';
 
 import { useControllerConfig } from '../../../hooks/controller';
-import { ControllerConfiguration } from '../../../types/common/Common_BaseTypes';
+import { ControllerConfiguration } from '../../../types/controller/Controller_Types';
 
 import { DynamicControllerForm } from './DeviceManagement_DynamicControllerForm';
 

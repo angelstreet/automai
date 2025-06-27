@@ -1,7 +1,7 @@
 import { Box, TextField } from '@mui/material';
 import React from 'react';
 
-import { DeviceFormData } from '../../../types/common/Common_BaseTypes';
+import { DeviceFormData } from '../../../types/controller/Controller_Types';
 
 interface BasicInfoStepProps {
   formData: DeviceFormData;

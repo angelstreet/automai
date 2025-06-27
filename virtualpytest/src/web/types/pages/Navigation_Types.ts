@@ -1,7 +1,7 @@
 import { Node, Edge } from 'reactflow';
 
-import { EdgeAction } from '../controller/ActionTypes';
-import { Verification } from '../verification/VerificationTypes';
+import { EdgeAction } from '../controller/Action_Types';
+import { Verification } from '../verification/Verification_Types';
 
 // =====================================================
 // CORE NAVIGATION TYPES
@@ -36,7 +36,7 @@ export interface UINavigationNodeData {
 export type UINavigationNode = Node<UINavigationNodeData>;
 
 // EdgeAction is now imported from ActionTypes.ts to maintain consistency
-export type { EdgeAction } from '../controller/ActionTypes';
+export type { EdgeAction } from '../controller/Action_Types';
 
 // Define the data type for navigation edges
 export interface UINavigationEdgeData {
@@ -305,7 +305,7 @@ export interface NodeEditDialogProps {
   isControlActive?: boolean;
   model?: string;
   // Centralized verification references props - required
-  modelReferences: import('../verification/VerificationTypes').ModelReferences;
+  modelReferences: import('../verification/Verification_Types').ModelReferences;
   referencesLoading: boolean;
 }
 
@@ -438,7 +438,7 @@ export interface EdgeActionItemProps {
 
 export interface VerificationsListProps {
   verifications: Verification[];
-  availableVerifications: import('../verification/VerificationTypes').Verifications;
+  availableVerifications: import('../verification/Verification_Types').Verifications;
   onVerificationsChange: (verifications: Verification[]) => void;
   loading?: boolean;
   error?: string | null;
@@ -448,13 +448,13 @@ export interface VerificationsListProps {
   reloadTrigger?: number;
   onReferenceSelected?: (referenceName: string, referenceData: any) => void;
   selectedHost: import('../common/Host_Types').Host | null;
-  modelReferences: import('../verification/VerificationTypes').ModelReferences;
+  modelReferences: import('../verification/Verification_Types').ModelReferences;
   referencesLoading: boolean;
 }
 
 export interface NodeVerificationsListProps {
   verifications: Verification[];
-  availableVerifications: import('../verification/VerificationTypes').Verifications;
+  availableVerifications: import('../verification/Verification_Types').Verifications;
   onVerificationsChange: (verifications: Verification[]) => void;
   loading?: boolean;
   error?: string | null;
@@ -464,7 +464,7 @@ export interface NodeVerificationsListProps {
   reloadTrigger?: number;
   onReferenceSelected?: (referenceName: string, referenceData: any) => void;
   selectedHost: import('../common/Host_Types').Host | null;
-  modelReferences: import('../verification/VerificationTypes').ModelReferences;
+  modelReferences: import('../verification/Verification_Types').ModelReferences;
   referencesLoading: boolean;
 }
 

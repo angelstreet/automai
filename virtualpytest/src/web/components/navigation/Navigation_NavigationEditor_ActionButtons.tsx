@@ -7,7 +7,7 @@ import {
 import { Box, Button, IconButton, CircularProgress } from '@mui/material';
 import React from 'react';
 
-import { NavigationEditorActionButtonsProps } from '../../types/pages/Navigation_Header_Types';
+import { NavigationEditorActionButtonsProps } from '../../types/pages/NavigationHeader_Types';
 import { ValidationButtonClient } from '../validation';
 
 export const NavigationEditorActionButtons: React.FC<NavigationEditorActionButtonsProps> = ({

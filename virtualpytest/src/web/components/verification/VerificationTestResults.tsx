@@ -1,7 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import React from 'react';
 
-import { Verification } from '../../types/verification/VerificationTypes';
+import { Verification } from '../../types/verification/Verification_Types';
 
 import { VerificationImageComparisonThumbnails } from './VerificationImageComparisonThumbnails';
 import { VerificationTextComparisonDisplay } from './VerificationTextComparisonDisplay';

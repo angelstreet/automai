@@ -16,7 +16,7 @@ import {
   Verification,
   Verifications,
   ModelReferences,
-} from '../../types/verification/VerificationTypes';
+} from '../../types/verification/Verification_Types';
 
 import { VerificationImageComparisonDialog } from './VerificationImageComparisonDialog';
 import { VerificationItem } from './VerificationItem';

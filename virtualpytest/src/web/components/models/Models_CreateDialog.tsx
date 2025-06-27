@@ -19,7 +19,7 @@ import {
 import React, { useState } from 'react';
 
 // Import the simplified interface from Models.tsx
-import { ModelCreateData } from '../../types/common/Common_BaseTypes';
+import { ModelCreatePayload as ModelCreateData } from '../../types/pages/Models_Types';
 
 interface CreateModelDialogProps {
   open: boolean;

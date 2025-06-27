@@ -14,7 +14,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 import { useAction } from '../../hooks/actions';
 import { Host } from '../../types/common/Host_Types';
-import type { Actions, EdgeAction } from '../../types/controller/ActionTypes';
+import type { Actions, EdgeAction } from '../../types/controller/Action_Types';
 import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
 import { ActionsList } from '../actions';
 

@@ -18,7 +18,7 @@ import {
   Verification,
   Verifications,
   ModelReferences,
-} from '../../types/verification/VerificationTypes';
+} from '../../types/verification/Verification_Types';
 
 import { VerificationControls } from './VerificationControls';
 import { VerificationTestResults } from './VerificationTestResults';

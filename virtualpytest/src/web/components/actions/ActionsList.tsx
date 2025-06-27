@@ -12,7 +12,7 @@ import {
 import React, { useState, useCallback } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import type { Actions, Action, EdgeAction } from '../../types/controller/ActionTypes';
+import type { Actions, Action, EdgeAction } from '../../types/controller/Action_Types';
 
 import { ActionItem } from './ActionItem';
 

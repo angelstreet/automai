@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import { Verification } from '../../types/verification/VerificationTypes';
+import { Verification } from '../../types/verification/Verification_Types';
 
 // Define interfaces for verification data structures
 

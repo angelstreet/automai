@@ -10,7 +10,7 @@ import { useMemo, useState, useEffect, useCallback } from 'react';
 
 import { useHostManager } from '../useHostManager';
 
-import { Model, ModelCreateData } from '../../types/common/Common_BaseTypes';
+import { Model, ModelCreatePayload as ModelCreateData } from '../../types/pages/Models_Types';
 
 // Server Response interface
 export interface ServerResponse<T> {

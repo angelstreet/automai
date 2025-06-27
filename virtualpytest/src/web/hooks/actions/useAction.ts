@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import type { EdgeAction } from '../../types/controller/ActionTypes';
+import type { EdgeAction } from '../../types/controller/Action_Types';
 
 // Define interfaces for action data structures
 interface UseActionProps {

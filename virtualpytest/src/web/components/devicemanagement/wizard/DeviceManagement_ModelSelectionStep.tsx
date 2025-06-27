@@ -13,7 +13,7 @@ import {
 import React, { useState, useEffect } from 'react';
 
 import { useHostManager } from '../../../hooks/useHostManager';
-import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
+import { DeviceFormData } from '../../../types/controller/Controller_Types';
 
 interface ModelSelectionStepProps {
   formData: DeviceFormData;

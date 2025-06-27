@@ -1,7 +1,7 @@
 import { Box, FormControl, InputLabel, Select, MenuItem, Button, Typography } from '@mui/material';
 import React from 'react';
 
-import { NavigationEditorTreeControlsProps } from '../../types/pages/Navigation_Header_Types';
+import { NavigationEditorTreeControlsProps } from '../../types/pages/NavigationHeader_Types';
 
 interface TreeNode {
   id: string;

@@ -14,7 +14,7 @@ import {
 import React from 'react';
 
 import { useControllerConfig } from '../../../hooks/controller';
-import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
+import { DeviceFormData } from '../../../types/controller/Controller_Types';
 
 interface ReviewStepProps {
   formData: DeviceFormData;

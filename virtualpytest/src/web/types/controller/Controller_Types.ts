@@ -5,6 +5,7 @@
  * 1. Device model to controller mapping
  * 2. Verification controller types and their available operations
  * 3. Remote controller actions
+ * 4. Controller configuration types
  */
 
 /**
@@ -78,18 +79,75 @@ export interface ControllerCapability {
   required_config: string[]; // Required configuration fields
 }
 
-// Device form data interface for device management
+// =====================================================
+// CONTROLLER CONFIGURATION TYPES (moved from Common_Base_Types)
+// =====================================================
+
+export type ControllerTypeExtended = 'remote' | 'av' | 'verification' | 'network' | 'power';
+
+export type RemoteControllerImplementation =
+  | 'android_tv'
+  | 'android_mobile'
+  | 'ir_remote'
+  | 'bluetooth_remote';
+
+export type AVControllerImplementation = 'hdmi_stream';
+
+export type VerificationControllerImplementation =
+  | 'adb_verification'
+  | 'image_verification'
+  | 'text_verification';
+
+export type NetworkControllerImplementation = 'network' | 'rtsp' | 'http_stream' | 'webrtc';
+
+export type PowerControllerImplementation = 'mock' | 'smart_plug' | 'ipmi';
+
+export interface ControllerInputField {
+  name: string;
+  label: string;
+  type: 'text' | 'password' | 'number' | 'select' | 'textarea';
+  required: boolean;
+  placeholder?: string;
+  defaultValue?: string | number;
+  description?: string;
+  options?: { value: string; label: string }[]; // For select fields
+  validation?: {
+    min?: number;
+    max?: number;
+    pattern?: string;
+    minLength?: number;
+    maxLength?: number;
+  };
+}
+
+export interface ControllerConfiguration {
+  id: string;
+  name: string;
+  description: string;
+  implementation: string;
+  status: 'available' | 'placeholder' | 'unavailable';
+  inputFields: ControllerInputField[];
+}
+
+export interface ControllerConfigMap {
+  remote: ControllerConfiguration[];
+  av: ControllerConfiguration[];
+  verification: ControllerConfiguration[];
+  network: ControllerConfiguration[];
+  power: ControllerConfiguration[];
+}
+
+// Device form data with controller configurations
 export interface DeviceFormData {
   name: string;
   description: string;
   model: string;
-  controllerConfigs: { [key: string]: any };
+  controllerConfigs: {
+    [controllerType: string]: {
+      implementation: string;
+      parameters: { [key: string]: any };
+    };
+  };
 }
 
-// Re-export controller configuration types from Common_BaseTypes with correct path
-export type {
-  ControllerConfiguration,
-  ControllerInputField,
-  ControllerConfigMap,
-  DeviceFormData as CommonDeviceFormData, // Alias to avoid conflict with local DeviceFormData
-} from '../common/Common_BaseTypes';
+// All controller configuration types are now defined above in this file

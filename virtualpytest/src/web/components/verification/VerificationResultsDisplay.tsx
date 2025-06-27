@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, Typography, FormControl, Select, MenuItem } from '@mui/material';
 
-import { Verification } from '../../types/verification/VerificationTypes';
+import { Verification } from '../../types/verification/Verification_Types';
 
 interface VerificationResultsDisplayProps {
   testResults: Verification[];

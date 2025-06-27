@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { NodeForm } from '../../types/pages/Navigation_Types';
-import { Verification } from '../../types/verification/VerificationTypes';
+import { Verification } from '../../types/verification/Verification_Types';
 
 interface UseNodeOperationsProps {
   selectedHost?: Host;

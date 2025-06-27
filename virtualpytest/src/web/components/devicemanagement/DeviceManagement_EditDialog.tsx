@@ -23,7 +23,8 @@ import {
 import React, { useState, useEffect } from 'react';
 
 import { useControllerConfig } from '../../hooks/controller';
-import { Device, DeviceFormData, DeviceModel } from '../../types/common/Common_BaseTypes';
+import { DeviceFormData } from '../../types/controller/Controller_Types';
+import { Device } from '../../types/common/Host_Types';
 
 // Import wizard step components - reuse the same ones as creation
 import { BasicInfoStep } from './wizard/DeviceManagement_BasicInfoStep';

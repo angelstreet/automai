@@ -1,7 +1,7 @@
 import React from 'react';
 import { Box, TextField } from '@mui/material';
 
-import { Verification } from '../../types/verification/VerificationTypes';
+import { Verification } from '../../types/verification/Verification_Types';
 
 interface VerificationControlsProps {
   verification: Verification;

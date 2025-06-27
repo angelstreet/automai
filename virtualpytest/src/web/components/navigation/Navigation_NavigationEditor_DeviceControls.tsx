@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import React from 'react';
 
-import { NavigationEditorDeviceControlsProps } from '../../types/pages/Navigation_Header_Types';
+import { NavigationEditorDeviceControlsProps } from '../../types/pages/NavigationHeader_Types';
 
 export const NavigationEditorDeviceControls: React.FC<NavigationEditorDeviceControlsProps> = ({
   selectedHost,

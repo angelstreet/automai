@@ -13,7 +13,7 @@ import React from 'react';
 import {
   ControllerConfiguration,
   ControllerInputField,
-} from '../../../types/common/Common_BaseTypes';
+} from '../../../types/controller/Controller_Types';
 
 interface DynamicControllerFormProps {
   configuration: ControllerConfiguration;

@@ -1,7 +1,7 @@
 import { Box, Typography, Alert, Divider } from '@mui/material';
 import React from 'react';
 
-import { DeviceModel, DeviceFormData } from '../../../types/common/Common_BaseTypes';
+import { DeviceFormData } from '../../../types/controller/Controller_Types';
 
 import { ControllerTypeSection } from './DeviceManagement_ControllerTypeSection';
 

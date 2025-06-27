@@ -20,7 +20,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useVerification } from '../../hooks/verification/useVerification';
 import { useNodeOperations } from '../../hooks/navigation/useNodeOperations';
 import { NodeEditDialogProps } from '../../types/pages/Navigation_Types';
-import { Verification } from '../../types/verification/VerificationTypes';
+import { Verification } from '../../types/verification/Verification_Types';
 import { VerificationsList } from '../verification/VerificationsList';
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   isOpen,
