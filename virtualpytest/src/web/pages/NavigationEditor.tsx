@@ -32,6 +32,7 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
+import { useTheme } from '../contexts/ThemeContext';
 import { useDeviceData } from '../contexts/device/DeviceDataContext';
 import { useHostManager } from '../contexts/index';
 import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
@@ -101,13 +102,22 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const location = useLocation();
     const userInterfaceFromState = location.state?.userInterface;
 
-    // Static miniMapStyle like in working commit
-    const miniMapStyle = {
-      backgroundColor: 'var(--card, #ffffff)',
-      border: '1px solid var(--border, #e5e7eb)',
-      borderRadius: '8px',
-      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-    };
+    // Get theme context for dynamic styling
+    const { actualMode } = useTheme();
+
+    // Dynamic miniMapStyle based on theme - black background in dark mode, white in light mode
+    const miniMapStyle = useMemo(
+      () => ({
+        backgroundColor: actualMode === 'dark' ? '#1f2937' : '#ffffff',
+        border: `1px solid ${actualMode === 'dark' ? '#374151' : '#e5e7eb'}`,
+        borderRadius: '8px',
+        boxShadow:
+          actualMode === 'dark'
+            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)'
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+      }),
+      [actualMode],
+    );
 
     // Use the restored navigation editor hook
     const {

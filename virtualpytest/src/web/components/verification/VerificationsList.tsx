@@ -120,7 +120,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
     const addVerification = useCallback(() => {
       const newVerification: Verification = {
         command: '',
-        params: {} as any,
+        params: { timeout: 0 } as any,
         verification_type: 'text',
       };
       onVerificationsChange([...verifications, newVerification]);

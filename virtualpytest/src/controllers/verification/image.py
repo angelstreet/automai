@@ -7,8 +7,10 @@ Provides route interfaces and core domain logic.
 
 import time
 import os
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, List
 from .image_helpers import ImageHelpers
+import cv2
+import numpy as np
 
 
 class ImageVerificationController:
@@ -58,84 +60,145 @@ class ImageVerificationController:
             "captures_path": self.captures_path
         }
 
-    def waitForImageToAppear(self, image_path: str, timeout: float = 10.0, confidence: float = 0.8,
-                            area: dict = None) -> tuple:
+    def waitForImageToAppear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8, 
+                            area: tuple = None, image_list: List[str] = None, model: str = None, 
+                            verification_index: int = 0, image_filter: str = 'none') -> Tuple[bool, str, dict]:
         """
-        Check if a specific image appears on screen immediately.
+        Wait for image to appear either in provided image list or by capturing new frames.
         
         Args:
-            image_path: Path to the reference image to search for
-            timeout: Ignored - verification happens immediately
-            confidence: Matching confidence threshold (0.0 to 1.0)
-            area: Optional area to search within {x, y, width, height}
+            image_path: Path to reference image or reference name
+            timeout: Timeout for capture if no image_list provided
+            threshold: Match threshold (0.0 to 1.0)
+            area: Optional area to search (x, y, width, height)
+            image_list: Optional list of source image paths to search
+            model: Model name for organizing output images
+            verification_index: Index of verification for naming
+            image_filter: Filter to apply ('none', 'greyscale', 'binary')
             
         Returns:
-            tuple: (found, match_location, screenshot_path)
+            Tuple of (success, message, additional_data)
         """
-        try:
-            print(f"[@controller:ImageVerification] Searching for image: {image_path}")
-            print(f"[@controller:ImageVerification] Timeout: {timeout}s, Confidence: {confidence}")
-            
-            # Take screenshot
-            screenshot_path = self.av_controller.take_screenshot()
-            if not screenshot_path or not os.path.exists(screenshot_path):
-                print(f"[@controller:ImageVerification] Failed to take screenshot")
-                return False, None, ""
-            
-            # Perform template matching
-            match_result = self.helpers.match_template_in_area(
-                screenshot_path, image_path, area, confidence
-            )
-            
-            if match_result['found']:
-                print(f"[@controller:ImageVerification] Image found at location: {match_result['location']}")
-                return True, match_result['location'], screenshot_path
+        # Check if image_path is provided
+        if not image_path or image_path.strip() == '':
+            error_msg = "No reference image specified. Please select a reference image or provide an image path."
+            print(f"[@controller:ImageVerification] {error_msg}")
+            return False, error_msg, {}
+        
+        print(f"[@controller:ImageVerification] Looking for image: {image_path}")
+        if image_filter and image_filter != 'none':
+            print(f"[@controller:ImageVerification] Using image filter: {image_filter}")
+        
+        # Resolve reference image path - download from R2 if needed
+        resolved_image_path = self._resolve_reference_image(image_path, model)
+        if not resolved_image_path:
+            error_msg = f"Reference image not found and could not be downloaded: {image_path}"
+            print(f"[@controller:ImageVerification] {error_msg}")
+            return False, error_msg, {}
+        
+        # Get filtered reference image path (only change the reference, not source)
+        filtered_reference_path = resolved_image_path
+        if image_filter and image_filter != 'none':
+            base_path, ext = os.path.splitext(resolved_image_path)
+            filtered_path = f"{base_path}_{image_filter}{ext}"
+            if os.path.exists(filtered_path):
+                filtered_reference_path = filtered_path
+                print(f"[@controller:ImageVerification] Using pre-existing filtered reference: {filtered_reference_path}")
             else:
-                print(f"[@controller:ImageVerification] Image not found in current screenshot")
-                return False, None, screenshot_path
+                print(f"[@controller:ImageVerification] Filtered reference not found, using original: {resolved_image_path}")
+        
+        ref_img = cv2.imread(filtered_reference_path, cv2.IMREAD_COLOR)
+        if ref_img is None:
+            return False, f"Could not load reference image: {filtered_reference_path}", {}
+        
+        additional_data = {
+            "reference_image_path": filtered_reference_path,
+            "image_filter": image_filter
+        }
+        
+        if image_list:
+            # Search in provided images
+            print(f"[@controller:ImageVerification] Searching in {len(image_list)} provided images")
+            max_confidence = 0.0
+            best_source_path = None
+            
+            for source_path in image_list:
+                if not os.path.exists(source_path):
+                    continue
                 
-        except Exception as e:
-            print(f"[@controller:ImageVerification] Error in waitForImageToAppear: {e}")
-            return False, None, ""
+                source_img = cv2.imread(source_path, cv2.IMREAD_COLOR)
+                if source_img is None:
+                    continue
+                
+                confidence = self._match_template(ref_img, source_img, area)
+                
+                # Always set first valid source as best_source_path, then update if better confidence found
+                if best_source_path is None or confidence > max_confidence:
+                    max_confidence = confidence
+                    best_source_path = source_path
+                
+                if confidence >= threshold:
+                    print(f"[@controller:ImageVerification] Match found in {source_path} with confidence {confidence:.3f}")
+                    
+                    # Generate comparison images and URLs like the original working version
+                    image_urls = self._generate_comparison_images(source_path, resolved_image_path, area, verification_index, model, image_filter)
+                    additional_data.update(image_urls)
+                    
+                    # Save actual confidence for threshold display and disappear operations
+                    additional_data["threshold"] = confidence
+                    
+                    return True, f"Image found with confidence {confidence:.3f} (threshold: {threshold:.3f})", additional_data
+            
+            # Generate comparison images even for failed matches
+            if best_source_path and model is not None:
+                image_urls = self._generate_comparison_images(best_source_path, resolved_image_path, area, verification_index, model, image_filter)
+                additional_data.update(image_urls)
+            
+            # Save best confidence for threshold display and disappear operations
+            additional_data["threshold"] = max_confidence
+            
+            return False, f"Image not found. Best confidence: {max_confidence:.3f} (threshold: {threshold:.3f})", additional_data
+        
+        else:
+            # Capture new image if no image list provided - this shouldn't happen in our case
+            print(f"[@controller:ImageVerification] No image list provided, image not found")
+            return False, "Image not found in current screenshot", additional_data
 
-    def waitForImageToDisappear(self, image_path: str, timeout: float = 10.0, confidence: float = 0.8,
-                               area: dict = None) -> tuple:
+    def waitForImageToDisappear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8,
+                               area: tuple = None, image_list: List[str] = None, model: str = None,
+                               verification_index: int = 0, image_filter: str = 'none') -> Tuple[bool, str, dict]:
         """
-        Check if a specific image has disappeared from screen immediately.
+        Wait for image to disappear by calling waitForImageToAppear and inverting the result.
+        """
+        # Check if image_path is provided
+        if not image_path or image_path.strip() == '':
+            error_msg = "No reference image specified. Please select a reference image or provide an image path."
+            print(f"[@controller:ImageVerification] {error_msg}")
+            return False, error_msg, {}
+            
+        print(f"[@controller:ImageVerification] Looking for image to disappear: {image_path}")
         
-        Args:
-            image_path: Path to the reference image to search for
-            timeout: Ignored - verification happens immediately
-            confidence: Matching confidence threshold (0.0 to 1.0)
-            area: Optional area to search within {x, y, width, height}
-            
-        Returns:
-            tuple: (disappeared, screenshot_path)
-        """
-        try:
-            print(f"[@controller:ImageVerification] Checking if image disappeared: {image_path}")
-            
-            # Take screenshot
-            screenshot_path = self.av_controller.take_screenshot()
-            if not screenshot_path or not os.path.exists(screenshot_path):
-                print(f"[@controller:ImageVerification] Failed to take screenshot")
-                return False, ""
-            
-            # Perform template matching
-            match_result = self.helpers.match_template_in_area(
-                screenshot_path, image_path, area, confidence
-            )
-            
-            if not match_result['found']:
-                print(f"[@controller:ImageVerification] Image has disappeared!")
-                return True, screenshot_path
-            else:
-                print(f"[@controller:ImageVerification] Image still present in current screenshot")
-                return False, screenshot_path
-                
-        except Exception as e:
-            print(f"[@controller:ImageVerification] Error in waitForImageToDisappear: {e}")
-            return False, ""
+        # Smart reuse: call waitForImageToAppear and invert result
+        found, message, additional_data = self.waitForImageToAppear(image_path, timeout, threshold, area, image_list, model, verification_index, image_filter)
+        
+        # Invert the boolean result and adjust the message
+        success = not found
+        
+        # For disappear operations, invert the threshold for UI display to make it intuitive
+        if 'threshold' in additional_data and additional_data['threshold'] is not None:
+            original_threshold = additional_data['threshold']
+            # Invert threshold for disappear operations: 1.0 - original gives intuitive "disappear percentage"
+            inverted_threshold = 1.0 - original_threshold
+            additional_data['threshold'] = inverted_threshold
+            additional_data['original_threshold'] = original_threshold  # Keep original for debugging
+            print(f"[@controller:ImageVerification] Disappear threshold display: {original_threshold:.3f} -> {inverted_threshold:.3f} (inverted for UI)")
+        
+        if success:
+            # Image has disappeared (was not found)
+            return True, f"Image disappeared: {message}", additional_data
+        else:
+            # Image is still present (was found)
+            return False, f"Image still present: {message}", additional_data
 
     # =============================================================================
     # Route Interface Methods (Required by host_verification_image_routes.py)
@@ -315,60 +378,93 @@ class ImageVerificationController:
     def execute_verification(self, verification_config: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for executing verification."""
         try:
-            command = verification_config.get('command', 'WaitForImageToAppear')
+            # Take screenshot first
+            source_path = self.av_controller.take_screenshot()
+            if not source_path:
+                return {
+                    'success': False,
+                    'message': 'Failed to capture screenshot for image verification',
+                    'screenshot_path': None
+                }
             
-            if command == 'WaitForImageToAppear':
-                image_path = verification_config.get('image_path', '')
-                timeout = verification_config.get('timeout', 10.0)
-                confidence = verification_config.get('confidence', 0.8)
-                area = verification_config.get('area')
-                
-                found, location, screenshot_path = self.waitForImageToAppear(
-                    image_path, timeout, confidence, area
-                )
-                
+            # Extract parameters from nested structure (matching previous working commit)
+            params = verification_config.get('params', {})
+            command = verification_config.get('command', 'waitForImageToAppear')
+            
+            # Required parameters
+            image_path = params.get('image_path', '')
+            if not image_path:
                 return {
-                    'success': found,
-                    'command': command,
-                    'image_path': image_path,
-                    'screenshot_path': screenshot_path,
-                    'match_location': location,
-                    'confidence': confidence,
-                    'message': f"Image {'found' if found else 'not found'}"
+                    'success': False,
+                    'message': 'No reference image specified for image verification',
+                    'screenshot_path': source_path
                 }
-                
-            elif command == 'WaitForImageToDisappear':
-                image_path = verification_config.get('image_path', '')
-                timeout = verification_config.get('timeout', 10.0)
-                confidence = verification_config.get('confidence', 0.8)
-                area = verification_config.get('area')
-                
-                disappeared, screenshot_path = self.waitForImageToDisappear(
-                    image_path, timeout, confidence, area
+            
+            # Optional parameters with defaults
+            threshold = params.get('threshold', 0.8)
+            timeout = params.get('timeout', 1.0)
+            area = params.get('area')
+            image_filter = params.get('image_filter', 'none')
+            model = params.get('model', 'default')  # Get device model for R2 download
+            
+            print(f"[@controller:ImageVerification] Searching for image: {image_path}")
+            print(f"[@controller:ImageVerification] Timeout: {timeout}s, Confidence: {threshold}")
+            
+            # Execute verification based on command using the exact same method signature as before
+            if command == 'waitForImageToAppear':
+                success, message, details = self.waitForImageToAppear(
+                    image_path=image_path,
+                    timeout=timeout,
+                    threshold=threshold,
+                    area=area,
+                    image_list=[source_path],  # Use source_path as image list
+                    model=model,  # Pass device model for R2 reference resolution
+                    verification_index=0,
+                    image_filter=image_filter
                 )
-                
-                return {
-                    'success': disappeared,
-                    'command': command,
-                    'image_path': image_path,
-                    'screenshot_path': screenshot_path,
-                    'confidence': confidence,
-                    'message': f"Image {'disappeared' if disappeared else 'did not disappear'}"
-                }
-                
+            elif command == 'waitForImageToDisappear':
+                success, message, details = self.waitForImageToDisappear(
+                    image_path=image_path,
+                    timeout=timeout,
+                    threshold=threshold,
+                    area=area,
+                    image_list=[source_path],  # Use source_path as image list
+                    model=model,  # Pass device model for R2 reference resolution
+                    verification_index=0,
+                    image_filter=image_filter
+                )
             else:
                 return {
                     'success': False,
-                    'command': command,
-                    'message': f"Unknown verification command: {command}"
+                    'message': f'Unknown image verification command: {command}',
+                    'screenshot_path': source_path
                 }
-                
+            
+            # Return results in the expected format
+            result = {
+                'success': success,
+                'message': message,
+                'screenshot_path': source_path,
+                'threshold': details.get('threshold', 0.0),
+                'details': details
+            }
+            
+            # Add image URLs from details if they exist
+            if 'sourceImageUrl' in details:
+                result['sourceImageUrl'] = details['sourceImageUrl']
+            if 'referenceImageUrl' in details:
+                result['referenceImageUrl'] = details['referenceImageUrl']
+            if 'resultOverlayUrl' in details:
+                result['resultOverlayUrl'] = details['resultOverlayUrl']
+            
+            return result
+            
         except Exception as e:
-            print(f"[@controller:ImageVerification] Error in execute_verification: {e}")
+            print(f"[@controller:ImageVerification] Execution error: {e}")
             return {
                 'success': False,
-                'command': verification_config.get('command', 'unknown'),
-                'message': f"Verification failed: {str(e)}"
+                'message': f'Image verification execution error: {str(e)}',
+                'screenshot_path': source_path if 'source_path' in locals() else None
             }
 
     def get_available_verifications(self) -> list:
@@ -395,5 +491,256 @@ class ImageVerificationController:
                 "verification_type": "image"
             }
         ]
+
+    def _generate_comparison_images(self, source_path: str, reference_path: str, area: dict = None, 
+                                   verification_index: int = 0, model: str = None, 
+                                   image_filter: str = 'none') -> dict:
+        """
+        Generate comparison images exactly like the original working version.
+        Creates source, reference, and overlay images with public URLs.
+        """
+        try:
+            # Create results directory - simple path, just ensure it exists
+            results_dir = '/var/www/html/stream/verification_results'
+            os.makedirs(results_dir, exist_ok=True)
+            
+            # Create result file paths in stream directory
+            source_result_path = f'{results_dir}/source_image_{verification_index}.png'
+            reference_result_path = f'{results_dir}/reference_image_{verification_index}.png'
+            overlay_result_path = f'{results_dir}/result_overlay_{verification_index}.png'
+            
+            print(f"[@controller:ImageVerification] Generating comparison images:")
+            print(f"  Source: {source_path} -> {source_result_path}")
+            print(f"  Reference: {reference_path} -> {reference_result_path}")
+            print(f"  Overlay: {overlay_result_path}")
+            
+            # === STEP 1: Handle Source Image ===
+            # Crop source image to area if specified (always crop for source)
+            if area:
+                # Crop source image using cv2
+                source_img = cv2.imread(source_path)
+                if source_img is not None:
+                    x, y, w, h = int(area['x']), int(area['y']), int(area['width']), int(area['height'])
+                    cropped_source = source_img[y:y+h, x:x+w]
+                    cv2.imwrite(source_result_path, cropped_source)
+                    print(f"[@controller:ImageVerification] Cropped source image to area: {area}")
+                else:
+                    print(f"[@controller:ImageVerification] Failed to load source image for cropping")
+                    return {}
+            else:
+                # Copy full source image
+                import shutil
+                shutil.copy2(source_path, source_result_path)
+            
+            # === STEP 2: Handle Reference Image ===
+            # Copy reference image
+            import shutil
+            shutil.copy2(reference_path, reference_result_path)
+            
+            # === STEP 3: Create Pixel-by-Pixel Difference Overlay ===
+            # Load both images for comparison
+            source_img = cv2.imread(source_result_path)
+            ref_img = cv2.imread(reference_result_path)
+            
+            if source_img is None or ref_img is None:
+                print(f"[@controller:ImageVerification] Failed to load images for comparison")
+                return {}
+            
+            print(f"[@controller:ImageVerification] Source image shape: {source_img.shape}")
+            print(f"[@controller:ImageVerification] Reference image shape: {ref_img.shape}")
+            
+            # Create pixel-by-pixel difference overlay
+            overlay_img = self._create_pixel_difference_overlay(source_img, ref_img)
+            
+            if overlay_img is not None:
+                cv2.imwrite(overlay_result_path, overlay_img)
+                print(f"[@controller:ImageVerification] Created pixel-by-pixel difference overlay")
+            else:
+                print(f"[@controller:ImageVerification] Failed to create pixel difference overlay")
+                return {}
+            
+            # === STEP 4: Convert local paths to public URLs ===
+            # Get host device info for URL building
+            try:
+                from src.utils.build_url_utils import buildVerificationResultUrl
+                from flask import current_app
+                
+                # Get host info from current app context
+                host_device = getattr(current_app, 'my_host_device', None)
+                if not host_device:
+                    print(f"[@controller:ImageVerification] ERROR: No host device found for URL building")
+                    raise ValueError("Host device context required for URL building - ensure proper request context")
+                
+                # Build public URLs
+                source_url = buildVerificationResultUrl(host_device, source_result_path)
+                reference_url = buildVerificationResultUrl(host_device, reference_result_path)
+                overlay_url = buildVerificationResultUrl(host_device, overlay_result_path)
+                
+                print(f"[@controller:ImageVerification] Built URLs:")
+                print(f"  Source URL: {source_url}")
+                print(f"  Reference URL: {reference_url}")
+                print(f"  Overlay URL: {overlay_url}")
+                
+                return {
+                    'source_image_path': source_result_path,
+                    'reference_image_path': reference_result_path,
+                    'result_overlay_path': overlay_result_path,
+                    'sourceImageUrl': source_url,
+                    'referenceImageUrl': reference_url,
+                    'resultOverlayUrl': overlay_url,
+                }
+                
+            except Exception as url_error:
+                print(f"[@controller:ImageVerification] URL building error: {url_error}")
+                raise ValueError(f"Failed to build verification result URLs: {url_error}")
+                
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error generating comparison images: {e}")
+            return {}
+
+    def _create_pixel_difference_overlay(self, source_img, ref_img):
+        """
+        Create a pixel-by-pixel difference overlay image.
+        
+        Green pixels (with transparency) = matching pixels
+        Red pixels (with transparency) = non-matching pixels
+        """
+        try:
+            # Ensure both images have the same dimensions
+            if source_img.shape != ref_img.shape:
+                print(f"[@controller:ImageVerification] Resizing images to match - Source: {source_img.shape}, Ref: {ref_img.shape}")
+                # Resize reference to match source
+                ref_img = cv2.resize(ref_img, (source_img.shape[1], source_img.shape[0]))
+            
+            # Convert to grayscale for pixel comparison (more reliable than color)
+            source_gray = cv2.cvtColor(source_img, cv2.COLOR_BGR2GRAY)
+            ref_gray = cv2.cvtColor(ref_img, cv2.COLOR_BGR2GRAY)
+            
+            # Calculate absolute difference between pixels
+            diff = cv2.absdiff(source_gray, ref_gray)
+            
+            # Create binary mask for matching/non-matching pixels
+            # Threshold for pixel difference (adjust as needed - smaller = more sensitive)
+            pixel_threshold = 10  # Pixels with difference <= 10 are considered matching
+            matching_mask = diff <= pixel_threshold
+            
+            # Create BGRA overlay (BGR + Alpha channel for transparency)
+            height, width = source_img.shape[:2]
+            overlay = np.zeros((height, width, 4), dtype=np.uint8)
+            
+            # Set transparency level (0-255, where 0=fully transparent, 255=fully opaque)
+            transparency = 128  # 50% transparency
+            
+            # Green pixels for matching areas (BGR format: Green = [0, 255, 0])
+            overlay[matching_mask] = [0, 255, 0, transparency]  # Green with transparency
+            
+            # Red pixels for non-matching areas (BGR format: Red = [0, 0, 255])
+            overlay[~matching_mask] = [0, 0, 255, transparency]  # Red with transparency
+            
+            # Optional: Make areas with very small differences more transparent
+            # This helps focus attention on significant differences
+            small_diff_mask = (diff > 0) & (diff <= 5)
+            if np.any(small_diff_mask):
+                overlay[small_diff_mask] = [0, 255, 0, transparency // 2]  # More transparent green
+            
+            print(f"[@controller:ImageVerification] Pixel comparison stats:")
+            matching_pixels = np.sum(matching_mask)
+            total_pixels = height * width
+            match_percentage = (matching_pixels / total_pixels) * 100
+            print(f"  Matching pixels: {matching_pixels}/{total_pixels} ({match_percentage:.1f}%)")
+            print(f"  Pixel threshold: {pixel_threshold}")
+            print(f"  Overlay transparency: {transparency}/255")
+            
+            return overlay
+            
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error creating pixel difference overlay: {e}")
+            return None
+
+    def _resolve_reference_image(self, image_path: str, model: str = None) -> Optional[str]:
+        """
+        Resolve reference image path by downloading from R2 if needed.
+        """
+        try:
+            # Extract reference name from path
+            if '/' in image_path:
+                reference_name = os.path.basename(image_path)
+            else:
+                reference_name = image_path
+            
+            # Remove extension if present to get base name
+            base_name = reference_name.split('.')[0]
+            
+            print(f"[@controller:ImageVerification] Resolving reference: {reference_name} for model: {model}")
+            
+            # Set up local path for downloaded reference
+            resources_path = '/var/www/html/stream/resources'
+            device_model = model or 'default'
+            local_dir = f'{resources_path}/{device_model}'
+            os.makedirs(local_dir, exist_ok=True)
+            
+            # Use the reference name with proper extension
+            if not reference_name.endswith(('.jpg', '.jpeg', '.png')):
+                reference_name = f"{reference_name}.jpg"
+            
+            local_path = f'{local_dir}/{reference_name}'
+            
+            # Check if already exists locally
+            if os.path.exists(local_path):
+                print(f"[@controller:ImageVerification] Reference already exists locally: {local_path}")
+                return local_path
+            
+            print(f"[@controller:ImageVerification] Downloading from R2 to: {local_path}")
+            
+            # Download from R2 using CloudflareUtils
+            try:
+                from src.utils.cloudflare_utils import get_cloudflare_utils
+                
+                # Construct R2 object key
+                r2_object_key = f"reference-images/{device_model}/{reference_name}"
+                
+                print(f"[@controller:ImageVerification] R2 object key: {r2_object_key}")
+                
+                # Download file
+                cloudflare_utils = get_cloudflare_utils()
+                download_result = cloudflare_utils.download_file(r2_object_key, local_path)
+                
+                if download_result.get('success'):
+                    print(f"[@controller:ImageVerification] Successfully downloaded reference from R2: {local_path}")
+                    return local_path
+                else:
+                    print(f"[@controller:ImageVerification] Failed to download from R2: {download_result.get('error')}")
+                    return None
+                    
+            except Exception as download_error:
+                print(f"[@controller:ImageVerification] R2 download error: {download_error}")
+                return None
+                
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Reference resolution error: {e}")
+            return None
+
+    def _match_template(self, ref_img, source_img, area: tuple = None) -> float:
+        """
+        Perform template matching between reference and source images.
+        
+        Returns:
+            Confidence score (0.0 to 1.0)
+        """
+        try:
+            # Crop source image to area if specified
+            if area:
+                x, y, w, h = int(area['x']), int(area['y']), int(area['width']), int(area['height'])
+                source_img = source_img[y:y+h, x:x+w]
+            
+            # Perform standard template matching
+            result = cv2.matchTemplate(source_img, ref_img, cv2.TM_CCOEFF_NORMED)
+            _, max_val, _, _ = cv2.minMaxLoc(result)
+            
+            return float(max_val)
+            
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Template matching error: {e}")
+            return 0.0
 
  

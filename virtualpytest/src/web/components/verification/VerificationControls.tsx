@@ -21,14 +21,14 @@ export const VerificationControls: React.FC<VerificationControlsProps> = ({
           size="small"
           type="number"
           label="Timeout"
-          value={verification.params?.timeout !== undefined ? verification.params.timeout : 1}
+          value={verification.params?.timeout !== undefined ? verification.params.timeout : 0}
           autoComplete="off"
           onChange={(e) => {
             const value = parseFloat(e.target.value);
             onUpdateVerification(index, {
               params: {
                 ...verification.params,
-                timeout: isNaN(value) ? 1 : value,
+                timeout: isNaN(value) ? 0 : value,
               },
             });
           }}
