@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
 
+import { useNavigationFlow } from './NavigationFlowContext';
 import { useNavigationNodes } from './NavigationNodesContext';
 import { useNavigationUI } from './NavigationUIContext';
-import { useNavigationFlow } from './NavigationFlowContext';
 
 // ========================================
 // TYPES
