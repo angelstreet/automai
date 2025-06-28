@@ -271,7 +271,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       if (!selectedDeviceId || !stableSelectedHost?.devices) return {};
       const device = stableSelectedHost.devices.find((d) => d.device_id === selectedDeviceId);
       if (!device?.device_model) return {};
-      return getModelReferences(device.device_model);
+      return getModelReferences(device.model);
     }, [getModelReferences, stableSelectedHost?.devices, selectedDeviceId]);
 
     // Memoize the RemotePanel props to prevent unnecessary re-renders

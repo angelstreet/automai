@@ -114,7 +114,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   const getHostsByModel = useCallback(
     (models: string[]): Host[] => {
       const filtered = availableHosts.filter((host) =>
-        host.devices?.some((device) => models.includes(device.device_model)),
+        host.devices?.some((device) => models.includes(device.model)),
       );
       return filtered;
     },
@@ -581,7 +581,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     if (stableUserInterface?.models && availableHosts.length > 0) {
       // Fix model filtering to check device models
       const compatibleHosts = availableHosts.filter((host) =>
-        host.devices?.some((device) => stableUserInterface.models!.includes(device.device_model)),
+        host.devices?.some((device) => stableUserInterface.models!.includes(device.model)),
       );
 
       setFilteredAvailableHosts(compatibleHosts);

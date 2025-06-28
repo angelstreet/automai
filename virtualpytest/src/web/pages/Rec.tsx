@@ -33,8 +33,8 @@ const Rec: React.FC = () => {
 
     avDevices.forEach(({ host, device }) => {
       hosts.add(host.host_name);
-      if (device.device_model) {
-        deviceModels.add(device.device_model);
+      if (device.model) {
+        deviceModels.add(device.model);
       }
     });
 
@@ -48,7 +48,7 @@ const Rec: React.FC = () => {
   const filteredDevices = useMemo(() => {
     return avDevices.filter(({ host, device }) => {
       const matchesHost = !hostFilter || host.host_name === hostFilter;
-      const matchesDeviceModel = !deviceModelFilter || device.device_model === deviceModelFilter;
+      const matchesDeviceModel = !deviceModelFilter || device.model === deviceModelFilter;
 
       return matchesHost && matchesDeviceModel;
     });

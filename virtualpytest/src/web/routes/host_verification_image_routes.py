@@ -188,7 +188,7 @@ def execute_image_verification():
                 'timeout': verification.get('params', {}).get('timeout', 10.0),
                 'area': verification.get('params', {}).get('area'),
                 'image_filter': verification.get('params', {}).get('image_filter', 'none'),
-                'model': device.device_model  # Pass device model for R2 reference resolution
+                'model': device.model  # Use device.model instead of device.model
             }
         })
         

@@ -135,7 +135,7 @@ export const NavigationEditorHeader: React.FC<{
       const device = selectedHost.devices?.find((d: any) => d.device_id === selectedDeviceId);
       if (device) {
         console.log(
-          `[@component:NavigationEditorHeader] Device selected: ${device.device_name} (${device.device_model}) on host ${selectedHost.host_name}`,
+          `[@component:NavigationEditorHeader] Device selected: ${device.name} (${device.model}) on host ${selectedHost.host_name}`,
         );
       }
     }

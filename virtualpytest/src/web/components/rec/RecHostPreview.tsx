@@ -210,7 +210,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   };
 
   // Clean display values
-  const displayName = device ? `${host.host_name} - ${device.device_name}` : host.host_name;
+  const displayName = device ? `${host.host_name} - ${device.name}` : host.host_name;
 
   return (
     <Card
