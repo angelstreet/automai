@@ -525,7 +525,7 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
         console.log(`[DeviceDataContext] Fetching verifications for device model: ${deviceModel}`);
 
         const response = await fetch(
-          `/server/verifications/getVerifications?device_model=${encodeURIComponent(deviceModel)}`,
+          `/server/verification/getAvailableVerifications?device_model=${encodeURIComponent(deviceModel)}`,
           {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },

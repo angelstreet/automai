@@ -100,7 +100,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
 
           for (const verification of verificationsToSave) {
             try {
-              const response = await fetch('/server/verifications/save-verification', {
+              const response = await fetch('/server/verification/saveVerification', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
