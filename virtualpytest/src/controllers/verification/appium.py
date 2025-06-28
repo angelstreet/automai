@@ -613,7 +613,7 @@ class AppiumVerificationController(VerificationControllerInterface):
                 'command': 'waitForElementToAppear',
                 'params': {
                     'search_term': '',      # Empty string for user input
-                    'timeout': 10.0,        # Default value
+                    'timeout': 0.0,         # Default: single check, no polling
                     'check_interval': 1.0   # Default value
                 },
                 'verification_type': 'appium'
@@ -622,7 +622,7 @@ class AppiumVerificationController(VerificationControllerInterface):
                 'command': 'waitForElementToDisappear',
                 'params': {
                     'search_term': '',      # Empty string for user input
-                    'timeout': 10.0,        # Default value
+                    'timeout': 0.0,         # Default: single check, no polling
                     'check_interval': 1.0   # Default value
                 },
                 'verification_type': 'appium'

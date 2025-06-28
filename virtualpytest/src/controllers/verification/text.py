@@ -203,9 +203,9 @@ class TextVerificationController:
     def execute_verification(self, verification_config: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for executing verification."""
         try:
-            command = verification_config.get('command', 'WaitForTextToAppear')
+            command = verification_config.get('command', 'waitForTextToAppear')
             
-            if command == 'WaitForTextToAppear':
+            if command == 'waitForTextToAppear':
                 text = verification_config.get('text', '')
                 timeout = verification_config.get('timeout', 10.0)
                 area = verification_config.get('area')
@@ -223,7 +223,7 @@ class TextVerificationController:
                     'message': f"Text {'found' if found else 'not found'}"
                 }
                 
-            elif command == 'WaitForTextToDisappear':
+            elif command == 'waitForTextToDisappear':
                 text = verification_config.get('text', '')
                 timeout = verification_config.get('timeout', 10.0)
                 area = verification_config.get('area')
@@ -250,7 +250,7 @@ class TextVerificationController:
         """Get list of available verification types."""
         return [
             {
-                "command": "WaitForTextToAppear",
+                "command": "waitForTextToAppear",
                 "params": {
                     "text": "",             # Empty string for user input
                     "timeout": 0,           # Default: single check, no polling
@@ -259,7 +259,7 @@ class TextVerificationController:
                 "verification_type": "text"
             },
             {
-                "command": "WaitForTextToDisappear",
+                "command": "waitForTextToDisappear",
                 "params": {
                     "text": "",             # Empty string for user input
                     "timeout": 0,           # Default: single check, no polling

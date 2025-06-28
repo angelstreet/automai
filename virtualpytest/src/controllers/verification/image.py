@@ -471,7 +471,7 @@ class ImageVerificationController:
         """Get list of available verification types."""
         return [
             {
-                "command": "WaitForImageToAppear",
+                "command": "waitForImageToAppear",
                 "params": {
                     "image_path": "",       # Empty string for user input
                     "timeout": 0,           # Default: single check, no polling
@@ -481,7 +481,7 @@ class ImageVerificationController:
                 "verification_type": "image"
             },
             {
-                "command": "WaitForImageToDisappear",
+                "command": "waitForImageToDisappear",
                 "params": {
                     "image_path": "",       # Empty string for user input
                     "timeout": 0,           # Default: single check, no polling
