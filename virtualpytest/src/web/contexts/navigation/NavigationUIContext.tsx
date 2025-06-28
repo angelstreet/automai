@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
-import { NodeForm, EdgeForm } from '../../types/pages/Navigation_Types';
 import {
   NavigationUIContextType,
   NavigationUIProviderProps,
 } from '../../types/pages/NavigationContext_Types';
+import { NodeForm, EdgeForm } from '../../types/pages/Navigation_Types';
 
 // ========================================
 // CONTEXT
@@ -131,23 +131,36 @@ export const NavigationUIProvider: React.FC<NavigationUIProviderProps> = ({ chil
       resetDialogs,
     };
   }, [
-    // Only include state values that actually change, not function references
     isNodeDialogOpen,
+    setIsNodeDialogOpen,
     isEdgeDialogOpen,
+    setIsEdgeDialogOpen,
     isDiscardDialogOpen,
+    setIsDiscardDialogOpen,
     isNewNode,
+    setIsNewNode,
     stableNodeForm,
+    setNodeForm,
     stableEdgeForm,
+    setEdgeForm,
     isLoading,
+    setIsLoading,
     error,
+    setError,
     success,
+    setSuccess,
     isSaving,
+    setIsSaving,
     saveError,
+    setSaveError,
     saveSuccess,
+    setSaveSuccess,
     hasUnsavedChanges,
+    setHasUnsavedChanges,
     isLoadingInterface,
-    // Remove function dependencies to prevent cascade re-renders
-    // resetForms and resetDialogs are stable due to their own useCallback dependencies
+    setIsLoadingInterface,
+    resetForms,
+    resetDialogs,
   ]);
 
   return (

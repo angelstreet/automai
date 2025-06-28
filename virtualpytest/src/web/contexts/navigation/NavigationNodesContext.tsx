@@ -134,17 +134,26 @@ export const NavigationNodesProvider: React.FC<NavigationNodesProviderProps> = (
       resetSelection,
     };
   }, [
-    // Only include state values that actually change, not function references
     stableNodes,
+    setNodes,
+    onNodesChange,
     stableEdges,
+    setEdges,
+    onEdgesChange,
     selectedNode,
+    setSelectedNode,
     selectedEdge,
+    setSelectedEdge,
     focusNodeId,
+    setFocusNodeId,
     maxDisplayDepth,
+    setMaxDisplayDepth,
     stableAvailableFocusNodes,
+    setAvailableFocusNodes,
     initialState,
-    // Remove function references from dependencies to prevent unnecessary re-renders
-    // resetToInitialState and resetSelection are stable due to their own useCallback deps
+    setInitialState,
+    resetToInitialState,
+    resetSelection,
   ]);
 
   return (

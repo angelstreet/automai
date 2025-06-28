@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useRef, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
 
@@ -379,47 +379,78 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
       resetSelection,
     };
   }, [
-    // Core navigation state - only recreate when these essential values change
     treeId,
     treeName,
     interfaceId,
     currentTreeId,
+    setCurrentTreeId,
     currentTreeName,
+    setCurrentTreeName,
     stableNavigationPath,
+    setNavigationPath,
     stableNavigationNamePath,
-
-    // Data state - recreate when core data changes
-    stableNodes,
-    stableEdges,
-    userInterface,
-    rootTree,
-    initialState,
-
-    // UI state that affects multiple components
+    setNavigationNamePath,
+    isSaving,
+    setIsSaving,
+    saveError,
+    setSaveError,
+    saveSuccess,
+    setSaveSuccess,
     hasUnsavedChanges,
+    setHasUnsavedChanges,
+    isDiscardDialogOpen,
+    setIsDiscardDialogOpen,
+    userInterface,
+    setUserInterface,
+    rootTree,
+    setRootTree,
+    isLoadingInterface,
+    setIsLoadingInterface,
+    stableNodes,
+    setNodes,
+    onNodesChange,
+    stableEdges,
+    setEdges,
+    onEdgesChange,
+    reactFlowInstance,
+    setReactFlowInstance,
+    reactFlowWrapper,
+    initialState,
+    setInitialState,
     isLoading,
+    setIsLoading,
     error,
+    setError,
     success,
-
-    // Selection state - this is what causes re-renders when clicking nodes
-    // We need to include these, but we can optimize by memoizing components that don't need them
-    selectedNode,
-    selectedEdge,
-    isNodeDialogOpen,
-    isEdgeDialogOpen,
-    isNewNode,
-    stableNodeForm,
-    stableEdgeForm,
-
-    // View state
+    setSuccess,
     currentViewRootId,
+    setCurrentViewRootId,
     stableViewPath,
+    setViewPath,
+    selectedNode,
+    setSelectedNode,
+    selectedEdge,
+    setSelectedEdge,
+    isNodeDialogOpen,
+    setIsNodeDialogOpen,
+    isEdgeDialogOpen,
+    setIsEdgeDialogOpen,
+    isNewNode,
+    setIsNewNode,
+    stableNodeForm,
+    setNodeForm,
+    stableEdgeForm,
+    setEdgeForm,
     stableAvailableFocusNodes,
+    setAvailableFocusNodes,
     focusNodeId,
+    setFocusNodeId,
     maxDisplayDepth,
-
-    // Only include state that actually affects context value
-    // Remove setter functions and callbacks as they are stable
+    setMaxDisplayDepth,
+    resetToInitialState,
+    validateNavigationPath,
+    updateNavigationPath,
+    resetSelection,
   ]);
 
   return (
