@@ -3,7 +3,7 @@ import React, { createContext, useContext, useCallback, useMemo } from 'react';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
 import { useNavigationNodes } from './NavigationNodesContext';
 import { useNavigationUI } from './NavigationUIContext';
-import { useNavigationConfig } from './NavigationConfigContext';
+import { useNavigationTreeControl } from './NavigationConfigContext';
 
 // ========================================
 // TYPES
@@ -41,7 +41,7 @@ export const NodeEdgeManagementProvider: React.FC<NodeEdgeManagementProviderProp
   // Get contexts directly - single source of truth
   const nodesContext = useNavigationNodes();
   const uiContext = useNavigationUI();
-  const configContext = useNavigationConfig();
+  const configContext = useNavigationTreeControl();
 
   const {
     nodes,

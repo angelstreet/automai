@@ -4,7 +4,7 @@ import { useNavigationActions } from '../../contexts/navigation';
 import { useNavigationNodes, useNavigationUI, useNavigationFlow } from '../../contexts/navigation';
 
 // Optional import for NavigationConfig - will be available when wrapped with NavigationConfigProvider
-import { useNavigationConfig } from '../../contexts';
+import { useNavigationTreeControl } from '../../contexts';
 
 // Optional import for HostManager - will be available when wrapped with HostManagerProvider
 import { useHostManager } from '../../contexts/index';
@@ -19,7 +19,7 @@ export const useNavigationActionsHook = () => {
   // Use existing context hooks with fallbacks for provider hierarchy issues
   let configHook;
   try {
-    configHook = useNavigationConfig();
+    configHook = useNavigationTreeControl();
   } catch (error) {
     configHook = null;
   }

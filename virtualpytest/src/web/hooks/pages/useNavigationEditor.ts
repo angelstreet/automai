@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addEdge, Connection, MarkerType } from 'reactflow';
 
-import { useHostManager, useNavigationConfig, useNodeEdgeManagement } from '../../contexts';
+import { useHostManager, useNavigationTreeControl, useNodeEdgeManagement } from '../../contexts';
 import { useNavigationState } from '../navigation/useNavigationState';
 import {
   UINavigationNode,
@@ -17,7 +17,7 @@ export const useNavigationEditor = () => {
 
   // Use context hooks directly
   const navigationState = useNavigationState();
-  const configHook = useNavigationConfig();
+  const configHook = useNavigationTreeControl();
   const nodeEdgeHook = useNodeEdgeManagement();
   const hostManager = useHostManager();
 
