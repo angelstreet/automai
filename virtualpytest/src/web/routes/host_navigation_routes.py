@@ -14,7 +14,7 @@ from src.utils.host_utils import get_controller, get_device_by_id
 # Create blueprint with host navigation prefix
 navigation_bp = Blueprint('navigation', __name__, url_prefix='/host/navigation')
 
-@navigation_bp.route('/saveuscreenshot', methods=['POST'])
+@navigation_bp.route('/saveScreenshot', methods=['POST'])
 def save_navigation_screenshot():
     """Take screenshot and upload to R2 for navigation documentation"""
     try:

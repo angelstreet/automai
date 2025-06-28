@@ -158,7 +158,7 @@ def get_status():
             'error': str(e)
         }), 500
 
-@av_bp.route('/restartustream', methods=['POST'])
+@av_bp.route('/restartStream', methods=['POST'])
 def restart_stream():
     """Restart stream service using new architecture"""
     try:
@@ -212,7 +212,7 @@ def restart_stream():
             'error': str(e)
         }), 500
 
-@av_bp.route('/takeucontrol', methods=['POST'])
+@av_bp.route('/takeControl', methods=['POST'])
 def take_control():
     """Take control of AV system using new architecture"""
     try:
@@ -377,7 +377,7 @@ def take_screenshot():
             'error': str(e)
         }), 500
 
-@av_bp.route('/startucapture', methods=['POST'])
+@av_bp.route('/startCapture', methods=['POST'])
 def start_video_capture():
     """Start video capture using new architecture"""
     try:
@@ -446,7 +446,7 @@ def start_video_capture():
             'error': str(e)
         }), 500
 
-@av_bp.route('/stopucapture', methods=['POST'])
+@av_bp.route('/stopCapture', methods=['POST'])
 def stop_video_capture():
     """Stop video capture using new architecture"""
     try:

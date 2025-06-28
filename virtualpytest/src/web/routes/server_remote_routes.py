@@ -75,7 +75,7 @@ def get_apps():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/clickuelement', methods=['POST'])
+@remote_bp.route('/clickElement', methods=['POST'])
 def click_element():
     """Proxy click element request to selected host (for Appium controllers)"""
     try:
@@ -106,7 +106,7 @@ def click_element():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/tapucoordinates', methods=['POST'])
+@remote_bp.route('/tapCoordinates', methods=['POST'])
 def tap_coordinates():
     """Handle tap coordinates for mobile devices - centralized mobile control"""
     try:
@@ -137,7 +137,7 @@ def tap_coordinates():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/streamutap', methods=['POST'])
+@remote_bp.route('/streamTap', methods=['POST'])
 def stream_tap():
     """Handle stream tap with device coordinate conversion - mobile control integration"""
     try:
@@ -241,7 +241,7 @@ def execute_command():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/dumpuui', methods=['POST'])
+@remote_bp.route('/dumpUi', methods=['POST'])
 def dump_ui():
     """Dump UI elements without screenshot - for HDMI stream usage"""
     try:

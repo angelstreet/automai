@@ -10,7 +10,7 @@ import os
 
 power_bp = Blueprint('power', __name__, url_prefix='/server/power')
 
-@power_bp.route('/takeucontrol', methods=['POST'])
+@power_bp.route('/takeControl', methods=['POST'])
 def power_take_control():
     """Take control of power device using abstract power controller."""
     try:
@@ -51,7 +51,7 @@ def power_take_control():
             'error': f'Connection error: {str(e)}'
         }), 500
 
-@power_bp.route('/releaseucontrol', methods=['POST'])
+@power_bp.route('/releaseControl', methods=['POST'])
 def power_release_control():
     """Release control of power device using abstract power controller."""
     try:
@@ -119,7 +119,7 @@ def get_power_status():
             'error': f'Status check error: {str(e)}'
         }), 500
 
-@power_bp.route('/powerustatus', methods=['GET'])
+@power_bp.route('/powerStatus', methods=['GET'])
 def get_power_state():
     """Get current power state using abstract power controller."""
     try:
@@ -154,7 +154,7 @@ def get_power_state():
             'error': f'Power status error: {str(e)}'
         }), 500
 
-@power_bp.route('/poweruon', methods=['POST'])
+@power_bp.route('/powerOn', methods=['POST'])
 def power_on():
     """Turn power on using abstract power controller."""
     try:
@@ -196,7 +196,7 @@ def power_on():
             'error': f'Power on error: {str(e)}'
         }), 500
 
-@power_bp.route('/poweruoff', methods=['POST'])
+@power_bp.route('/powerOff', methods=['POST'])
 def power_off():
     """Turn power off using abstract power controller."""
     try:

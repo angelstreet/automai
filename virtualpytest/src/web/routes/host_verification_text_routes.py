@@ -11,7 +11,7 @@ from src.utils.build_url_utils import buildHostImageUrl
 # Create blueprint
 verification_text_host_bp = Blueprint('verification_text_host', __name__, url_prefix='/host/verification/text')
 
-@verification_text_host_bp.route('/detectutext', methods=['POST'])
+@verification_text_host_bp.route('/detectText', methods=['POST'])
 def detect_text():
     """Auto-detect text elements in the current screen"""
     try:
@@ -65,7 +65,7 @@ def detect_text():
             'error': f'Text detection error: {str(e)}'
         }), 500
 
-@verification_text_host_bp.route('/saveutext', methods=['POST'])
+@verification_text_host_bp.route('/saveText', methods=['POST'])
 def save_text():
     """Save text verification reference"""
     try:

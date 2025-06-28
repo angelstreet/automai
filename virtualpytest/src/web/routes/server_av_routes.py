@@ -14,7 +14,7 @@ from src.web.utils.routeUtils import proxy_to_host, proxy_to_host_with_params, g
 # Create blueprint
 av_bp = Blueprint('server_av', __name__, url_prefix='/server/av')
 
-@av_bp.route('/restartustream', methods=['POST'])
+@av_bp.route('/restartStream', methods=['POST'])
 def restart_stream():
     """Proxy restart stream request to selected host with device_id"""
     try:
@@ -85,7 +85,7 @@ def get_stream_url():
             'error': str(e)
         }), 500
 
-@av_bp.route('/proxyuimage', methods=['GET'])
+@av_bp.route('/proxyImage', methods=['GET'])
 def proxy_image():
     """
     Proxy HTTP image URLs through HTTPS to solve mixed content issues.
@@ -177,7 +177,7 @@ def proxy_image():
             'error': f'Image proxy error: {str(e)}'
         }), 500
 
-@av_bp.route('/proxyuimage', methods=['OPTIONS'])
+@av_bp.route('/proxyImage', methods=['OPTIONS'])
 def proxy_image_options():
     """Handle CORS preflight requests for image proxy"""
     return Response(
@@ -190,7 +190,7 @@ def proxy_image_options():
         }
     )
 
-@av_bp.route('/proxyustream', methods=['GET'])
+@av_bp.route('/proxyStream', methods=['GET'])
 def proxy_stream():
     """
     Proxy HTTP HLS streams through HTTPS to solve mixed content issues.
@@ -334,7 +334,7 @@ def proxy_stream():
             'error': f'Stream proxy error: {str(e)}'
         }), 500
 
-@av_bp.route('/proxyustream', methods=['OPTIONS'])
+@av_bp.route('/proxyStream', methods=['OPTIONS'])
 def proxy_stream_options():
     """Handle CORS preflight requests for stream proxy"""
     return Response(
@@ -420,7 +420,7 @@ def take_screenshot():
             'error': str(e)
         }), 500
 
-@av_bp.route('/saveuscreenshot', methods=['POST'])
+@av_bp.route('/saveScreenshot', methods=['POST'])
 def save_screenshot():
     """Proxy save screenshot request to selected host with device_id"""
     try:

@@ -224,7 +224,7 @@ def getAllHosts():
         print(f"❌ [HOSTS] Error listing hosts: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@system_bp.route('/environmentuprofiles', methods=['GET'])
+@system_bp.route('/environmentProfiles', methods=['GET'])
 def get_environment_profiles():
     """Get available environment profiles for test execution"""
     try:
