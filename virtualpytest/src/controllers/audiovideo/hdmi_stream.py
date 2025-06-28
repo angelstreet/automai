@@ -94,7 +94,7 @@ class HDMIStreamController(AVControllerInterface):
             screenshot_path = f'{captures_path}/capture_{timestamp}.jpg'
             
             # Add 100ms delay before returning path (allows host to capture screenshot)
-            time.sleep(0.1)
+            time.sleep(0.2)
             
             return screenshot_path
                 
