@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 
 import { Host } from '../types/common/Host_Types';
 import type { Actions } from '../types/controller/Action_Types';
@@ -27,10 +27,42 @@ export const useReferences = (
   const [referencesLoading, setReferencesLoading] = useState(false);
   const [actionsLoading, setActionsLoading] = useState(false);
 
+  // Track if we've already fetched for the current host/control state to prevent duplicate calls
+  const lastFetchedRef = useRef<{
+    hostId: string | null;
+    isControlActive: boolean;
+    reloadTrigger: number;
+  }>({
+    hostId: null,
+    isControlActive: false,
+    reloadTrigger: 0,
+  });
+
+  // Create stable host identifier for comparison
+  const hostId = useMemo(() => {
+    return selectedHost ? `${selectedHost.host_name}_${selectedHost.host_url}` : null;
+  }, [selectedHost]);
+
   const fetchAvailableReferences = useCallback(async () => {
     if (!isControlActive) {
       console.log('[@hook:useReferences] Control not active, skipping references fetch');
       setAvailableReferences({});
+      return;
+    }
+
+    // Check if we should skip this fetch (already done for this state)
+    const currentState = { hostId, isControlActive, reloadTrigger };
+    const lastState = lastFetchedRef.current;
+
+    if (
+      lastState.hostId === currentState.hostId &&
+      lastState.isControlActive === currentState.isControlActive &&
+      lastState.reloadTrigger === currentState.reloadTrigger &&
+      reloadTrigger === 0 // Only skip if it's not a manual reload
+    ) {
+      console.log(
+        '[@hook:useReferences] Skipping references fetch - already fetched for current state',
+      );
       return;
     }
 
@@ -127,12 +159,28 @@ export const useReferences = (
     } finally {
       setReferencesLoading(false);
     }
-  }, [selectedHost, isControlActive]);
+  }, [selectedHost, isControlActive, hostId, reloadTrigger]);
 
   const fetchAvailableActions = useCallback(async () => {
     if (!isControlActive) {
       console.log('[@hook:useReferences] Control not active, skipping actions fetch');
       setAvailableActions({});
+      return;
+    }
+
+    // Check if we should skip this fetch (already done for this state)
+    const currentState = { hostId, isControlActive, reloadTrigger };
+    const lastState = lastFetchedRef.current;
+
+    if (
+      lastState.hostId === currentState.hostId &&
+      lastState.isControlActive === currentState.isControlActive &&
+      lastState.reloadTrigger === currentState.reloadTrigger &&
+      reloadTrigger === 0 // Only skip if it's not a manual reload
+    ) {
+      console.log(
+        '[@hook:useReferences] Skipping actions fetch - already fetched for current state',
+      );
       return;
     }
 
@@ -214,7 +262,7 @@ export const useReferences = (
     } finally {
       setActionsLoading(false);
     }
-  }, [selectedHost, isControlActive]);
+  }, [selectedHost, isControlActive, hostId, reloadTrigger]);
 
   const getModelReferences = useCallback(
     (model?: string): ModelReferences => {
@@ -244,31 +292,50 @@ export const useReferences = (
     [availableActions],
   );
 
+  // Effect for initial load and control/host changes
   useEffect(() => {
     if (isControlActive && selectedHost) {
       console.log(
         '[@hook:useReferences] Control active, fetching references and actions:',
         selectedHost.host_name,
       );
+
+      // Update the last fetched state
+      lastFetchedRef.current = { hostId, isControlActive, reloadTrigger };
+
       fetchAvailableReferences();
       fetchAvailableActions();
     } else if (!isControlActive) {
       console.log('[@hook:useReferences] Control lost, clearing references and actions');
       setAvailableReferences({});
       setAvailableActions({});
+      // Reset the last fetched state
+      lastFetchedRef.current = { hostId: null, isControlActive: false, reloadTrigger: 0 };
     }
-  }, [isControlActive, selectedHost, fetchAvailableReferences, fetchAvailableActions]);
+  }, [
+    isControlActive,
+    selectedHost,
+    fetchAvailableReferences,
+    fetchAvailableActions,
+    hostId,
+    reloadTrigger,
+  ]);
 
+  // Effect for reload trigger (manual refresh)
   useEffect(() => {
     if (reloadTrigger > 0 && isControlActive) {
       console.log(
         '[@hook:useReferences] Reload trigger changed, fetching references and actions:',
         reloadTrigger,
       );
+
+      // Update the last fetched state for reload
+      lastFetchedRef.current = { hostId, isControlActive, reloadTrigger };
+
       fetchAvailableReferences();
       fetchAvailableActions();
     }
-  }, [reloadTrigger, fetchAvailableReferences, fetchAvailableActions, isControlActive]);
+  }, [reloadTrigger, fetchAvailableReferences, fetchAvailableActions, isControlActive, hostId]);
 
   return {
     availableReferences,
