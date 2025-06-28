@@ -44,13 +44,6 @@ export const HDMIStream = React.memo(
     onCaptureModeChange,
     sx = {},
   }: HDMIStreamProps) {
-    console.log(
-      '[@component:HDMIStream] Component rendering with host:',
-      host.host_name,
-      'deviceId:',
-      deviceId,
-    );
-
     // Stream state
     const [isExpanded, setIsExpanded] = useState<boolean>(false);
     const [isMinimized, setIsMinimized] = useState<boolean>(false);

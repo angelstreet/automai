@@ -41,10 +41,7 @@ class HDMIStreamController(AVControllerInterface):
         self.capture_duration = 0
         self.capture_session_id = None
         
-        print(f"HDMI[{self.capture_source}]: Initialized controller")
-        print(f"HDMI[{self.capture_source}]: Video stream path: {self.video_stream_path}")
-        print(f"HDMI[{self.capture_source}]: Video capture path: {self.video_capture_path}")
-        
+        print(f"HDMI[{self.capture_source}]: Initialized - Stream: {self.video_stream_path}, Capture: {self.video_capture_path}")
 
         
     def restart_stream(self) -> bool:
@@ -77,8 +74,6 @@ class HDMIStreamController(AVControllerInterface):
         Returns local file path only - routes will build URLs using existing URL building functions.
         """
         try:
-            print('[@controller:HDMIStream] Generating Zurich timezone timestamp for screenshot...')
-            
             # Generate timestamp in Zurich timezone (Europe/Zurich) in format: YYYYMMDDHHMMSS
             now = datetime.now()
             zurich_tz = pytz.timezone("Europe/Zurich")
@@ -94,24 +89,17 @@ class HDMIStreamController(AVControllerInterface):
             
             timestamp = f"{year}{month}{day}{hours}{minutes}{seconds}"
             
-            print(f'[@controller:HDMIStream] Using Zurich timestamp: {timestamp}')
-            
             # Build local screenshot file path using capture path
             captures_path = os.path.join(self.video_capture_path, 'captures')
             screenshot_path = f'{captures_path}/capture_{timestamp}.jpg'
             
-            print(f'[@controller:HDMIStream] Local screenshot path: {screenshot_path}')
-            
             # Add 100ms delay before returning path (allows host to capture screenshot)
-            print('[@controller:HDMIStream] Adding 100ms delay before returning screenshot path...')
             time.sleep(0.1)
             
             return screenshot_path
                 
         except Exception as e:
-            print(f'[@controller:HDMIStream] Error taking screenshot: {e}')
-            import traceback
-            print(f'[@controller:HDMIStream] Traceback: {traceback.format_exc()}')
+            print(f'HDMI[{self.capture_source}]: Error taking screenshot: {e}')
             return None
     
     def save_screenshot(self, filename: str) -> Optional[str]:
@@ -127,44 +115,33 @@ class HDMIStreamController(AVControllerInterface):
             Local file path if successful, None if failed
         """
         try:
-            print(f'[@controller:HDMIStream] Saving screenshot with filename: {filename}')
-            
             # First take a temporary screenshot to get the image
             temp_screenshot_path = self.take_screenshot()
             if not temp_screenshot_path:
-                print(f'[@controller:HDMIStream] Failed to take temporary screenshot')
+                print(f'HDMI[{self.capture_source}]: Failed to take temporary screenshot')
                 return None
-            
-            print(f'[@controller:HDMIStream] Temporary screenshot taken: {temp_screenshot_path}')
             
             # Extract timestamp from temp screenshot path to get the actual image file
             import re
             timestamp_match = re.search(r'capture_(\d{14})\.jpg', temp_screenshot_path)
             if not timestamp_match:
-                print(f'[@controller:HDMIStream] Could not extract timestamp from temp path: {temp_screenshot_path}')
+                print(f'HDMI[{self.capture_source}]: Could not extract timestamp from temp path: {temp_screenshot_path}')
                 return None
-            
-            timestamp = timestamp_match.group(1)
-            print(f'[@controller:HDMIStream] Extracted timestamp: {timestamp}')
             
             # The temp_screenshot_path is already the local file path we need
             local_screenshot_path = temp_screenshot_path
             
-            print(f'[@controller:HDMIStream] Local screenshot path: {local_screenshot_path}')
-            
             # Check if local file exists
             import os
             if not os.path.exists(local_screenshot_path):
-                print(f'[@controller:HDMIStream] Local screenshot file not found: {local_screenshot_path}')
+                print(f'HDMI[{self.capture_source}]: Local screenshot file not found: {local_screenshot_path}')
                 return None
             
             # Return the local file path for the route to handle the upload
             return local_screenshot_path
             
         except Exception as e:
-            print(f'[@controller:HDMIStream] Error saving screenshot: {e}')
-            import traceback
-            print(f'[@controller:HDMIStream] Traceback: {traceback.format_exc()}')
+            print(f'HDMI[{self.capture_source}]: Error saving screenshot: {e}')
             return None
         
     def take_control(self) -> Dict[str, Any]:
@@ -175,7 +152,6 @@ class HDMIStreamController(AVControllerInterface):
             Dictionary with success status and stream information
         """
         try:
-            print(f"HDMI[{self.capture_source}]: Taking control of HDMI stream")
             # Check stream status
             status = self.get_status()
             is_streaming = status.get('is_streaming', False)
@@ -212,7 +188,6 @@ class HDMIStreamController(AVControllerInterface):
             fps: Video FPS (ignored - uses 1 frame per second from screenshots)
         """
         if self.is_capturing_video:
-            print(f"HDMI[{self.capture_source}]: Video capture already active")
             return True
             
         try:
@@ -222,12 +197,7 @@ class HDMIStreamController(AVControllerInterface):
             self.capture_session_id = f"capture_{int(time.time())}"
             self.is_capturing_video = True
             
-            print(f"HDMI[{self.capture_source}]: Starting video capture session")
-            print(f"HDMI[{self.capture_source}]: Session ID: {self.capture_session_id}")
-            print(f"HDMI[{self.capture_source}]: Start time: {self.capture_start_time}")
-            print(f"HDMI[{self.capture_source}]: Duration: {duration}s")
-            
-            print(f"HDMI[{self.capture_source}]: Will reference screenshots from local path: {self.video_capture_path}/captures")
+            print(f"HDMI[{self.capture_source}]: Starting video capture - Session: {self.capture_session_id}, Duration: {duration}s")
             
             # Start monitoring thread to automatically stop after duration
             monitoring_thread = threading.Thread(
@@ -246,22 +216,17 @@ class HDMIStreamController(AVControllerInterface):
     def stop_video_capture(self) -> bool:
         """Stop video capture session."""
         if not self.is_capturing_video:
-            print(f"HDMI[{self.capture_source}]: No active video capture to stop")
             return False
             
         try:
-            print(f"HDMI[{self.capture_source}]: Stopping video capture session")
-            print(f"HDMI[{self.capture_source}]: Session ID: {self.capture_session_id}")
-            
             # Calculate actual capture duration
             if self.capture_start_time:
                 actual_duration = (datetime.now() - self.capture_start_time).total_seconds()
-                print(f"HDMI[{self.capture_source}]: Actual capture duration: {actual_duration:.1f}s")
+                print(f"HDMI[{self.capture_source}]: Video capture stopped - Duration: {actual_duration:.1f}s")
             
             self.is_capturing_video = False
             self.capture_session_id = None
             
-            print(f"HDMI[{self.capture_source}]: Video capture session stopped")
             return True
             
         except Exception as e:
@@ -279,8 +244,6 @@ class HDMIStreamController(AVControllerInterface):
     def get_status(self) -> Dict[str, Any]:
         """Get controller status using systemd service status."""
         try:
-            print(f"[@controller:HDMIStream:get_status] Getting status for HDMI controller")
-            
             # Get systemd service status
             result = subprocess.run(
                 ['sudo', 'systemctl', 'show', 'stream', '--property=ActiveState,SubState'],
@@ -314,7 +277,7 @@ class HDMIStreamController(AVControllerInterface):
                     'message': f'HDMI controller - service is {service_status_text}'
                 }
             else:
-                print(f"[@controller:HDMIStream:get_status] Failed to get service status: {result.stderr}")
+                print(f"HDMI[{self.capture_source}]: Failed to get service status: {result.stderr}")
                 return {
                     'success': False,
                     'controller_type': 'av',
@@ -325,7 +288,7 @@ class HDMIStreamController(AVControllerInterface):
                 }
             
         except Exception as e:
-            print(f"[@controller:HDMIStream:get_status] Error getting status: {e}")
+            print(f"HDMI[{self.capture_source}]: Error getting status: {e}")
             return {
                 'success': False,
                 'controller_type': 'av',

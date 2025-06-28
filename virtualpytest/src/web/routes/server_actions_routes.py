@@ -28,7 +28,7 @@ server_actions_bp = Blueprint('server_actions', __name__)
 # BATCH ACTION EXECUTION (MIRRORS VERIFICATION WORKFLOW)
 # =====================================================
 
-@server_actions_bp.route('/server/action/executeBatch', methods=['POST'])
+@server_actions_bp.route('/action/executeBatch', methods=['POST'])
 def action_execute_batch():
     """Execute batch of actions - mirrors verification batch execution"""
     try:
@@ -112,7 +112,7 @@ def action_execute_batch():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # LEGACY ROUTE - for backward compatibility during transition
-@server_actions_bp.route('/server/actions/batch/execute', methods=['POST'])
+@server_actions_bp.route('/actions/batch/execute', methods=['POST'])
 def execute_batch_actions():
     """LEGACY: Execute batch actions - redirects to new naming convention"""
     print("[@route:server_actions:execute_batch_actions] LEGACY route called - redirecting to action_execute_batch")
@@ -219,7 +219,7 @@ def record_executions_to_database(execution_records):
 # EXISTING ENDPOINTS
 # =====================================================
 
-@server_actions_bp.route('/server/actions/save', methods=['POST'])
+@server_actions_bp.route('/actions/save', methods=['POST'])
 def save_action_endpoint():
     """
     Save action definition to database.
@@ -296,7 +296,7 @@ def save_action_endpoint():
 
 
 
-@server_actions_bp.route('/server/actions/getActions', methods=['GET'])
+@server_actions_bp.route('/actions/getActions', methods=['GET'])
 def get_actions():
     """
     List actions with optional filtering.
@@ -342,7 +342,7 @@ def get_actions():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_actions_bp.route('/server/actions/delete', methods=['DELETE'])
+@server_actions_bp.route('/actions/delete', methods=['DELETE'])
 def delete_action_endpoint():
     """
     Delete action by ID or by name/model/type combination.

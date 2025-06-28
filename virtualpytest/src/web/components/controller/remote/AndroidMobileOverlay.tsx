@@ -36,11 +36,6 @@ export const AndroidMobileOverlay = React.memo(
     panelInfo,
     host,
   }: AndroidMobileOverlayProps) {
-    console.log(
-      `[@component:AndroidMobileOverlay] Component called with: elements=${elements.length}, isVisible=${isVisible}, deviceSize=${deviceWidth}x${deviceHeight}`,
-    );
-    console.log(`[@component:AndroidMobileOverlay] PanelInfo:`, panelInfo);
-
     const [scaledElements, setScaledElements] = useState<ScaledElement[]>([]);
     const [clickAnimation, setClickAnimation] = useState<{
       x: number;
@@ -114,13 +109,6 @@ export const AndroidMobileOverlay = React.memo(
       const actualWidth = panelInfo.size.height * deviceAspectRatio;
       const hOffset = (panelInfo.size.width - actualWidth) / 2;
 
-      console.log(`[@component:AndroidMobileOverlay] Content width calculated:`, {
-        deviceAspectRatio,
-        panelHeight: panelInfo.size.height,
-        actualWidth,
-        hOffset,
-      });
-
       return {
         actualContentWidth: actualWidth,
         horizontalOffset: hOffset,
@@ -130,10 +118,6 @@ export const AndroidMobileOverlay = React.memo(
     // Direct server tap function - bypasses useRemoteConfigs double conversion
     const handleDirectTap = async (deviceX: number, deviceY: number) => {
       try {
-        console.log(
-          `[@component:AndroidMobileOverlay] Direct tap at device coordinates (${deviceX}, ${deviceY})`,
-        );
-
         const response = await fetch('/server/remote/tap-coordinates', {
           method: 'POST',
           headers: {
@@ -148,9 +132,7 @@ export const AndroidMobileOverlay = React.memo(
 
         const result = await response.json();
 
-        if (result.success) {
-          console.log(`[@component:AndroidMobileOverlay] Direct tap executed successfully`);
-        } else {
+        if (!result.success) {
           console.error(`[@component:AndroidMobileOverlay] Direct tap failed:`, result.error);
         }
       } catch (error) {
@@ -161,37 +143,20 @@ export const AndroidMobileOverlay = React.memo(
     // Calculate scaled coordinates for panel positioning
     useEffect(() => {
       if (elements.length === 0) {
-        console.log(`[@component:AndroidMobileOverlay] No elements, clearing overlay elements`);
         setScaledElements([]);
         return;
       }
 
       // Skip calculation if panelInfo is not properly defined
       if (!panelInfo || !panelInfo.deviceResolution || !panelInfo.size) {
-        console.log(
-          `[@component:AndroidMobileOverlay] Invalid panelInfo, skipping element scaling`,
-        );
         setScaledElements([]);
         return;
       }
-
-      console.log(
-        `[@component:AndroidMobileOverlay] Processing ${elements.length} elements for overlay`,
-      );
-      console.log(`[@component:AndroidMobileOverlay] Panel position:`, panelInfo.position);
-      console.log(`[@component:AndroidMobileOverlay] Panel size:`, panelInfo.size);
-      console.log(
-        `[@component:AndroidMobileOverlay] Device resolution:`,
-        panelInfo.deviceResolution,
-      );
 
       const scaled = elements
         .map((element, index) => {
           const bounds = parseBounds(element.bounds);
           if (!bounds) {
-            console.warn(
-              `[@component:AndroidMobileOverlay] Skipping element ${index + 1} due to invalid bounds`,
-            );
             return null;
           }
 
@@ -224,18 +189,10 @@ export const AndroidMobileOverlay = React.memo(
             label: getElementLabel(element),
           };
 
-          // Debug first few elements
-          if (index < 3) {
-            console.log(
-              `[@component:AndroidMobileOverlay] Element ${index + 1}: device(${bounds.x},${bounds.y},${bounds.width},${bounds.height}) → scaled(${scaledElement.x.toFixed(1)},${scaledElement.y.toFixed(1)},${scaledElement.width.toFixed(1)},${scaledElement.height.toFixed(1)})`,
-            );
-          }
-
           return scaledElement;
         })
         .filter(Boolean) as ScaledElement[];
 
-      console.log(`[@component:AndroidMobileOverlay] Created ${scaled.length} scaled elements`);
       setScaledElements(scaled);
     }, [elements, deviceWidth, deviceHeight, panelInfo, actualContentWidth, horizontalOffset]);
 
@@ -259,9 +216,6 @@ export const AndroidMobileOverlay = React.memo(
 
       // Prioritize onElementClick over direct tap for element clicks
       if (onElementClick) {
-        console.log(
-          `[@component:AndroidMobileOverlay] Clicked element ID ${scaledElement.id}: ${scaledElement.label}`,
-        );
         onElementClick(originalElement);
       } else {
         // Convert overlay coordinates back to device coordinates and call server directly
@@ -269,10 +223,6 @@ export const AndroidMobileOverlay = React.memo(
           ((scaledElement.x - horizontalOffset) * deviceWidth) / actualContentWidth,
         );
         const deviceY = Math.round((scaledElement.y * deviceHeight) / panelInfo.size.height);
-
-        console.log(
-          `[@component:AndroidMobileOverlay] Element tap - element ${scaledElement.id} at device coordinates (${deviceX}, ${deviceY})`,
-        );
 
         await handleDirectTap(deviceX, deviceY);
       }
@@ -300,23 +250,12 @@ export const AndroidMobileOverlay = React.memo(
       const deviceX = Math.round(contentX / scaleX);
       const deviceY = Math.round(contentY / scaleY);
 
-      console.log(
-        `[@component:AndroidMobileOverlay] Base tap at content(${contentX.toFixed(1)}, ${contentY.toFixed(1)}) → device(${deviceX}, ${deviceY}) [scaleX=${scaleX.toFixed(3)}, scaleY=${scaleY.toFixed(3)}]`,
-      );
-
       await handleDirectTap(deviceX, deviceY);
     };
 
     if (!isVisible) {
-      console.log(`[@component:AndroidMobileOverlay] Not visible, not rendering`);
       return null;
     }
-
-    console.log(
-      '[@component:AndroidMobileOverlay] Rendering overlay with base tap layer and',
-      scaledElements.length,
-      'element overlays',
-    );
 
     return (
       <>

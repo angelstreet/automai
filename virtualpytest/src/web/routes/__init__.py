@@ -82,7 +82,16 @@ def _register_server_routes(app):
         try:
             module = __import__(f'src.web.routes.{module_name}', fromlist=[blueprint_name])
             blueprint = getattr(module, blueprint_name)
-            app.register_blueprint(blueprint)
+            
+            # Register with proper URL prefix for server routes
+            if module_name == 'server_actions_routes':
+                app.register_blueprint(blueprint, url_prefix='/server')
+            elif module_name == 'server_verifications_routes':
+                app.register_blueprint(blueprint, url_prefix='/server')
+            elif module_name == 'server_execution_results_routes':
+                app.register_blueprint(blueprint, url_prefix='/server')
+            else:
+                app.register_blueprint(blueprint)
             print(f"   ✅ {module_name} -> {blueprint_name}")
             
         except ImportError as e:

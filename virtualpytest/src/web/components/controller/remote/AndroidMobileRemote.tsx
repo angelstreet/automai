@@ -94,41 +94,21 @@ export const AndroidMobileRemote = React.memo(
 
     // Debug logging for elements state
     React.useEffect(() => {
-      console.log('[@component:AndroidMobileRemote] Elements state changed:', {
-        elementsCount: androidElements.length,
-        elements: androidElements
-          .filter((el) => el && el.id) // Filter out invalid elements
-          .slice(0, 3)
-          .map((el) => ({ id: el.id, contentDesc: el.contentDesc, text: el.text })),
-      });
+      // Only log when elements count changes significantly or when there are errors
+      if (androidElements.length > 0 && androidElements.length % 10 === 0) {
+        console.log('[@component:AndroidMobileRemote] Elements loaded:', androidElements.length);
+      }
     }, [androidElements]);
 
     // Panel integration - prepare panelInfo for overlay
     const panelInfo: PanelInfo | undefined = React.useMemo(() => {
       // Skip unnecessary recalculations if missing required props
       if (!panelWidth || !panelHeight || !deviceResolution) {
-        console.log(
-          '[@component:AndroidMobileRemote] panelInfo is undefined - missing required props',
-        );
         return undefined;
       }
 
-      console.log('[@component:AndroidMobileRemote] PanelInfo debug:', {
-        isCollapsed,
-        panelWidth,
-        panelHeight,
-        deviceResolution,
-        streamCollapsed,
-        hasStreamContainerDimensions: !!streamContainerDimensions,
-      });
-
       // NEW: Use stream container dimensions if provided (modal context)
       if (streamContainerDimensions) {
-        console.log(
-          '[@component:AndroidMobileRemote] Using stream container dimensions for modal context:',
-          streamContainerDimensions,
-        );
-
         const info = {
           position: {
             x: streamContainerDimensions.x,
@@ -141,7 +121,6 @@ export const AndroidMobileRemote = React.memo(
           deviceResolution: { width: 1920, height: 1080 }, // Keep HDMI resolution for overlay positioning
           isCollapsed: false, // In modal context, stream is always expanded
         };
-        console.log('[@component:AndroidMobileRemote] Created panelInfo for modal context:', info);
         return info;
       }
 
@@ -170,19 +149,6 @@ export const AndroidMobileRemote = React.memo(
       const deviceAspectRatio = 1920 / 1080; // 16:9 = 1.777...
       const streamContentWidth = streamContentHeight / deviceAspectRatio;
 
-      // Debug logging for width calculation
-      console.log(`[@component:AndroidMobileRemote] Width calculation debug (floating panel):`, {
-        streamCollapsed,
-        configState: streamCollapsed ? 'collapsed' : 'expanded',
-        streamPanelWidth,
-        streamPanelHeight,
-        headerHeight,
-        streamContentHeight,
-        deviceAspectRatio,
-        calculatedWidth: streamContentWidth,
-        roundedWidth: Math.round(streamContentWidth),
-      });
-
       // Calculate stream position - centered in panel
       const panelX =
         'left' in currentStreamConfig.position
@@ -210,7 +176,6 @@ export const AndroidMobileRemote = React.memo(
         deviceResolution: hdmiStreamResolution, // Keep HDMI resolution for overlay positioning
         isCollapsed: streamCollapsed ?? true, // Use stream collapsed state directly, default to collapsed
       };
-      console.log('[@component:AndroidMobileRemote] Created panelInfo for floating panel:', info);
       return info;
     }, [
       isCollapsed,
@@ -236,14 +201,14 @@ export const AndroidMobileRemote = React.memo(
         return 'Invalid Element';
       }
 
-      // Debug logging for first few elements
-      if (parseInt(String(el.id)) <= 3) {
-        console.log(`[@component:AndroidMobileRemote] Element ${el.id} debug:`, {
-          contentDesc: el.contentDesc,
-          text: el.text,
-          className: el.className,
-        });
-      }
+      // Debug logging for first few elements (only for development)
+      // if (parseInt(String(el.id)) <= 3) {
+      //   console.log(`[@component:AndroidMobileRemote] Element ${el.id} debug:`, {
+      //     contentDesc: el.contentDesc,
+      //     text: el.text,
+      //     className: el.className,
+      //   });
+      // }
 
       // Priority: ContentDesc → Text → Class Name (same as UIElementsOverlay)
       // Ensure we're working with strings and handle null/undefined safely
@@ -438,11 +403,6 @@ export const AndroidMobileRemote = React.memo(
                   }}
                   onChange={(e) => {
                     const elementId = e.target.value as string;
-                    console.log('[@component:AndroidMobileRemote] Dropdown selection changed:', {
-                      elementId,
-                      availableElements: androidElements.length,
-                      elementIds: androidElements.filter((el) => el?.id).map((el) => el.id),
-                    });
                     const element = androidElements.find((el) => el.id === elementId);
                     if (element) {
                       setSelectedElement(element.id);
@@ -465,10 +425,6 @@ export const AndroidMobileRemote = React.memo(
                   {androidElements
                     .filter((element) => element && element.id) // Filter out invalid elements
                     .map((element) => {
-                      console.log('[@component:AndroidMobileRemote] Rendering dropdown item:', {
-                        id: element.id,
-                        displayName: getElementDisplayName(element),
-                      });
                       return (
                         <MenuItem
                           key={element.id}
@@ -659,21 +615,10 @@ export const AndroidMobileRemote = React.memo(
       !onDisconnectCompleteChanged &&
       !streamContainerDimensionsChanged;
 
-    if (!shouldSkipRender) {
-      console.log(`[@component:AndroidMobileRemote] Re-rendering due to prop changes:`, {
-        hostChanged,
-        sxChanged,
-        isCollapsedChanged,
-        panelWidthChanged,
-        panelHeightChanged,
-        deviceResolutionChanged,
-        streamCollapsedChanged,
-        streamMinimizedChanged,
-        captureModeChanged,
-        onDisconnectCompleteChanged,
-        streamContainerDimensionsChanged,
-      });
-    }
+    // Log only significant re-renders for debugging
+    // if (!shouldSkipRender) {
+    //   console.log(`[@component:AndroidMobileRemote] Re-rendering due to prop changes`);
+    // }
 
     return shouldSkipRender;
   },

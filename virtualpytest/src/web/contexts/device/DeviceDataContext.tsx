@@ -367,14 +367,22 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
           `[DeviceDataContext] Fetching available verifications for host: ${state.currentHost.host_name}`,
         );
 
-        const response = await fetch('/server/verification/getAvailableVerifications', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            host: state.currentHost,
-            device_id: state.currentDeviceId,
-          }),
-        });
+        const device = state.currentHost.devices?.find(
+          (d) => d.device_id === state.currentDeviceId,
+        );
+        const deviceModel = device?.device_model;
+
+        if (!deviceModel) {
+          throw new Error('Device model not found');
+        }
+
+        const response = await fetch(
+          `/server/verification/getAvailableVerifications?device_model=${encodeURIComponent(deviceModel)}`,
+          {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+          },
+        );
 
         if (response.ok) {
           const result = await response.json();
