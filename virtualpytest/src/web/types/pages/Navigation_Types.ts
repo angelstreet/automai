@@ -368,23 +368,6 @@ export interface StatusMessagesProps {
   error: string | null;
 }
 
-export interface NavigationEditorDeviceControlProps {
-  selectedHost: any | null;
-  selectedDeviceId: string | null;
-  isControlActive: boolean;
-  isRemotePanelOpen: boolean;
-  verificationResults: any[];
-  verificationPassCondition: string;
-  lastVerifiedNodeId: string | null;
-  nodes: UINavigationNode[];
-  selectedNode: UINavigationNode | null;
-  selectedEdge: UINavigationEdge | null;
-  onReleaseControl: () => void;
-  onSetVerificationResults: (results: any[]) => void;
-  onSetLastVerifiedNodeId: (nodeId: string | null) => void;
-  onSetVerificationPassCondition: (condition: string) => void;
-}
-
 export interface NavigationToolbarProps {
   onAddNewNode: (nodeType: string, position: { x: number; y: number }) => void;
   onFitView: () => void;

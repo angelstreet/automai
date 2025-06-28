@@ -270,63 +270,60 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
 
       try {
         console.log(
-          `[DeviceDataContext] Fetching available actions for host: ${state.currentHost.host_name}`,
+          `[DeviceDataContext] Loading available actions from device data for host: ${state.currentHost.host_name}`,
         );
 
-        const response = await fetch('/server/actions/getAvailableActions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ host: state.currentHost }),
-        });
+        // Get available actions directly from device data in the host payload
+        const categorizedActions: Actions = {};
+        let totalActions = 0;
 
-        if (response.ok) {
-          const result = await response.json();
+        // Process all devices in the host
+        state.currentHost.devices?.forEach((device: any) => {
+          const deviceActionTypes = device.device_action_types || {};
 
-          if (result.success && result.actions && Array.isArray(result.actions)) {
-            const categorizedActions: Actions = {};
-
-            result.actions.forEach((action: any) => {
-              const category = action.category || action.action_type || 'unknown';
+          // Process each action category (remote, av, power, etc.)
+          Object.keys(deviceActionTypes).forEach((category) => {
+            const actions = deviceActionTypes[category];
+            if (Array.isArray(actions)) {
               if (!categorizedActions[category]) {
                 categorizedActions[category] = [];
               }
-              categorizedActions[category].push({
-                id: action.id,
-                label: action.label,
-                command: action.command,
-                description: action.description,
-                action_type: action.action_type || category,
-                params: action.params || {},
-                requiresInput: action.requiresInput || false,
-                inputLabel: action.inputLabel,
-                inputPlaceholder: action.inputPlaceholder,
+
+              actions.forEach((action: any) => {
+                categorizedActions[category].push({
+                  id: action.id || `${action.command}_${category}`,
+                  label: action.label || action.command,
+                  command: action.command,
+                  description: action.description || `${action.command} action`,
+                  action_type: action.action_type || category,
+                  params: action.params || {},
+                  requiresInput: action.requiresInput || false,
+                  inputLabel: action.inputLabel,
+                  inputPlaceholder: action.inputPlaceholder,
+                });
+                totalActions++;
               });
-            });
+            }
+          });
+        });
 
-            const totalActions = result.actions.length;
-            const categories = Object.keys(categorizedActions).length;
+        const categories = Object.keys(categorizedActions).length;
 
-            console.log(
-              `[DeviceDataContext] ✅ Loaded ${totalActions} available actions in ${categories} categories`,
-            );
+        console.log(
+          `[DeviceDataContext] ✅ Loaded ${totalActions} available actions in ${categories} categories from device data`,
+        );
 
-            setState((prev) => ({
-              ...prev,
-              availableActions: categorizedActions,
-              availableActionsLoading: false,
-            }));
-            loadedDataRef.current.availableActionsLoaded = true;
-          } else {
-            setState((prev) => ({ ...prev, availableActions: {}, availableActionsLoading: false }));
-          }
-        } else if (response.status === 404) {
-          console.warn('[DeviceDataContext] Available actions endpoint not found (404)');
-          setState((prev) => ({ ...prev, availableActions: {}, availableActionsLoading: false }));
-        } else {
-          throw new Error(`HTTP ${response.status}`);
-        }
+        setState((prev) => ({
+          ...prev,
+          availableActions: categorizedActions,
+          availableActionsLoading: false,
+        }));
+        loadedDataRef.current.availableActionsLoaded = true;
       } catch (error) {
-        console.error('[DeviceDataContext] Error fetching available actions:', error);
+        console.error(
+          '[DeviceDataContext] Error loading available actions from device data:',
+          error,
+        );
         setState((prev) => ({
           ...prev,
           availableActionsLoading: false,
@@ -364,48 +361,44 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
 
       try {
         console.log(
-          `[DeviceDataContext] Fetching available verifications for host: ${state.currentHost.host_name}`,
+          `[DeviceDataContext] Loading available verifications from device data for host: ${state.currentHost.host_name}`,
         );
 
-        const response = await fetch('/server/verification/getAvailableVerifications', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ host: state.currentHost }),
+        // Get available verifications directly from device data in the host payload
+        const allVerificationTypes: Record<string, any> = {};
+
+        // Process all devices in the host
+        state.currentHost.devices?.forEach((device: any) => {
+          const deviceVerificationTypes = device.device_verification_types || {};
+
+          // Merge device verification types into all_verification_types
+          Object.keys(deviceVerificationTypes).forEach((category) => {
+            const verifications = deviceVerificationTypes[category];
+            if (Array.isArray(verifications)) {
+              if (!allVerificationTypes[category]) {
+                allVerificationTypes[category] = [];
+              }
+              allVerificationTypes[category].push(...verifications);
+            }
+          });
         });
 
-        if (response.ok) {
-          const result = await response.json();
+        console.log(
+          '[DeviceDataContext] ✅ Loaded available verifications from device data:',
+          allVerificationTypes,
+        );
 
-          if (result.success && result.verifications && typeof result.verifications === 'object') {
-            console.log(
-              '[DeviceDataContext] ✅ Loaded available verifications:',
-              result.verifications,
-            );
-            setState((prev) => ({
-              ...prev,
-              availableVerificationTypes: result.verifications,
-              availableVerificationTypesLoading: false,
-            }));
-            loadedDataRef.current.availableVerificationTypesLoaded = true;
-          } else {
-            setState((prev) => ({
-              ...prev,
-              availableVerificationTypes: {},
-              availableVerificationTypesLoading: false,
-            }));
-          }
-        } else if (response.status === 404) {
-          console.warn('[DeviceDataContext] Available verifications endpoint not found (404)');
-          setState((prev) => ({
-            ...prev,
-            availableVerificationTypes: {},
-            availableVerificationTypesLoading: false,
-          }));
-        } else {
-          throw new Error(`HTTP ${response.status}`);
-        }
+        setState((prev) => ({
+          ...prev,
+          availableVerificationTypes: allVerificationTypes,
+          availableVerificationTypesLoading: false,
+        }));
+        loadedDataRef.current.availableVerificationTypesLoaded = true;
       } catch (error) {
-        console.error('[DeviceDataContext] Error fetching available verifications:', error);
+        console.error(
+          '[DeviceDataContext] Error loading available verifications from device data:',
+          error,
+        );
         setState((prev) => ({
           ...prev,
           availableVerificationTypesLoading: false,

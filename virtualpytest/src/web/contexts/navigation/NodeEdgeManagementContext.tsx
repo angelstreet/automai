@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
 
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
+
+import { NavigationConfigContext } from './NavigationConfigContext';
 import { useNavigationNodes } from './NavigationNodesContext';
 import { useNavigationUI } from './NavigationUIContext';
-import { NavigationConfigContext } from './NavigationConfigContext';
 
 // ========================================
 // TYPES

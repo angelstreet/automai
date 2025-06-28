@@ -37,7 +37,7 @@ import { useHostManager } from '../contexts/index';
 import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { NodeEdgeManagementProvider } from '../contexts/navigation/NodeEdgeManagementContext';
-import { useNavigationEditor } from '../hooks/navigation/useNavigationEditor';
+import { useNavigationEditor } from '../hooks/pages/useNavigationEditor';
 import { NodeForm, EdgeForm } from '../types/pages/Navigation_Types';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render

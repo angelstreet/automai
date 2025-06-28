@@ -10,7 +10,6 @@ export { useNavigationNodesHook } from './useNavigationNodesHook';
 export { useNavigationUIHook } from './useNavigationUIHook';
 export { useNavigationFlowHook } from './useNavigationFlowHook';
 export { useNavigationActionsHook } from './useNavigationActionsHook';
-export { useNavigationEditor } from './useNavigationEditor';
 export { useNodeOperations } from './useNodeOperations';
 
 // Export legacy navigation state hook
