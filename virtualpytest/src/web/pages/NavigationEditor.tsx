@@ -32,7 +32,6 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
-import { useTheme } from '../contexts/ThemeContext';
 import { useDeviceData } from '../contexts/device/DeviceDataContext';
 import { useHostManager } from '../contexts/index';
 import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
@@ -92,8 +91,6 @@ const miniMapNodeColor = (node: any) => {
       return '#10b981';
     case 'menu':
       return '#ffc107';
-    case 'entry':
-      return '#ef4444'; // Red for entry/root nodes
     default:
       return '#6b7280';
   }
@@ -104,34 +101,13 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const location = useLocation();
     const userInterfaceFromState = location.state?.userInterface;
 
-    // Get theme context
-    const { actualMode } = useTheme();
-
-    // Create dynamic miniMapStyle based on theme
-    const miniMapStyle = useMemo(
-      () => ({
-        backgroundColor: actualMode === 'dark' ? '#1f2937' : '#ffffff',
-        border: `1px solid ${actualMode === 'dark' ? '#374151' : '#e5e7eb'}`,
-        borderRadius: '8px',
-        boxShadow:
-          actualMode === 'dark'
-            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)'
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-        position: 'absolute' as const,
-        top: '10px',
-        right: '10px',
-        zIndex: 4,
-        width: '200px',
-        height: '150px',
-      }),
-      [actualMode],
-    );
-
-    // Create dynamic maskColor based on theme (lighter mask to keep nodes visible)
-    const miniMapMaskColor = useMemo(
-      () => (actualMode === 'dark' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'),
-      [actualMode],
-    );
+    // Static miniMapStyle like in working commit
+    const miniMapStyle = {
+      backgroundColor: 'var(--card, #ffffff)',
+      border: '1px solid var(--border, #e5e7eb)',
+      borderRadius: '8px',
+      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    };
 
     // Use the restored navigation editor hook
     const {
@@ -604,9 +580,10 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                   <MiniMap
                     style={miniMapStyle}
                     nodeColor={miniMapNodeColor}
-                    maskColor={miniMapMaskColor}
+                    maskColor="rgba(255, 255, 255, 0.2)"
                     pannable
                     zoomable
+                    position="top-right"
                   />
                 </ReactFlow>
               </div>
