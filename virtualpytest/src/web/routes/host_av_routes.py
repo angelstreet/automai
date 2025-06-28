@@ -350,12 +350,12 @@ def take_screenshot():
         print(f"[@route:host_av:take_screenshot] Screenshot path from controller: {screenshot_path}")
         
         # Use URL building utilities
-        from src.utils.build_url_utils import buildScreenshotUrlFromPath
+        from src.utils.build_url_utils import buildCaptureUrlFromPath
         from src.controllers.controller_manager import get_host
         
         try:
             host = get_host()
-            screenshot_url = buildScreenshotUrlFromPath(host.to_dict(), screenshot_path, device_id)
+            screenshot_url = buildCaptureUrlFromPath(host.to_dict(), screenshot_path, device_id)
             
             print(f"[@route:host_av:take_screenshot] Built screenshot URL: {screenshot_url}")
             
@@ -512,29 +512,29 @@ def serve_screenshot(filename):
         print(f"[@route:host_av:serve_screenshot] Screenshot request for: {filename}")
         
         # Use URL building utilities to resolve screenshot path
-        from src.utils.build_url_utils import resolveScreenshotFilePath
+        from src.utils.build_url_utils import resolveCaptureFilePath
         
         try:
-            screenshot_path = resolveScreenshotFilePath(filename)
+            capture_path = resolveCaptureFilePath(filename)
         except ValueError as e:
             print(f"[@route:host_av:serve_screenshot] Invalid filename: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 400
         
         # Check if the file exists
-        if not os.path.exists(screenshot_path):
-            print(f"[@route:host_av:serve_screenshot] Screenshot not found: {screenshot_path}")
-            return jsonify({'success': False, 'error': 'Screenshot not found'}), 404
+        if not os.path.exists(capture_path):
+            print(f"[@route:host_av:serve_screenshot] Capture not found: {capture_path}")
+            return jsonify({'success': False, 'error': 'Capture not found'}), 404
         
         # Check file size - ensure it's not empty
-        file_size = os.path.getsize(screenshot_path)
+        file_size = os.path.getsize(capture_path)
         if file_size == 0:
-            print(f"[@route:host_av:serve_screenshot] Screenshot file is empty: {screenshot_path}")
-            return jsonify({'success': False, 'error': 'Screenshot file is empty'}), 500
+            print(f"[@route:host_av:serve_screenshot] Capture file is empty: {capture_path}")
+            return jsonify({'success': False, 'error': 'Capture file is empty'}), 500
         
-        print(f"[@route:host_av:serve_screenshot] Serving screenshot: {screenshot_path} ({file_size} bytes)")
+        print(f"[@route:host_av:serve_screenshot] Serving capture: {capture_path} ({file_size} bytes)")
         
         # Serve the file with CORS headers and cache control
-        response = send_file(screenshot_path, mimetype='image/jpeg')
+        response = send_file(capture_path, mimetype='image/jpeg')
         response.headers.add('Access-Control-Allow-Origin', '*')
         response.headers.add('Cache-Control', 'no-cache, no-store, must-revalidate')
         response.headers.add('Pragma', 'no-cache')

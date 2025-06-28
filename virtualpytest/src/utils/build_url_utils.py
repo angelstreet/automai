@@ -427,31 +427,31 @@ def get_device_by_id(host_info: dict, device_id: str) -> dict:
     
     return None
 
-def buildScreenshotUrlFromPath(host_info: dict, screenshot_path: str, device_id: str) -> str:
+def buildCaptureUrlFromPath(host_info: dict, capture_path: str, device_id: str) -> str:
     """
-    Build URL for screenshot from a local file path by extracting timestamp
+    Build URL for capture from a local file path by extracting timestamp
     
     Args:
         host_info: Host information from registry
-        screenshot_path: Local file path to screenshot (e.g., '/path/screenshot_20250117134500.jpg')
+        capture_path: Local file path to capture (e.g., '/path/capture_20250117134500.jpg')
         device_id: Device ID for multi-device hosts (required)
         
     Returns:
-        Complete URL to screenshot capture
+        Complete URL to capture
         
     Raises:
         ValueError: If timestamp cannot be extracted from path
         
     Example:
-        buildScreenshotUrlFromPath(host_info, '/tmp/screenshot_20250117134500.jpg', 'device1')
+        buildCaptureUrlFromPath(host_info, '/tmp/capture_20250117134500.jpg', 'device1')
         -> 'https://host:444/host/stream/capture1/captures/capture_20250117134500.jpg'
     """
     import re
     
-    # Extract timestamp from screenshot path
-    timestamp_match = re.search(r'screenshot_(\d{14})\.jpg', screenshot_path)
+    # Extract timestamp from capture path
+    timestamp_match = re.search(r'capture_(\d{14})\.jpg', capture_path)
     if not timestamp_match:
-        raise ValueError(f'Failed to extract timestamp from screenshot path: {screenshot_path}')
+        raise ValueError(f'Failed to extract timestamp from capture path: {capture_path}')
     
     timestamp = timestamp_match.group(1)
     
@@ -475,22 +475,22 @@ def buildStreamUrlForDevice(host_info: dict, device_id: str) -> str:
     """
     return buildStreamUrl(host_info, device_id)
 
-def resolveScreenshotFilePath(filename: str) -> str:
+def resolveCaptureFilePath(filename: str) -> str:
     """
-    Resolve local file path for a screenshot filename
+    Resolve local file path for a capture filename
     
     Args:
-        filename: Screenshot filename (e.g., 'screenshot_20250117134500.jpg')
+        filename: Capture filename (e.g., 'capture_20250117134500.jpg')
         
     Returns:
-        Local file path to screenshot
+        Local file path to capture
         
     Raises:
         ValueError: If filename is invalid or unsafe
         
     Example:
-        resolveScreenshotFilePath('screenshot_20250117134500.jpg')
-        -> '/tmp/screenshots/screenshot_20250117134500.jpg'
+        resolveCaptureFilePath('capture_20250117134500.jpg')
+        -> '/tmp/captures/capture_20250117134500.jpg'
     """
     # Security validation - ensure the path is safe
     if '..' in filename or filename.startswith('/'):
@@ -499,10 +499,10 @@ def resolveScreenshotFilePath(filename: str) -> str:
     # Extract the base filename without query parameters
     base_filename = filename.split('?')[0]
     
-    # Use host's tmp directory for screenshots
-    screenshot_path = f"/tmp/screenshots/{base_filename}"
+    # Use host's tmp directory for captures
+    capture_path = f"/tmp/captures/{base_filename}"
     
-    return screenshot_path
+    return capture_path
 
 def resolveImageFilePath(image_path: str) -> str:
     """
