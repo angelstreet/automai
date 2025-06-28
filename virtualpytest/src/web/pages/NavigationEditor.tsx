@@ -111,7 +111,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       // State
       nodes,
       edges,
-      treeName,
       isLoadingInterface,
       selectedNode,
       selectedEdge,
@@ -330,58 +329,56 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
 
     // Effect to load tree when tree name changes
     useEffect(() => {
-      // Only load if we have a tree name from URL
-      if (treeName && treeName !== 'home') {
-        // Check if we already loaded this tree to prevent infinite loops
-        if (lastLoadedTreeId.current === treeName) {
+      // Only load if we have a tree name and userInterface is loaded
+      if (userInterface?.id && !isLoadingInterface) {
+        // Check if we already loaded this userInterface to prevent infinite loops
+        if (lastLoadedTreeId.current === userInterface.id) {
           return;
         }
-        lastLoadedTreeId.current = treeName;
-
-        console.log(`[@component:NavigationEditor] Loading tree by name: ${treeName}`);
+        lastLoadedTreeId.current = userInterface.id;
 
         // STEP 1: Acquire navigation tree lock on mount (prevent concurrent editing)
         if (lockNavigationTree) {
-          lockNavigationTree(treeName)
+          lockNavigationTree(userInterface.id)
             .then((lockSuccess: boolean) => {
               if (lockSuccess) {
                 console.log(
-                  `[@component:NavigationEditor] Navigation tree locked for editing: ${treeName}`,
+                  `[@component:NavigationEditor] Navigation tree locked for editing: ${userInterface.id}`,
                 );
                 // STEP 2: Load tree data after acquiring lock
                 if (loadFromConfig) {
-                  loadFromConfig(treeName);
+                  loadFromConfig(userInterface.id);
                 }
               } else {
                 console.warn(
-                  `[@component:NavigationEditor] Failed to lock navigation tree: ${treeName} - entering read-only mode`,
+                  `[@component:NavigationEditor] Failed to lock navigation tree: ${userInterface.id} - entering read-only mode`,
                 );
                 // Still load tree but in read-only mode
                 if (loadFromConfig) {
-                  loadFromConfig(treeName);
+                  loadFromConfig(userInterface.id);
                 }
               }
             })
             .catch((error: any) => {
               console.error(
-                `[@component:NavigationEditor] Error locking navigation tree: ${treeName}`,
+                `[@component:NavigationEditor] Error locking navigation tree: ${userInterface.id}`,
                 error,
               );
               // Still try to load in read-only mode
               if (loadFromConfig) {
-                loadFromConfig(treeName);
+                loadFromConfig(userInterface.id);
               }
             });
         } else {
           console.warn('[@component:NavigationEditor] lockNavigationTree function not available');
           if (loadFromConfig) {
-            loadFromConfig(treeName);
+            loadFromConfig(userInterface.id);
           }
         }
 
         // No auto-unlock for navigation tree - keep it locked for editing session
       }
-    }, [treeName, lockNavigationTree, loadFromConfig]);
+    }, [userInterface?.id, isLoadingInterface, lockNavigationTree, loadFromConfig]);
 
     // Simple update handlers - complex validation logic moved to device control component
     const handleUpdateNode = useCallback(
@@ -463,7 +460,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           availableHosts={availableHosts}
           onAddNewNode={handleAddNewNodeWrapper}
           onFitView={fitView}
-          onSaveToConfig={() => treeName && saveToConfig && saveToConfig(treeName)}
+          onSaveToConfig={() =>
+            actualUserInterfaceId && saveToConfig && saveToConfig(actualUserInterfaceId)
+          }
           onDiscardChanges={discardChanges}
           onFocusNodeChange={setFocusNode}
           onDepthChange={setDisplayDepth}
