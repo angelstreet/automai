@@ -1,13 +1,16 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
-import { useNavigationActions } from '../../contexts/navigation';
-import { useNavigationNodes, useNavigationUI, useNavigationFlow } from '../../contexts/navigation';
+import { useNavigationTreeControl, useHostManager } from '../../contexts';
+import {
+  useNavigationActions,
+  useNavigationNodes,
+  useNavigationUI,
+  useNavigationFlow,
+} from '../../contexts/navigation';
 
 // Optional import for NavigationConfig - will be available when wrapped with NavigationConfigProvider
-import { useNavigationTreeControl } from '../../contexts';
 
 // Optional import for HostManager - will be available when wrapped with HostManagerProvider
-import { useHostManager } from '../../contexts/index';
 
 export const useNavigationActionsHook = () => {
   // Use the focused contexts

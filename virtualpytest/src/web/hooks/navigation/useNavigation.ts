@@ -211,7 +211,7 @@ export const useNavigation = (): NavigationHookResult => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            device_model: device.model,
+            device_model: device.device_model,
             host_name: selectedHost.host_name,
             device_id: selectedDeviceId,
             video_device: '/dev/video0', // Use default video device

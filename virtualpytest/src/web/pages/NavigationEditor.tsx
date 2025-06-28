@@ -36,7 +36,6 @@ import { useHostManager } from '../contexts/index';
 import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { NodeEdgeManagementProvider } from '../contexts/navigation/NodeEdgeManagementContext';
-import { useNavigationEditorNew } from '../hooks/navigation/useNavigationEditorNew';
 import { useReferences } from '../hooks/useReferences';
 import { NodeForm, EdgeForm } from '../types/pages/Navigation_Types';
 
@@ -159,7 +158,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       isLocked,
       showReadOnlyOverlay,
       lockNavigationTree,
-      setupAutoUnlock,
       handleNodeFormSubmit,
       handleEdgeFormSubmit,
       addNewNode,
@@ -179,7 +177,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       setHasUnsavedChanges,
       setEdges,
       setSelectedEdge,
-    } = useNavigationEditorNew();
+    } = useNavigationEditor();
 
     // Use the correct userInterfaceId - prefer prop over URL param
     const actualUserInterfaceId = userInterfaceId || interfaceId;
@@ -372,17 +370,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           }
         }
 
-        // Setup auto-unlock for navigation tree (cleanup function)
-        const cleanup = setupAutoUnlock ? setupAutoUnlock(userInterface.id) : undefined;
-        return cleanup;
+        // No auto-unlock for navigation tree - keep it locked for editing session
       }
-    }, [
-      userInterface?.id,
-      isLoadingInterface,
-      lockNavigationTree,
-      setupAutoUnlock,
-      loadFromConfig,
-    ]);
+    }, [userInterface?.id, isLoadingInterface, lockNavigationTree, loadFromConfig]);
 
     // Simple update handlers - complex validation logic moved to device control component
     const handleUpdateNode = useCallback(
@@ -747,8 +737,8 @@ const NavigationEditorWithNodeEdgeManagement: React.FC<{
   userInterface: any;
   userInterfaceId: string;
 }> = ({ userInterface: _userInterface, userInterfaceId }) => {
-  // Now we can safely call useNavigationEditorNew inside NavigationConfigProvider
-  const navigationEditor = useNavigationEditorNew();
+  // Now we can safely call useNavigationEditor inside NavigationConfigProvider
+  const navigationEditor = useNavigationEditor();
 
   // Verify we have the required contexts before rendering NodeEdgeManagementProvider
   if (!navigationEditor.saveToConfig) {

@@ -1,14 +1,15 @@
 import { useMemo } from 'react';
 
-import { useNavigationNodesHook } from './useNavigationNodesHook';
-import { useNavigationUIHook } from './useNavigationUIHook';
-import { useNavigationFlowHook } from './useNavigationFlowHook';
-import { useNavigationActionsHook } from './useNavigationActionsHook';
-
-// Optional import for NodeEdgeManagement - will be available when wrapped with NodeEdgeManagementProvider
 import { useNodeEdgeManagement } from '../../contexts/navigation/NodeEdgeManagementContext';
 
-export const useNavigationEditorNew = () => {
+import { useNavigationActionsHook } from './useNavigationActionsHook';
+import { useNavigationFlowHook } from './useNavigationFlowHook';
+import { useNavigationNodesHook } from './useNavigationNodesHook';
+import { useNavigationUIHook } from './useNavigationUIHook';
+
+// Optional import for NodeEdgeManagement - will be available when wrapped with NodeEdgeManagementProvider
+
+export const useNavigationEditor = () => {
   // Use all focused hooks
   const nodesHook = useNavigationNodesHook();
   const uiHook = useNavigationUIHook();
@@ -19,7 +20,7 @@ export const useNavigationEditorNew = () => {
   let nodeEdgeHook;
   try {
     nodeEdgeHook = useNodeEdgeManagement();
-  } catch (error) {
+  } catch {
     // NodeEdgeManagementProvider not available - this is expected in some contexts
     nodeEdgeHook = null;
   }

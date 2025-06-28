@@ -25,10 +25,8 @@ export { useStreamCoordinates } from './useStreamCoordinates';
 export { useReferences } from './useReferences';
 
 // Navigation hooks
-export { useNavigationActions } from './navigation/useNavigationActionsHook';
-export { useNavigationEditor } from './navigation/useNavigationEditorHook';
-export { useNavigationEditorNew } from './navigation/useNavigationEditorHookNew';
-export { useNavigationPlayer } from './navigation/useNavigationPlayerHook';
+export { useNavigationActionsHook } from './navigation/useNavigationActionsHook';
+export { useNavigationEditor } from './navigation/useNavigationEditor';
 
 // Component hooks
 export { useLocalStorage } from './useLocalStorage';

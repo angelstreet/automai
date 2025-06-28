@@ -27,7 +27,6 @@ export interface VerificationsListProps {
   availableVerifications: Verifications;
   onVerificationsChange: (verifications: Verification[]) => void;
   loading?: boolean;
-  error?: string | null;
   model?: string;
   onTest?: () => void;
   testResults?: Verification[];
@@ -46,7 +45,6 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
     availableVerifications = {},
     onVerificationsChange,
     loading = false,
-    error = null,
     model,
     onTest,
     testResults = [],
@@ -362,14 +360,6 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       );
     }
 
-    if (error) {
-      return (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      );
-    }
-
     const content = (
       <>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1 }}>
@@ -609,7 +599,6 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       JSON.stringify(prevProps.availableVerifications) !==
       JSON.stringify(nextProps.availableVerifications);
     const loadingChanged = prevProps.loading !== nextProps.loading;
-    const errorChanged = prevProps.error !== nextProps.error;
     const modelChanged = prevProps.model !== nextProps.model;
     const testResultsChanged =
       JSON.stringify(prevProps.testResults) !== JSON.stringify(nextProps.testResults);
@@ -634,7 +623,6 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       verificationsChanged ||
       availableVerificationsChanged ||
       loadingChanged ||
-      errorChanged ||
       modelChanged ||
       testResultsChanged ||
       reloadTriggerChanged ||
@@ -652,7 +640,6 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
         verificationsChanged,
         availableVerificationsChanged,
         loadingChanged,
-        errorChanged,
         modelChanged,
         testResultsChanged,
         reloadTriggerChanged,

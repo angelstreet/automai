@@ -147,13 +147,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
           </Typography>
         </Typography>
 
-        {/* Show error message if any */}
-        {verification.error && (
-          <Typography variant="caption" sx={{ color: 'error.main', fontSize: '0.7rem' }}>
-            {verification.error}
-          </Typography>
-        )}
-
         {/* =================== CAPTURE SECTION =================== */}
         <VerificationCapture
           verification={verification}
@@ -218,7 +211,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
                 availableVerifications={verification.availableVerificationTypes}
                 onVerificationsChange={verification.handleVerificationsChange}
                 loading={verification.loading}
-                error={verification.error}
                 model={model}
                 onTest={verification.handleTest}
                 testResults={verification.testResults}

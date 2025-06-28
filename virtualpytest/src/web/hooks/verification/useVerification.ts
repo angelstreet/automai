@@ -260,7 +260,10 @@ export const useVerification = ({
           const totalCount = result.total_count || 0;
           setSuccessMessage(`Verification completed: ${passedCount}/${totalCount} passed`);
         } else {
-          setError(result.error || 'Verification test failed');
+          // Show simple fail message
+          const passedCount = result.passed_count || 0;
+          const totalCount = result.total_count || 0;
+          setSuccessMessage(`Test completed: ${passedCount}/${totalCount} passed`);
         }
       } catch (error) {
         console.error('[@hook:useVerification] Error during verification test:', error);

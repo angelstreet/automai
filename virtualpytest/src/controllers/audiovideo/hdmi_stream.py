@@ -139,7 +139,7 @@ class HDMIStreamController(AVControllerInterface):
             
             # Extract timestamp from temp screenshot path to get the actual image file
             import re
-            timestamp_match = re.search(r'screenshot_(\d{14})\.jpg', temp_screenshot_path)
+            timestamp_match = re.search(r'capture_(\d{14})\.jpg', temp_screenshot_path)
             if not timestamp_match:
                 print(f'[@controller:HDMIStream] Could not extract timestamp from temp path: {temp_screenshot_path}')
                 return None
