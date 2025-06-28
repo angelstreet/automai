@@ -212,7 +212,7 @@ def get_apps():
             'error': f'Get apps error: {str(e)}'
         }), 500
 
-@remote_bp.route('/tapucoordinates', methods=['POST'])
+@remote_bp.route('/tapCoordinates', methods=['POST'])
 def tap_coordinates():
     """Handle tap coordinates - mobile control only"""
     try:
@@ -477,7 +477,7 @@ def execute_command():
             'error': f'Command execution error: {str(e)}'
         }), 500
 
-@remote_bp.route('/dumpuui', methods=['POST'])
+@remote_bp.route('/dumpUi', methods=['POST'])
 def dump_ui():
     """Dump UI elements without screenshot - for HDMI stream usage"""
     try:

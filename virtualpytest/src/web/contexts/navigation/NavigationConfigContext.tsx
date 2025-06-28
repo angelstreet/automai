@@ -47,7 +47,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         setIsCheckingLock(true);
 
         const response = await fetch(
-          `/server/navigation-trees/lock/status?userinterface_id=${userInterfaceId}`,
+          `/server/navigationTrees/lockStatus?userinterface_id=${userInterfaceId}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       try {
         setIsCheckingLock(true);
 
-        const response = await fetch(`/server/navigation-trees/lock/acquire`, {
+        const response = await fetch(`/server/navigationTrees/lockAcquire`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       try {
         setIsCheckingLock(true);
 
-        const response = await fetch(`/server/navigation-trees/lock/release`, {
+        const response = await fetch(`/server/navigationTrees/lockRelease`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -232,7 +232,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
         // Get trees for this userInterface directly by ID
         const response = await fetch(
-          `/server/navigation-trees/list?userinterface_id=${userInterfaceId}`,
+          `/server/navigationTrees/list?userinterface_id=${userInterfaceId}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -336,7 +336,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           changes_summary: 'Updated navigation tree from editor',
         };
 
-        const response = await fetch(`/server/navigation-trees/save`, {
+        const response = await fetch(`/server/navigationTrees/save`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -402,7 +402,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(true);
         state.setError(null);
 
-        const response = await fetch(`/server/navigation-trees/save`, {
+        const response = await fetch(`/server/navigationTrees/save`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

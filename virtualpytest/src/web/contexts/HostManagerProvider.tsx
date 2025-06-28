@@ -189,7 +189,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       );
 
       // Get list of all locked devices from server
-      const response = await fetch('/server/control/locked-devices', {
+      const response = await fetch('/server/control/lockedDevices', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
