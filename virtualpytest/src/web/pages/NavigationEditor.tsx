@@ -92,6 +92,8 @@ const miniMapNodeColor = (node: any) => {
       return '#10b981';
     case 'menu':
       return '#ffc107';
+    case 'entry':
+      return '#ef4444'; // Red for entry/root nodes
     default:
       return '#6b7280';
   }
@@ -589,7 +591,15 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                 >
                   <Background variant={BackgroundVariant.Dots} gap={15} size={1} />
                   <Controls />
-                  <MiniMap style={miniMapStyle} nodeColor={miniMapNodeColor} pannable zoomable />
+                  <MiniMap
+                    style={miniMapStyle}
+                    nodeColor={miniMapNodeColor}
+                    nodeStrokeWidth={2}
+                    nodeBorderRadius={2}
+                    maskColor="rgba(0, 0, 0, 0.2)"
+                    pannable
+                    zoomable
+                  />
                 </ReactFlow>
               </div>
 

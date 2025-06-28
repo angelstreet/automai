@@ -5,7 +5,7 @@ Host-side text verification endpoints that execute using instantiated text verif
 """
 
 from flask import Blueprint, request, jsonify
-from src.utils.host_utils import get_controller, get_device_by_id
+from src.utils.host_utils import get_controller, get_device_by_id, get_host
 from src.utils.build_url_utils import buildHostImageUrl
 
 # Create blueprint
@@ -40,9 +40,10 @@ def detect_text():
         # Get text detection result
         result = text_controller.detect_text(data)
         
-        # Build URL for text detected image
+        # Build URL for text detected image using host instance
         if result.get('success') and result.get('image_textdetected_path'):
-            result['image_textdetected_url'] = buildHostImageUrl(data.get('host', {}), result['image_textdetected_path'])
+            host = get_host()
+            result['image_textdetected_url'] = buildHostImageUrl(host.to_dict(), result['image_textdetected_path'])
             print(f"[@route:host_detect_text] Built text detected image URL: {result['image_textdetected_url']}")
         
         # Add device info to response
@@ -130,9 +131,12 @@ def execute_text_verification():
         verification = data.get('verification')
         result = text_controller.execute_verification(verification)
         
+        # Get host instance for URL building
+        host = get_host()
+        
         # Build URLs for images in verification result
         if result.get('screenshot_path'):
-            result['source_image_url'] = buildHostImageUrl(data.get('host', {}), result['screenshot_path'])
+            result['source_image_url'] = buildHostImageUrl(host.to_dict(), result['screenshot_path'])
             print(f"[@route:host_verification_text:execute] Built source image URL: {result['source_image_url']}")
         
         # Populate extracted text fields for the frontend

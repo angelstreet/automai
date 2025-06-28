@@ -5,7 +5,7 @@ Host-side image verification endpoints that execute using instantiated image ver
 """
 
 from flask import Blueprint, request, jsonify
-from src.utils.host_utils import get_controller, get_device_by_id
+from src.utils.host_utils import get_controller, get_device_by_id, get_host
 from src.utils.build_url_utils import buildHostImageUrl
 import os
 
@@ -41,9 +41,10 @@ def crop_area():
         # Controller handles everything
         result = image_controller.crop_image(data)
         
-        # Build image URL for frontend preview
+        # Build image URL for frontend preview using host instance
         if result.get('success') and result.get('image_cropped_path'):
-            result['image_cropped_url'] = buildHostImageUrl(data.get('host', {}), result['image_cropped_path'])
+            host = get_host()
+            result['image_cropped_url'] = buildHostImageUrl(host.to_dict(), result['image_cropped_path'])
             print(f"[@route:host_crop_area] Built image cropped URL: {result['image_cropped_url']}")
         
         # Add device info to response
@@ -88,9 +89,10 @@ def process_area():
         
         result = image_controller.process_image(data)
         
-        # Build image URL for frontend preview
+        # Build image URL for frontend preview using host instance
         if result.get('success') and result.get('image_filtered_path'):
-            result['image_filtered_url'] = buildHostImageUrl(data.get('host', {}), result['image_filtered_path'])
+            host = get_host()
+            result['image_filtered_url'] = buildHostImageUrl(host.to_dict(), result['image_filtered_path'])
             print(f"[@route:host_process_area] Built image filtered URL: {result['image_filtered_url']}")
         
         # Add device info to response
@@ -178,16 +180,19 @@ def execute_image_verification():
         verification = data.get('verification')
         result = image_controller.execute_verification(verification)
         
+        # Get host instance for URL building
+        host = get_host()
+        
         # Build URLs for images in verification result
         if result.get('screenshot_path'):
-            result['source_image_url'] = buildHostImageUrl(data.get('host', {}), result['screenshot_path'])
+            result['source_image_url'] = buildHostImageUrl(host.to_dict(), result['screenshot_path'])
             print(f"[@route:host_verification_image:execute] Built source image URL: {result['source_image_url']}")
         
         # Build reference image URL from image_path parameter
         if verification and verification.get('params', {}).get('image_path'):
             reference_path = os.path.join(image_controller.captures_path, verification['params']['image_path'])
             if os.path.exists(reference_path):
-                result['reference_image_url'] = buildHostImageUrl(data.get('host', {}), reference_path)
+                result['reference_image_url'] = buildHostImageUrl(host.to_dict(), reference_path)
                 print(f"[@route:host_verification_image:execute] Built reference image URL: {result['reference_image_url']}")
             else:
                 print(f"[@route:host_verification_image:execute] Reference image not found: {reference_path}")
