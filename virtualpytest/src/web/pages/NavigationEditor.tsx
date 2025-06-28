@@ -125,9 +125,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       [actualMode],
     );
 
-    // Create dynamic maskColor based on theme
+    // Create dynamic maskColor based on theme (lighter mask to keep nodes visible)
     const miniMapMaskColor = useMemo(
-      () => (actualMode === 'dark' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.2)'),
+      () => (actualMode === 'dark' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'),
       [actualMode],
     );
 
