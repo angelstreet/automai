@@ -168,16 +168,16 @@ export const useVerification = ({
         const result = await response.json();
         console.log('[useVerification] Batch test result:', result);
 
-        if (result.success) {
-          setTestResults(result.results || []);
-          console.log('[useVerification] Test results set:', result.results);
+        // Always set test results regardless of overall batch success/failure
+        setTestResults(result.results || []);
+        console.log('[useVerification] Test results set:', result.results);
 
-          const passedCount = result.passed_count || 0;
-          const totalCount = result.total_count || 0;
+        const passedCount = result.passed_count || 0;
+        const totalCount = result.total_count || 0;
+
+        if (result.success) {
           setSuccessMessage(`Verification completed: ${passedCount}/${totalCount} passed`);
         } else {
-          const passedCount = result.passed_count || 0;
-          const totalCount = result.total_count || 0;
           setSuccessMessage(`Test completed: ${passedCount}/${totalCount} passed`);
         }
       } catch (error) {
