@@ -27,14 +27,16 @@ export const useReferences = (
   const [referencesLoading, setReferencesLoading] = useState(false);
   const [actionsLoading, setActionsLoading] = useState(false);
 
-  // Track if we've already fetched for the current host/control state to prevent duplicate calls
+  // Track if we've already fetched for the current host to prevent duplicate calls
   const lastFetchedRef = useRef<{
     hostId: string | null;
-    isControlActive: boolean;
+    referencesLoaded: boolean;
+    actionsLoaded: boolean;
     reloadTrigger: number;
   }>({
     hostId: null,
-    isControlActive: false,
+    referencesLoaded: false,
+    actionsLoaded: false,
     reloadTrigger: 0,
   });
 
@@ -44,40 +46,33 @@ export const useReferences = (
   }, [selectedHost]);
 
   const fetchAvailableReferences = useCallback(async () => {
-    if (!isControlActive) {
-      console.log('[@hook:useReferences] Control not active, skipping references fetch');
-      setAvailableReferences({});
+    if (!isControlActive || !selectedHost) {
+      console.log(
+        '[@hook:useReferences] Cannot fetch references - control not active or no host selected',
+      );
       return;
     }
 
-    // Check if we should skip this fetch (already done for this state)
-    const currentState = { hostId, isControlActive, reloadTrigger };
-    const lastState = lastFetchedRef.current;
-
+    // Check if we should skip this fetch (already done for this host)
+    const currentState = lastFetchedRef.current;
     if (
-      lastState.hostId === currentState.hostId &&
-      lastState.isControlActive === currentState.isControlActive &&
-      lastState.reloadTrigger === currentState.reloadTrigger &&
+      currentState.hostId === hostId &&
+      currentState.referencesLoaded &&
+      currentState.reloadTrigger === reloadTrigger &&
       reloadTrigger === 0 // Only skip if it's not a manual reload
     ) {
       console.log(
-        '[@hook:useReferences] Skipping references fetch - already fetched for current state',
+        '[@hook:useReferences] Skipping references fetch - already loaded for host:',
+        hostId,
       );
       return;
     }
 
     setReferencesLoading(true);
     try {
-      console.log('[@hook:useReferences] Fetching verification references...');
-
-      if (!selectedHost) {
-        console.warn(
-          '[@hook:useReferences] No host selected, cannot fetch verification references',
-        );
-        setAvailableReferences({});
-        setReferencesLoading(false);
-        return;
-      }
+      console.log(
+        `[@hook:useReferences] Fetching verification references for host: ${selectedHost.host_name}`,
+      );
 
       const response = await fetch('/server/verification/getAllReferences', {
         method: 'POST',
@@ -88,10 +83,6 @@ export const useReferences = (
           host: selectedHost,
         }),
       });
-
-      console.log(
-        `[@hook:useReferences] Fetching verification references from: /server/verification/getAllReferences with host: ${selectedHost.host_name}`,
-      );
 
       if (response.ok) {
         const result = await response.json();
@@ -137,13 +128,20 @@ export const useReferences = (
           const textCount = Object.values(modelRefs).filter((ref) => ref.type === 'text').length;
 
           console.log(
-            `[@hook:useReferences] Processed ${Object.keys(modelRefs).length} verification references for model '${deviceModel}': ${imageCount} images, ${textCount} text`,
-            Object.keys(modelRefs),
+            `[@hook:useReferences] ✅ Loaded ${Object.keys(modelRefs).length} verification references for model '${deviceModel}': ${imageCount} images, ${textCount} text`,
           );
 
           setAvailableReferences(allReferences);
+
+          // Mark as loaded for this host
+          lastFetchedRef.current = {
+            ...lastFetchedRef.current,
+            hostId,
+            referencesLoaded: true,
+            reloadTrigger,
+          };
         } else {
-          console.log('[@hook:useReferences] No verification references found');
+          console.log('[@hook:useReferences] No verification references found in response');
           setAvailableReferences({});
         }
       } else {
@@ -162,38 +160,33 @@ export const useReferences = (
   }, [selectedHost, isControlActive, hostId, reloadTrigger]);
 
   const fetchAvailableActions = useCallback(async () => {
-    if (!isControlActive) {
-      console.log('[@hook:useReferences] Control not active, skipping actions fetch');
-      setAvailableActions({});
+    if (!isControlActive || !selectedHost) {
+      console.log(
+        '[@hook:useReferences] Cannot fetch actions - control not active or no host selected',
+      );
       return;
     }
 
-    // Check if we should skip this fetch (already done for this state)
-    const currentState = { hostId, isControlActive, reloadTrigger };
-    const lastState = lastFetchedRef.current;
-
+    // Check if we should skip this fetch (already done for this host)
+    const currentState = lastFetchedRef.current;
     if (
-      lastState.hostId === currentState.hostId &&
-      lastState.isControlActive === currentState.isControlActive &&
-      lastState.reloadTrigger === currentState.reloadTrigger &&
+      currentState.hostId === hostId &&
+      currentState.actionsLoaded &&
+      currentState.reloadTrigger === reloadTrigger &&
       reloadTrigger === 0 // Only skip if it's not a manual reload
     ) {
       console.log(
-        '[@hook:useReferences] Skipping actions fetch - already fetched for current state',
+        '[@hook:useReferences] Skipping actions fetch - already loaded for host:',
+        hostId,
       );
       return;
     }
 
     setActionsLoading(true);
     try {
-      console.log('[@hook:useReferences] Fetching available actions...');
-
-      if (!selectedHost) {
-        console.warn('[@hook:useReferences] No host selected, cannot fetch actions');
-        setAvailableActions({});
-        setActionsLoading(false);
-        return;
-      }
+      console.log(
+        `[@hook:useReferences] Fetching available actions for host: ${selectedHost.host_name}`,
+      );
 
       const response = await fetch('/server/system/getAvailableActions', {
         method: 'POST',
@@ -204,10 +197,6 @@ export const useReferences = (
           host: selectedHost,
         }),
       });
-
-      console.log(
-        `[@hook:useReferences] Fetching actions from: /server/system/getAvailableActions with host: ${selectedHost.host_name}`,
-      );
 
       if (response.ok) {
         const result = await response.json();
@@ -238,13 +227,20 @@ export const useReferences = (
           const categories = Object.keys(categorizedActions).length;
 
           console.log(
-            `[@hook:useReferences] Processed ${totalActions} actions in ${categories} categories:`,
-            Object.keys(categorizedActions),
+            `[@hook:useReferences] ✅ Loaded ${totalActions} actions in ${categories} categories`,
           );
 
           setAvailableActions(categorizedActions);
+
+          // Mark as loaded for this host
+          lastFetchedRef.current = {
+            ...lastFetchedRef.current,
+            hostId,
+            actionsLoaded: true,
+            reloadTrigger,
+          };
         } else {
-          console.log('[@hook:useReferences] No actions found');
+          console.log('[@hook:useReferences] No actions found in response');
           setAvailableActions({});
         }
       } else if (response.status === 404) {
@@ -267,14 +263,15 @@ export const useReferences = (
   const getModelReferences = useCallback(
     (model?: string): ModelReferences => {
       if (!model || !availableReferences[model]) {
-        console.log(`[@hook:useReferences] No verification references found for model '${model}'`);
+        console.log(
+          `[@hook:useReferences] No verification references found for model '${model}' (available models: ${Object.keys(availableReferences).join(', ') || 'none'})`,
+        );
         return {};
       }
 
       const modelRefs = availableReferences[model];
       console.log(
-        `[@hook:useReferences] Found ${Object.keys(modelRefs).length} verification references for model '${model}':`,
-        Object.keys(modelRefs),
+        `[@hook:useReferences] Found ${Object.keys(modelRefs).length} verification references for model '${model}'`,
       );
       return modelRefs;
     },
@@ -285,57 +282,75 @@ export const useReferences = (
     (_model?: string): Actions => {
       console.log(
         `[@hook:useReferences] Found ${Object.keys(availableActions).length} action categories`,
-        Object.keys(availableActions),
       );
       return availableActions;
     },
     [availableActions],
   );
 
-  // Effect for initial load and control/host changes
+  // Effect for host changes - only clear if host actually changes
   useEffect(() => {
-    if (isControlActive && selectedHost) {
+    if (hostId !== lastFetchedRef.current.hostId) {
       console.log(
-        '[@hook:useReferences] Control active, fetching references and actions:',
-        selectedHost.host_name,
+        `[@hook:useReferences] Host changed from ${lastFetchedRef.current.hostId} to ${hostId}, clearing cache`,
       );
-
-      // Update the last fetched state
-      lastFetchedRef.current = { hostId, isControlActive, reloadTrigger };
-
-      fetchAvailableReferences();
-      fetchAvailableActions();
-    } else if (!isControlActive) {
-      console.log('[@hook:useReferences] Control lost, clearing references and actions');
+      // Reset the tracking state for new host
+      lastFetchedRef.current = {
+        hostId,
+        referencesLoaded: false,
+        actionsLoaded: false,
+        reloadTrigger: 0,
+      };
+      // Clear existing data
       setAvailableReferences({});
       setAvailableActions({});
-      // Reset the last fetched state
-      lastFetchedRef.current = { hostId: null, isControlActive: false, reloadTrigger: 0 };
     }
-  }, [
-    isControlActive,
-    selectedHost,
-    fetchAvailableReferences,
-    fetchAvailableActions,
-    hostId,
-    reloadTrigger,
-  ]);
+  }, [hostId]);
+
+  // Effect for control activation - fetch when control becomes active
+  useEffect(() => {
+    if (isControlActive && selectedHost && hostId) {
+      console.log(
+        `[@hook:useReferences] Control active for host: ${selectedHost.host_name}, checking if data needs loading`,
+      );
+
+      // Only fetch if not already loaded for this host
+      if (!lastFetchedRef.current.referencesLoaded || lastFetchedRef.current.hostId !== hostId) {
+        fetchAvailableReferences();
+      }
+
+      if (!lastFetchedRef.current.actionsLoaded || lastFetchedRef.current.hostId !== hostId) {
+        fetchAvailableActions();
+      }
+    }
+    // Note: We don't clear data when control becomes inactive - keep it cached
+  }, [isControlActive, selectedHost, hostId, fetchAvailableReferences, fetchAvailableActions]);
 
   // Effect for reload trigger (manual refresh)
   useEffect(() => {
-    if (reloadTrigger > 0 && isControlActive) {
+    if (reloadTrigger > 0 && isControlActive && selectedHost) {
       console.log(
-        '[@hook:useReferences] Reload trigger changed, fetching references and actions:',
-        reloadTrigger,
+        `[@hook:useReferences] Manual reload triggered (${reloadTrigger}) for host: ${selectedHost.host_name}`,
       );
 
-      // Update the last fetched state for reload
-      lastFetchedRef.current = { hostId, isControlActive, reloadTrigger };
+      // Force reload regardless of cache state
+      lastFetchedRef.current = {
+        ...lastFetchedRef.current,
+        referencesLoaded: false,
+        actionsLoaded: false,
+        reloadTrigger,
+      };
 
       fetchAvailableReferences();
       fetchAvailableActions();
     }
-  }, [reloadTrigger, fetchAvailableReferences, fetchAvailableActions, isControlActive, hostId]);
+  }, [
+    reloadTrigger,
+    fetchAvailableReferences,
+    fetchAvailableActions,
+    isControlActive,
+    selectedHost,
+  ]);
 
   return {
     availableReferences,

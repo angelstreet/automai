@@ -249,6 +249,7 @@ export function useHdmiStream({
     captureSourcePath,
     referenceName,
     host,
+    deviceModel,
     referenceType,
     imageProcessingOptions,
     captureImageDimensions,
@@ -367,12 +368,7 @@ export function useHdmiStream({
   // Computed values
   const canCapture = !!selectedArea;
   const canSave = useMemo(() => {
-    if (
-      !referenceName.trim() ||
-      !selectedArea ||
-      !host.device_model ||
-      host.device_model.trim() === ''
-    ) {
+    if (!referenceName.trim() || !selectedArea || !deviceModel || deviceModel.trim() === '') {
       return false;
     }
 
@@ -386,7 +382,7 @@ export function useHdmiStream({
   }, [
     referenceName,
     selectedArea,
-    host.device_model,
+    deviceModel,
     referenceType,
     hasCaptured,
     referenceText,
@@ -397,15 +393,14 @@ export function useHdmiStream({
 
   // Layout config based on device model
   const layoutConfig = useMemo(() => {
-    const isMobileModel =
-      host.device_model === 'android_mobile' || host.device_model === 'ios_mobile';
+    const isMobileModel = deviceModel === 'android_mobile' || deviceModel === 'ios_mobile';
     return {
       width: 400,
       height: 800,
       captureHeight: isMobileModel ? 300 : 200,
       isMobileModel,
     };
-  }, [host.device_model]);
+  }, [deviceModel]);
 
   return {
     // State

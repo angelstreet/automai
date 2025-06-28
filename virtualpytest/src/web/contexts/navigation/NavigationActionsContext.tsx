@@ -135,7 +135,6 @@ export const NavigationActionsProvider: React.FC<NavigationActionsProviderProps>
   // ========================================
 
   const contextValue: NavigationActionsContextType = useMemo(() => {
-    console.log(`[@context:NavigationActionsProvider] Creating new context value`);
     return {
       // Action coordination
       resetAll,
