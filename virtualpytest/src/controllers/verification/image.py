@@ -684,6 +684,7 @@ class ImageVerificationController:
     def _resolve_reference_image(self, image_path: str, model: str = None) -> Optional[str]:
         """
         Resolve reference image path by downloading from R2 if needed.
+        Uses the same directory structure as verification_results for proper permissions.
         """
         try:
             # Extract reference name from path
@@ -697,10 +698,10 @@ class ImageVerificationController:
             
             print(f"[@controller:ImageVerification] Resolving reference: {reference_name} for model: {model}")
             
-            # Set up local path for downloaded reference
-            resources_path = '/var/www/html/stream/resources'
+            # Use verification_results directory instead of resources - same permissions as comparison images
+            verification_results_path = '/var/www/html/stream/verification_results'
             device_model = model or 'default'
-            local_dir = f'{resources_path}/{device_model}'
+            local_dir = f'{verification_results_path}/references/{device_model}'
             os.makedirs(local_dir, exist_ok=True)
             
             # Use the reference name with proper extension
