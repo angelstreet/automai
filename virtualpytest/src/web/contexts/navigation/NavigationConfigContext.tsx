@@ -363,7 +363,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   // List available user interfaces
   const listAvailableUserInterfaces = useCallback(async (): Promise<any[]> => {
     try {
-      const response = await fetch('/server/navigation/getAllUserInterfaces');
+      const response = await fetch('/server/userinterface/getAllUserInterfaces');
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

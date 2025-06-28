@@ -19,29 +19,7 @@ server_navigation_trees_bp = Blueprint('server_navigation_trees', __name__, url_
 # UserInterface Endpoints
 # ========================================
 
-@server_navigation_trees_bp.route('/getAllUserInterfaces', methods=['GET'])
-def get_all_user_interfaces():
-    """List all userinterfaces for a team"""
-    try:
-        team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
-        
-        print(f'[@route:navigation_trees:list_userinterfaces] Listing userinterfaces for team: {team_id}')
-        
-        userinterfaces = get_all_userinterfaces(team_id)
-        
-        return jsonify({
-            'success': True,
-            'userinterfaces': userinterfaces,
-            'count': len(userinterfaces)
-        })
-    
-    except Exception as e:
-        print(f'[@route:navigation_trees:list_userinterfaces] ERROR: {e}')
-        return jsonify({
-            'success': False,
-            'message': f'Server error: {str(e)}',
-            'userinterfaces': []
-        }), 500
+
 
 # Lock Management Endpoints
 # ========================================
