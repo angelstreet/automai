@@ -251,20 +251,13 @@ export const useVerification = ({
         console.log('[@hook:useVerification] Batch test result:', result);
 
         if (result.success) {
-          // Update results with tested verifications
-          const resultsWithStatus = validVerifications.map((verification, index) => ({
-            ...verification,
-            status: result.results?.[index]?.success ? 'passed' : 'failed',
-            result_message: result.results?.[index]?.message || 'No message',
-            execution_time: result.results?.[index]?.execution_time || 0,
-          }));
-
-          setTestResults(resultsWithStatus);
-          console.log('[@hook:useVerification] Test results set:', resultsWithStatus);
+          // Direct mapping from backend results - no legacy compatibility
+          setTestResults(result.results || []);
+          console.log('[@hook:useVerification] Test results set:', result.results);
 
           // Show summary message
-          const passedCount = result.results?.filter((r: any) => r.success).length || 0;
-          const totalCount = result.results?.length || 0;
+          const passedCount = result.passed_count || 0;
+          const totalCount = result.total_count || 0;
           setSuccessMessage(`Verification completed: ${passedCount}/${totalCount} passed`);
         } else {
           setError(result.error || 'Verification test failed');

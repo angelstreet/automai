@@ -475,18 +475,18 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
               borderRadius: 1,
               backgroundColor:
                 passCondition === 'all'
-                  ? testResults.every((result) => result.success || result.resultType === 'PASS')
+                  ? testResults.every((result) => result.success)
                     ? 'rgba(76, 175, 80, 0.1)'
                     : 'rgba(244, 67, 54, 0.1)'
-                  : testResults.some((result) => result.success || result.resultType === 'PASS')
+                  : testResults.some((result) => result.success)
                     ? 'rgba(76, 175, 80, 0.1)'
                     : 'rgba(244, 67, 54, 0.1)',
               border: `1px solid ${
                 passCondition === 'all'
-                  ? testResults.every((result) => result.success || result.resultType === 'PASS')
+                  ? testResults.every((result) => result.success)
                     ? '#4caf50'
                     : '#f44336'
-                  : testResults.some((result) => result.success || result.resultType === 'PASS')
+                  : testResults.some((result) => result.success)
                     ? '#4caf50'
                     : '#f44336'
               }`,
@@ -497,20 +497,20 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
                 fontWeight: 'bold',
                 color:
                   passCondition === 'all'
-                    ? testResults.every((result) => result.success || result.resultType === 'PASS')
+                    ? testResults.every((result) => result.success)
                       ? '#4caf50'
                       : '#f44336'
-                    : testResults.some((result) => result.success || result.resultType === 'PASS')
+                    : testResults.some((result) => result.success)
                       ? '#4caf50'
                       : '#f44336',
               }}
             >
               Final Result:{' '}
               {passCondition === 'all'
-                ? testResults.every((result) => result.success || result.resultType === 'PASS')
+                ? testResults.every((result) => result.success)
                   ? 'PASS'
                   : 'FAIL'
-                : testResults.some((result) => result.success || result.resultType === 'PASS')
+                : testResults.some((result) => result.success)
                   ? 'PASS'
                   : 'FAIL'}
             </Typography>

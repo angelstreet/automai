@@ -143,20 +143,13 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
         console.log('[@hook:useAction] Batch execution result:', result);
 
         if (result.success !== undefined) {
-          // Update results with executed actions
-          const resultsWithStatus = validActions.map((action, index) => ({
-            ...action,
-            status: result.results?.[index]?.success ? 'passed' : 'failed',
-            result_message: result.results?.[index]?.message || 'No message',
-            execution_time: result.results?.[index]?.execution_time || 0,
-          }));
-
-          setExecutionResults(resultsWithStatus);
-          console.log('[@hook:useAction] Execution results set:', resultsWithStatus);
+          // Direct mapping from backend results - no legacy compatibility
+          setExecutionResults(result.results || []);
+          console.log('[@hook:useAction] Execution results set:', result.results);
 
           // Show summary message
           const passedCount = result.passed_count || 0;
-          const totalCount = result.total_count || result.results?.length || 0;
+          const totalCount = result.total_count || 0;
           const summaryMessage = `Action execution completed: ${passedCount}/${totalCount} passed`;
           setSuccessMessage(summaryMessage);
 

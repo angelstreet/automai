@@ -26,14 +26,14 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
 
   const finalPassed =
     passCondition === 'all'
-      ? testResults.every((result) => result.success || result.resultType === 'PASS')
-      : testResults.some((result) => result.success || result.resultType === 'PASS');
+      ? testResults.every((result) => result.success)
+      : testResults.some((result) => result.success);
 
   // Helper function to render detailed ADB element info for PASS results
   const renderADBElementDetails = (result: Verification, verificationIndex: number) => {
     if (
       verifications[verificationIndex]?.verification_type !== 'adb' ||
-      result.resultType !== 'PASS' ||
+      !result.success ||
       !result.matches ||
       result.matches.length === 0
     ) {
@@ -215,19 +215,10 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
                     minWidth: 120,
                     padding: '4px 8px',
                     borderRadius: 1,
-                    backgroundColor:
-                      result.resultType === 'PASS'
-                        ? 'rgba(76, 175, 80, 0.1)'
-                        : result.resultType === 'ERROR'
-                          ? 'rgba(255, 152, 0, 0.1)'
-                          : 'rgba(244, 67, 54, 0.1)',
-                    border: `1px solid ${
-                      result.resultType === 'PASS'
-                        ? '#4caf50'
-                        : result.resultType === 'ERROR'
-                          ? '#ff9800'
-                          : '#f44336'
-                    }`,
+                    backgroundColor: result.success
+                      ? 'rgba(76, 175, 80, 0.1)'
+                      : 'rgba(244, 67, 54, 0.1)',
+                    border: `1px solid ${result.success ? '#4caf50' : '#f44336'}`,
                   }}
                 >
                   <Box
@@ -235,28 +226,18 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      backgroundColor:
-                        result.resultType === 'PASS'
-                          ? '#4caf50'
-                          : result.resultType === 'ERROR'
-                            ? '#ff9800'
-                            : '#f44336',
+                      backgroundColor: result.success ? '#4caf50' : '#f44336',
                     }}
                   />
                   <Typography
                     variant="caption"
                     sx={{
                       fontSize: '0.7rem',
-                      color:
-                        result.resultType === 'PASS'
-                          ? '#4caf50'
-                          : result.resultType === 'ERROR'
-                            ? '#ff9800'
-                            : '#f44336',
+                      color: result.success ? '#4caf50' : '#f44336',
                       fontWeight: 600,
                     }}
                   >
-                    {result.resultType || (result.success ? 'PASS' : 'FAIL')}
+                    {result.success ? 'PASS' : 'FAIL'}
                   </Typography>
 
                   {/* Show threshold for image verifications */}
@@ -293,9 +274,7 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
 
               {/* Show message if available (skip for successful ADB verifications as they have detailed element info) */}
               {(result.message || result.error) &&
-                !(
-                  verifications[index]?.verification_type === 'adb' && result.resultType === 'PASS'
-                ) && (
+                !(verifications[index]?.verification_type === 'adb' && result.success) && (
                   <Typography
                     variant="caption"
                     sx={{
@@ -369,8 +348,7 @@ export const VerificationResultsDisplay: React.FC<VerificationResultsDisplayProp
                 fontSize: '0.9rem',
               }}
             >
-              ({testResults.filter((r) => r.success || r.resultType === 'PASS').length}/
-              {testResults.length} passed)
+              ({testResults.filter((r) => r.success).length}/{testResults.length} passed)
             </Typography>
           )}
         </Box>

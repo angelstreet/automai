@@ -47,38 +47,18 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
           padding: '4px 8px',
           borderRadius: 1,
           mb: 1,
-          backgroundColor:
-            testResult.resultType === 'PASS' || testResult.success
-              ? 'rgba(76, 175, 80, 0.1)'
-              : testResult.resultType === 'ERROR'
-                ? 'rgba(255, 152, 0, 0.1)'
-                : 'rgba(244, 67, 54, 0.1)',
-          border: `2px solid ${
-            testResult.resultType === 'PASS' || testResult.success
-              ? '#4caf50'
-              : testResult.resultType === 'ERROR'
-                ? '#ff9800'
-                : '#f44336'
-          }`,
+          backgroundColor: testResult.success ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+          border: `2px solid ${testResult.success ? '#4caf50' : '#f44336'}`,
         }}
       >
         <Typography
           sx={{
             fontWeight: 'bold',
             fontSize: '0.75rem',
-            color:
-              testResult.resultType === 'PASS' || testResult.success
-                ? '#4caf50'
-                : testResult.resultType === 'ERROR'
-                  ? '#ff9800'
-                  : '#f44336',
+            color: testResult.success ? '#4caf50' : '#f44336',
           }}
         >
-          {testResult.resultType === 'PASS' || testResult.success
-            ? 'PASS'
-            : testResult.resultType === 'ERROR'
-              ? 'ERROR'
-              : 'FAIL'}
+          {testResult.success ? 'PASS' : 'FAIL'}
         </Typography>
 
         {/* Display message within the same status box */}
@@ -87,12 +67,7 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
             sx={{
               fontSize: '0.7rem',
               fontWeight: 500,
-              color:
-                testResult.resultType === 'PASS' || testResult.success
-                  ? '#4caf50'
-                  : testResult.resultType === 'ERROR'
-                    ? '#ff9800'
-                    : '#f44336',
+              color: testResult.success ? '#4caf50' : '#f44336',
               ml: 1,
             }}
           >
@@ -108,7 +83,7 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
             sourceUrl={testResult.sourceImageUrl || ''}
             referenceUrl={testResult.referenceImageUrl || ''}
             overlayUrl={testResult.resultOverlayUrl}
-            resultType={testResult.resultType || (testResult.success ? 'PASS' : 'FAIL')}
+            resultType={testResult.success ? 'PASS' : 'FAIL'}
             userThreshold={verification.params?.threshold}
             matchingResult={testResult.threshold}
             imageFilter={verification.params?.image_filter || 'none'}
@@ -123,7 +98,7 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
             searchedText={testResult.searchedText || verification.params?.text || ''}
             extractedText={testResult.extractedText || ''}
             sourceUrl={testResult.sourceImageUrl}
-            resultType={testResult.resultType || (testResult.success ? 'PASS' : 'FAIL')}
+            resultType={testResult.success ? 'PASS' : 'FAIL'}
             detectedLanguage={testResult.detectedLanguage}
             languageConfidence={testResult.languageConfidence}
             onSourceImageClick={onSourceImageClick}

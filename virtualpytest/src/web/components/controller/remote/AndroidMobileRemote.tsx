@@ -67,7 +67,6 @@ export const AndroidMobileRemote = React.memo(
       // State
       androidElements,
       androidApps,
-      showOverlay,
       selectedElement,
       selectedApp,
       isDumpingUI,
@@ -609,56 +608,22 @@ export const AndroidMobileRemote = React.memo(
 
         {/* AndroidMobileOverlay - Only visible when in stream mode (not during screenshot/video capture) and not minimized */}
         {panelInfo &&
-          typeof document !== 'undefined' &&
-          captureMode === 'stream' &&
-          !streamMinimized &&
-          createPortal(
-            <AndroidMobileOverlay
-              elements={androidElements} // Can be empty array when no UI dumped yet
-              deviceWidth={1080} // Use actual Android device resolution from ADB
-              deviceHeight={2340} // Use actual Android device resolution from ADB
-              isVisible={captureMode === 'stream' && !streamMinimized} // Only visible in stream mode, not during screenshot/video capture
-              onElementClick={handleOverlayElementClick}
-              panelInfo={panelInfo}
-              host={host}
-            />,
-            document.body,
-          )}
-
-        {/* Debug info when panelInfo is missing */}
-        {!panelInfo && (
-          <div
-            style={{
-              position: 'fixed',
-              top: '10px',
-              right: '10px',
-              background: 'red',
-              color: 'white',
-              padding: '10px',
-              borderRadius: '4px',
-              zIndex: 999999,
-              fontSize: '12px',
-              maxWidth: '300px',
-            }}
-          >
-            <strong>Overlay Debug:</strong>
-            <br />
-            Elements: {androidElements.length}
-            <br />
-            ShowOverlay: {showOverlay.toString()}
-            <br />
-            StreamPosition: undefined
-            <br />
-            StreamSize: undefined
-            <br />
-            StreamResolution:{' '}
-            {deviceResolution
-              ? `${deviceResolution.width}x${deviceResolution.height}`
-              : 'undefined'}
-            <br />
-            PanelState: {isCollapsed ? 'collapsed' : 'expanded'}
-          </div>
-        )}
+        typeof document !== 'undefined' &&
+        captureMode === 'stream' &&
+        !streamMinimized
+          ? createPortal(
+              <AndroidMobileOverlay
+                elements={androidElements} // Can be empty array when no UI dumped yet
+                deviceWidth={1080} // Use actual Android device resolution from ADB
+                deviceHeight={2340} // Use actual Android device resolution from ADB
+                isVisible={captureMode === 'stream' && !streamMinimized} // Only visible in stream mode, not during screenshot/video capture
+                onElementClick={handleOverlayElementClick}
+                panelInfo={panelInfo}
+                host={host}
+              />,
+              document.body,
+            )
+          : null}
       </Box>
     );
   },
