@@ -4,7 +4,7 @@ import React, { useContext } from 'react';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
-import { useNavigation } from '../../hooks/navigation/useNavigation';
+import { useNavigationEditor } from '../../hooks/navigation/useNavigationEditor';
 import {
   ValidationPreviewClient,
   ValidationResultsClient,
@@ -100,9 +100,8 @@ export const NavigationEditorHeader: React.FC<{
   const {
     isLocked: isNavigationTreeLocked,
     lockNavigationTree,
-    unlockNavigationTree,
     isCheckingLock: isCheckingTreeLock,
-  } = useNavigation();
+  } = useNavigationEditor();
 
   // Device control handler (only controls physical device, not navigation tree)
   const handleDeviceControl = React.useCallback(async () => {

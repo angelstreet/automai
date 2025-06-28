@@ -520,6 +520,15 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       showReadOnlyOverlay,
       sessionId,
       userId,
+      setCheckingLockState,
+      lockNavigationTree,
+      unlockNavigationTree,
+      checkTreeLockStatus,
+      setupAutoUnlock,
+      loadFromConfig,
+      saveToConfig,
+      listAvailableUserInterfaces,
+      createEmptyTree,
     ],
   );
 

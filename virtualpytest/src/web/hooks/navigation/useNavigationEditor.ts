@@ -127,7 +127,7 @@ export const useNavigationEditor = () => {
         }
 
         // Update the node
-        let updatedNodeData;
+        let updatedNodeData: any;
 
         if (navigation.isNewNode) {
           // Create new node

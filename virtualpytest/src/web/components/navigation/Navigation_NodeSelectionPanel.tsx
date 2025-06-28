@@ -21,7 +21,7 @@ import React, { useState, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
-import { useNavigation } from '../../hooks/navigation/useNavigation';
+import { useNavigationEditor } from '../../hooks/navigation/useNavigationEditor';
 
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
 

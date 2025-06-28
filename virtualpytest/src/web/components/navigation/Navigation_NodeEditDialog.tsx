@@ -18,7 +18,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 // Import proper types from navigationTypes
 import { useVerification } from '../../hooks/verification/useVerification';
-import { useNavigation } from '../../hooks/navigation/useNavigation';
+import { useNavigationEditor } from '../../hooks/navigation/useNavigationEditor';
 import { NodeEditDialogProps } from '../../types/pages/Navigation_Types';
 import { Verification } from '../../types/verification/Verification_Types';
 import { VerificationsList } from '../verification/VerificationsList';
