@@ -451,8 +451,8 @@ def save_complete_navigation_tree(tree_id):
 # HELPER ENDPOINTS
 # =====================================================
 
-@navigation_bp.route('/userinterfaces', methods=['GET'])
-def available_userinterfaces():
+@navigation_bp.route('/getAllUserInterfaces', methods=['GET'])
+def get_all_user_interfaces():
     """Get all available user interfaces for creating navigation trees"""
     error = check_supabase()
     if error:
@@ -466,8 +466,8 @@ def available_userinterfaces():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@navigation_bp.route('/userinterfaces/<interface_id>', methods=['GET'])
-def get_userinterface_with_root(interface_id):
+@navigation_bp.route('/getUserInterface/<interface_id>', methods=['GET'])
+def get_user_interface_with_root(interface_id):
     """Get a specific user interface with its root navigation tree"""
     error = check_supabase()
     if error:
@@ -509,7 +509,7 @@ def get_userinterface_with_root(interface_id):
 # NAVIGATION SCREENSHOT ENDPOINTS (HOST)
 # =====================================================
 
-@navigation_bp.route('/saveuscreenshot', methods=['POST'])
+@navigation_bp.route('/saveNavigationScreenshot', methods=['POST'])
 def save_navigation_screenshot():
     """Proxy save navigation screenshot request to host (host handles R2 upload and database save)"""
     try:

@@ -18,8 +18,8 @@ server_navigation_trees_bp = Blueprint('server_navigation_trees', __name__, url_
 # UserInterface Endpoints
 # ========================================
 
-@server_navigation_trees_bp.route('/userinterfaces/list', methods=['GET'])
-def list_userinterfaces():
+@server_navigation_trees_bp.route('/getAllUserInterfaces', methods=['GET'])
+def get_all_user_interfaces():
     """List all userinterfaces for a team"""
     try:
         team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
@@ -45,7 +45,7 @@ def list_userinterfaces():
 # Lock Management Endpoints
 # ========================================
 
-@server_navigation_trees_bp.route('/navigationTrees/lock/status', methods=['GET'])
+@server_navigation_trees_bp.route('/navigationTrees/lockStatus', methods=['GET'])
 def check_lock_status():
     """Check lock status for a navigation tree by userinterface_id"""
     try:
@@ -70,7 +70,7 @@ def check_lock_status():
             'message': f'Server error: {str(e)}'
         }), 500
 
-@server_navigation_trees_bp.route('/navigationTrees/lock/acquire', methods=['POST'])
+@server_navigation_trees_bp.route('/navigationTrees/lockAcquire', methods=['POST'])
 def acquire_lock():
     """Acquire lock for a navigation tree by userinterface_id"""
     try:
@@ -107,7 +107,7 @@ def acquire_lock():
             'message': f'Server error: {str(e)}'
         }), 500
 
-@server_navigation_trees_bp.route('/navigationTrees/lock/release', methods=['POST'])
+@server_navigation_trees_bp.route('/navigationTrees/lockRelease', methods=['POST'])
 def release_lock():
     """Release lock for a navigation tree by userinterface_id"""
     try:
@@ -139,7 +139,7 @@ def release_lock():
 # Tree CRUD Endpoints
 # ========================================
 
-@server_navigation_trees_bp.route('/navigationTrees/save', methods=['POST'])
+@server_navigation_trees_bp.route('/navigationTrees/saveTree', methods=['POST'])
 def save_tree():
     """Save navigation tree with history"""
     try:
@@ -199,7 +199,7 @@ def save_tree():
             'message': f'Server error: {str(e)}'
         }), 500
 
-@server_navigation_trees_bp.route('/navigationTrees/get/<tree_id>', methods=['GET'])
+@server_navigation_trees_bp.route('/navigationTrees/getTree/<tree_id>', methods=['GET'])
 def get_tree(tree_id):
     """Get navigation tree by ID"""
     try:
@@ -227,8 +227,8 @@ def get_tree(tree_id):
             'message': f'Server error: {str(e)}'
         }), 500
 
-@server_navigation_trees_bp.route('/navigationTrees/list', methods=['GET'])
-def list_trees():
+@server_navigation_trees_bp.route('/navigationTrees/getAllTrees', methods=['GET'])
+def get_all_trees():
     """List navigation trees for a team"""
     try:
         team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
@@ -259,7 +259,7 @@ def list_trees():
             'trees': []
         }), 500
 
-@server_navigation_trees_bp.route('/navigationTrees/history/<tree_id>', methods=['GET'])
+@server_navigation_trees_bp.route('/navigationTrees/getHistory/<tree_id>', methods=['GET'])
 def get_history(tree_id):
     """Get history for a navigation tree"""
     try:
@@ -291,7 +291,7 @@ def get_history(tree_id):
             'history': []
         }), 500
 
-@server_navigation_trees_bp.route('/navigationTrees/restore', methods=['POST'])
+@server_navigation_trees_bp.route('/navigationTrees/restoreVersion', methods=['POST'])
 def restore_version():
     """Restore navigation tree to specific version"""
     try:
@@ -334,7 +334,7 @@ def restore_version():
             'message': f'Server error: {str(e)}'
         }), 500
 
-@server_navigation_trees_bp.route('/navigationTrees/delete/<tree_id>', methods=['DELETE'])
+@server_navigation_trees_bp.route('/navigationTrees/deleteTree/<tree_id>', methods=['DELETE'])
 def delete_tree(tree_id):
     """Delete navigation tree"""
     try:
@@ -364,7 +364,7 @@ def delete_tree(tree_id):
         }), 500
 
 # Health check endpoint
-@server_navigation_trees_bp.route('/navigationTrees/health', methods=['GET'])
+@server_navigation_trees_bp.route('/navigationTrees/healthCheck', methods=['GET'])
 def health_check():
     """Health check for navigation trees service"""
     return jsonify({

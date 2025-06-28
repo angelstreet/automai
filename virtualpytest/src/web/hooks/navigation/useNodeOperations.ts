@@ -712,7 +712,7 @@ export const useNodeOperations = ({
       // Device model will be extracted by server from device_id
 
       try {
-        const response = await fetch('/server/navigation/save-screenshot', {
+        const response = await fetch('/server/navigation/saveNavigationScreenshot', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

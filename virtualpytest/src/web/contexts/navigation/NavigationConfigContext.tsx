@@ -47,7 +47,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         setIsCheckingLock(true);
 
         const response = await fetch(
-          `/server/navigationTrees/lock/status?userinterface_id=${userInterfaceId}`,
+          `/server/navigationTrees/lockStatus?userinterface_id=${userInterfaceId}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       try {
         setIsCheckingLock(true);
 
-        const response = await fetch(`/server/navigationTrees/lock/acquire`, {
+        const response = await fetch(`/server/navigationTrees/lockAcquire`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       try {
         setIsCheckingLock(true);
 
-        const response = await fetch(`/server/navigationTrees/lock/release`, {
+        const response = await fetch(`/server/navigationTrees/lockRelease`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -232,7 +232,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
         // Get trees for this userInterface directly by ID
         const response = await fetch(
-          `/server/navigationTrees/list?userinterface_id=${userInterfaceId}`,
+          `/server/navigationTrees/getAllTrees?userinterface_id=${userInterfaceId}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -254,9 +254,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           // Update state with loaded data
           let nodes = treeData.nodes || [];
           let edges = treeData.edges || [];
-
-          // Note: Verification and action definitions are now loaded dynamically by useReferences hook
-          // Tree only stores IDs, actual content is loaded when host control is active
 
           state.setNodes(nodes);
           state.setEdges(edges);
@@ -336,7 +333,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           changes_summary: 'Updated navigation tree from editor',
         };
 
-        const response = await fetch(`/server/navigationTrees/save`, {
+        const response = await fetch(`/server/navigationTrees/saveTree`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -376,7 +373,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   // List available user interfaces
   const listAvailableUserInterfaces = useCallback(async (): Promise<any[]> => {
     try {
-      const response = await fetch('/server/navigation/userinterfaces');
+      const response = await fetch('/server/navigation/getAllUserInterfaces');
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -402,7 +399,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(true);
         state.setError(null);
 
-        const response = await fetch(`/server/navigationTrees/save`, {
+        const response = await fetch(`/server/navigationTrees/saveTree`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -516,5 +513,3 @@ export const useNavigationTreeControl = (): NavigationConfigContextType => {
   }
   return context;
 };
-
-// Old export removed - use useNavigationTreeControl instead
