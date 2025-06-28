@@ -36,6 +36,7 @@ import { useHostManager } from '../contexts/index';
 import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { NodeEdgeManagementProvider } from '../contexts/navigation/NodeEdgeManagementContext';
+import { useNavigationEditor } from '../hooks/navigation/useNavigationEditor';
 import { useReferences } from '../hooks/useReferences';
 import { NodeForm, EdgeForm } from '../types/pages/Navigation_Types';
 
