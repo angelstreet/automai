@@ -308,11 +308,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           state.setInitialState({ nodes: [...nodes], edges: [...edges] });
           state.setHasUnsavedChanges(false);
 
-          // Start in read-only mode - user must explicitly take control
-          setIsLocked(false);
-          setLockInfo(null);
-          setIsCheckingLock(false);
-          setShowReadOnlyOverlay(true);
+          // Don't reset lock state here - preserve existing lock status
         } else {
           // Create empty tree structure
           state.setNodes([]);
@@ -320,11 +316,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           state.setInitialState({ nodes: [], edges: [] });
           state.setHasUnsavedChanges(false);
 
-          // Start in read-only mode even for new trees - user must explicitly take control
-          setIsLocked(false);
-          setLockInfo(null);
-          setIsCheckingLock(false);
-          setShowReadOnlyOverlay(true);
+          // Don't reset lock state here - preserve existing lock status
         }
       } catch (error) {
         console.error(
