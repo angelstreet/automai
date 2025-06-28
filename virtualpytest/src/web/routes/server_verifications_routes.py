@@ -85,10 +85,10 @@ def save_verification_endpoint():
 
 
 
-@server_verifications_bp.route('/verification/getAvailableVerifications', methods=['GET'])
-def get_available_verifications():
+@server_verifications_bp.route('/verification/getVerifications', methods=['GET'])
+def get_verifications_endpoint():
     """
-    List verifications with optional filtering.
+    Get saved verifications from database with optional filtering.
     
     Query parameters:
     - verification_type: Filter by type

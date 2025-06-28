@@ -5,10 +5,11 @@ Navigation Trees API Routes with History Support
 from flask import Blueprint, request, jsonify
 from src.lib.supabase.navigation_trees_db import (
     save_navigation_tree, get_navigation_tree, get_navigation_trees,
-    get_tree_history, restore_tree_version, delete_navigation_tree
+    get_tree_history, restore_tree_version, delete_navigation_tree,
+    get_all_trees as get_all_navigation_trees_util
 )
 from src.lib.supabase.userinterface_db import get_all_userinterfaces
-from src.utils.app_utils import DEFAULT_TEAM_ID, DEFAULT_USER_ID
+from src.utils.app_utils import DEFAULT_TEAM_ID, DEFAULT_USER_ID, check_supabase, get_team_id
 
 # Debug: Print the DEFAULT_USER_ID value when module loads
 print(f'[@route:navigation_trees] DEFAULT_USER_ID loaded: {DEFAULT_USER_ID}')
@@ -222,6 +223,44 @@ def get_tree(tree_id):
     
     except Exception as e:
         print(f'[@route:navigation_trees:get_tree] ERROR: {e}')
+        return jsonify({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }), 500
+
+@server_navigation_trees_bp.route('/navigationTrees/getTreeByName/<tree_name>', methods=['GET'])
+def get_tree_by_name(tree_name):
+    """Get navigation tree by name - optimized for fastest lookup"""
+    try:
+        # Check if Supabase is available
+        error_response = check_supabase()
+        if error_response:
+            return error_response
+        
+        team_id = get_team_id()
+        
+        print(f'[@route:navigation_trees:get_tree_by_name] Fetching tree by name: {tree_name}')
+        
+        # Get all trees and find the one with matching name
+        all_trees = get_all_navigation_trees_util(team_id)
+        tree = next((tree for tree in all_trees if tree['name'] == tree_name), None)
+        
+        if tree:
+            print(f'[@route:navigation_trees:get_tree_by_name] Found tree: {tree["id"]} with name: {tree_name}')
+            return jsonify({
+                'success': True,
+                'tree': tree
+            })
+        else:
+            print(f'[@route:navigation_trees:get_tree_by_name] Tree not found with name: {tree_name}')
+            return jsonify({
+                'success': False,
+                'message': f'Navigation tree with name "{tree_name}" not found',
+                'code': 'NOT_FOUND'
+            }), 404
+            
+    except Exception as e:
+        print(f'[@route:navigation_trees:get_tree_by_name] ERROR: {e}')
         return jsonify({
             'success': False,
             'message': f'Server error: {str(e)}'

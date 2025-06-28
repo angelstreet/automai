@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useState, useCallback, useMemo } from 'react';
 
 import { useUserSession } from '../../hooks/useUserSession';
 import {
@@ -12,7 +12,7 @@ import { UINavigationNode } from '../../types/pages/Navigation_Types';
 // CONTEXT
 // ========================================
 
-const NavigationConfigContext = createContext<NavigationConfigContextType | null>(null);
+export const NavigationConfigContext = createContext<NavigationConfigContextType | null>(null);
 
 export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> = ({ children }) => {
   // ========================================
@@ -224,148 +224,141 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   // ========================================
 
   // Load tree from database
-  const loadFromConfig = useCallback(
-    async (userInterfaceId: string, state: NavigationConfigState) => {
-      try {
-        state.setIsLoading(true);
-        state.setError(null);
+  const loadFromConfig = useCallback(async (treeName: string, state: NavigationConfigState) => {
+    try {
+      state.setIsLoading(true);
+      state.setError(null);
 
-        // Use existing userinterface endpoint that includes root tree
-        const response = await fetch(`/server/userinterface/getUserInterface/${userInterfaceId}`, {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+      // Use optimized tree-by-name endpoint for fastest lookup
+      const response = await fetch(`/server/navigationTrees/getTreeByName/${treeName}`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const userInterface = await response.json();
-
-        if (userInterface && userInterface.root_tree) {
-          // Get the root tree data from userinterface response
-          const tree = userInterface.root_tree;
-          const treeData = tree.metadata || {};
-
-          // Update state with loaded data
-          let nodes = treeData.nodes || [];
-          let edges = treeData.edges || [];
-
-          state.setNodes(nodes);
-          state.setEdges(edges);
-
-          console.log(
-            `[@context:NavigationConfigProvider:loadFromConfig] Loaded root tree for userInterface: ${userInterfaceId} with ${nodes.length} nodes and ${edges.length} edges`,
-          );
-
-          // Set initial state for change tracking
-          state.setInitialState({ nodes: [...nodes], edges: [...edges] });
-          state.setHasUnsavedChanges(false);
-
-          // Enable editing when tree is loaded (tree lock acquired on mount)
-          setIsLocked(true);
-          setLockInfo(null);
-          setIsCheckingLock(false);
-          setShowReadOnlyOverlay(false);
-        } else {
-          // Create empty tree structure
-          state.setNodes([]);
-          state.setEdges([]);
-          state.setInitialState({ nodes: [], edges: [] });
-          state.setHasUnsavedChanges(false);
-
-          // Enable editing for new trees (tree lock acquired on mount)
-          setIsLocked(true);
-          setLockInfo(null);
-          setIsCheckingLock(false);
-          setShowReadOnlyOverlay(false);
-        }
-      } catch (error) {
-        console.error(
-          `[@context:NavigationConfigProvider:loadFromConfig] Error loading tree:`,
-          error,
-        );
-        state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
-      } finally {
-        state.setIsLoading(false);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    },
-    [],
-  );
+
+      const result = await response.json();
+
+      if (result.success && result.tree) {
+        // Get the tree data directly
+        const tree = result.tree;
+        const treeData = tree.metadata || {};
+
+        // Update state with loaded data
+        let nodes = treeData.nodes || [];
+        let edges = treeData.edges || [];
+
+        state.setNodes(nodes);
+        state.setEdges(edges);
+
+        console.log(
+          `[@context:NavigationConfigProvider:loadFromConfig] Loaded tree: ${treeName} (ID: ${tree.id}) with ${nodes.length} nodes and ${edges.length} edges`,
+        );
+
+        // Set initial state for change tracking
+        state.setInitialState({ nodes: [...nodes], edges: [...edges] });
+        state.setHasUnsavedChanges(false);
+
+        // Enable editing when tree is loaded (tree lock acquired on mount)
+        setIsLocked(true);
+        setLockInfo(null);
+        setIsCheckingLock(false);
+        setShowReadOnlyOverlay(false);
+      } else {
+        // Create empty tree structure
+        state.setNodes([]);
+        state.setEdges([]);
+        state.setInitialState({ nodes: [], edges: [] });
+        state.setHasUnsavedChanges(false);
+
+        // Enable editing for new trees (tree lock acquired on mount)
+        setIsLocked(true);
+        setLockInfo(null);
+        setIsCheckingLock(false);
+        setShowReadOnlyOverlay(false);
+      }
+    } catch (error) {
+      console.error(
+        `[@context:NavigationConfigProvider:loadFromConfig] Error loading tree:`,
+        error,
+      );
+      state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
+    } finally {
+      state.setIsLoading(false);
+    }
+  }, []);
 
   // Save tree to database
-  const saveToConfig = useCallback(
-    async (userInterfaceId: string, state: NavigationConfigState) => {
-      try {
-        state.setIsLoading(true);
-        state.setError(null);
+  const saveToConfig = useCallback(async (treeName: string, state: NavigationConfigState) => {
+    try {
+      state.setIsLoading(true);
+      state.setError(null);
 
-        // Prepare tree data for saving - only store structure and IDs
-        const treeDataForSaving = {
-          nodes: state.nodes.map((node: UINavigationNode) => ({
-            ...node,
-            data: {
-              ...node.data,
-              // Store verification_ids for reference
-              verification_ids: node.data.verification_ids || [],
-            },
-          })),
-          edges: state.edges.map((edge: any) => ({
-            ...edge,
-            data: {
-              ...edge.data,
-              // Store action_ids for reference
-              action_ids: edge.data?.action_ids || [],
-            },
-          })),
-        };
-
-        const requestBody = {
-          name: 'root', // Always use 'root' as the name
-          userinterface_id: userInterfaceId,
-          tree_data: treeDataForSaving,
-          description: `Navigation tree for userInterface: ${userInterfaceId}`,
-          modification_type: 'update',
-          changes_summary: 'Updated navigation tree from editor',
-        };
-
-        const response = await fetch(`/server/navigationTrees/saveTree`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+      // Prepare tree data for saving - only store structure and IDs
+      const treeDataForSaving = {
+        nodes: state.nodes.map((node: UINavigationNode) => ({
+          ...node,
+          data: {
+            ...node.data,
+            // Store verification_ids for reference
+            verification_ids: node.data.verification_ids || [],
           },
-          body: JSON.stringify(requestBody),
-        });
+        })),
+        edges: state.edges.map((edge: any) => ({
+          ...edge,
+          data: {
+            ...edge.data,
+            // Store action_ids for reference
+            action_ids: edge.data?.action_ids || [],
+          },
+        })),
+      };
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(
-            '[@context:NavigationConfigProvider:saveToConfig] Response error text:',
-            errorText,
-          );
-          throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-        }
+      const requestBody = {
+        name: treeName, // Use the actual tree name
+        tree_data: treeDataForSaving,
+        description: `Navigation tree: ${treeName}`,
+        modification_type: 'update',
+        changes_summary: 'Updated navigation tree from editor',
+      };
 
-        const data = await response.json();
+      const response = await fetch(`/server/navigationTrees/saveTree`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-        if (data.success) {
-          // Update initial state to reflect saved state
-          state.setInitialState({ nodes: [...state.nodes], edges: [...state.edges] });
-          state.setHasUnsavedChanges(false);
-        } else {
-          console.error('[@context:NavigationConfigProvider:saveToConfig] Save failed:', data);
-          throw new Error(data.message || 'Failed to save navigation tree to database');
-        }
-      } catch (error) {
-        console.error(`[@context:NavigationConfigProvider:saveToConfig] Error saving tree:`, error);
-        state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
-      } finally {
-        state.setIsLoading(false);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(
+          '[@context:NavigationConfigProvider:saveToConfig] Response error text:',
+          errorText,
+        );
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
       }
-    },
-    [],
-  );
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update initial state to reflect saved state
+        state.setInitialState({ nodes: [...state.nodes], edges: [...state.edges] });
+        state.setHasUnsavedChanges(false);
+      } else {
+        console.error('[@context:NavigationConfigProvider:saveToConfig] Save failed:', data);
+        throw new Error(data.message || 'Failed to save navigation tree to database');
+      }
+    } catch (error) {
+      console.error(`[@context:NavigationConfigProvider:saveToConfig] Error saving tree:`, error);
+      state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
+    } finally {
+      state.setIsLoading(false);
+    }
+  }, []);
 
   // List available user interfaces
   const listAvailableUserInterfaces = useCallback(async (): Promise<any[]> => {
@@ -390,56 +383,52 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   }, []);
 
   // Create empty tree
-  const createEmptyTree = useCallback(
-    async (userInterfaceId: string, state: NavigationConfigState) => {
-      try {
-        state.setIsLoading(true);
-        state.setError(null);
+  const createEmptyTree = useCallback(async (treeName: string, state: NavigationConfigState) => {
+    try {
+      state.setIsLoading(true);
+      state.setError(null);
 
-        const response = await fetch(`/server/navigationTrees/saveTree`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+      const response = await fetch(`/server/navigationTrees/saveTree`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: treeName,
+          tree_data: {
+            nodes: [],
+            edges: [],
           },
-          body: JSON.stringify({
-            name: 'root',
-            userinterface_id: userInterfaceId,
-            tree_data: {
-              nodes: [],
-              edges: [],
-            },
-            description: `New navigation tree for userInterface: ${userInterfaceId}`,
-            modification_type: 'create',
-            changes_summary: 'Created new empty navigation tree',
-          }),
-        });
+          description: `New navigation tree: ${treeName}`,
+          modification_type: 'create',
+          changes_summary: 'Created new empty navigation tree',
+        }),
+      });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.success) {
-          state.setNodes([]);
-          state.setEdges([]);
-          state.setInitialState({ nodes: [], edges: [] });
-          state.setHasUnsavedChanges(false);
-          console.log(
-            `[@context:NavigationConfigProvider:createEmptyTree] Created empty tree for userInterface: ${userInterfaceId}`,
-          );
-        } else {
-          throw new Error(data.message || 'Failed to create empty navigation tree');
-        }
-      } catch (error) {
-        console.error(`[@context:NavigationConfigProvider:createEmptyTree] Error:`, error);
-        state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
-      } finally {
-        state.setIsLoading(false);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    },
-    [],
-  );
+
+      const data = await response.json();
+
+      if (data.success) {
+        state.setNodes([]);
+        state.setEdges([]);
+        state.setInitialState({ nodes: [], edges: [] });
+        state.setHasUnsavedChanges(false);
+        console.log(
+          `[@context:NavigationConfigProvider:createEmptyTree] Created empty tree: ${treeName}`,
+        );
+      } else {
+        throw new Error(data.message || 'Failed to create empty navigation tree');
+      }
+    } catch (error) {
+      console.error(`[@context:NavigationConfigProvider:createEmptyTree] Error:`, error);
+      state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
+    } finally {
+      state.setIsLoading(false);
+    }
+  }, []);
 
   // ========================================
   // CONTEXT VALUE
@@ -498,15 +487,3 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 };
 
 NavigationConfigProvider.displayName = 'NavigationConfigProvider';
-
-// ========================================
-// HOOK
-// ========================================
-
-export const useNavigationTreeControl = (): NavigationConfigContextType => {
-  const context = useContext(NavigationConfigContext);
-  if (!context) {
-    throw new Error('useNavigationTreeControl must be used within a NavigationConfigProvider');
-  }
-  return context;
-};

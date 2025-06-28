@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 
+import { useDeviceData } from '../../contexts/device/DeviceDataContext';
 import { Host } from '../../types/common/Host_Types';
 import type { EdgeAction } from '../../types/controller/Action_Types';
-import { useDeviceData } from '../../contexts/device/DeviceDataContext';
 
 // Define interfaces for action data structures
 interface UseActionProps {
@@ -21,7 +21,7 @@ interface ActionExecutionResult {
 
 export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
   // Get actions from centralized context
-  const { actions, getModelActions } = useDeviceData();
+  const { getAvailableActions } = useDeviceData();
 
   // State for action execution (not data fetching)
   const [loading, setLoading] = useState<boolean>(false);
@@ -208,7 +208,7 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
 
   return {
     // Get actions from context
-    availableActions: getModelActions(),
+    availableActions: getAvailableActions(),
     loading,
     error,
     executionResults,

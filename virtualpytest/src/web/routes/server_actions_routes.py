@@ -399,6 +399,4 @@ def delete_action_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
-
-
  

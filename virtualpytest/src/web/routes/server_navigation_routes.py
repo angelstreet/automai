@@ -258,55 +258,7 @@ def delete_navigation_tree_route(tree_id):
             'error': f'Failed to delete navigation tree: {str(e)}'
         }), 500
 
-@navigation_bp.route('/trees/byName/<tree_name>', methods=['GET'])
-def get_navigation_tree_by_name(tree_name):
-    """Get a navigation tree by name"""
-    # Check if Supabase is available
-    error_response = check_supabase()
-    if error_response:
-        return error_response
-    
-    team_id = get_team_id()
-    
-    try:
-        # First check if the name exists by getting all trees and filtering
-        all_trees = get_all_navigation_trees_util(team_id)
-        name_exists = any(tree['name'] == tree_name for tree in all_trees)
-        
-        if not name_exists:
-            # Return a proper 404 with helpful message
-            print(f"[@api:navigation:get_tree_by_name] Tree not found with name: {tree_name}")
-            return jsonify({
-                'success': False,
-                'error': f'Navigation tree with name "{tree_name}" not found',
-                'code': 'NOT_FOUND'
-            }), 404
-        
-        # Get all trees and find the one with matching name
-        all_trees = get_all_navigation_trees_util(team_id)
-        tree = next((tree for tree in all_trees if tree['name'] == tree_name), None)
-        
-        if tree:
-            print(f"[@api:navigation:get_tree_by_name] Found tree: {tree['id']} with name: {tree_name}")
-            return jsonify({
-                'success': True,
-                'data': tree
-            })
-        else:
-            # This should not happen since we checked name_exists above
-            print(f"[@api:navigation:get_tree_by_name] Tree not found with name: {tree_name}")
-            return jsonify({
-                'success': False,
-                'error': f'Navigation tree with name "{tree_name}" not found',
-                'code': 'NOT_FOUND'
-            }), 404
-            
-    except Exception as e:
-        print(f"[@api:navigation:get_tree_by_name] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Failed to retrieve navigation tree: {str(e)}'
-        }), 500
+
 
 @navigation_bp.route('/trees/byIdAndTeam/<tree_id>/<team_id>', methods=['GET'])
 def get_navigation_tree_by_id_and_team(tree_id, team_id):
