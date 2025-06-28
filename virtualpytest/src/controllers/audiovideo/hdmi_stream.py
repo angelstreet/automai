@@ -102,9 +102,9 @@ class HDMIStreamController(AVControllerInterface):
             
             print(f'[@controller:HDMIStream] Local screenshot path: {screenshot_path}')
             
-            # Add 600ms delay before returning path (allows host to capture screenshot)
-            print('[@controller:HDMIStream] Adding 600ms delay before returning screenshot path...')
-            time.sleep(0.6)
+            # Add 100ms delay before returning path (allows host to capture screenshot)
+            print('[@controller:HDMIStream] Adding 100ms delay before returning screenshot path...')
+            time.sleep(0.1)
             
             return screenshot_path
                 

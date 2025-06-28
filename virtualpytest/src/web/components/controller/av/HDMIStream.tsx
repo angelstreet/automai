@@ -12,8 +12,7 @@ import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 
 import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
-import { useHdmiStream } from '../../../hooks/controller';
-import { useStream } from '../../../hooks/useStream';
+import { useHdmiStream, useStream } from '../../../hooks/controller';
 import { Host } from '../../../types/common/Host_Types';
 import { buildCaptureUrl } from '../../../utils/buildUrlUtils';
 import { VerificationEditor } from '../verification';

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 import { Host } from '../types/common/Host_Types';
 
@@ -63,75 +63,78 @@ export const useStream = ({ host, device_id }: UseStreamProps): UseStreamReturn 
   // Track the current device to detect changes
   const currentDeviceRef = useRef<string | null>(null);
 
-  const fetchStreamUrl = async (force: boolean = false) => {
-    if (!host || !device_id) return;
+  const fetchStreamUrl = useCallback(
+    async (force: boolean = false) => {
+      if (!host || !device_id) return;
 
-    const deviceKey = `${host.host_name}-${device_id}`;
+      const deviceKey = `${host.host_name}-${device_id}`;
 
-    // Skip if we already have a stream URL for this device and not forcing
-    if (!force && fetchedDevicesRef.current.has(deviceKey) && streamUrl) {
-      console.log(
-        `[@hook:useStream] Stream URL already cached for device: ${deviceKey}, skipping fetch`,
-      );
-      return;
-    }
-
-    setIsLoadingUrl(true);
-    setUrlError(null);
-
-    try {
-      console.log(
-        `[@hook:useStream] Fetching stream URL for host: ${host.host_name}, device: ${device_id}`,
-      );
-
-      const response = await fetch('/server/av/get-stream-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host: host,
-          device_id: device_id,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success && result.stream_url) {
-        console.log(`[@hook:useStream] Stream URL received: ${result.stream_url}`);
-
-        // Process stream URL for HTTP-to-HTTPS conversion
-        const processedUrl = processStreamUrl(result.stream_url);
+      // Skip if we already have a stream URL for this device and not forcing
+      if (!force && fetchedDevicesRef.current.has(deviceKey) && streamUrl) {
         console.log(
-          `[@hook:useStream] Stream URL processed: ${result.stream_url} -> ${processedUrl}`,
+          `[@hook:useStream] Stream URL already cached for device: ${deviceKey}, skipping fetch`,
+        );
+        return;
+      }
+
+      setIsLoadingUrl(true);
+      setUrlError(null);
+
+      try {
+        console.log(
+          `[@hook:useStream] Fetching stream URL for host: ${host.host_name}, device: ${device_id}`,
         );
 
-        setStreamUrl(processedUrl);
-        setUrlError(null);
+        const response = await fetch('/server/av/get-stream-url', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: host,
+            device_id: device_id,
+          }),
+        });
 
-        // Mark this device as fetched
-        fetchedDevicesRef.current.add(deviceKey);
-      } else {
-        const errorMessage = result.error || 'Failed to get stream URL';
-        console.error(`[@hook:useStream] Failed to get stream URL:`, errorMessage);
+        const result = await response.json();
+
+        if (result.success && result.stream_url) {
+          console.log(`[@hook:useStream] Stream URL received: ${result.stream_url}`);
+
+          // Process stream URL for HTTP-to-HTTPS conversion
+          const processedUrl = processStreamUrl(result.stream_url);
+          console.log(
+            `[@hook:useStream] Stream URL processed: ${result.stream_url} -> ${processedUrl}`,
+          );
+
+          setStreamUrl(processedUrl);
+          setUrlError(null);
+
+          // Mark this device as fetched
+          fetchedDevicesRef.current.add(deviceKey);
+        } else {
+          const errorMessage = result.error || 'Failed to get stream URL';
+          console.error(`[@hook:useStream] Failed to get stream URL:`, errorMessage);
+          setUrlError(errorMessage);
+          setStreamUrl(null);
+        }
+      } catch (error: any) {
+        const errorMessage = error.message || 'Network error: Failed to communicate with server';
+        console.error(`[@hook:useStream] Error getting stream URL:`, error);
         setUrlError(errorMessage);
         setStreamUrl(null);
+      } finally {
+        setIsLoadingUrl(false);
       }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Network error: Failed to communicate with server';
-      console.error(`[@hook:useStream] Error getting stream URL:`, error);
-      setUrlError(errorMessage);
-      setStreamUrl(null);
-    } finally {
-      setIsLoadingUrl(false);
-    }
-  };
+    },
+    [host, device_id, streamUrl],
+  );
 
   // Manual refetch function for force refresh
-  const refetchStreamUrl = () => {
+  const refetchStreamUrl = useCallback(() => {
     console.log(`[@hook:useStream] Manual refetch requested for device: ${device_id}`);
     fetchStreamUrl(true);
-  };
+  }, [device_id, fetchStreamUrl]);
 
   // Auto-fetch stream URL when host or device_id changes
   useEffect(() => {
@@ -153,7 +156,7 @@ export const useStream = ({ host, device_id }: UseStreamProps): UseStreamReturn 
       // Fetch for new device (will check cache internally)
       fetchStreamUrl();
     }
-  }, [host, device_id]); // Re-fetch when host or device_id changes
+  }, [host, device_id, fetchStreamUrl]); // Re-fetch when host or device_id changes
 
   return {
     streamUrl,

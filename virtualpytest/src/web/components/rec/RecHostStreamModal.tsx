@@ -3,7 +3,7 @@ import { Box, IconButton, Typography, Button, CircularProgress } from '@mui/mate
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
 import { useDeviceControl } from '../../hooks/useDeviceControl';
-import { useStream } from '../../hooks/useStream';
+import { useStream } from '../../hooks/controller';
 import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
 import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
