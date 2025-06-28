@@ -701,6 +701,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                     maskColor="rgba(255, 255, 255, 0.2)"
                     pannable
                     zoomable
+                    position="top-right"
                   />
                 </ReactFlow>
               </div>
