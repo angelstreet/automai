@@ -225,7 +225,7 @@ def release_control():
         print(f"❌ [CONTROL] Error releasing control: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@control_bp.route('/lockedudevices', methods=['GET'])
+@control_bp.route('/lockedDevices', methods=['GET'])
 def get_locked_devices():
     """Get information about all currently locked devices"""
     try:

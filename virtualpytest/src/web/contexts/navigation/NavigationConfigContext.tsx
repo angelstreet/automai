@@ -47,7 +47,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         setIsCheckingLock(true);
 
         const response = await fetch(
-          `/server/navigationTrees/lockStatus?userinterface_id=${userInterfaceId}`,
+          `/server/navigationTrees/lock/status?userinterface_id=${userInterfaceId}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -104,7 +104,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       try {
         setIsCheckingLock(true);
 
-        const response = await fetch(`/server/navigationTrees/lockAcquire`, {
+        const response = await fetch(`/server/navigationTrees/lock/acquire`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -151,7 +151,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       try {
         setIsCheckingLock(true);
 
-        const response = await fetch(`/server/navigationTrees/lockRelease`, {
+        const response = await fetch(`/server/navigationTrees/lock/release`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
