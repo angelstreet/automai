@@ -517,25 +517,49 @@ class ImageVerificationController:
             # === STEP 1: Handle Source Image ===
             # Crop source image to area if specified (always crop for source)
             if area:
-                # Crop source image using cv2
-                source_img = cv2.imread(source_path)
-                if source_img is not None:
-                    x, y, w, h = int(area['x']), int(area['y']), int(area['width']), int(area['height'])
-                    cropped_source = source_img[y:y+h, x:x+w]
-                    cv2.imwrite(source_result_path, cropped_source)
-                    print(f"[@controller:ImageVerification] Cropped source image to area: {area}")
-                else:
-                    print(f"[@controller:ImageVerification] Failed to load source image for cropping")
+                # Use controller to crop source image
+                success = self.crop_image(source_path, source_result_path, area, create_filtered_versions=False)
+                if not success:
+                    print(f"[@controller:ImageVerification] Failed to crop source image")
                     return {}
             else:
-                # Copy full source image
-                import shutil
-                shutil.copy2(source_path, source_result_path)
+                # Copy full source image using controller
+                success = self.copy_image(source_path, source_result_path)
+                if not success:
+                    print(f"[@controller:ImageVerification] Failed to copy source image")
+                    return {}
+            
+            # Apply filter to source image if user selected one
+            if image_filter and image_filter != 'none':
+                print(f"[@controller:ImageVerification] Applying {image_filter} filter to source image")
+                if not self.apply_filter(source_result_path, image_filter):
+                    print(f"[@controller:ImageVerification] Warning: Failed to apply {image_filter} filter to source")
             
             # === STEP 2: Handle Reference Image ===
-            # Copy reference image
-            import shutil
-            shutil.copy2(reference_path, reference_result_path)
+            # Copy reference image and apply filter if needed
+            if image_filter and image_filter != 'none':
+                # User wants filtered comparison - check if filtered reference exists
+                base_path, ext = os.path.splitext(reference_path)
+                filtered_reference_path = f"{base_path}_{image_filter}{ext}"
+                
+                if os.path.exists(filtered_reference_path):
+                    print(f"[@controller:ImageVerification] Using existing filtered reference: {filtered_reference_path}")
+                    self.copy_image(filtered_reference_path, reference_result_path)
+                else:
+                    print(f"[@controller:ImageVerification] Filtered reference not found, creating dynamically from original: {reference_path}")
+                    # Copy original reference first using controller
+                    self.copy_image(reference_path, reference_result_path)
+                    # Apply filter dynamically to the copied reference
+                    if not self.apply_filter(reference_result_path, image_filter):
+                        print(f"[@controller:ImageVerification] Warning: Failed to apply {image_filter} filter to reference, using original")
+                        # If filter fails, copy original again to ensure clean state
+                        self.copy_image(reference_path, reference_result_path)
+                    else:
+                        print(f"[@controller:ImageVerification] Successfully applied {image_filter} filter to reference image")
+            else:
+                # User wants original comparison - use original reference
+                print(f"[@controller:ImageVerification] Using original reference: {reference_path}")
+                self.copy_image(reference_path, reference_result_path)
             
             # === STEP 3: Create Pixel-by-Pixel Difference Overlay ===
             # Load both images for comparison
@@ -737,10 +761,128 @@ class ImageVerificationController:
             result = cv2.matchTemplate(source_img, ref_img, cv2.TM_CCOEFF_NORMED)
             _, max_val, _, _ = cv2.minMaxLoc(result)
             
-            return float(max_val)
+            return max_val
             
         except Exception as e:
             print(f"[@controller:ImageVerification] Template matching error: {e}")
             return 0.0
+
+    def crop_image(self, source_path: str, target_path: str, area: dict, create_filtered_versions: bool = True) -> bool:
+        """
+        Crop an image to a specific area and save it.
+        
+        Args:
+            source_path: Path to source image
+            target_path: Path to save cropped image
+            area: Dictionary with x, y, width, height coordinates
+            create_filtered_versions: Whether to create greyscale/binary versions
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            print(f"[@controller:ImageVerification] Cropping image: {source_path} -> {target_path}")
+            
+            # Load source image
+            source_img = cv2.imread(source_path)
+            if source_img is None:
+                print(f"[@controller:ImageVerification] Failed to load source image: {source_path}")
+                return False
+            
+            # Extract crop coordinates
+            x = int(area.get('x', 0))
+            y = int(area.get('y', 0))
+            width = int(area.get('width', source_img.shape[1]))
+            height = int(area.get('height', source_img.shape[0]))
+            
+            # Ensure coordinates are within image bounds
+            x = max(0, min(x, source_img.shape[1] - 1))
+            y = max(0, min(y, source_img.shape[0] - 1))
+            width = min(width, source_img.shape[1] - x)
+            height = min(height, source_img.shape[0] - y)
+            
+            # Crop the image
+            cropped_img = source_img[y:y+height, x:x+width]
+            
+            # Save cropped image
+            success = cv2.imwrite(target_path, cropped_img)
+            if success:
+                print(f"[@controller:ImageVerification] Successfully cropped image to {width}x{height} at ({x},{y})")
+                return True
+            else:
+                print(f"[@controller:ImageVerification] Failed to save cropped image: {target_path}")
+                return False
+                
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error cropping image: {e}")
+            return False
+
+    def copy_image(self, source_path: str, target_path: str) -> bool:
+        """
+        Simple copy of an image file from source to target.
+        
+        Args:
+            source_path: Path to source image
+            target_path: Path to copy image to
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            import shutil
+            shutil.copy2(source_path, target_path)
+            print(f"[@controller:ImageVerification] Successfully copied image: {source_path} -> {target_path}")
+            return True
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error copying image: {e}")
+            return False
+
+    def apply_filter(self, image_path: str, filter_type: str) -> bool:
+        """
+        Apply image filter to an image file in-place.
+        
+        Args:
+            image_path: Path to image to filter
+            filter_type: Type of filter ('greyscale', 'binary', etc.)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            if filter_type == 'none':
+                return True
+                
+            # Load image
+            img = cv2.imread(image_path)
+            if img is None:
+                print(f"[@controller:ImageVerification] Failed to load image for filtering: {image_path}")
+                return False
+            
+            # Apply filter based on type
+            if filter_type == 'greyscale':
+                filtered_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                # Convert back to BGR for consistent saving
+                filtered_img = cv2.cvtColor(filtered_img, cv2.COLOR_GRAY2BGR)
+            elif filter_type == 'binary':
+                gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                _, filtered_img = cv2.threshold(gray_img, 128, 255, cv2.THRESH_BINARY)
+                # Convert back to BGR for consistent saving
+                filtered_img = cv2.cvtColor(filtered_img, cv2.COLOR_GRAY2BGR)
+            else:
+                print(f"[@controller:ImageVerification] Unknown filter type: {filter_type}")
+                return False
+            
+            # Save filtered image
+            success = cv2.imwrite(image_path, filtered_img)
+            if success:
+                print(f"[@controller:ImageVerification] Successfully applied {filter_type} filter to {image_path}")
+                return True
+            else:
+                print(f"[@controller:ImageVerification] Failed to save filtered image: {image_path}")
+                return False
+                
+        except Exception as e:
+            print(f"[@controller:ImageVerification] Error applying filter: {e}")
+            return False
 
  
