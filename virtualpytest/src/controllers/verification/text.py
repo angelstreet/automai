@@ -253,7 +253,7 @@ class TextVerificationController:
                 "command": "WaitForTextToAppear",
                 "params": {
                     "text": "",             # Empty string for user input
-                    "timeout": 10.0,        # Default value
+                    "timeout": 0,           # Default: single check, no polling
                     "area": None            # Optional area
                 },
                 "verification_type": "text"
@@ -262,7 +262,7 @@ class TextVerificationController:
                 "command": "WaitForTextToDisappear",
                 "params": {
                     "text": "",             # Empty string for user input
-                    "timeout": 10.0,        # Default value
+                    "timeout": 0,           # Default: single check, no polling
                     "area": None            # Optional area
                 },
                 "verification_type": "text"

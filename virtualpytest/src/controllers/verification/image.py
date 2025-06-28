@@ -474,7 +474,7 @@ class ImageVerificationController:
                 "command": "WaitForImageToAppear",
                 "params": {
                     "image_path": "",       # Empty string for user input
-                    "timeout": 10.0,        # Default value
+                    "timeout": 0,           # Default: single check, no polling
                     "confidence": 0.8,      # Default value
                     "area": None            # Optional area
                 },
@@ -484,7 +484,7 @@ class ImageVerificationController:
                 "command": "WaitForImageToDisappear",
                 "params": {
                     "image_path": "",       # Empty string for user input
-                    "timeout": 10.0,        # Default value
+                    "timeout": 0,           # Default: single check, no polling
                     "confidence": 0.8,      # Default value
                     "area": None            # Optional area
                 },
