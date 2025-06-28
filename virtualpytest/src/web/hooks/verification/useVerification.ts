@@ -191,8 +191,7 @@ export const useVerification = ({
   );
 
   return {
-    verificationTypes: getVerificationTypes(deviceId || undefined), // Get from context
-    availableVerificationTypes: getVerificationTypes(deviceId || undefined), // Alias for compatibility
+    verificationTypes: getVerificationTypes(), // Get from context
     verifications,
     loading,
     error,

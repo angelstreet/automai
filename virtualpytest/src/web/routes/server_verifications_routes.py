@@ -85,8 +85,8 @@ def save_verification_endpoint():
 
 
 
-@server_verifications_bp.route('/server/verifications/list-verifications', methods=['GET'])
-def list_verifications():
+@server_verifications_bp.route('/server/verifications/getVerifications', methods=['GET'])
+def get_verifications():
     """
     List verifications with optional filtering.
     
@@ -124,41 +124,13 @@ def list_verifications():
             }), 500
             
     except Exception as e:
-        print(f"[@server_verifications_routes:list_verifications] Error: {e}")
+        print(f"[@server_verifications_routes:get_verifications] Error: {e}")
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_verifications_bp.route('/server/verifications/get-all-verifications', methods=['GET'])
-def get_all_verifications_endpoint():
-    """
-    Get all verifications for the team.
-    """
-    try:
-        team_id = DEFAULT_TEAM_ID
-        
-        # Get all verifications from database
-        result = get_all_verifications(team_id=team_id)
-        
-        if result['success']:
-            return jsonify({
-                'success': True,
-                'verifications': result['verifications'],
-                'count': len(result['verifications'])
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Unknown error')
-            }), 500
-            
-    except Exception as e:
-        print(f"[@server_verifications_routes:get_all_verifications_endpoint] Error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Server error: {str(e)}'
-        }), 500
+
 
 @server_verifications_bp.route('/server/verifications/delete-verification', methods=['POST'])
 def delete_verification_endpoint():

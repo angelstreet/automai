@@ -296,8 +296,8 @@ def save_action_endpoint():
 
 
 
-@server_actions_bp.route('/server/actions/list', methods=['GET'])
-def list_actions_endpoint():
+@server_actions_bp.route('/server/actions/getActions', methods=['GET'])
+def get_actions():
     """
     List actions with optional filtering.
     
@@ -336,7 +336,7 @@ def list_actions_endpoint():
             }), 500
             
     except Exception as e:
-        print(f"[@server_actions_routes:list_actions_endpoint] Error: {e}")
+        print(f"[@server_actions_routes:get_actions] Error: {e}")
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'
@@ -399,35 +399,6 @@ def delete_action_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_actions_bp.route('/server/actions/all', methods=['GET'])
-def get_all_actions_endpoint():
-    """
-    Get all actions for the current team.
-    """
-    try:        
-        # Use default team ID
-        team_id = DEFAULT_TEAM_ID
-        
-        # Get all actions
-        result = get_all_actions(team_id=team_id)
-        
-        if result['success']:
-            return jsonify({
-                'success': True,
-                'actions': result['actions'],
-                'count': len(result['actions'])
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Unknown error')
-            }), 500
-            
-    except Exception as e:
-        print(f"[@server_actions_routes:get_all_actions_endpoint] Error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Server error: {str(e)}'
-        }), 500
+
 
  
