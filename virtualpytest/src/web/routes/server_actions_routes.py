@@ -12,7 +12,7 @@ import sys
 # Add the parent directory to the path so we can import from src
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from src.lib.supabase.actions_db import save_action, get_actions, delete_action, get_all_actions
+from src.lib.supabase.actions_db import save_action, get_actions as db_get_actions, delete_action, get_all_actions
 
 # Import default team ID from app utils (same as verifications)
 from src.utils.app_utils import DEFAULT_TEAM_ID
@@ -316,7 +316,7 @@ def get_actions():
         team_id = DEFAULT_TEAM_ID
         
         # Get actions from database
-        result = get_actions(
+        result = db_get_actions(
             team_id=team_id,
             action_type=action_type,
             device_model=device_model,
