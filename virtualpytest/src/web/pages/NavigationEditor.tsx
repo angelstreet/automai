@@ -104,19 +104,8 @@ const miniMapNodeColor = (node: any) => {
 
 const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.memo(
   ({ userInterfaceId }) => {
-    // ========================================
-    // 1. INITIALIZATION & SETUP
-    // ========================================
-
-    // Objects are already defined outside component, no need to memoize again
-
-    // Get user interface data from navigation state (passed from UserInterface.tsx)
     const location = useLocation();
     const userInterfaceFromState = location.state?.userInterface;
-
-    // Use navigation hook for device management
-    // This hook handles: interface fetching, host filtering, device control, take control, screenshots
-    // The header will use this same hook to be autonomous
 
     const {
       // State
@@ -131,22 +120,13 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       edgeForm,
       success,
       reactFlowWrapper,
-      reactFlowInstance,
       treeId,
       interfaceId,
-
-      // Navigation state
-      currentTreeId,
-
-      navigationPath,
-      navigationNamePath,
       hasUnsavedChanges,
       isDiscardDialogOpen,
       userInterface,
 
       // View state for single-level navigation
-      viewPath,
-      navigateToParentView,
 
       // Tree filtering state
       focusNodeId,
@@ -177,21 +157,15 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       loadFromConfig,
       saveToConfig,
       isLocked,
-      lockInfo,
       showReadOnlyOverlay,
-      setCheckingLockState,
-      sessionId,
       lockNavigationTree,
-      unlockNavigationTree,
       setupAutoUnlock,
       handleNodeFormSubmit,
       handleEdgeFormSubmit,
-      navigateToParent,
       addNewNode,
       cancelNodeChanges,
       discardChanges,
       performDiscardChanges,
-      navigateToTreeLevel,
       closeSelectionPanel,
       fitView,
       deleteSelected,
@@ -223,7 +197,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       handleToggleRemotePanel,
       handleDisconnectComplete,
       availableHosts,
-      getHostByName,
     } = useHostManager();
 
     // Track the last loaded tree ID to prevent unnecessary reloads
@@ -253,24 +226,20 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const stableSelectedHost = useMemo(() => selectedHost, [selectedHost]);
 
     // Centralized reference management - both verification references and actions
-    const [referenceSaveCounter, setReferenceSaveCounter] = useState<number>(0);
-    const {
-      availableReferences,
-      availableActions,
-      referencesLoading,
-      actionsLoading,
-      getModelReferences,
-      getModelActions,
-    } = useReferences(referenceSaveCounter, stableSelectedHost, isControlActive);
-
-    // Note: Reference fetching is now handled automatically by useReferences hook
-    // when selectedHost changes - no need for manual fetching here
+    const [referenceSaveCounter] = useState<number>(0);
+    const { availableActions, referencesLoading, getModelReferences } = useReferences(
+      referenceSaveCounter,
+      stableSelectedHost,
+      isControlActive,
+    );
 
     // Memoize model references for current device to prevent unnecessary re-renders
     const currentModelReferences = useMemo(() => {
-      if (!stableSelectedHost?.device_model) return {};
-      return getModelReferences(stableSelectedHost.device_model);
-    }, [getModelReferences, stableSelectedHost?.device_model]);
+      if (!selectedDeviceId || !stableSelectedHost?.devices) return {};
+      const device = stableSelectedHost.devices.find((d) => d.device_id === selectedDeviceId);
+      if (!device?.device_model) return {};
+      return getModelReferences(device.device_model);
+    }, [getModelReferences, stableSelectedHost?.devices, selectedDeviceId]);
 
     // Memoize the RemotePanel props to prevent unnecessary re-renders
     const remotePanelProps = useMemo(
@@ -279,9 +248,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         deviceId: selectedDeviceId!,
         deviceModel: selectedDeviceId
           ? stableSelectedHost?.devices?.find((d) => d.device_id === selectedDeviceId)
-              ?.device_model ||
-            stableSelectedHost?.device_model ||
-            'unknown'
+              ?.device_model || 'unknown'
           : 'unknown',
         isConnected: isControlActive,
         deviceResolution: { width: 1920, height: 1080 }, // Default HDMI resolution
@@ -308,7 +275,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         deviceId: selectedDeviceId!,
         deviceModel: selectedDeviceId
           ? stableSelectedHost?.devices?.find((d) => d.device_id === selectedDeviceId)
-              ?.device_model || stableSelectedHost?.device_model
+              ?.device_model || 'unknown'
           : undefined,
         isControlActive,
         onCollapsedChange: handleAVPanelCollapsedChange,
@@ -366,34 +333,31 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         }
         lastLoadedTreeId.current = userInterface.id;
 
-        // Fix race condition: Set checking state immediately
-        if (setCheckingLockState) {
-          setCheckingLockState(true);
-        }
-
-        // STEP 1: First acquire lock (this is the critical requirement)
+        // STEP 1: Acquire navigation tree lock on mount (prevent concurrent editing)
         if (lockNavigationTree) {
           lockNavigationTree(userInterface.id)
-            .then((lockSuccess) => {
+            .then((lockSuccess: boolean) => {
               if (lockSuccess) {
-                // STEP 2: If lock acquired, load the tree data (nodes/edges only, not interface metadata)
+                console.log(
+                  `[@component:NavigationEditor] Navigation tree locked for editing: ${userInterface.id}`,
+                );
+                // STEP 2: Load tree data after acquiring lock
                 if (loadFromConfig) {
                   loadFromConfig(userInterface.id);
                 }
               } else {
                 console.warn(
-                  `[@component:NavigationEditor] Failed to acquire lock for userInterface: ${userInterface.id} - entering read-only mode`,
+                  `[@component:NavigationEditor] Failed to lock navigation tree: ${userInterface.id} - entering read-only mode`,
                 );
-                // STEP 3: If lock failed, still load tree but in read-only mode
+                // Still load tree but in read-only mode
                 if (loadFromConfig) {
                   loadFromConfig(userInterface.id);
                 }
-                // Note: isLocked state will be false, which will trigger read-only UI
               }
             })
-            .catch((error) => {
+            .catch((error: any) => {
               console.error(
-                `[@component:NavigationEditor] Error during lock acquisition for userInterface: ${userInterface.id}`,
+                `[@component:NavigationEditor] Error locking navigation tree: ${userInterface.id}`,
                 error,
               );
               // Still try to load in read-only mode
@@ -408,10 +372,8 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           }
         }
 
-        // Setup auto-unlock for this tree (cleanup function)
+        // Setup auto-unlock for navigation tree (cleanup function)
         const cleanup = setupAutoUnlock ? setupAutoUnlock(userInterface.id) : undefined;
-
-        // Return cleanup function
         return cleanup;
       }
     }, [
@@ -419,19 +381,8 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       isLoadingInterface,
       lockNavigationTree,
       setupAutoUnlock,
-      setCheckingLockState,
       loadFromConfig,
     ]);
-
-    // ========================================
-    // 3. DEVICE CONTROL - HANDLED BY HOOK
-    // ========================================
-
-    // All device control logic is now in useNavigation hook
-
-    // ========================================
-    // 6. EVENT HANDLERS SETUP
-    // ========================================
 
     // Simple update handlers - complex validation logic moved to device control component
     const handleUpdateNode = useCallback(
@@ -506,12 +457,11 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           error={null}
           isLocked={isLocked ?? false}
           treeId={treeId}
+          userInterfaceId={actualUserInterfaceId || ''}
           selectedHost={selectedHost}
           selectedDeviceId={selectedDeviceId}
-          isControlActive={isControlActive}
           isRemotePanelOpen={isRemotePanelOpen}
           availableHosts={availableHosts}
-          getHostByName={getHostByName}
           onAddNewNode={handleAddNewNodeWrapper}
           onFitView={fitView}
           onSaveToConfig={() =>
@@ -581,7 +531,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                   >
                     🔒 READ-ONLY MODE
                     <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                      Tree is locked
+                      Tree locked by another user
                     </Typography>
                   </Box>
                 )}
@@ -621,9 +571,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                   />
                 </ReactFlow>
               </div>
-
-              {/* Device Control Component - Simplified without selectedHost */}
-              {/* NavigationEditorDeviceControl removed - logic should be in take control action */}
 
               {/* Side Panels */}
               {selectedNode || selectedEdge ? (
@@ -799,7 +746,7 @@ const NavigationEditorWithAllProviders: React.FC = () => {
 const NavigationEditorWithNodeEdgeManagement: React.FC<{
   userInterface: any;
   userInterfaceId: string;
-}> = ({ userInterface, userInterfaceId }) => {
+}> = ({ userInterface: _userInterface, userInterfaceId }) => {
   // Now we can safely call useNavigationEditorNew inside NavigationConfigProvider
   const navigationEditor = useNavigationEditorNew();
 

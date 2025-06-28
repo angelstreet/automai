@@ -4,14 +4,7 @@ import { NavigationNodesProvider } from './NavigationNodesContext';
 import { NavigationUIProvider } from './NavigationUIContext';
 import { NavigationFlowProvider } from './NavigationFlowContext';
 import { NavigationActionsProvider } from './NavigationActionsContext';
-
-// ========================================
-// TYPES
-// ========================================
-
-interface NavigationEditorProviderProps {
-  children: React.ReactNode;
-}
+import { NavigationEditorProviderProps } from '../../types/pages/NavigationContext_Types';
 
 // ========================================
 // PROVIDER

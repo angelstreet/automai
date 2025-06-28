@@ -1,51 +1,12 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 import { useUserSession } from '../../hooks/useUserSession';
-import { UINavigationNode, UINavigationEdge } from '../../types/pages/Navigation_Types';
-
-// ========================================
-// TYPES
-// ========================================
-
-interface NavigationConfigContextType {
-  // Lock management
-  isLocked: boolean;
-  lockInfo: any;
-  isCheckingLock: boolean;
-  showReadOnlyOverlay: boolean;
-  setCheckingLockState: (checking: boolean) => void;
-  lockNavigationTree: (userInterfaceId: string) => Promise<boolean>;
-  unlockNavigationTree: (userInterfaceId: string) => Promise<boolean>;
-  checkTreeLockStatus: (userInterfaceId: string) => Promise<void>;
-  setupAutoUnlock: (userInterfaceId: string) => () => void;
-
-  // Config operations
-  loadFromConfig: (userInterfaceId: string, state: NavigationConfigState) => Promise<void>;
-  saveToConfig: (userInterfaceId: string, state: NavigationConfigState) => Promise<void>;
-  listAvailableUserInterfaces: () => Promise<any[]>;
-  createEmptyTree: (userInterfaceId: string, state: NavigationConfigState) => Promise<void>;
-
-  // User identification
-  sessionId: string;
-  userId: string;
-}
-
-interface NavigationConfigState {
-  nodes: UINavigationNode[];
-  edges: UINavigationEdge[];
-  userInterface: any;
-  setNodes: (nodes: UINavigationNode[]) => void;
-  setEdges: (edges: UINavigationEdge[]) => void;
-  setUserInterface: (ui: any) => void;
-  setInitialState: (state: { nodes: UINavigationNode[]; edges: UINavigationEdge[] } | null) => void;
-  setHasUnsavedChanges: (hasChanges: boolean) => void;
-  setIsLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-}
-
-interface NavigationConfigProviderProps {
-  children: React.ReactNode;
-}
+import {
+  NavigationConfigContextType,
+  NavigationConfigState,
+  NavigationConfigProviderProps,
+} from '../../types/pages/NavigationConfig_Types';
+import { UINavigationNode } from '../../types/pages/Navigation_Types';
 
 // ========================================
 // CONTEXT
@@ -308,11 +269,11 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           state.setInitialState({ nodes: [...nodes], edges: [...edges] });
           state.setHasUnsavedChanges(false);
 
-          // Start in read-only mode - user must explicitly take control
-          setIsLocked(false);
+          // Enable editing when tree is loaded (tree lock acquired on mount)
+          setIsLocked(true);
           setLockInfo(null);
           setIsCheckingLock(false);
-          setShowReadOnlyOverlay(true);
+          setShowReadOnlyOverlay(false);
         } else {
           // Create empty tree structure
           state.setNodes([]);
@@ -320,11 +281,11 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           state.setInitialState({ nodes: [], edges: [] });
           state.setHasUnsavedChanges(false);
 
-          // Start in read-only mode even for new trees - user must explicitly take control
-          setIsLocked(false);
+          // Enable editing for new trees (tree lock acquired on mount)
+          setIsLocked(true);
           setLockInfo(null);
           setIsCheckingLock(false);
-          setShowReadOnlyOverlay(true);
+          setShowReadOnlyOverlay(false);
         }
       } catch (error) {
         console.error(
@@ -519,17 +480,16 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       lockInfo,
       isCheckingLock,
       showReadOnlyOverlay,
-      // Remove stable functions from dependencies to prevent unnecessary re-renders
-      // setCheckingLockState,
-      // lockNavigationTree,
-      // unlockNavigationTree,
-      // checkTreeLockStatus,
-      // setupAutoUnlock,
-      // loadFromConfig,
-      // saveToConfig,
-      // listAvailableUserInterfaces,
-      // createEmptyTree,
-
+      // Add stable functions to dependencies
+      setCheckingLockState,
+      lockNavigationTree,
+      unlockNavigationTree,
+      checkTreeLockStatus,
+      setupAutoUnlock,
+      loadFromConfig,
+      saveToConfig,
+      listAvailableUserInterfaces,
+      createEmptyTree,
       // User session data is stable from singleton
       sessionId,
       userId,
@@ -549,13 +509,12 @@ NavigationConfigProvider.displayName = 'NavigationConfigProvider';
 // HOOK
 // ========================================
 
-export const useNavigationConfig = (): NavigationConfigContextType => {
+export const useNavigationTreeControl = (): NavigationConfigContextType => {
   const context = useContext(NavigationConfigContext);
   if (!context) {
-    throw new Error('useNavigationConfig must be used within a NavigationConfigProvider');
+    throw new Error('useNavigationTreeControl must be used within a NavigationConfigProvider');
   }
   return context;
 };
 
-// Export the type for use in other files
-export type { NavigationConfigState };
+// Old export removed - use useNavigationTreeControl instead

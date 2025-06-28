@@ -9,19 +9,22 @@ export { NavigationActionsProvider, useNavigationActions } from './NavigationAct
 
 // Legacy Navigation Contexts (moved from parent directory)
 export { NavigationStateProvider } from './NavigationStateContext';
-export {
-  NavigationConfigProvider,
-  useNavigationConfig,
-  type NavigationConfigState,
-} from './NavigationConfigContext';
-export {
-  NodeEdgeManagementProvider,
-  useNodeEdgeManagement,
-  type NodeEdgeManagementState,
-} from './NodeEdgeManagementContext';
+export { NavigationConfigProvider, useNavigationTreeControl } from './NavigationConfigContext';
+export { NodeEdgeManagementProvider, useNodeEdgeManagement } from './NodeEdgeManagementContext';
 
-// Export types
-export type { NavigationNodesContextType } from './NavigationNodesContext';
-export type { NavigationUIContextType } from './NavigationUIContext';
-export type { NavigationFlowContextType } from './NavigationFlowContext';
-export type { NavigationActionsContextType } from './NavigationActionsContext';
+// Export types from centralized location
+export type {
+  NavigationActionsContextType,
+  NavigationUIContextType,
+  NavigationNodesContextType,
+  NavigationFlowContextType,
+  NavigationEditorProviderProps,
+  NodeEdgeManagementContextType,
+} from '../../types/pages/NavigationContext_Types';
+
+export type {
+  NavigationConfigContextType,
+  NavigationConfigState,
+  TreeLockInfo,
+  LockStatusResponse,
+} from '../../types/pages/NavigationConfig_Types';

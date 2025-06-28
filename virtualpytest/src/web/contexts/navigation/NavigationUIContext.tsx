@@ -1,58 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 import { NodeForm, EdgeForm } from '../../types/pages/Navigation_Types';
-
-// ========================================
-// TYPES
-// ========================================
-
-export interface NavigationUIContextType {
-  // Dialog states
-  isNodeDialogOpen: boolean;
-  setIsNodeDialogOpen: (open: boolean) => void;
-  isEdgeDialogOpen: boolean;
-  setIsEdgeDialogOpen: (open: boolean) => void;
-  isDiscardDialogOpen: boolean;
-  setIsDiscardDialogOpen: (open: boolean) => void;
-
-  // Form states
-  isNewNode: boolean;
-  setIsNewNode: (isNew: boolean) => void;
-  nodeForm: NodeForm;
-  setNodeForm: (form: NodeForm) => void;
-  edgeForm: EdgeForm;
-  setEdgeForm: (form: EdgeForm) => void;
-
-  // Loading and error states
-  isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
-  error: string | null;
-  setError: (error: string | null) => void;
-  success: string | null;
-  setSuccess: (success: string | null) => void;
-
-  // Save states
-  isSaving: boolean;
-  setIsSaving: (saving: boolean) => void;
-  saveError: string | null;
-  setSaveError: (error: string | null) => void;
-  saveSuccess: boolean;
-  setSaveSuccess: (success: boolean) => void;
-  hasUnsavedChanges: boolean;
-  setHasUnsavedChanges: (hasChanges: boolean) => void;
-
-  // Interface loading state
-  isLoadingInterface: boolean;
-  setIsLoadingInterface: (loading: boolean) => void;
-
-  // Callback functions
-  resetForms: () => void;
-  resetDialogs: () => void;
-}
-
-interface NavigationUIProviderProps {
-  children: React.ReactNode;
-}
+import {
+  NavigationUIContextType,
+  NavigationUIProviderProps,
+} from '../../types/pages/NavigationContext_Types';
 
 // ========================================
 // CONTEXT
