@@ -230,25 +230,22 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(true);
         state.setError(null);
 
-        // Get trees for this userInterface directly by ID
-        const response = await fetch(
-          `/server/navigationTrees/getAllTrees?userinterface_id=${userInterfaceId}`,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            },
+        // Use existing userinterface endpoint that includes root tree
+        const response = await fetch(`/server/userinterface/getUserInterface/${userInterfaceId}`, {
+          headers: {
+            'Content-Type': 'application/json',
           },
-        );
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
+        const userInterface = await response.json();
 
-        if (data.success && data.trees && data.trees.length > 0) {
-          // Get the first tree (root tree)
-          const tree = data.trees[0];
+        if (userInterface && userInterface.root_tree) {
+          // Get the root tree data from userinterface response
+          const tree = userInterface.root_tree;
           const treeData = tree.metadata || {};
 
           // Update state with loaded data
@@ -259,7 +256,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           state.setEdges(edges);
 
           console.log(
-            `[@context:NavigationConfigProvider:loadFromConfig] Loaded tree for userInterface: ${userInterfaceId} with ${nodes.length} nodes and ${edges.length} edges`,
+            `[@context:NavigationConfigProvider:loadFromConfig] Loaded root tree for userInterface: ${userInterfaceId} with ${nodes.length} nodes and ${edges.length} edges`,
           );
 
           // Set initial state for change tracking
