@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useContext, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addEdge, Connection, MarkerType } from 'reactflow';
 
-import { useHostManager, useNavigationTreeControl, useNodeEdgeManagement } from '../../contexts';
+import { useHostManager, useNodeEdgeManagement } from '../../contexts';
+import { NavigationConfigContext } from '../../contexts/navigation/NavigationConfigContext';
 import { useNavigationState } from '../navigation/useNavigationState';
 import {
   UINavigationNode,
@@ -17,7 +18,10 @@ export const useNavigationEditor = () => {
 
   // Use context hooks directly
   const navigationState = useNavigationState();
-  const configHook = useNavigationTreeControl();
+  const configHook = useContext(NavigationConfigContext);
+  if (!configHook) {
+    throw new Error('useNavigationEditor must be used within a NavigationConfigProvider');
+  }
   const nodeEdgeHook = useNodeEdgeManagement();
   const hostManager = useHostManager();
 

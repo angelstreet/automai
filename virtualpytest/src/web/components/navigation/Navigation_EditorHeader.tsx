@@ -1,10 +1,10 @@
 import { AppBar, Toolbar, Typography, Box } from '@mui/material';
-import React from 'react';
+import React, { useContext } from 'react';
 
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
-import { useNavigationTreeControl } from '../../contexts/navigation/NavigationConfigContext';
+import { NavigationConfigContext } from '../../contexts/navigation/NavigationConfigContext';
 import {
   ValidationPreviewClient,
   ValidationResultsClient,
@@ -102,7 +102,7 @@ export const NavigationEditorHeader: React.FC<{
     lockNavigationTree,
     unlockNavigationTree,
     isCheckingLock: isCheckingTreeLock,
-  } = useNavigationTreeControl();
+  } = useContext(NavigationConfigContext) || {};
 
   // Device control handler (only controls physical device, not navigation tree)
   const handleDeviceControl = React.useCallback(async () => {

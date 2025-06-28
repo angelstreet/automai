@@ -2,7 +2,6 @@
 export {
   NavigationStateProvider,
   NavigationConfigProvider,
-  useNavigationTreeControl,
   type NavigationConfigState,
   NodeEdgeManagementProvider,
   useNodeEdgeManagement,

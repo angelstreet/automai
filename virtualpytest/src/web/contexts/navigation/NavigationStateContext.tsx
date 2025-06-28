@@ -430,7 +430,3 @@ export const NavigationStateProvider: React.FC<NavigationStateProviderProps> = (
 };
 
 NavigationStateProvider.displayName = 'NavigationStateProvider';
-
-// ========================================
-// HOOK - Moved to hooks/navigation/useNavigationState.ts
-// ========================================

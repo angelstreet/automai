@@ -1,15 +1,13 @@
-// Navigation Editor Provider (wraps all focused contexts)
+// Navigation Editor Provider
 export { NavigationEditorProvider } from './NavigationEditorProvider';
 
-// Focused Navigation Contexts
+// Navigation Contexts
 export { NavigationNodesProvider, useNavigationNodes } from './NavigationNodesContext';
 export { NavigationUIProvider, useNavigationUI } from './NavigationUIContext';
 export { NavigationFlowProvider, useNavigationFlow } from './NavigationFlowContext';
 export { NavigationActionsProvider, useNavigationActions } from './NavigationActionsContext';
-
-// Legacy Navigation Contexts (moved from parent directory)
 export { NavigationStateProvider } from './NavigationStateContext';
-export { NavigationConfigProvider, useNavigationTreeControl } from './NavigationConfigContext';
+export { NavigationConfigProvider } from './NavigationConfigContext';
 export { NodeEdgeManagementProvider, useNodeEdgeManagement } from './NodeEdgeManagementContext';
 
 // Export types from centralized location
