@@ -146,17 +146,22 @@ interface NavigationProviderProps {
 const NavigationContext = createContext<NavigationContextType | null>(null);
 
 export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children }) => {
-  console.log('[@context:NavigationProvider] Initializing unified navigation context');
+  // console.log('[@context:NavigationProvider] Initializing unified navigation context');
 
   // ========================================
   // ROUTE PARAMS
   // ========================================
 
-  const { treeId, treeName, interfaceId } = useParams<{
+  const routeParams = useParams<{
     treeId?: string;
     treeName: string;
     interfaceId?: string;
   }>();
+
+  const { treeId, treeName, interfaceId } = useMemo(
+    () => routeParams,
+    [routeParams.treeId, routeParams.treeName, routeParams.interfaceId],
+  );
 
   // ========================================
   // STATE
@@ -278,7 +283,7 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   // ========================================
 
   const resetAll = useCallback(() => {
-    console.log('[@context:NavigationProvider] Resetting all state');
+    // console.log('[@context:NavigationProvider] Resetting all state');
     setSelectedNode(null);
     setSelectedEdge(null);
     if (initialState) {
@@ -307,7 +312,7 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   }, [initialState, setNodes, setEdges]);
 
   const resetSelection = useCallback(() => {
-    console.log('[@context:NavigationProvider] Resetting selection');
+    // console.log('[@context:NavigationProvider] Resetting selection');
     setSelectedNode(null);
     setSelectedEdge(null);
   }, []);
@@ -453,7 +458,7 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   // ========================================
 
   const contextValue: NavigationContextType = useMemo(() => {
-    console.log('[@context:NavigationProvider] Creating context value');
+    // console.log('[@context:NavigationProvider] Creating context value');
     return {
       // Route params
       treeId,
@@ -576,92 +581,43 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       unlockNavigationTree,
     };
   }, [
+    // Only include values that should trigger context recreation
     treeId,
     treeName,
     interfaceId,
     currentTreeId,
-    setCurrentTreeId,
     currentTreeName,
-    setCurrentTreeName,
     stableNavigationPath,
-    setNavigationPath,
     stableNavigationNamePath,
-    setNavigationNamePath,
     stableNodes,
-    setNodes,
-    onNodesChange,
     stableEdges,
-    setEdges,
-    onEdgesChange,
     selectedNode,
-    setSelectedNode,
     selectedEdge,
-    setSelectedEdge,
     isNodeDialogOpen,
-    setIsNodeDialogOpen,
     isEdgeDialogOpen,
-    setIsEdgeDialogOpen,
     isDiscardDialogOpen,
-    setIsDiscardDialogOpen,
     isNewNode,
-    setIsNewNode,
     stableNodeForm,
-    setNodeForm,
     stableEdgeForm,
-    setEdgeForm,
     isLoading,
-    setIsLoading,
     error,
-    setError,
     success,
-    setSuccess,
     isSaving,
-    setIsSaving,
     saveError,
-    setSaveError,
     saveSuccess,
-    setSaveSuccess,
     hasUnsavedChanges,
-    setHasUnsavedChanges,
     isLocked,
-    setIsLocked,
     isCheckingLock,
-    setIsCheckingLock,
     userInterface,
-    setUserInterface,
     rootTree,
-    setRootTree,
     isLoadingInterface,
-    setIsLoadingInterface,
     currentViewRootId,
-    setCurrentViewRootId,
     stableViewPath,
-    setViewPath,
     focusNodeId,
-    setFocusNodeId,
     maxDisplayDepth,
-    setMaxDisplayDepth,
     stableAvailableFocusNodes,
-    setAvailableFocusNodes,
     initialState,
-    setInitialState,
-    reactFlowWrapper,
     reactFlowInstance,
-    setReactFlowInstance,
-    resetAll,
-    resetSelection,
-    resetToInitialState,
-    resetForms,
-    resetDialogs,
-    openNodeDialog,
-    openEdgeDialog,
-    closeAllDialogs,
-    markUnsavedChanges,
-    clearUnsavedChanges,
-    resetToHome,
-    fitViewToNodes,
-    validateNavigationPath,
-    updateNavigationPath,
   ]);
 
   return <NavigationContext.Provider value={contextValue}>{children}</NavigationContext.Provider>;
