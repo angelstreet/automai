@@ -68,7 +68,7 @@ def take_control():
         if success:
             # Forward take-control request to the specific host with device_id
             try:
-                host_endpoint = '/host/take-control'
+                host_endpoint = '/host/takeControl'
                 host_url = buildHostUrl(host_data, host_endpoint)
                 
                 print(f"📡 [CONTROL] Forwarding take-control to host: {host_url}")
@@ -179,7 +179,7 @@ def release_control():
         
         # Forward release-control request to the specific host with device_id
         try:
-            host_endpoint = '/host/release-control'
+            host_endpoint = '/host/releaseControl'
             host_url = buildHostUrl(host_data, host_endpoint)
             
             print(f"📡 [CONTROL] Forwarding release-control to host: {host_url}")
@@ -321,7 +321,7 @@ def batch_execute_navigation():
             return jsonify({'error': f'Host {host_name} not found'}), 404
         
         # Forward request to host
-        host_endpoint = '/host/navigation/batch-execute'
+        host_endpoint = '/host/navigation/batchExecute'
         host_url = buildHostUrl(host_data, host_endpoint)
         
         print(f"📡 [BATCH-NAVIGATION] Forwarding to: {host_url}")

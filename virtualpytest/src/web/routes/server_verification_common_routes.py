@@ -466,7 +466,7 @@ def verification_image_process():
         request_data = request.get_json() or {}
         
         # Proxy to host verification image process endpoint
-        response_data, status_code = proxy_to_host('/host/verification/image/process-image', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/image/processImage', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -486,7 +486,7 @@ def verification_image_crop():
         request_data = request.get_json() or {}
         
         # Proxy to host verification image crop endpoint
-        response_data, status_code = proxy_to_host('/host/verification/image/crop-image', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/image/cropImage', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -506,7 +506,7 @@ def verification_image_save():
         request_data = request.get_json() or {}
         
         # Proxy to host verification image save endpoint
-        response_data, status_code = proxy_to_host('/host/verification/image/save-image', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/image/saveImage', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -531,7 +531,7 @@ def verification_text_detect():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/verification/text/detect-text', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/verification/text/detectText', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -552,7 +552,7 @@ def verification_text_save():
         
         # Step 1: Get text data from host (fast, no git operations)
         print("[@route:server_verification_common:verification_text_save] Step 1: Getting text data from host")
-        host_response_data, host_status_code = proxy_to_host('/host/verification/text/save-text', 'POST', request_data)
+        host_response_data, host_status_code = proxy_to_host('/host/verification/text/saveText', 'POST', request_data)
         
         if host_status_code != 200 or not host_response_data.get('success'):
             print(f"[@route:server_verification_common:verification_text_save] Host step failed: {host_response_data}")

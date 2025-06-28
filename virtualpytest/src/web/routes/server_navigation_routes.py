@@ -519,7 +519,7 @@ def save_navigation_screenshot():
         request_data = request.get_json() or {}
         
         # Proxy to host navigation save-screenshot endpoint
-        response_data, status_code = proxy_to_host('/host/navigation/save-screenshot', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/navigation/saveScreenshot', 'POST', request_data)
         
         return jsonify(response_data), status_code
         

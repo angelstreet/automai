@@ -96,7 +96,7 @@ def click_element():
         host_request_data = {k: v for k, v in request_data.items() if k != 'host'}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/remote/click-element', 'POST', host_request_data)
+        response_data, status_code = proxy_to_host('/host/remote/clickElement', 'POST', host_request_data)
         
         return jsonify(response_data), status_code
         
@@ -127,7 +127,7 @@ def tap_coordinates():
         host_request_data = {k: v for k, v in request_data.items() if k != 'host'}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/remote/tap-coordinates', 'POST', host_request_data)
+        response_data, status_code = proxy_to_host('/host/remote/tapCoordinates', 'POST', host_request_data)
         
         return jsonify(response_data), status_code
         
@@ -178,7 +178,7 @@ def tap_coordinates_internal(host, x, y):
     try:
         # Use the centralized API URL builder to forward to host
         from src.utils.build_url_utils import buildHostUrl
-        full_url = buildHostUrl(host, '/host/remote/tap-coordinates')
+        full_url = buildHostUrl(host, '/host/remote/tapCoordinates')
         
         if not full_url:
             return jsonify({
@@ -251,7 +251,7 @@ def dump_ui():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/remote/dump-ui', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/remote/dumpUi', 'POST', request_data)
         
         return jsonify(response_data), status_code
         

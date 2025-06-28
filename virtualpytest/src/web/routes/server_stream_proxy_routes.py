@@ -75,7 +75,7 @@ def proxy_stream_url():
             return jsonify({'error': f'Host {host_name} not found'}), 404
         
         # Forward request to host
-        host_url = buildHostUrl(host_data, '/host/av/stream-url')
+        host_url = buildHostUrl(host_data, '/host/av/streamUrl')
         
         print(f"📡 [PROXY] Forwarding stream URL request to: {host_url}")
         

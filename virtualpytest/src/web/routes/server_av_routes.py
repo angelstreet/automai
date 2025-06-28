@@ -36,7 +36,7 @@ def restart_stream():
 
         # Proxy to host with device_id
         response_data, status_code = proxy_to_host_with_params(
-            '/host/av/restart-stream',
+            '/host/av/restartStream',
             'POST',
             request_data,
             query_params
@@ -71,7 +71,7 @@ def get_stream_url():
 
         # Proxy to host with device_id
         response_data, status_code = proxy_to_host_with_params(
-            '/host/av/get-stream-url',
+            '/host/av/getStreamUrl',
             'GET',
             request_data,
             query_params
@@ -442,7 +442,7 @@ def save_screenshot():
 
         # Proxy to host with device_id
         response_data, status_code = proxy_to_host_with_params(
-            '/host/av/save-screenshot',
+            '/host/av/saveScreenshot',
             'POST',
             request_data,
             query_params
@@ -478,7 +478,7 @@ def start_video_capture():
 
         # Proxy to host with device_id
         response_data, status_code = proxy_to_host_with_params(
-            '/host/av/start-capture',
+            '/host/av/startCapture',
             'POST',
             request_data,
             query_params
@@ -514,7 +514,7 @@ def stop_video_capture():
 
         # Proxy to host with device_id
         response_data, status_code = proxy_to_host_with_params(
-            '/host/av/stop-capture',
+            '/host/av/stopCapture',
             'POST',
             request_data,
             query_params
@@ -550,7 +550,7 @@ def take_control():
 
         # Proxy to host with device_id
         response_data, status_code = proxy_to_host_with_params(
-            '/host/av/take-control',
+            '/host/av/takeControl',
             'POST',
             request_data,
             query_params
