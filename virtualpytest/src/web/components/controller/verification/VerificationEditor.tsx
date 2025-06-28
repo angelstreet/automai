@@ -136,15 +136,6 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
       >
         <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
           Verification Editor
-          <Typography component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', ml: 1 }}>
-            ({model}) [{selectedDevice!.device_name}]
-            {!finalLayoutConfig.isMobileModel && (
-              <Typography component="span" sx={{ fontSize: '0.7rem' }}>
-                {' '}
-                [Landscape]
-              </Typography>
-            )}
-          </Typography>
         </Typography>
 
         {/* =================== CAPTURE SECTION =================== */}
