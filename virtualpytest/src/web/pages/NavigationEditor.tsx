@@ -32,6 +32,7 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
+import { useTheme } from '../contexts/ThemeContext';
 import { useDeviceData } from '../contexts/device/DeviceDataContext';
 import { useHostManager } from '../contexts/index';
 import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
@@ -74,16 +75,7 @@ const reactFlowStyle = { width: '100%', height: '100%' };
 
 const nodeOrigin: [number, number] = [0, 0];
 
-const miniMapStyle = {
-  backgroundColor: 'var(--card, #ffffff)',
-  border: '1px solid var(--border, #e5e7eb)',
-  borderRadius: '8px',
-  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-  position: 'absolute' as const,
-  top: '10px',
-  right: '10px',
-  zIndex: 4,
-};
+// miniMapStyle moved inside component to use theme context
 
 const proOptions = { hideAttribution: true };
 
@@ -109,6 +101,35 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
   ({ userInterfaceId }) => {
     const location = useLocation();
     const userInterfaceFromState = location.state?.userInterface;
+
+    // Get theme context
+    const { actualMode } = useTheme();
+
+    // Create dynamic miniMapStyle based on theme
+    const miniMapStyle = useMemo(
+      () => ({
+        backgroundColor: actualMode === 'dark' ? '#1f2937' : '#ffffff',
+        border: `1px solid ${actualMode === 'dark' ? '#374151' : '#e5e7eb'}`,
+        borderRadius: '8px',
+        boxShadow:
+          actualMode === 'dark'
+            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)'
+            : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+        position: 'absolute' as const,
+        top: '10px',
+        right: '10px',
+        zIndex: 4,
+        width: '200px',
+        height: '150px',
+      }),
+      [actualMode],
+    );
+
+    // Create dynamic maskColor based on theme
+    const miniMapMaskColor = useMemo(
+      () => (actualMode === 'dark' ? 'rgba(0, 0, 0, 0.6)' : 'rgba(255, 255, 255, 0.2)'),
+      [actualMode],
+    );
 
     // Use the restored navigation editor hook
     const {
@@ -581,7 +602,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                   <MiniMap
                     style={miniMapStyle}
                     nodeColor={miniMapNodeColor}
-                    maskColor="rgba(255, 255, 255, 0.2)"
+                    maskColor={miniMapMaskColor}
                     pannable
                     zoomable
                   />
