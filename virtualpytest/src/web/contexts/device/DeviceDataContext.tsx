@@ -181,13 +181,13 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
         if (response.ok) {
           const result = await response.json();
 
-          if (result.success && result.images && Array.isArray(result.images)) {
+          if (result.success && result.references && Array.isArray(result.references)) {
             const references: { [deviceModel: string]: ModelReferences } = {};
 
-            result.images.forEach((ref: any) => {
+            result.references.forEach((ref: any) => {
               const deviceModel = ref.device_model || 'unknown';
               const baseName = ref.name || ref.filename || 'unknown';
-              const refType = ref.type === 'reference_text' ? 'text' : 'image';
+              const refType = ref.reference_type === 'reference_text' ? 'text' : 'image';
 
               // Initialize model references if not exists
               if (!references[deviceModel]) {
