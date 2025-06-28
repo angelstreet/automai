@@ -77,6 +77,12 @@ export interface NavigationContextType {
   hasUnsavedChanges: boolean;
   setHasUnsavedChanges: (hasChanges: boolean) => void;
 
+  // Lock states
+  isLocked: boolean;
+  setIsLocked: (locked: boolean) => void;
+  isCheckingLock: boolean;
+  setIsCheckingLock: (checking: boolean) => void;
+
   // Interface state
   userInterface: any;
   setUserInterface: (ui: any) => void;
@@ -123,6 +129,10 @@ export interface NavigationContextType {
   fitViewToNodes: () => void;
   validateNavigationPath: (path: string[]) => boolean;
   updateNavigationPath: (newPath: string[], newNamePath: string[]) => void;
+
+  // Lock methods
+  lockNavigationTree: (treeId: string) => Promise<boolean>;
+  unlockNavigationTree: (treeId: string) => Promise<boolean>;
 }
 
 interface NavigationProviderProps {
@@ -197,6 +207,10 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  // Lock states
+  const [isLocked, setIsLocked] = useState(false);
+  const [isCheckingLock, setIsCheckingLock] = useState(false);
+
   // Interface state
   const [userInterface, setUserInterface] = useState<any>(null);
   const [rootTree, setRootTree] = useState<any>(null);
@@ -222,6 +236,42 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   // React Flow refs
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+
+  // ========================================
+  // LOCK METHODS
+  // ========================================
+
+  const lockNavigationTree = useCallback(async (treeId: string): Promise<boolean> => {
+    setIsCheckingLock(true);
+    try {
+      // Mock implementation - replace with actual API call
+      console.log('[@context:NavigationProvider] Locking navigation tree:', treeId);
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
+      setIsLocked(true);
+      return true;
+    } catch (error) {
+      console.error('[@context:NavigationProvider] Failed to lock navigation tree:', error);
+      return false;
+    } finally {
+      setIsCheckingLock(false);
+    }
+  }, []);
+
+  const unlockNavigationTree = useCallback(async (treeId: string): Promise<boolean> => {
+    setIsCheckingLock(true);
+    try {
+      // Mock implementation - replace with actual API call
+      console.log('[@context:NavigationProvider] Unlocking navigation tree:', treeId);
+      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
+      setIsLocked(false);
+      return true;
+    } catch (error) {
+      console.error('[@context:NavigationProvider] Failed to unlock navigation tree:', error);
+      return false;
+    } finally {
+      setIsCheckingLock(false);
+    }
+  }, []);
 
   // ========================================
   // ACTION METHODS
@@ -468,6 +518,12 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       hasUnsavedChanges,
       setHasUnsavedChanges,
 
+      // Lock states
+      isLocked,
+      setIsLocked,
+      isCheckingLock,
+      setIsCheckingLock,
+
       // Interface state
       userInterface,
       setUserInterface,
@@ -514,6 +570,10 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       fitViewToNodes,
       validateNavigationPath,
       updateNavigationPath,
+
+      // Lock methods
+      lockNavigationTree,
+      unlockNavigationTree,
     };
   }, [
     treeId,
@@ -563,6 +623,10 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
     setSaveSuccess,
     hasUnsavedChanges,
     setHasUnsavedChanges,
+    isLocked,
+    setIsLocked,
+    isCheckingLock,
+    setIsCheckingLock,
     userInterface,
     setUserInterface,
     rootTree,
