@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { Verification } from '../../types/verification/Verification_Types';
+import { useDeviceData } from '../../contexts/device/DeviceDataContext';
 
 // Define interfaces for verification data structures
 
@@ -16,84 +17,15 @@ export const useVerification = ({
   deviceId,
   captureSourcePath,
 }: UseVerificationProps) => {
-  // State for verification types and verifications
-  const [verificationTypes, setVerificationTypes] = useState<Record<string, any>>({});
+  // Get verification types from centralized context
+  const { verificationTypes, getVerificationTypes } = useDeviceData();
+
+  // State for verification execution (not data fetching)
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Verification[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  // Load verification types from selected device data and clean parameter definitions
-  useEffect(() => {
-    // Get verification types from the selected device
-    const device = selectedHost?.devices?.find((d) => d.device_id === deviceId);
-    const deviceVerificationTypes = device?.device_verification_types;
-
-    if (deviceVerificationTypes) {
-      console.log(
-        '🔍 [useVerification] Loading verification types from device:',
-        deviceVerificationTypes,
-      );
-      console.log(
-        '🔍 [useVerification] Device verification types keys:',
-        Object.keys(deviceVerificationTypes),
-      );
-      console.log(
-        '🔍 [useVerification] Device verification types structure:',
-        JSON.stringify(deviceVerificationTypes, null, 2),
-      );
-
-      // Transform the verification types into the format expected by the UI
-      const transformedTypes: Record<string, any> = {};
-
-      Object.entries(deviceVerificationTypes).forEach(([verType, verConfig]: [string, any]) => {
-        console.log(`🔄 [useVerification] Processing verification type: ${verType}`, verConfig);
-
-        if (!Array.isArray(verConfig)) {
-          console.error(
-            `❌ [useVerification] Expected array for ${verType}, got:`,
-            typeof verConfig,
-          );
-          return;
-        }
-
-        transformedTypes[verType] = verConfig.map((verification: any) => {
-          const transformed = {
-            command: verification.command || verification.type,
-            verification_type: verType,
-            params: {} as Record<string, any>,
-          };
-
-          if (verification.params && typeof verification.params === 'object') {
-            // Direct assignment - backend now sends actual parameter values
-            transformed.params = verification.params;
-          } else if (verification.parameters && Array.isArray(verification.parameters)) {
-            verification.parameters.forEach((paramName: string) => {
-              transformed.params[paramName] = '';
-            });
-          }
-
-          console.log(`✅ [useVerification] Transformed verification:`, transformed);
-          return transformed;
-        });
-      });
-
-      setVerificationTypes(transformedTypes);
-      console.log('✅ [useVerification] Transformed verification types:', transformedTypes);
-      console.log(
-        '✅ [useVerification] Transformed verification types keys:',
-        Object.keys(transformedTypes),
-      );
-      console.log(
-        '✅ [useVerification] Transformed verification types structure:',
-        JSON.stringify(transformedTypes, null, 2),
-      );
-    } else {
-      console.log('⚠️ [useVerification] No device verification types found for device:', deviceId);
-      setVerificationTypes({});
-    }
-  }, [selectedHost, deviceId]);
 
   // Effect to clear success message after delay
   useEffect(() => {
@@ -108,66 +40,57 @@ export const useVerification = ({
   // Handle verifications change
   const handleVerificationsChange = useCallback((newVerifications: Verification[]) => {
     setVerifications(newVerifications);
-    // Clear test results when verifications change
     setTestResults([]);
   }, []);
 
   // Handle test execution
   const handleTest = useCallback(
     async (event?: React.MouseEvent) => {
-      // Prevent any default form submission behavior
       if (event) {
         event.preventDefault();
         event.stopPropagation();
       }
 
       if (verifications.length === 0) {
-        console.log('[@hook:useVerification] No verifications to test');
+        console.log('[useVerification] No verifications to test');
         return;
       }
 
-      console.log('[@hook:useVerification] === VERIFICATION TEST DEBUG ===');
+      console.log('[useVerification] === VERIFICATION TEST DEBUG ===');
       console.log(
-        '[@hook:useVerification] Number of verifications before filtering:',
+        '[useVerification] Number of verifications before filtering:',
         verifications.length,
       );
 
       // Filter out empty/invalid verifications before testing
       const validVerifications = verifications.filter((verification, index) => {
-        // Check if verification has a command (is configured)
         if (!verification.command || verification.command.trim() === '') {
           console.log(
-            `[@hook:useVerification] Removing verification ${index}: No verification type selected`,
+            `[useVerification] Removing verification ${index}: No verification type selected`,
           );
           return false;
         }
 
-        // Check if verification has required input based on verification type
         if (verification.verification_type === 'image') {
-          // Image verifications need a reference image
           const hasImagePath = verification.params?.image_path;
           if (!hasImagePath) {
             console.log(
-              `[@hook:useVerification] Removing verification ${index}: No image reference specified`,
+              `[useVerification] Removing verification ${index}: No image reference specified`,
             );
             return false;
           }
         } else if (verification.verification_type === 'text') {
-          // Text verifications need text to search for
           const hasText = verification.params?.text && verification.params.text.trim() !== '';
           if (!hasText) {
-            console.log(
-              `[@hook:useVerification] Removing verification ${index}: No text specified`,
-            );
+            console.log(`[useVerification] Removing verification ${index}: No text specified`);
             return false;
           }
         } else if (verification.verification_type === 'adb') {
-          // ADB verifications need search criteria
           const hasSearchTerm =
             verification.params?.search_term && verification.params.search_term.trim() !== '';
           if (!hasSearchTerm) {
             console.log(
-              `[@hook:useVerification] Removing verification ${index}: No search term specified`,
+              `[useVerification] Removing verification ${index}: No search term specified`,
             );
             return false;
           }
@@ -179,11 +102,10 @@ export const useVerification = ({
       // Update verifications list if any were filtered out
       if (validVerifications.length !== verifications.length) {
         console.log(
-          `[@hook:useVerification] Filtered out ${verifications.length - validVerifications.length} empty verifications`,
+          `[useVerification] Filtered out ${verifications.length - validVerifications.length} empty verifications`,
         );
         setVerifications(validVerifications);
 
-        // Show message about removed verifications
         if (validVerifications.length === 0) {
           setError(
             'All verifications were empty and have been removed. Please add valid verifications.',
@@ -204,43 +126,39 @@ export const useVerification = ({
         // Extract capture filename from captureSourcePath for specific capture selection
         let capture_filename = null;
         if (captureSourcePath) {
-          // Extract filename from URL like "http://localhost:5009/images/screenshot/android_mobile.jpg?t=1749217510777"
           const url = new URL(captureSourcePath);
           const pathname = url.pathname;
-          capture_filename = pathname.split('/').pop(); // Get the filename
-          console.log('[@hook:useVerification] Using specific capture:', capture_filename);
+          capture_filename = pathname.split('/').pop();
+          console.log('[useVerification] Using specific capture:', capture_filename);
         }
 
-        console.log('[@hook:useVerification] Submitting batch verification request');
-        console.log(
-          '[@hook:useVerification] Valid verifications count:',
-          validVerifications.length,
-        );
+        console.log('[useVerification] Submitting batch verification request');
+        console.log('[useVerification] Valid verifications count:', validVerifications.length);
 
         const device = selectedHost?.devices?.find((d) => d.device_id === deviceId);
 
         const batchPayload = {
-          verifications: validVerifications, // Use filtered verifications
+          verifications: validVerifications,
           model: device?.device_model || 'unknown',
           node_id: 'verification-editor',
           tree_id: 'verification-tree',
-          capture_filename: capture_filename, // Send specific capture filename
+          capture_filename: capture_filename,
         };
 
-        console.log('[@hook:useVerification] Batch payload:', batchPayload);
+        console.log('[useVerification] Batch payload:', batchPayload);
 
         const response = await fetch('/server/verification/execute_batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            host: selectedHost, // Send full host object
-            device_id: deviceId, // Send device ID
+            host: selectedHost,
+            device_id: deviceId,
             ...batchPayload,
           }),
         });
 
         console.log(
-          `[@hook:useVerification] Fetching from: /server/verification/execute_batch with host: ${selectedHost?.host_name} and device: ${deviceId}`,
+          `[useVerification] Fetching from: /server/verification/execute_batch with host: ${selectedHost?.host_name} and device: ${deviceId}`,
         );
 
         if (!response.ok) {
@@ -248,25 +166,22 @@ export const useVerification = ({
         }
 
         const result = await response.json();
-        console.log('[@hook:useVerification] Batch test result:', result);
+        console.log('[useVerification] Batch test result:', result);
 
         if (result.success) {
-          // Direct mapping from backend results - no legacy compatibility
           setTestResults(result.results || []);
-          console.log('[@hook:useVerification] Test results set:', result.results);
+          console.log('[useVerification] Test results set:', result.results);
 
-          // Show summary message
           const passedCount = result.passed_count || 0;
           const totalCount = result.total_count || 0;
           setSuccessMessage(`Verification completed: ${passedCount}/${totalCount} passed`);
         } else {
-          // Show simple fail message
           const passedCount = result.passed_count || 0;
           const totalCount = result.total_count || 0;
           setSuccessMessage(`Test completed: ${passedCount}/${totalCount} passed`);
         }
       } catch (error) {
-        console.error('[@hook:useVerification] Error during verification test:', error);
+        console.error('[useVerification] Error during verification test:', error);
         setError(error instanceof Error ? error.message : 'Unknown error during verification test');
       } finally {
         setLoading(false);
@@ -276,8 +191,8 @@ export const useVerification = ({
   );
 
   return {
-    verificationTypes,
-    availableVerificationTypes: verificationTypes, // Alias for compatibility
+    verificationTypes: getVerificationTypes(deviceId || undefined), // Get from context
+    availableVerificationTypes: getVerificationTypes(deviceId || undefined), // Alias for compatibility
     verifications,
     loading,
     error,

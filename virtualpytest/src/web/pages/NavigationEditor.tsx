@@ -32,12 +32,12 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
+import { useDeviceData } from '../contexts/device/DeviceDataContext';
 import { useHostManager } from '../contexts/index';
 import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { NodeEdgeManagementProvider } from '../contexts/navigation/NodeEdgeManagementContext';
 import { useNavigationEditor } from '../hooks/navigation/useNavigationEditor';
-import { useReferences } from '../hooks/useReferences';
 import { NodeForm, EdgeForm } from '../types/pages/Navigation_Types';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
@@ -225,12 +225,17 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const stableSelectedHost = useMemo(() => selectedHost, [selectedHost]);
 
     // Centralized reference management - both verification references and actions
-    const [referenceSaveCounter] = useState<number>(0);
-    const { availableActions, referencesLoading, getModelReferences } = useReferences(
-      referenceSaveCounter,
-      stableSelectedHost,
-      isControlActive,
-    );
+    const {
+      actions: availableActions,
+      referencesLoading,
+      getModelReferences,
+      setControlState,
+    } = useDeviceData();
+
+    // Set control state in device data context when it changes
+    useEffect(() => {
+      setControlState(stableSelectedHost, selectedDeviceId, isControlActive);
+    }, [stableSelectedHost, selectedDeviceId, isControlActive, setControlState]);
 
     // Memoize model references for current device to prevent unnecessary re-renders
     const currentModelReferences = useMemo(() => {

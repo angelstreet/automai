@@ -3,7 +3,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Host } from '../../types/common/Host_Types';
 import { DragArea } from '../../types/controller/Hdmi_Types';
 import { Verification } from '../../types/verification/Verification_Types';
-import { useReferences } from '../useReferences';
+import { useDeviceData } from '../../contexts/device/DeviceDataContext';
 
 import { useVerification } from './useVerification';
 
@@ -75,20 +75,17 @@ export const useVerificationEditor = ({
   const [showConfirmDialog, setShowConfirmDialog] = useState<boolean>(false);
   const [referenceSaveCounter, setReferenceSaveCounter] = useState<number>(0);
 
-  // Add references management after referenceSaveCounter is declared
-  const { availableReferences, referencesLoading, getModelReferences } = useReferences(
-    referenceSaveCounter,
-    selectedHost,
-    isControlActive,
-  );
+  // Get references from centralized context
+  const {
+    references: availableReferences,
+    referencesLoading,
+    getModelReferences,
+  } = useDeviceData();
 
   // Get model references using the device model
   const modelReferences = useMemo(() => {
     return getModelReferences(deviceModel || '');
   }, [getModelReferences, deviceModel]);
-
-  // Note: Reference fetching is now handled automatically by useReferences hook
-  // when selectedHost changes - no need for manual fetching here
 
   // State for reference type and details
   const [referenceText, setReferenceText] = useState<string>('');

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import type { EdgeAction } from '../../types/controller/Action_Types';
+import { useDeviceData } from '../../contexts/device/DeviceDataContext';
 
 // Define interfaces for action data structures
 interface UseActionProps {
@@ -19,7 +20,10 @@ interface ActionExecutionResult {
 }
 
 export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
-  // State for action execution
+  // Get actions from centralized context
+  const { actions, getModelActions } = useDeviceData();
+
+  // State for action execution (not data fetching)
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [executionResults, setExecutionResults] = useState<EdgeAction[]>([]);
@@ -49,27 +53,25 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
       }
 
       if (actions.length === 0) {
-        console.log('[@hook:useAction] No actions to execute');
+        console.log('[useAction] No actions to execute');
         return { success: true, message: 'No actions to execute' };
       }
 
-      console.log('[@hook:useAction] === ACTION EXECUTION DEBUG ===');
-      console.log('[@hook:useAction] Number of actions:', actions.length);
-      console.log('[@hook:useAction] Number of retry actions:', retryActions.length);
+      console.log('[useAction] === ACTION EXECUTION DEBUG ===');
+      console.log('[useAction] Number of actions:', actions.length);
+      console.log('[useAction] Number of retry actions:', retryActions.length);
 
       // Filter out empty/invalid actions before execution
       const validActions = actions.filter((action, index) => {
-        // Check if action has a command (is configured)
         if (!action.command || action.command.trim() === '') {
-          console.log(`[@hook:useAction] Removing action ${index}: No action type selected`);
+          console.log(`[useAction] Removing action ${index}: No action type selected`);
           return false;
         }
 
-        // Check if action has required input
         if (action.requiresInput) {
           const hasInputValue = action.inputValue && action.inputValue.trim() !== '';
           if (!hasInputValue) {
-            console.log(`[@hook:useAction] Removing action ${index}: No input value specified`);
+            console.log(`[useAction] Removing action ${index}: No input value specified`);
             return false;
           }
         }
@@ -80,16 +82,14 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
       // Filter retry actions similarly
       const validRetryActions = retryActions.filter((action, index) => {
         if (!action.command || action.command.trim() === '') {
-          console.log(`[@hook:useAction] Removing retry action ${index}: No action type selected`);
+          console.log(`[useAction] Removing retry action ${index}: No action type selected`);
           return false;
         }
 
         if (action.requiresInput) {
           const hasInputValue = action.inputValue && action.inputValue.trim() !== '';
           if (!hasInputValue) {
-            console.log(
-              `[@hook:useAction] Removing retry action ${index}: No input value specified`,
-            );
+            console.log(`[useAction] Removing retry action ${index}: No input value specified`);
             return false;
           }
         }
@@ -108,9 +108,9 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
         setError(null);
         setExecutionResults([]);
 
-        console.log('[@hook:useAction] Submitting batch action request');
-        console.log('[@hook:useAction] Valid actions count:', validActions.length);
-        console.log('[@hook:useAction] Valid retry actions count:', validRetryActions.length);
+        console.log('[useAction] Submitting batch action request');
+        console.log('[useAction] Valid actions count:', validActions.length);
+        console.log('[useAction] Valid retry actions count:', validRetryActions.length);
 
         const batchPayload = {
           actions: validActions,
@@ -118,21 +118,20 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
           final_wait_time: finalWaitTime,
         };
 
-        console.log('[@hook:useAction] Batch payload:', batchPayload);
+        console.log('[useAction] Batch payload:', batchPayload);
 
-        // Use the consistent endpoint from our naming convention
         const response = await fetch('/server/action/execute_batch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            host: selectedHost, // Send full host object
-            device_id: deviceId, // Send device ID
+            host: selectedHost,
+            device_id: deviceId,
             ...batchPayload,
           }),
         });
 
         console.log(
-          `[@hook:useAction] Fetching from: /server/action/execute_batch with host: ${selectedHost?.host_name} and device: ${deviceId}`,
+          `[useAction] Fetching from: /server/action/execute_batch with host: ${selectedHost?.host_name} and device: ${deviceId}`,
         );
 
         if (!response.ok) {
@@ -140,14 +139,12 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
         }
 
         const result = await response.json();
-        console.log('[@hook:useAction] Batch execution result:', result);
+        console.log('[useAction] Batch execution result:', result);
 
         if (result.success !== undefined) {
-          // Direct mapping from backend results - no legacy compatibility
           setExecutionResults(result.results || []);
-          console.log('[@hook:useAction] Execution results set:', result.results);
+          console.log('[useAction] Execution results set:', result.results);
 
-          // Show summary message
           const passedCount = result.passed_count || 0;
           const totalCount = result.total_count || 0;
           const summaryMessage = `Action execution completed: ${passedCount}/${totalCount} passed`;
@@ -166,7 +163,7 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
           return { success: false, message: errorMsg, error: errorMsg };
         }
       } catch (error) {
-        console.error('[@hook:useAction] Error during action execution:', error);
+        console.error('[useAction] Error during action execution:', error);
         const errorMsg =
           error instanceof Error ? error.message : 'Unknown error during action execution';
         setError(errorMsg);
@@ -186,7 +183,6 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
 
     const lines: string[] = [];
 
-    // Add individual action results
     result.results.forEach((actionResult: any, index: number) => {
       if (actionResult.success) {
         lines.push(`✅ Action ${index + 1}: ${actionResult.message || 'Success'}`);
@@ -197,23 +193,22 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
       }
     });
 
-    // Add empty line
     lines.push('');
 
-    // Add overall result
     if (result.success) {
       lines.push(`✅ OVERALL RESULT: SUCCESS`);
     } else {
       lines.push(`❌ OVERALL RESULT: FAILED`);
     }
 
-    // Add summary
     lines.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
 
     return lines.join('\n');
   }, []);
 
   return {
+    // Get actions from context
+    availableActions: getModelActions(),
     loading,
     error,
     executionResults,

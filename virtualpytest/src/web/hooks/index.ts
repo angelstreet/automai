@@ -22,7 +22,6 @@ export { useVerification } from './verification/useVerification';
 export { useVerificationEditor } from './verification/useVerificationEditor';
 export { useAction } from './actions/useAction';
 export { useStreamCoordinates } from './useStreamCoordinates';
-export { useReferences } from './useReferences';
 
 // Navigation hooks
 export { useNavigationActionsHook } from './navigation/useNavigationActionsHook';

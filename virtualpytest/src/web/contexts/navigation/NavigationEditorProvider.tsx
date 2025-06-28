@@ -1,10 +1,14 @@
 import React from 'react';
 
+import { DeviceDataProvider } from '../device/DeviceDataContext';
+import { NavigationActionsProvider } from './NavigationActionsContext';
+import { NavigationFlowProvider } from './NavigationFlowContext';
 import { NavigationNodesProvider } from './NavigationNodesContext';
 import { NavigationUIProvider } from './NavigationUIContext';
-import { NavigationFlowProvider } from './NavigationFlowContext';
-import { NavigationActionsProvider } from './NavigationActionsContext';
-import { NavigationEditorProviderProps } from '../../types/pages/NavigationContext_Types';
+
+interface NavigationEditorProviderProps {
+  children: React.ReactNode;
+}
 
 // ========================================
 // PROVIDER
@@ -12,13 +16,15 @@ import { NavigationEditorProviderProps } from '../../types/pages/NavigationConte
 
 export const NavigationEditorProvider: React.FC<NavigationEditorProviderProps> = ({ children }) => {
   return (
-    <NavigationFlowProvider>
+    <DeviceDataProvider>
       <NavigationNodesProvider>
         <NavigationUIProvider>
-          <NavigationActionsProvider>{children}</NavigationActionsProvider>
+          <NavigationFlowProvider>
+            <NavigationActionsProvider>{children}</NavigationActionsProvider>
+          </NavigationFlowProvider>
         </NavigationUIProvider>
       </NavigationNodesProvider>
-    </NavigationFlowProvider>
+    </DeviceDataProvider>
   );
 };
 
