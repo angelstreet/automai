@@ -98,7 +98,7 @@ class HDMIStreamController(AVControllerInterface):
             
             # Build local screenshot file path using capture path
             captures_path = os.path.join(self.video_capture_path, 'captures')
-            screenshot_path = f'{captures_path}/screenshot_{timestamp}.jpg'
+            screenshot_path = f'{captures_path}/capture_{timestamp}.jpg'
             
             print(f'[@controller:HDMIStream] Local screenshot path: {screenshot_path}')
             
