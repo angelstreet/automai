@@ -1,12 +1,5 @@
-// Navigation Contexts (moved to navigation/ directory)
-export {
-  NavigationStateProvider,
-  NavigationConfigProvider,
-  type NavigationConfigState,
-  NodeEdgeManagementProvider,
-  useNodeEdgeManagement,
-  type NodeEdgeManagementState,
-} from './navigation';
+// Navigation Contexts (clean unified architecture)
+export { NavigationProvider, NavigationEditorProvider } from './navigation';
 
 // Host Manager Context (simplified architecture - no more RegistrationContext)
 export { HostManagerProvider } from './HostManagerProvider';

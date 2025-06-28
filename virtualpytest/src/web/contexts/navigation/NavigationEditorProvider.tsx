@@ -1,11 +1,7 @@
 import React from 'react';
 
 import { DeviceDataProvider } from '../device/DeviceDataContext';
-import { NavigationActionsProvider } from './NavigationActionsContext';
-import { NavigationFlowProvider } from './NavigationFlowContext';
-import { NavigationNodesProvider } from './NavigationNodesContext';
-import { NavigationStateProvider } from './NavigationStateContext';
-import { NavigationUIProvider } from './NavigationUIContext';
+import { NavigationProvider } from './NavigationContext';
 
 interface NavigationEditorProviderProps {
   children: React.ReactNode;
@@ -18,15 +14,7 @@ interface NavigationEditorProviderProps {
 export const NavigationEditorProvider: React.FC<NavigationEditorProviderProps> = ({ children }) => {
   return (
     <DeviceDataProvider>
-      <NavigationStateProvider>
-        <NavigationNodesProvider>
-          <NavigationUIProvider>
-            <NavigationFlowProvider>
-              <NavigationActionsProvider>{children}</NavigationActionsProvider>
-            </NavigationFlowProvider>
-          </NavigationUIProvider>
-        </NavigationNodesProvider>
-      </NavigationStateProvider>
+      <NavigationProvider>{children}</NavigationProvider>
     </DeviceDataProvider>
   );
 };
