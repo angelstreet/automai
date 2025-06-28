@@ -22,7 +22,16 @@ export const useNavigationEditor = () => {
   if (!configHook) {
     throw new Error('useNavigationEditor must be used within a NavigationConfigProvider');
   }
-  const nodeEdgeHook = useNodeEdgeManagement();
+
+  // Try to get NodeEdgeManagement context if available (will be undefined if not wrapped with provider)
+  let nodeEdgeHook;
+  try {
+    nodeEdgeHook = useNodeEdgeManagement();
+  } catch {
+    // NodeEdgeManagementProvider not available - this is expected in some contexts
+    nodeEdgeHook = null;
+  }
+
   const hostManager = useHostManager();
 
   // Connection rules hook
@@ -673,15 +682,15 @@ export const useNavigationEditor = () => {
       setupAutoUnlock: configHook.setupAutoUnlock,
 
       // Actions from Node/Edge management hook - memoized to prevent re-renders
-      handleNodeFormSubmit: nodeEdgeHook.saveNodeChanges,
-      handleEdgeFormSubmit: nodeEdgeHook.saveEdgeChanges,
-      handleDeleteNode: nodeEdgeHook.deleteSelected,
-      handleDeleteEdge: nodeEdgeHook.deleteSelected,
-      addNewNode: nodeEdgeHook.addNewNode,
-      cancelNodeChanges: nodeEdgeHook.cancelNodeChanges,
-      closeSelectionPanel: nodeEdgeHook.closeSelectionPanel,
-      deleteSelected: nodeEdgeHook.deleteSelected,
-      resetNode: nodeEdgeHook.resetNode,
+      handleNodeFormSubmit: nodeEdgeHook?.saveNodeChanges || (() => {}),
+      handleEdgeFormSubmit: nodeEdgeHook?.saveEdgeChanges || (() => {}),
+      handleDeleteNode: nodeEdgeHook?.deleteSelected || (() => {}),
+      handleDeleteEdge: nodeEdgeHook?.deleteSelected || (() => {}),
+      addNewNode: nodeEdgeHook?.addNewNode || (() => {}),
+      cancelNodeChanges: nodeEdgeHook?.cancelNodeChanges || (() => {}),
+      closeSelectionPanel: nodeEdgeHook?.closeSelectionPanel || (() => {}),
+      deleteSelected: nodeEdgeHook?.deleteSelected || (() => {}),
+      resetNode: nodeEdgeHook?.resetNode || (() => {}),
 
       // History actions removed
 
