@@ -130,7 +130,61 @@ def get_verifications_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
-
+@server_verifications_bp.route('/verification/getAvailableVerifications', methods=['POST'])
+def get_available_verifications():
+    """Get available verification types from device controller (similar to getAvailableActions)."""
+    try:
+        data = request.get_json()
+        host = data.get('host')
+        
+        if not host:
+            return jsonify({'success': False, 'error': 'Host data is required'}), 400
+        
+        host_name = host.get('host_name')
+        if not host_name:
+            return jsonify({'success': False, 'error': 'Host name is required'}), 400
+        
+        print(f"[@route:server_verifications_routes:get_available_verifications] Getting available verification types for host: {host_name}")
+        
+        # Get host from host manager (similar to getAvailableActions)
+        from src.utils.app_utils import get_host_manager
+        host_manager = get_host_manager()
+        host_data = host_manager.get_host(host_name)
+        if not host_data:
+            print(f"[@route:server_verifications_routes:get_available_verifications] Host {host_name} not found in host manager")
+            return jsonify({'success': False, 'error': f'Host {host_name} not found'}), 404
+        
+        # Get available verification types from all devices in the host
+        all_verification_types = {}
+        devices = host_data.get('devices', [])
+        
+        for device in devices:
+            device_verification_types = device.get('device_verification_types', {})
+            device_name = device.get('device_name', device.get('device_id', 'unknown'))
+            
+            print(f"[@route:server_verifications_routes:get_available_verifications] Device {device_name} has {len(device_verification_types)} verification categories")
+            
+            # Merge device verification types into all_verification_types
+            for category, verifications_list in device_verification_types.items():
+                if category not in all_verification_types:
+                    all_verification_types[category] = []
+                if isinstance(verifications_list, list):
+                    all_verification_types[category].extend(verifications_list)
+        
+        if not all_verification_types:
+            print(f"[@route:server_verifications_routes:get_available_verifications] No verification types available for host {host_name}")
+            return jsonify({'success': True, 'verifications': {}})
+        
+        print(f"[@route:server_verifications_routes:get_available_verifications] Returning verification types for host {host_name}")
+        
+        return jsonify({
+            'success': True,
+            'verifications': all_verification_types
+        })
+        
+    except Exception as e:
+        print(f"[@route:server_verifications_routes:get_available_verifications] Error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @server_verifications_bp.route('/verification/deleteVerification', methods=['POST'])
 def delete_verification_endpoint():
