@@ -188,14 +188,42 @@ def execute_image_verification():
             result['source_image_url'] = buildHostImageUrl(host.to_dict(), result['screenshot_path'])
             print(f"[@route:host_verification_image:execute] Built source image URL: {result['source_image_url']}")
         
-        # Build reference image URL from image_path parameter
+        # Build reference image URL from image_path parameter - with R2 download fallback
         if verification and verification.get('params', {}).get('image_path'):
-            reference_path = os.path.join(image_controller.captures_path, verification['params']['image_path'])
+            image_path = verification['params']['image_path']
+            reference_path = os.path.join(image_controller.captures_path, image_path)
+            
+            # First check if reference exists locally
             if os.path.exists(reference_path):
                 result['reference_image_url'] = buildHostImageUrl(host.to_dict(), reference_path)
-                print(f"[@route:host_verification_image:execute] Built reference image URL: {result['reference_image_url']}")
+                print(f"[@route:host_verification_image:execute] Built reference image URL from local file: {result['reference_image_url']}")
             else:
-                print(f"[@route:host_verification_image:execute] Reference image not found: {reference_path}")
+                print(f"[@route:host_verification_image:execute] Reference image not found locally: {reference_path}")
+                
+                # Try to download from R2 if not found locally
+                try:
+                    from src.utils.cloudflare_utils import download_reference_image
+                    
+                    # Get device model for R2 path
+                    device_model = device.model if device else 'android_mobile'
+                    
+                    # Ensure image_path has .jpg extension for R2 lookup
+                    reference_filename = image_path if image_path.endswith('.jpg') else f"{image_path}.jpg"
+                    
+                    print(f"[@route:host_verification_image:execute] Attempting to download reference from R2: {device_model}/{reference_filename}")
+                    
+                    # Download to local captures directory
+                    local_download_path = os.path.join(image_controller.captures_path, reference_filename)
+                    download_result = download_reference_image(device_model, reference_filename, local_download_path)
+                    
+                    if download_result.get('success'):
+                        result['reference_image_url'] = buildHostImageUrl(host.to_dict(), local_download_path)
+                        print(f"[@route:host_verification_image:execute] Successfully downloaded and built reference image URL: {result['reference_image_url']}")
+                    else:
+                        print(f"[@route:host_verification_image:execute] Failed to download reference from R2: {download_result.get('error')}")
+                        
+                except Exception as download_error:
+                    print(f"[@route:host_verification_image:execute] Error downloading reference from R2: {str(download_error)}")
         
         # Build response
         response = {
