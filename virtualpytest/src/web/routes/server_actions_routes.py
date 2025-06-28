@@ -12,7 +12,7 @@ import sys
 # Add the parent directory to the path so we can import from src
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from lib.supabase.actions_db import save_action, get_actions, delete_action, get_all_actions, load_actions_by_ids
+from lib.supabase.actions_db import save_action, get_actions, delete_action, get_all_actions
 
 # Import default team ID from app utils (same as verifications)
 from src.utils.app_utils import DEFAULT_TEAM_ID
@@ -294,59 +294,7 @@ def save_action_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_actions_bp.route('/server/actions/load-by-ids', methods=['POST'])
-def load_actions_by_ids_endpoint():
-    """
-    Load action definitions by their database IDs.
-    
-    Expected JSON payload:
-    {
-        "action_ids": ["uuid1", "uuid2", ...]
-    }
-    """
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        if 'action_ids' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'Missing required field: action_ids'
-            }), 400
-        
-        if not isinstance(data['action_ids'], list):
-            return jsonify({
-                'success': False,
-                'error': 'action_ids must be an array'
-            }), 400
-        
-        # Use default team ID
-        team_id = DEFAULT_TEAM_ID
-        
-        # Load actions from database
-        result = load_actions_by_ids(
-            action_ids=data['action_ids'],
-            team_id=team_id
-        )
-        
-        if result['success']:
-            return jsonify({
-                'success': True,
-                'actions': result['actions'],
-                'count': len(result['actions'])
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Unknown error')
-            }), 500
-            
-    except Exception as e:
-        print(f"[@server_actions_routes:load_actions_by_ids_endpoint] Error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Server error: {str(e)}'
-        }), 500
+
 
 @server_actions_bp.route('/server/actions/list', methods=['GET'])
 def list_actions_endpoint():

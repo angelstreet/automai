@@ -46,7 +46,7 @@ import {
   AccordionSummary,
   AccordionDetails,
 } from '@mui/material';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { useHostManager } from '../hooks/useHostManager';
 import { TestCase, Campaign, Tree } from '../types';
@@ -55,7 +55,7 @@ import { DashboardStats, RecentActivity, ViewMode } from '../types/pages/Dashboa
 
 const Dashboard: React.FC = () => {
   const { getAllHosts } = useHostManager();
-  const availableHosts = getAllHosts();
+  const availableHosts = useMemo(() => getAllHosts(), [getAllHosts]);
   const [stats, setStats] = useState<DashboardStats>({
     testCases: 0,
     campaigns: 0,

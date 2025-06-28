@@ -77,7 +77,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     }
   }, []);
 
-  // Auto-load hosts on mount
+  // Auto-load hosts on mount - only once
   useEffect(() => {
     const loadHostsOnMount = async () => {
       setIsLoading(true);
@@ -91,7 +91,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     };
 
     loadHostsOnMount();
-  }, [loadHosts]);
+  }, []); // Empty dependency array to run only once on mount
 
   // ========================================
   // NEW: DIRECT DATA ACCESS FUNCTIONS (Phase 1.2)

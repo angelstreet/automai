@@ -12,7 +12,7 @@ import sys
 # Add the parent directory to the path so we can import from src
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from lib.supabase.verifications_db import save_verification, get_verifications, delete_verification, get_all_verifications, get_verifications_by_ids
+from lib.supabase.verifications_db import save_verification, get_verifications, delete_verification, get_all_verifications
 
 # Import default team ID from app utils (same as actions)
 from src.utils.app_utils import DEFAULT_TEAM_ID
@@ -83,59 +83,7 @@ def save_verification_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_verifications_bp.route('/server/verifications/load-verification-by-ids', methods=['POST'])
-def load_verifications_by_ids_endpoint():
-    """
-    Load verification definitions by their database IDs.
-    
-    Expected JSON payload:
-    {
-        "verification_ids": ["uuid1", "uuid2", ...]
-    }
-    """
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        if 'verification_ids' not in data:
-            return jsonify({
-                'success': False,
-                'error': 'Missing required field: verification_ids'
-            }), 400
-        
-        if not isinstance(data['verification_ids'], list):
-            return jsonify({
-                'success': False,
-                'error': 'verification_ids must be an array'
-            }), 400
-        
-        # Use default team ID
-        team_id = DEFAULT_TEAM_ID
-        
-        # Load verifications from database
-        result = get_verifications_by_ids(
-            team_id=team_id,
-            verification_ids=data['verification_ids']
-        )
-        
-        if result['success']:
-            return jsonify({
-                'success': True,
-                'verifications': result['verifications'],
-                'count': len(result['verifications'])
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Unknown error')
-            }), 500
-            
-    except Exception as e:
-        print(f"[@server_verifications_routes:load_verifications_by_ids_endpoint] Error: {e}")
-        return jsonify({
-            'success': False,
-            'error': f'Server error: {str(e)}'
-        }), 500
+
 
 @server_verifications_bp.route('/server/verifications/list-verifications', methods=['GET'])
 def list_verifications():

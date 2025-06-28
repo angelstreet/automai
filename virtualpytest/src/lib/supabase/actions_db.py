@@ -399,45 +399,4 @@ def delete_action(team_id: str, action_id: str = None, name: str = None, device_
             'error': str(e)
         }
 
-def load_actions_by_ids(action_ids: List[str], team_id: str) -> Dict:
-    """
-    Load action definitions by their database IDs.
-    
-    Args:
-        action_ids: List of action database IDs
-        team_id: Team ID for RLS
-        
-    Returns:
-        Dict: {'success': bool, 'actions': List[Dict], 'error': str}
-    """
-    try:
-        if not action_ids:
-            return {
-                'success': True,
-                'actions': []
-            }
-        
-        supabase = get_supabase()
-        
-        # Load actions by IDs with team filter for RLS
-        result = supabase.table('actions').select('*').in_('id', action_ids).eq('team_id', team_id).execute()
-        
-        if result.data:
-            print(f"[@db:actions:load_actions_by_ids] Loaded {len(result.data)} actions from database")
-            return {
-                'success': True,
-                'actions': result.data
-            }
-        else:
-            print(f"[@db:actions:load_actions_by_ids] No actions found for IDs: {action_ids}")
-            return {
-                'success': True,
-                'actions': []
-            }
-            
-    except Exception as e:
-        print(f"[@db:actions:load_actions_by_ids] Error loading actions: {str(e)}")
-        return {
-            'success': False,
-            'error': str(e)
-        } 
+ 

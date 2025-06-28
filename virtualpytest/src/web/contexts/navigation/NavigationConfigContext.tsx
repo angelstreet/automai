@@ -111,10 +111,10 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
             setLockInfo(lockData);
             setShowReadOnlyOverlay(!isOurLock);
           } else {
-            // Tree is not locked
+            // Tree is not locked - user still needs to take control
             setIsLocked(false);
             setLockInfo(null);
-            setShowReadOnlyOverlay(false);
+            setShowReadOnlyOverlay(true);
           }
         } else {
           console.error(
@@ -123,13 +123,13 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           );
           setIsLocked(false);
           setLockInfo(null);
-          setShowReadOnlyOverlay(false);
+          setShowReadOnlyOverlay(true);
         }
       } catch (error) {
         console.error(`[@context:NavigationConfigProvider:checkTreeLockStatus] Error:`, error);
         setIsLocked(false);
         setLockInfo(null);
-        setShowReadOnlyOverlay(false);
+        setShowReadOnlyOverlay(true);
       } finally {
         setIsCheckingLock(false);
       }
@@ -175,7 +175,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         console.error(`[@context:NavigationConfigProvider:lockNavigationTree] Error:`, error);
         setIsLocked(false);
         setLockInfo(null);
-        setShowReadOnlyOverlay(false);
+        setShowReadOnlyOverlay(true);
         return false;
       } finally {
         setIsCheckingLock(false);
@@ -211,7 +211,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         if (data.success) {
           setIsLocked(false);
           setLockInfo(null);
-          setShowReadOnlyOverlay(false);
+          setShowReadOnlyOverlay(true);
           return true;
         } else {
           console.error(
@@ -222,6 +222,10 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         }
       } catch (error) {
         console.error(`[@context:NavigationConfigProvider:unlockNavigationTree] Error:`, error);
+        // On error, assume we don't have control
+        setIsLocked(false);
+        setLockInfo(null);
+        setShowReadOnlyOverlay(true);
         return false;
       } finally {
         setIsCheckingLock(false);
@@ -290,155 +294,8 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           let nodes = treeData.nodes || [];
           let edges = treeData.edges || [];
 
-          // Load verification definitions from database using stored verification IDs
-          try {
-            // Collect all verification IDs from all nodes
-            const allVerificationIds = new Set<string>();
-            nodes.forEach((node: UINavigationNode) => {
-              const verificationIds = node.data?.verification_ids || [];
-              verificationIds.forEach((id: string) => allVerificationIds.add(id));
-            });
-
-            // Collect all action IDs from all edges
-            const allActionIds = new Set<string>();
-            edges.forEach((edge: any) => {
-              const actionIds = edge.data?.action_ids || [];
-              actionIds.forEach((id: string) => allActionIds.add(id));
-            });
-
-            if (allVerificationIds.size > 0) {
-              // Load verifications by their IDs
-              const verificationsResponse = await fetch(
-                `/server/verifications/load-verification-by-ids`,
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    verification_ids: Array.from(allVerificationIds),
-                  }),
-                },
-              );
-
-              if (verificationsResponse.ok) {
-                const verificationsData = await verificationsResponse.json();
-
-                if (verificationsData.success && verificationsData.verifications.length > 0) {
-                  // Create a map of verification ID to verification data
-                  const verificationsById = new Map<string, any>();
-                  for (const verification of verificationsData.verifications) {
-                    // Convert database verification to node verification format
-                    const nodeVerification = {
-                      verification_type: verification.verification_type,
-                      command: verification.command,
-                      params: verification.parameters || {}, // Parameters already contain timeout and references
-                      device_model: verification.device_model,
-                      // Add database metadata
-                      _db_id: verification.id,
-                      _db_name: verification.name,
-                    };
-                    verificationsById.set(verification.id, nodeVerification);
-                  }
-
-                  // Merge verification definitions with nodes based on their stored IDs
-                  nodes = nodes.map((node: UINavigationNode) => {
-                    const verificationIds = node.data?.verification_ids || [];
-                    if (verificationIds.length > 0) {
-                      const nodeVerifications = verificationIds
-                        .map((id: string) => verificationsById.get(id))
-                        .filter(Boolean);
-
-                      if (nodeVerifications.length > 0) {
-                        return {
-                          ...node,
-                          data: {
-                            ...node.data,
-                            verifications: nodeVerifications,
-                          },
-                        };
-                      }
-                    }
-                    return node;
-                  });
-                }
-              } else {
-                console.warn(
-                  `[@context:NavigationConfigProvider:loadFromConfig] Failed to load verification definitions: ${verificationsResponse.status}`,
-                );
-              }
-            }
-
-            // Load action definitions from database using stored action IDs
-            if (allActionIds.size > 0) {
-              // Load actions by their IDs
-              const actionsResponse = await fetch(`/server/actions/load-by-ids`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  action_ids: Array.from(allActionIds),
-                }),
-              });
-
-              if (actionsResponse.ok) {
-                const actionsData = await actionsResponse.json();
-
-                if (actionsData.success && actionsData.actions.length > 0) {
-                  // Create a map of action ID to action data
-                  const actionsById = new Map<string, any>();
-                  for (const action of actionsData.actions) {
-                    // Convert database action to edge action format
-                    const edgeAction = {
-                      id: action.command,
-                      command: action.command,
-                      label: action.name,
-                      params: action.parameters || {},
-                      waitTime: action.wait_time || 500,
-                      requiresInput: action.requires_input || false,
-                      // Add database metadata
-                      _db_id: action.id,
-                      _db_name: action.name,
-                      _db_action_type: action.action_type,
-                    };
-                    actionsById.set(action.id, edgeAction);
-                  }
-
-                  // Merge action definitions with edges based on their stored IDs
-                  edges = edges.map((edge: any) => {
-                    const actionIds = edge.data?.action_ids || [];
-                    if (actionIds.length > 0) {
-                      const edgeActions = actionIds
-                        .map((id: string) => actionsById.get(id))
-                        .filter(Boolean);
-
-                      if (edgeActions.length > 0) {
-                        return {
-                          ...edge,
-                          data: {
-                            ...edge.data,
-                            actions: edgeActions,
-                          },
-                        };
-                      }
-                    }
-                    return edge;
-                  });
-                }
-              } else {
-                console.warn(
-                  `[@context:NavigationConfigProvider:loadFromConfig] Failed to load action definitions: ${actionsResponse.status}`,
-                );
-              }
-            }
-          } catch (verificationError) {
-            console.error(
-              `[@context:NavigationConfigProvider:loadFromConfig] Error loading verification definitions:`,
-              verificationError,
-            );
-            // Continue with tree loading even if verification loading fails
-          }
+          // Note: Verification and action definitions are now loaded dynamically by useReferences hook
+          // Tree only stores IDs, actual content is loaded when host control is active
 
           state.setNodes(nodes);
           state.setEdges(edges);
@@ -451,11 +308,11 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           state.setInitialState({ nodes: [...nodes], edges: [...edges] });
           state.setHasUnsavedChanges(false);
 
-          // Enable editing
-          setIsLocked(true);
+          // Start in read-only mode - user must explicitly take control
+          setIsLocked(false);
           setLockInfo(null);
           setIsCheckingLock(false);
-          setShowReadOnlyOverlay(false);
+          setShowReadOnlyOverlay(true);
         } else {
           // Create empty tree structure
           state.setNodes([]);
@@ -463,11 +320,11 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           state.setInitialState({ nodes: [], edges: [] });
           state.setHasUnsavedChanges(false);
 
-          // Allow editing for new trees
-          setIsLocked(true);
+          // Start in read-only mode even for new trees - user must explicitly take control
+          setIsLocked(false);
           setLockInfo(null);
           setIsCheckingLock(false);
-          setShowReadOnlyOverlay(false);
+          setShowReadOnlyOverlay(true);
         }
       } catch (error) {
         console.error(
@@ -489,26 +346,22 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(true);
         state.setError(null);
 
-        // Prepare tree data for saving - clean up nodes and edges to only include IDs in database
+        // Prepare tree data for saving - only store structure and IDs
         const treeDataForSaving = {
           nodes: state.nodes.map((node: UINavigationNode) => ({
             ...node,
             data: {
               ...node.data,
-              // Only include verification_ids for database persistence
+              // Store verification_ids for reference
               verification_ids: node.data.verification_ids || [],
-              // Remove the full verification objects from database storage
-              verifications: undefined,
             },
           })),
           edges: state.edges.map((edge: any) => ({
             ...edge,
             data: {
               ...edge.data,
-              // Only include action_ids for database persistence
+              // Store action_ids for reference
               action_ids: edge.data?.action_ids || [],
-              // Remove the full action objects from database storage
-              actions: undefined,
             },
           })),
         };

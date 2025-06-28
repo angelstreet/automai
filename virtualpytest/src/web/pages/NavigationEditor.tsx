@@ -32,7 +32,7 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
-import { HostManagerProvider, useHostManager } from '../contexts/index';
+import { useHostManager } from '../contexts/index';
 import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { NodeEdgeManagementProvider } from '../contexts/navigation/NodeEdgeManagementContext';
@@ -768,7 +768,7 @@ const NavigationEditorWithAllProviders: React.FC = () => {
   const location = useLocation();
   const userInterfaceFromState = location.state?.userInterface;
 
-  // Memoize userInterface to prevent HostManagerProvider re-renders
+  // Memoize userInterface for consistency
   const stableUserInterface = useMemo(() => userInterfaceFromState, [userInterfaceFromState]);
 
   // Ensure we have userInterfaceId before rendering
@@ -780,9 +780,7 @@ const NavigationEditorWithAllProviders: React.FC = () => {
     );
     return (
       <NavigationConfigProvider>
-        <HostManagerProvider userInterface={stableUserInterface}>
-          <NavigationEditorContent userInterfaceId={userInterfaceId} />
-        </HostManagerProvider>
+        <NavigationEditorContent userInterfaceId={userInterfaceId} />
       </NavigationConfigProvider>
     );
   }
@@ -810,18 +808,12 @@ const NavigationEditorWithNodeEdgeManagement: React.FC<{
     console.warn(
       '[@component:NavigationEditorWithNodeEdgeManagement] saveToConfig not available, rendering without NodeEdgeManagementProvider',
     );
-    return (
-      <HostManagerProvider userInterface={userInterface}>
-        <NavigationEditorContent userInterfaceId={userInterfaceId} />
-      </HostManagerProvider>
-    );
+    return <NavigationEditorContent userInterfaceId={userInterfaceId} />;
   }
 
   return (
     <NodeEdgeManagementProvider userInterfaceId={userInterfaceId}>
-      <HostManagerProvider userInterface={userInterface}>
-        <NavigationEditorContent userInterfaceId={userInterfaceId} />
-      </HostManagerProvider>
+      <NavigationEditorContent userInterfaceId={userInterfaceId} />
     </NodeEdgeManagementProvider>
   );
 };

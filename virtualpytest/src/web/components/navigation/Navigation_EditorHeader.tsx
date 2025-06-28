@@ -4,6 +4,7 @@ import React from 'react';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
+import { useNavigationConfig } from '../../contexts/navigation/NavigationConfigContext';
 import {
   ValidationPreviewClient,
   ValidationResultsClient,
@@ -25,6 +26,7 @@ export const NavigationEditorHeader: React.FC<{
   error: string | null;
   isLocked: boolean;
   treeId: string;
+  userInterfaceId: string; // Add userInterfaceId for navigation tree locking
   selectedHost: any; // Full host object
   selectedDeviceId?: string | null; // Selected device ID
   isRemotePanelOpen: boolean;
@@ -54,6 +56,7 @@ export const NavigationEditorHeader: React.FC<{
   error,
   isLocked,
   treeId,
+  userInterfaceId,
   selectedHost,
   selectedDeviceId,
   isRemotePanelOpen,
