@@ -259,7 +259,7 @@ export function useHdmiStream({
   // Handle take screenshot
   const handleTakeScreenshot = useCallback(async () => {
     try {
-      const response = await fetch(`/server/av/take-screenshot`, {
+      const response = await fetch(`/server/av/takeScreenshot`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

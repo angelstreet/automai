@@ -351,7 +351,7 @@ def get_cache_stats():
 # TAKE CONTROL MODE ROUTES
 # =====================================================
 
-@pathfinding_bp.route('/take-control/<tree_id>', methods=['POST'])
+@pathfinding_bp.route('/takeControl/<tree_id>', methods=['POST'])
 def toggle_take_control(tree_id):
     """API endpoint for toggling take control mode"""
     try:
@@ -384,7 +384,7 @@ def toggle_take_control(tree_id):
             'error_code': 'API_ERROR'
         }), 500
 
-@pathfinding_bp.route('/take-control/<tree_id>/status', methods=['GET'])
+@pathfinding_bp.route('/takeControl/<tree_id>/status', methods=['GET'])
 def get_take_control_status(tree_id):
     """API endpoint for getting take control mode status"""
     try:

@@ -168,7 +168,7 @@ export function useAndroidMobile(
     }
 
     try {
-      const response = await fetch('/server/remote/take-screenshot', {
+      const response = await fetch('/server/remote/takeScreenshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -229,7 +229,7 @@ export function useAndroidMobile(
 
     setIsRefreshingApps(true);
     try {
-      const response = await fetch('/server/remote/get-apps', {
+      const response = await fetch('/server/remote/getApps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -267,7 +267,7 @@ export function useAndroidMobile(
 
       console.log(`[@hook:useAndroidMobile] Element clicked: ${element.id}`);
       try {
-        const response = await fetch('/server/remote/execute-command', {
+        const response = await fetch('/server/remote/executeCommand', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -314,7 +314,7 @@ export function useAndroidMobile(
           };
         }
 
-        const response = await fetch('/server/remote/execute-command', {
+        const response = await fetch('/server/remote/executeCommand', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody),

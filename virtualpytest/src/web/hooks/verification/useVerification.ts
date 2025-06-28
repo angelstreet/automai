@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 
+import { useDeviceData } from '../../contexts/device/DeviceDataContext';
 import { Host } from '../../types/common/Host_Types';
 import { Verification } from '../../types/verification/Verification_Types';
-import { useDeviceData } from '../../contexts/device/DeviceDataContext';
 
 // Define interfaces for verification data structures
 
@@ -147,7 +147,7 @@ export const useVerification = ({
 
         console.log('[useVerification] Batch payload:', batchPayload);
 
-        const response = await fetch('/server/verification/execute_batch', {
+        const response = await fetch('/server/verification/executeBatch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -158,7 +158,7 @@ export const useVerification = ({
         });
 
         console.log(
-          `[useVerification] Fetching from: /server/verification/execute_batch with host: ${selectedHost?.host_name} and device: ${deviceId}`,
+          `[useVerification] Fetching from: /server/verification/executeBatch with host: ${selectedHost?.host_name} and device: ${deviceId}`,
         );
 
         if (!response.ok) {

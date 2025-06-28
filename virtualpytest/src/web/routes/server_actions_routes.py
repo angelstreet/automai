@@ -28,7 +28,7 @@ server_actions_bp = Blueprint('server_actions', __name__)
 # BATCH ACTION EXECUTION (MIRRORS VERIFICATION WORKFLOW)
 # =====================================================
 
-@server_actions_bp.route('/server/action/execute_batch', methods=['POST'])
+@server_actions_bp.route('/server/action/executeBatch', methods=['POST'])
 def action_execute_batch():
     """Execute batch of actions - mirrors verification batch execution"""
     try:
@@ -126,7 +126,7 @@ def execute_single_action(action, host, execution_order, action_number, action_c
         print(f"[@route:server_actions:execute_single_action] Executing {action_category} action {action_number}: {action.get('command')} with params {action.get('params', {})}")
         
         # Proxy to existing remote command endpoint
-        response_data, status_code = proxy_to_host('/host/remote/execute-command', 'POST', {
+        response_data, status_code = proxy_to_host('/host/remote/executeCommand', 'POST', {
             'command': action.get('command'),
             'params': action.get('params', {}),
             'wait_time': action.get('waitTime', 2000)

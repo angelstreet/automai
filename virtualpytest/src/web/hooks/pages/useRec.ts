@@ -63,7 +63,7 @@ export const useRec = (): UseRecReturn => {
       }
 
       try {
-        const response = await fetch('/server/av/take-screenshot', {
+        const response = await fetch('/server/av/takeScreenshot', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

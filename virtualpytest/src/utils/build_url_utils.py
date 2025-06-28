@@ -22,8 +22,8 @@ def buildHostUrl(host_info: dict, endpoint: str) -> str:
         Complete URL to the host API endpoint
         
     Example:
-        buildHostUrl(host_data, '/host/av/take-screenshot')
-        -> 'https://virtualpytest.com/host/av/take-screenshot'
+        buildHostUrl(host_data, '/host/av/takeScreenshot')
+        -> 'https://virtualpytest.com/host/av/takeScreenshot'
     """
     if not host_info:
         raise ValueError("host_info is required for buildHostUrl")

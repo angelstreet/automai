@@ -11,7 +11,7 @@ from src.utils.build_url_utils import buildHostImageUrl
 # Create blueprint
 verification_image_host_bp = Blueprint('verification_image_host', __name__, url_prefix='/host/verification/image')
 
-@verification_image_host_bp.route('/crop-image', methods=['POST'])
+@verification_image_host_bp.route('/cropuimage', methods=['POST'])
 def crop_area():
     """Crop area from image for verification"""
     try:
@@ -63,7 +63,7 @@ def crop_area():
             'error': f'Host cropping error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/process-image', methods=['POST'])
+@verification_image_host_bp.route('/processuimage', methods=['POST'])
 def process_area():
     """Process image for verification"""
     try:
@@ -113,7 +113,7 @@ def process_area():
             'error': f'Host processing error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/save-image', methods=['POST'])
+@verification_image_host_bp.route('/saveuimage', methods=['POST'])
 def save_resource():
     """Save image verification reference"""
     try:

@@ -105,7 +105,7 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
     try {
       console.log('[@component:USBPowerPanel] Starting power connection...');
 
-      const response = await fetch('/server/power/take-control', {
+      const response = await fetch('/server/power/takeControl', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
 
     try {
       console.log('[@component:USBPowerPanel] Disconnecting power controller...');
-      await fetch('/server/power/release-control', {
+      await fetch('/server/power/releaseControl', {
         method: 'POST',
       });
 

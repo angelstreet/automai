@@ -112,7 +112,7 @@ export const useAndroidTv = (
           requestBody.device_id = deviceId;
         }
 
-        const response = await fetch('/server/remote/execute-command', {
+        const response = await fetch('/server/remote/executeCommand', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

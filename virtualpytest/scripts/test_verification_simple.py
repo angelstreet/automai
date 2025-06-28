@@ -74,7 +74,7 @@ def execute_remote_image_verification(host_device, reference_name, command='wait
         
         # Step 1: Take a screenshot first
         print(f"📸 Taking screenshot via host API...")
-        screenshot_url = f"{host_url}/host/av/take-screenshot"
+        screenshot_url = f"{host_url}/host/av/takeScreenshot"
         
         try:
             screenshot_response = requests.post(screenshot_url, json={}, timeout=10)
@@ -247,7 +247,7 @@ def execute_remote_text_verification(host_device, text, command='waitForTextToAp
         
         # Step 1: Take a screenshot first (text verification needs a source image)
         print(f"📸 Taking screenshot for text verification...")
-        screenshot_url = f"{host_url}/host/av/take-screenshot"
+        screenshot_url = f"{host_url}/host/av/takeScreenshot"
         
         try:
             screenshot_response = requests.post(screenshot_url, json={}, timeout=10)

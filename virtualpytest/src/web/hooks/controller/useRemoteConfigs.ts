@@ -10,10 +10,10 @@ export const ANDROID_TV_CONFIG: RemoteDeviceConfig = {
   hasScreenshot: true,
   hasOverlay: true,
   serverEndpoints: {
-    connect: '/server/control/take-control',
-    disconnect: '/server/control/release-control',
-    screenshot: '/server/remote/take-screenshot',
-    command: '/server/remote/execute-command',
+    connect: '/server/control/takeControl',
+    disconnect: '/server/control/releaseControl',
+    screenshot: '/server/remote/takeScreenshot',
+    command: '/server/remote/executeCommand',
   },
 };
 
@@ -25,12 +25,12 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
   hasScreenshot: true,
   hasOverlay: true,
   serverEndpoints: {
-    connect: '/server/control/take-control',
-    disconnect: '/server/control/release-control',
-    screenshot: '/server/remote/take-screenshot',
-    command: '/server/remote/execute-command',
-    screenshotAndDump: '/server/remote/screenshot-and-dump',
-    getApps: '/server/remote/get-apps',
+    connect: '/server/control/takeControl',
+    disconnect: '/server/control/releaseControl',
+    screenshot: '/server/remote/takeScreenshot',
+    command: '/server/remote/executeCommand',
+    screenshotAndDump: '/server/remote/screenshotAndDump',
+    getApps: '/server/remote/getApps',
     tapElement: '/server/remote/tap-element',
   },
 };
@@ -43,14 +43,14 @@ export const APPIUM_REMOTE_CONFIG: RemoteDeviceConfig = {
   hasScreenshot: true,
   hasOverlay: true,
   serverEndpoints: {
-    connect: '/server/control/take-control',
-    disconnect: '/server/control/release-control',
-    screenshot: '/server/remote/take-screenshot',
-    command: '/server/remote/execute-command',
-    screenshotAndDump: '/server/remote/screenshot-and-dump',
-    getApps: '/server/remote/get-apps',
+    connect: '/server/control/takeControl',
+    disconnect: '/server/control/releaseControl',
+    screenshot: '/server/remote/takeScreenshot',
+    command: '/server/remote/executeCommand',
+    screenshotAndDump: '/server/remote/screenshotAndDump',
+    getApps: '/server/remote/getApps',
     tapElement: '/server/remote/tap-coordinates',
-    getStatus: '/server/remote/get-status',
+    getStatus: '/server/remote/getStatus',
   },
 };
 
@@ -64,7 +64,7 @@ export const IR_CONFIG: RemoteDeviceConfig = {
   serverEndpoints: {
     connect: '/server/remote/connect',
     disconnect: '/server/remote/disconnect',
-    command: '/server/remote/execute-command',
+    command: '/server/remote/executeCommand',
   },
 };
 
@@ -78,7 +78,7 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
   serverEndpoints: {
     connect: '/server/remote/connect',
     disconnect: '/server/remote/disconnect',
-    command: '/server/remote/execute-command',
+    command: '/server/remote/executeCommand',
   },
 };
 

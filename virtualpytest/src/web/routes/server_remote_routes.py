@@ -15,7 +15,7 @@ remote_bp = Blueprint('server_remote', __name__, url_prefix='/server/remote')
 # REMOTE CONTROLLER ENDPOINTS
 # =====================================================
 
-@remote_bp.route('/take-screenshot', methods=['POST'])
+@remote_bp.route('/takeScreenshot', methods=['POST'])
 def take_screenshot():
     """Proxy take screenshot request to selected host"""
     try:
@@ -25,7 +25,7 @@ def take_screenshot():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/remote/take-screenshot', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/remote/takeScreenshot', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -35,7 +35,7 @@ def take_screenshot():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/screenshot-and-dump', methods=['POST'])
+@remote_bp.route('/screenshotAndDump', methods=['POST'])
 def screenshot_and_dump():
     """Proxy screenshot and dump request to selected host"""
     try:
@@ -45,7 +45,7 @@ def screenshot_and_dump():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/remote/screenshot-and-dump', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/remote/screenshotAndDump', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -55,7 +55,7 @@ def screenshot_and_dump():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/get-apps', methods=['POST'])
+@remote_bp.route('/getApps', methods=['POST'])
 def get_apps():
     """Proxy get apps request to selected host"""
     try:
@@ -65,7 +65,7 @@ def get_apps():
         request_data = request.get_json() or {}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/remote/get-apps', 'POST', request_data)
+        response_data, status_code = proxy_to_host('/host/remote/getApps', 'POST', request_data)
         
         return jsonify(response_data), status_code
         
@@ -75,7 +75,7 @@ def get_apps():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/click-element', methods=['POST'])
+@remote_bp.route('/clickuelement', methods=['POST'])
 def click_element():
     """Proxy click element request to selected host (for Appium controllers)"""
     try:
@@ -106,7 +106,7 @@ def click_element():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/tap-coordinates', methods=['POST'])
+@remote_bp.route('/tapucoordinates', methods=['POST'])
 def tap_coordinates():
     """Handle tap coordinates for mobile devices - centralized mobile control"""
     try:
@@ -137,7 +137,7 @@ def tap_coordinates():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/stream-tap', methods=['POST'])
+@remote_bp.route('/streamutap', methods=['POST'])
 def stream_tap():
     """Handle stream tap with device coordinate conversion - mobile control integration"""
     try:
@@ -210,7 +210,7 @@ def tap_coordinates_internal(host, x, y):
             'error': f'Server error: {str(e)}'
         }), 500
 
-@remote_bp.route('/execute-command', methods=['POST'])
+@remote_bp.route('/executeCommand', methods=['POST'])
 def execute_command():
     """Proxy execute command request to selected host"""
     try:
@@ -231,7 +231,7 @@ def execute_command():
         host_request_data = {k: v for k, v in request_data.items() if k != 'host'}
         
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/remote/execute-command', 'POST', host_request_data)
+        response_data, status_code = proxy_to_host('/host/remote/executeCommand', 'POST', host_request_data)
         
         return jsonify(response_data), status_code
         
@@ -241,7 +241,7 @@ def execute_command():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/dump-ui', methods=['POST'])
+@remote_bp.route('/dumpuui', methods=['POST'])
 def dump_ui():
     """Dump UI elements without screenshot - for HDMI stream usage"""
     try:

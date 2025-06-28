@@ -24,7 +24,7 @@ server_verifications_bp = Blueprint('server_verifications', __name__)
 # VERIFICATION MANAGEMENT ENDPOINTS
 # =====================================================
 
-@server_verifications_bp.route('/server/verifications/save-verification', methods=['POST'])
+@server_verifications_bp.route('/server/verifications/saveVerification', methods=['POST'])
 def save_verification_endpoint():
     """
     Save or update verification definition.
@@ -132,7 +132,7 @@ def get_verifications():
 
 
 
-@server_verifications_bp.route('/server/verifications/delete-verification', methods=['POST'])
+@server_verifications_bp.route('/server/verifications/deleteVerification', methods=['POST'])
 def delete_verification_endpoint():
     """
     Delete verification by ID or by identifiers.

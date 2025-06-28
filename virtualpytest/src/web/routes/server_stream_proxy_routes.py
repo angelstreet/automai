@@ -54,7 +54,7 @@ def proxy_screenshot():
         print(f"❌ [PROXY] Error proxying screenshot: {e}")
         return jsonify({'error': str(e)}), 500
 
-@server_stream_proxy_routes.route('/av/stream-url', methods=['POST'])
+@server_stream_proxy_routes.route('/av/streamUrl', methods=['POST'])
 def proxy_stream_url():
     """Proxy stream URL request to appropriate host"""
     try:

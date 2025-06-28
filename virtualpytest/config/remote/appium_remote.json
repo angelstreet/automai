@@ -167,10 +167,10 @@
   "server_endpoints": {
     "connect": "/server/control/take-control",
     "disconnect": "/server/control/release-control",
-    "screenshot": "/server/remote/take-screenshot",
-    "command": "/server/remote/execute-command",
-    "screenshotAndDump": "/server/remote/screenshot-and-dump",
-    "getApps": "/server/remote/get-apps",
+    "screenshot": "/server/remote/takeScreenshot",
+    "command": "/server/remote/executeCommand",
+    "screenshotAndDump": "/server/remote/screenshotAndDump",
+    "getApps": "/server/remote/getApps",
     "clickElement": "/server/remote/click-element",
     "tapCoordinates": "/server/remote/tap-coordinates",
     "getStatus": "/server/remote/get-status"

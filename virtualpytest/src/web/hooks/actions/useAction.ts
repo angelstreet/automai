@@ -120,7 +120,7 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
 
         console.log('[useAction] Batch payload:', batchPayload);
 
-        const response = await fetch('/server/action/execute_batch', {
+        const response = await fetch('/server/action/executeBatch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -131,7 +131,7 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
         });
 
         console.log(
-          `[useAction] Fetching from: /server/action/execute_batch with host: ${selectedHost?.host_name} and device: ${deviceId}`,
+          `[useAction] Fetching from: /server/action/executeBatch with host: ${selectedHost?.host_name} and device: ${deviceId}`,
         );
 
         if (!response.ok) {

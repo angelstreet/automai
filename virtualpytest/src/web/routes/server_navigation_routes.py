@@ -258,7 +258,7 @@ def delete_navigation_tree_route(tree_id):
             'error': f'Failed to delete navigation tree: {str(e)}'
         }), 500
 
-@navigation_bp.route('/trees/by-name/<tree_name>', methods=['GET'])
+@navigation_bp.route('/trees/byName/<tree_name>', methods=['GET'])
 def get_navigation_tree_by_name(tree_name):
     """Get a navigation tree by name"""
     # Check if Supabase is available
@@ -308,7 +308,7 @@ def get_navigation_tree_by_name(tree_name):
             'error': f'Failed to retrieve navigation tree: {str(e)}'
         }), 500
 
-@navigation_bp.route('/trees/by-id-and-team/<tree_id>/<team_id>', methods=['GET'])
+@navigation_bp.route('/trees/byIdAndTeam/<tree_id>/<team_id>', methods=['GET'])
 def get_navigation_tree_by_id_and_team(tree_id, team_id):
     """Get a navigation tree by ID and team ID"""
     # Check if Supabase is available
@@ -509,7 +509,7 @@ def get_userinterface_with_root(interface_id):
 # NAVIGATION SCREENSHOT ENDPOINTS (HOST)
 # =====================================================
 
-@navigation_bp.route('/save-screenshot', methods=['POST'])
+@navigation_bp.route('/saveuscreenshot', methods=['POST'])
 def save_navigation_screenshot():
     """Proxy save navigation screenshot request to host (host handles R2 upload and database save)"""
     try:

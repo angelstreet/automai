@@ -142,7 +142,7 @@ def verification_video_execute():
 # BATCH VERIFICATION COORDINATION (SERVER-SIDE LOGIC)
 # =====================================================
 
-@server_verification_common_bp.route('/execute_batch', methods=['POST'])
+@server_verification_common_bp.route('/executeBatch', methods=['POST'])
 def verification_execute_batch():
     """Execute batch verification by dispatching individual requests to host endpoints (NEW NAMING CONVENTION)"""
     try:
@@ -456,7 +456,7 @@ def verification_get_batch_status():
 # IMAGE VERIFICATION SPECIFIC ENDPOINTS
 # =====================================================
 
-@server_verification_common_bp.route('/image/process-image', methods=['POST'])
+@server_verification_common_bp.route('/image/processImage', methods=['POST'])
 def verification_image_process():
     """Proxy process image request to host for reference image processing"""
     try:
@@ -476,7 +476,7 @@ def verification_image_process():
             'error': str(e)
         }), 500
 
-@server_verification_common_bp.route('/image/crop-image', methods=['POST'])
+@server_verification_common_bp.route('/image/cropImage', methods=['POST'])
 def verification_image_crop():
     """Proxy crop image request to host for reference image cropping"""
     try:
@@ -496,7 +496,7 @@ def verification_image_crop():
             'error': str(e)
         }), 500
 
-@server_verification_common_bp.route('/image/save-image', methods=['POST'])
+@server_verification_common_bp.route('/image/saveImage', methods=['POST'])
 def verification_image_save():
     """Proxy save image request to host"""
     try:
@@ -521,7 +521,7 @@ def verification_image_save():
 # TEXT VERIFICATION SPECIFIC ENDPOINTS
 # =====================================================
 
-@server_verification_common_bp.route('/text/detect-text', methods=['POST'])
+@server_verification_common_bp.route('/text/detectText', methods=['POST'])
 def verification_text_detect():
     """Proxy text auto-detection request to host"""
     try:
@@ -541,7 +541,7 @@ def verification_text_detect():
             'error': str(e)
         }), 500
 
-@server_verification_common_bp.route('/text/save-text', methods=['POST'])
+@server_verification_common_bp.route('/text/saveText', methods=['POST'])
 def verification_text_save():
     """Save text reference to database - Two-step process like image references"""
     try:
@@ -687,7 +687,7 @@ def verification_adb_wait_for_element_to_disappear():
 # DATABASE OPERATIONS (SERVER-SIDE ONLY)
 # =====================================================
 
-@server_verification_common_bp.route('/image/get-references', methods=['POST'])
+@server_verification_common_bp.route('/image/getReferences', methods=['POST'])
 def verification_image_get_references():
     """Get image references from database - Uses verification controller"""
     try:
@@ -720,7 +720,7 @@ def verification_image_get_references():
             'error': str(e)
         }), 500
 
-@server_verification_common_bp.route('/text/get-references', methods=['POST'])
+@server_verification_common_bp.route('/text/getReferences', methods=['POST'])
 def verification_text_get_references():
     """Get text references from database - Uses verification controller"""
     try:

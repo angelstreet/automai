@@ -14,7 +14,7 @@ remote_bp = Blueprint('host_remote', __name__, url_prefix='/host/remote')
 # REMOTE CONTROLLER ENDPOINTS
 # =====================================================
 
-@remote_bp.route('/take-screenshot', methods=['POST'])
+@remote_bp.route('/takeScreenshot', methods=['POST'])
 def take_screenshot():
     """Take a screenshot using the remote controller."""
     try:
@@ -64,7 +64,7 @@ def take_screenshot():
             'error': f'Screenshot error: {str(e)}'
         }), 500
 
-@remote_bp.route('/screenshot-and-dump', methods=['POST'])
+@remote_bp.route('/screenshotAndDump', methods=['POST'])
 def screenshot_and_dump():
     """Take screenshot and dump UI elements."""
     try:
@@ -155,7 +155,7 @@ def screenshot_and_dump():
             'error': f'Screenshot and UI dump error: {str(e)}'
         }), 500
 
-@remote_bp.route('/get-apps', methods=['POST'])
+@remote_bp.route('/getApps', methods=['POST'])
 def get_apps():
     """Get list of installed apps."""
     try:
@@ -212,7 +212,7 @@ def get_apps():
             'error': f'Get apps error: {str(e)}'
         }), 500
 
-@remote_bp.route('/tap-coordinates', methods=['POST'])
+@remote_bp.route('/tapucoordinates', methods=['POST'])
 def tap_coordinates():
     """Handle tap coordinates - mobile control only"""
     try:
@@ -270,7 +270,7 @@ def tap_coordinates():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@remote_bp.route('/execute-command', methods=['POST'])
+@remote_bp.route('/executeCommand', methods=['POST'])
 def execute_command():
     """Execute a remote command."""
     try:
@@ -477,7 +477,7 @@ def execute_command():
             'error': f'Command execution error: {str(e)}'
         }), 500
 
-@remote_bp.route('/dump-ui', methods=['POST'])
+@remote_bp.route('/dumpuui', methods=['POST'])
 def dump_ui():
     """Dump UI elements without screenshot - for HDMI stream usage"""
     try:
@@ -520,7 +520,7 @@ def dump_ui():
                 remote_controller.last_ui_elements = elements
                 print(f"[@route:host_remote:dump_ui] Stored {len(elements)} elements in controller for clicking")
             
-            # Serialize elements to JSON format (same as screenshot-and-dump)
+            # Serialize elements to JSON format (same as screenshotAndDump)
             elements_data = []
             for element in elements:
                 # Parse bounds string to object format expected by frontend

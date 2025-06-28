@@ -31,7 +31,7 @@ control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
 # SERVER-SIDE DEVICE CONTROL ENDPOINTS
 # =====================================================
 
-@control_bp.route('/take-control', methods=['POST'])
+@control_bp.route('/takeControl', methods=['POST'])
 def take_control():
     """Take control of a device"""
     try:
@@ -150,7 +150,7 @@ def take_control():
         print(f"❌ [CONTROL] Error taking control: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@control_bp.route('/release-control', methods=['POST'])
+@control_bp.route('/releaseControl', methods=['POST'])
 def release_control():
     """Release control of a device"""
     try:
@@ -225,7 +225,7 @@ def release_control():
         print(f"❌ [CONTROL] Error releasing control: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@control_bp.route('/locked-devices', methods=['GET'])
+@control_bp.route('/lockedudevices', methods=['GET'])
 def get_locked_devices():
     """Get information about all currently locked devices"""
     try:
@@ -295,7 +295,7 @@ def execute_navigation():
         print(f"❌ [NAVIGATION] Error executing navigation: {e}")
         return jsonify({'error': str(e)}), 500
 
-@control_bp.route('/navigation/batch-execute', methods=['POST'])
+@control_bp.route('/navigationBatchExecute', methods=['POST'])
 def batch_execute_navigation():
     """Execute batch navigation on a host device."""
     try:

@@ -254,7 +254,7 @@ export const useNodeOperations = ({
                 // Step 1: Take screenshot first (same as NodeSelectionPanel and editor pattern)
                 console.log('[@hook:useNodeOperations] Taking screenshot for verification...');
 
-                const screenshotResponse = await fetch('/server/av/take-screenshot', {
+                const screenshotResponse = await fetch('/server/av/takeScreenshot', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ host: selectedHost }),
@@ -306,7 +306,7 @@ export const useNodeOperations = ({
                 console.log('[@hook:useNodeOperations] Using capture filename:', capture_filename);
 
                 // Step 2: Execute verification using the same pattern as the editor
-                const response = await fetch(`/server/verification/execute_batch`, {
+                const response = await fetch(`/server/verification/executeBatch`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -488,7 +488,7 @@ export const useNodeOperations = ({
             'executions to database',
           );
           try {
-            const response = await fetch('/server/execution-results/record-batch', {
+            const response = await fetch('/server/executionResults/recordBatch', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -571,7 +571,7 @@ export const useNodeOperations = ({
         // Step 1: Take screenshot
         console.log('[@hook:useNodeOperations] Taking screenshot for verification...');
 
-        const screenshotResponse = await fetch('/server/av/take-screenshot', {
+        const screenshotResponse = await fetch('/server/av/takeScreenshot', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ host: selectedHost }),
@@ -625,7 +625,7 @@ export const useNodeOperations = ({
         }));
 
         // Step 3: Execute verifications using the same pattern as the editor
-        const verificationResponse = await fetch('/server/verification/execute_batch', {
+        const verificationResponse = await fetch('/server/verification/executeBatch', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

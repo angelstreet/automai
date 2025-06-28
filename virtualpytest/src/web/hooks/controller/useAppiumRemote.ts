@@ -139,7 +139,7 @@ export const useAppiumRemote = (
           requestBody.device_id = deviceId;
         }
 
-        const response = await fetch('/server/remote/execute-command', {
+        const response = await fetch('/server/remote/executeCommand', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -179,7 +179,7 @@ export const useAppiumRemote = (
         requestBody.device_id = deviceId;
       }
 
-      const response = await fetch('/server/remote/screenshot-and-dump', {
+      const response = await fetch('/server/remote/screenshotAndDump', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -268,7 +268,7 @@ export const useAppiumRemote = (
           requestBody.device_id = deviceId;
         }
 
-        const response = await fetch('/server/remote/execute-command', {
+        const response = await fetch('/server/remote/executeCommand', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

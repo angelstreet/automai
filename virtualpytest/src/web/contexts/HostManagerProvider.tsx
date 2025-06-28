@@ -269,7 +269,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
         );
         console.log(`[@context:HostManagerProvider] Using user ID for lock: ${userId}`);
 
-        const response = await fetch('/server/control/take-control', {
+        const response = await fetch('/server/control/takeControl', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -369,7 +369,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
         );
         console.log(`[@context:HostManagerProvider] Using user ID for unlock: ${userId}`);
 
-        const response = await fetch('/server/control/release-control', {
+        const response = await fetch('/server/control/releaseControl', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
