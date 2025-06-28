@@ -34,8 +34,9 @@ import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDial
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
 import { useDeviceData } from '../contexts/device/DeviceDataContext';
 import { useHostManager } from '../contexts/index';
+import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
-import { useNavigation } from '../hooks/navigation/useNavigation';
+import { useNavigationEditor } from '../hooks/navigation/useNavigationEditor';
 import { NodeForm, EdgeForm } from '../types/pages/Navigation_Types';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
@@ -105,11 +106,12 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const location = useLocation();
     const userInterfaceFromState = location.state?.userInterface;
 
-    // Use the new unified navigation context
+    // Use the restored navigation editor hook
     const {
-      // State from unified context
+      // State
       nodes,
       edges,
+      isLoadingInterface,
       selectedNode,
       selectedEdge,
       isNodeDialogOpen,
@@ -123,186 +125,63 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       hasUnsavedChanges,
       isDiscardDialogOpen,
       userInterface,
-      isLoadingInterface,
+
+      // View state for single-level navigation
+
+      // Tree filtering state
       focusNodeId,
       maxDisplayDepth,
       availableFocusNodes,
+      allNodes,
+      setFocusNode,
+      setDisplayDepth,
+      resetFocus,
 
-      // Setters from unified context
+      // Setters
       setIsNodeDialogOpen,
       setIsEdgeDialogOpen,
       setNodeForm,
       setEdgeForm,
       setIsDiscardDialogOpen,
+
+      // Event handlers
+      onNodesChange,
+      onEdgesChange,
+      onConnect,
+      onNodeClick,
+      onEdgeClick,
+      onNodeDoubleClick,
+      onPaneClick,
+
+      // Actions
+      loadFromConfig,
+      saveToConfig,
+      isLocked,
+      showReadOnlyOverlay,
+      lockNavigationTree,
+      handleNodeFormSubmit,
+      handleEdgeFormSubmit,
+      addNewNode,
+      cancelNodeChanges,
+      discardChanges,
+      performDiscardChanges,
+      closeSelectionPanel,
+      fitView,
+      deleteSelected,
+      resetNode,
+      setUserInterfaceFromProps,
+
+      // Additional setters we need
       setNodes,
       setSelectedNode,
       setReactFlowInstance,
       setHasUnsavedChanges,
       setEdges,
       setSelectedEdge,
-      setUserInterface,
-      setFocusNodeId,
-      setMaxDisplayDepth,
 
-      // Actions from unified context
-      onNodesChange,
-      onEdgesChange,
-      openNodeDialog,
-      resetAll,
-      markUnsavedChanges,
-      fitViewToNodes,
-    } = useNavigation();
-
-    // Mock some functions that were in the old useNavigationEditor hook
-    // These will need to be implemented properly later
-    const allNodes = nodes; // Simple fallback
-    const setFocusNode = setFocusNodeId;
-    const setDisplayDepth = setMaxDisplayDepth;
-    const resetFocus = () => {
-      setFocusNodeId(null);
-      setMaxDisplayDepth(5);
-    };
-
-    // Mock event handlers - these need proper implementation
-    const onConnect = useCallback((connection: any) => {
-      console.log('Connection attempt:', connection);
-      // TODO: Implement connection logic
-    }, []);
-
-    const onNodeClick = useCallback(
-      (_event: React.MouseEvent, node: any) => {
-        console.log('Node clicked:', node);
-        setSelectedNode(node);
-      },
-      [setSelectedNode],
-    );
-
-    const onEdgeClick = useCallback(
-      (_event: React.MouseEvent, edge: any) => {
-        console.log('Edge clicked:', edge);
-        setSelectedEdge(edge);
-      },
-      [setSelectedEdge],
-    );
-
-    const onNodeDoubleClick = useCallback(
-      (_event: React.MouseEvent, node: any) => {
-        console.log('Node double clicked:', node);
-        openNodeDialog(node);
-      },
-      [openNodeDialog],
-    );
-
-    const onPaneClick = useCallback(() => {
-      setSelectedNode(null);
-      setSelectedEdge(null);
-    }, [setSelectedNode, setSelectedEdge]);
-
-    // Mock action functions - these need proper implementation
-    const loadFromConfig = useCallback((id: string) => {
-      console.log('Loading from config:', id);
-      // TODO: Implement load logic
-    }, []);
-
-    const saveToConfig = useCallback((id: string) => {
-      console.log('Saving to config:', id);
-      // TODO: Implement save logic
-    }, []);
-
-    const isLocked = false; // TODO: Implement lock logic
-    const showReadOnlyOverlay = false;
-    const lockNavigationTree = useCallback((id: string) => {
-      console.log('Locking tree:', id);
-      return Promise.resolve(true);
-    }, []);
-
-    const handleNodeFormSubmit = useCallback(
-      (form: any) => {
-        console.log('Node form submit:', form);
-        // TODO: Implement form submit logic
-        setIsNodeDialogOpen(false);
-      },
-      [setIsNodeDialogOpen],
-    );
-
-    const handleEdgeFormSubmit = useCallback(
-      (form: any) => {
-        console.log('Edge form submit:', form);
-        // TODO: Implement form submit logic
-        setIsEdgeDialogOpen(false);
-      },
-      [setIsEdgeDialogOpen],
-    );
-
-    const addNewNode = useCallback(
-      (type: string, position: { x: number; y: number }) => {
-        const nodeType = type as 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry';
-        const newNode = {
-          id: `node-${Date.now()}`,
-          position,
-          type: 'uiScreen',
-          data: { label: `New ${type}`, type: nodeType },
-        };
-        setNodes([...nodes, newNode]);
-        markUnsavedChanges();
-      },
-      [nodes, setNodes, markUnsavedChanges],
-    );
-
-    const cancelNodeChanges = useCallback(() => {
-      setIsNodeDialogOpen(false);
-    }, [setIsNodeDialogOpen]);
-
-    const discardChanges = useCallback(() => {
-      setIsDiscardDialogOpen(true);
-    }, [setIsDiscardDialogOpen]);
-
-    const performDiscardChanges = useCallback(() => {
-      resetAll();
-      setIsDiscardDialogOpen(false);
-    }, [resetAll, setIsDiscardDialogOpen]);
-
-    const closeSelectionPanel = useCallback(() => {
-      setSelectedNode(null);
-      setSelectedEdge(null);
-    }, [setSelectedNode, setSelectedEdge]);
-
-    const fitView = fitViewToNodes;
-
-    const deleteSelected = useCallback(() => {
-      if (selectedNode) {
-        setNodes(nodes.filter((n) => n.id !== selectedNode.id));
-        setSelectedNode(null);
-        markUnsavedChanges();
-      }
-      if (selectedEdge) {
-        setEdges(edges.filter((e) => e.id !== selectedEdge.id));
-        setSelectedEdge(null);
-        markUnsavedChanges();
-      }
-    }, [
-      selectedNode,
-      selectedEdge,
-      nodes,
-      edges,
-      setNodes,
-      setEdges,
-      setSelectedNode,
-      setSelectedEdge,
-      markUnsavedChanges,
-    ]);
-
-    const resetNode = useCallback((nodeId: string) => {
-      console.log('Reset node:', nodeId);
-      // TODO: Implement reset logic
-    }, []);
-
-    const setUserInterfaceFromProps = useCallback(
-      (ui: any) => {
-        setUserInterface(ui);
-      },
-      [setUserInterface],
-    );
+      // Error state
+      error,
+    } = useNavigationEditor();
 
     // Use the correct userInterfaceId - prefer prop over URL param
     const actualUserInterfaceId = userInterfaceId || interfaceId;
@@ -587,7 +466,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           totalNodes={allNodes.length}
           visibleNodes={nodes.length}
           isLoading={isLoadingInterface}
-          error={null}
+          error={error}
           isLocked={isLocked ?? false}
           treeId={treeId || ''}
           userInterfaceId={actualUserInterfaceId || ''}
@@ -701,7 +580,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                     maskColor="rgba(255, 255, 255, 0.2)"
                     pannable
                     zoomable
-                    position="top-right"
                   />
                 </ReactFlow>
               </div>
@@ -835,11 +713,38 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
 );
 
 const NavigationEditor: React.FC = () => {
+  // Get userInterface directly from location.state to avoid timing issues
+  const location = useLocation();
+  const userInterfaceFromState = location.state?.userInterface;
+
+  // Memoize userInterface for consistency
+  const stableUserInterface = useMemo(() => userInterfaceFromState, [userInterfaceFromState]);
+
+  // Ensure we have userInterfaceId before rendering
+  const userInterfaceId = stableUserInterface?.id;
+
+  if (!userInterfaceId) {
+    console.warn(
+      '[@component:NavigationEditor] Missing userInterfaceId, cannot save verifications',
+    );
+    return (
+      <ReactFlowProvider>
+        <NavigationConfigProvider>
+          <NavigationEditorProvider>
+            <NavigationEditorContent />
+          </NavigationEditorProvider>
+        </NavigationConfigProvider>
+      </ReactFlowProvider>
+    );
+  }
+
   return (
     <ReactFlowProvider>
-      <NavigationEditorProvider>
-        <NavigationEditorContent />
-      </NavigationEditorProvider>
+      <NavigationConfigProvider>
+        <NavigationEditorProvider>
+          <NavigationEditorContent />
+        </NavigationEditorProvider>
+      </NavigationConfigProvider>
     </ReactFlowProvider>
   );
 };

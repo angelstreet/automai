@@ -1,6 +1,7 @@
 import React from 'react';
 
 import { DeviceDataProvider } from '../device/DeviceDataContext';
+
 import { NavigationProvider } from './NavigationContext';
 
 interface NavigationEditorProviderProps {
