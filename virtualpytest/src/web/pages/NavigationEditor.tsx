@@ -589,13 +589,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                 >
                   <Background variant={BackgroundVariant.Dots} gap={15} size={1} />
                   <Controls />
-                  <MiniMap
-                    style={miniMapStyle}
-                    nodeColor={miniMapNodeColor}
-                    maskColor={miniMapMaskColor}
-                    pannable
-                    zoomable
-                  />
+                  <MiniMap style={miniMapStyle} nodeColor={miniMapNodeColor} pannable zoomable />
                 </ReactFlow>
               </div>
 
