@@ -111,10 +111,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         backgroundColor: actualMode === 'dark' ? '#1f2937' : '#ffffff',
         border: `1px solid ${actualMode === 'dark' ? '#374151' : '#e5e7eb'}`,
         borderRadius: '8px',
-        boxShadow:
-          actualMode === 'dark'
-            ? '0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2)'
-            : '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
         position: 'absolute' as const,
         top: '10px',
         right: '10px',
@@ -122,12 +118,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         width: '200px',
         height: '150px',
       }),
-      [actualMode],
-    );
-
-    // Create dynamic maskColor based on theme (lighter mask to keep nodes visible)
-    const miniMapMaskColor = useMemo(
-      () => (actualMode === 'dark' ? 'rgba(0, 0, 0, 0.1)' : 'rgba(255, 255, 255, 0.1)'),
       [actualMode],
     );
 
