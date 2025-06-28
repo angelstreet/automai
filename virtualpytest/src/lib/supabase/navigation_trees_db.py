@@ -226,7 +226,7 @@ def get_next_version_number(tree_id: str, supabase_client) -> int:
         print(f'[@db:navigation_trees:get_next_version_number] ERROR: {e}')
         return 1
 
-def save_navigation_tree(name: str, userinterface_id: str, team_id: str, tree_data: Dict, 
+def save_navigation_tree(userinterface_id: str, team_id: str, tree_data: Dict, 
                         description: str = None, creator_id: str = None, 
                         modification_type: str = 'update', changes_summary: str = None,
                         supabase_client=None) -> Tuple[bool, str, Optional[Dict]]:
@@ -234,8 +234,7 @@ def save_navigation_tree(name: str, userinterface_id: str, team_id: str, tree_da
     Save navigation tree and create history record
     
     Args:
-        name: Tree name
-        userinterface_id: UI interface ID
+        userinterface_id: UI interface ID (primary identifier)
         team_id: Team ID
         tree_data: Complete navigation tree data (nodes, edges, etc.)
         description: Optional description
@@ -251,12 +250,11 @@ def save_navigation_tree(name: str, userinterface_id: str, team_id: str, tree_da
         if not supabase_client:
             supabase_client = get_supabase()
         
-        print(f'[@db:navigation_trees:save_navigation_tree] Starting save for tree: {name}')
+        print(f'[@db:navigation_trees:save_navigation_tree] Starting save for userinterface_id: {userinterface_id}')
         
-        # Check if tree exists
+        # Check if tree exists (using userinterface_id as primary identifier)
         existing_result = supabase_client.table('navigation_trees')\
             .select('*')\
-            .eq('name', name)\
             .eq('userinterface_id', userinterface_id)\
             .eq('team_id', team_id)\
             .execute()
@@ -266,9 +264,9 @@ def save_navigation_tree(name: str, userinterface_id: str, team_id: str, tree_da
         
         if is_new:
             # Create new tree
-            print(f'[@db:navigation_trees:save_navigation_tree] Creating new tree: {name}')
+            print(f'[@db:navigation_trees:save_navigation_tree] Creating new tree for userinterface_id: {userinterface_id}')
             insert_data = {
-                'name': name,
+                'name': f'nav_tree_{userinterface_id}',  # Generate name from userinterface_id
                 'userinterface_id': userinterface_id,
                 'team_id': team_id,
                 'metadata': tree_data,

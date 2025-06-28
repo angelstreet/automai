@@ -125,14 +125,13 @@ def save_tree():
         data = request.get_json()
         
         # Extract required fields
-        name = data.get('name')
         userinterface_id = data.get('userinterface_id')
         tree_data = data.get('tree_data', {})
         
-        if not name or not userinterface_id:
+        if not userinterface_id:
             return jsonify({
                 'success': False,
-                'message': 'Missing required fields: name, userinterface_id'
+                'message': 'Missing required field: userinterface_id'
             }), 400
         
         # Optional fields
@@ -142,14 +141,13 @@ def save_tree():
         modification_type = data.get('modification_type', 'update')
         changes_summary = data.get('changes_summary')
         
-        print(f'[@route:navigation_trees:save_tree] Saving tree: {name}')
+        print(f'[@route:navigation_trees:save_tree] Saving tree for userinterface_id: {userinterface_id}')
         print(f'[@route:navigation_trees:save_tree] Parameters:')
         print(f'  - userinterface_id: {userinterface_id} (type: {type(userinterface_id)})')
         print(f'  - team_id: {team_id} (type: {type(team_id)})')
         print(f'  - creator_id: {creator_id} (type: {type(creator_id)})')
         
         success, message, tree_record = save_navigation_tree(
-            name=name,
             userinterface_id=userinterface_id,
             team_id=team_id,
             tree_data=tree_data,
@@ -206,9 +204,9 @@ def get_tree(tree_id):
             'message': f'Server error: {str(e)}'
         }), 500
 
-@server_navigation_trees_bp.route('/navigationTrees/getTreeByName/<tree_name>', methods=['GET'])
-def get_tree_by_name(tree_name):
-    """Get navigation tree by name - optimized for fastest lookup"""
+@server_navigation_trees_bp.route('/navigationTrees/getTreeByUserInterfaceId/<userinterface_id>', methods=['GET'])
+def get_tree_by_userinterface_id(userinterface_id):
+    """Get navigation tree by userinterface_id - optimized for fastest lookup"""
     try:
         # Check if Supabase is available
         error_response = check_supabase()
@@ -217,28 +215,29 @@ def get_tree_by_name(tree_name):
         
         team_id = get_team_id()
         
-        print(f'[@route:navigation_trees:get_tree_by_name] Fetching tree by name: {tree_name}')
+        print(f'[@route:navigation_trees:get_tree_by_userinterface_id] Fetching tree by userinterface_id: {userinterface_id}')
         
-        # Get all trees and find the one with matching name
-        all_trees = get_all_navigation_trees_util(team_id)
-        tree = next((tree for tree in all_trees if tree['name'] == tree_name), None)
+        # Use the existing function to get trees filtered by userinterface_id
+        success, message, trees = get_navigation_trees(team_id, userinterface_id)
         
-        if tree:
-            print(f'[@route:navigation_trees:get_tree_by_name] Found tree: {tree["id"]} with name: {tree_name}')
+        if success and trees:
+            # Return the first tree (should be only one per userinterface_id)
+            tree = trees[0]
+            print(f'[@route:navigation_trees:get_tree_by_userinterface_id] Found tree: {tree["id"]} for userinterface_id: {userinterface_id}')
             return jsonify({
                 'success': True,
                 'tree': tree
             })
         else:
-            print(f'[@route:navigation_trees:get_tree_by_name] Tree not found with name: {tree_name}')
+            print(f'[@route:navigation_trees:get_tree_by_userinterface_id] Tree not found for userinterface_id: {userinterface_id}')
             return jsonify({
                 'success': False,
-                'message': f'Navigation tree with name "{tree_name}" not found',
+                'message': f'Navigation tree with userinterface_id "{userinterface_id}" not found',
                 'code': 'NOT_FOUND'
             }), 404
             
     except Exception as e:
-        print(f'[@route:navigation_trees:get_tree_by_name] ERROR: {e}')
+        print(f'[@route:navigation_trees:get_tree_by_userinterface_id] ERROR: {e}')
         return jsonify({
             'success': False,
             'message': f'Server error: {str(e)}'
