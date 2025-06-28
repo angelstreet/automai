@@ -4,7 +4,7 @@ import React from 'react';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
-import { useNavigationConfig } from '../../contexts/navigation/NavigationConfigContext';
+import { useNavigationTreeControl } from '../../contexts/navigation/NavigationConfigContext';
 import {
   ValidationPreviewClient,
   ValidationResultsClient,
@@ -81,16 +81,43 @@ export const NavigationEditorHeader: React.FC<{
   // Get device locking functionality from HostManager
   const { isDeviceLocked } = useHostManager();
 
-  // NEW: Use device control hook with device_id support for device-oriented architecture
-  const { isControlActive, isControlLoading, controlError, handleToggleControl, clearError } =
-    useDeviceControl({
-      host: selectedHost,
-      device_id: selectedDeviceId || 'device1', // Pass device_id for device-oriented control
-      sessionId: 'navigation-editor-session',
-      autoCleanup: true, // Auto-release on unmount
-    });
+  // Device control hook (physical device control)
+  const {
+    isControlActive,
+    isControlLoading,
+    controlError,
+    handleTakeControl,
+    handleReleaseControl,
+    clearError,
+  } = useDeviceControl({
+    host: selectedHost,
+    device_id: selectedDeviceId || 'device1', // Pass device_id for device-oriented control
+    sessionId: 'navigation-editor-session',
+    autoCleanup: true, // Auto-release on unmount
+  });
 
-  // Sync control state with parent component
+  // Navigation tree control hook (editing control)
+  const {
+    isLocked: isNavigationTreeLocked,
+    lockNavigationTree,
+    unlockNavigationTree,
+    isCheckingLock: isCheckingTreeLock,
+  } = useNavigationTreeControl();
+
+  // Device control handler (only controls physical device, not navigation tree)
+  const handleDeviceControl = React.useCallback(async () => {
+    if (isControlActive) {
+      // Release device control only
+      console.log('[@component:NavigationEditorHeader] Releasing device control');
+      await handleReleaseControl();
+    } else {
+      // Take device control only
+      console.log('[@component:NavigationEditorHeader] Taking device control');
+      await handleTakeControl();
+    }
+  }, [isControlActive, handleTakeControl, handleReleaseControl]);
+
+  // Sync control state with parent component (only device control)
   React.useEffect(() => {
     onControlStateChange(isControlActive);
   }, [isControlActive, onControlStateChange]);
@@ -197,7 +224,7 @@ export const NavigationEditorHeader: React.FC<{
                 return isDeviceLocked(host, deviceId);
               }}
               onDeviceSelect={onDeviceSelect}
-              onTakeControl={handleToggleControl}
+              onTakeControl={handleDeviceControl}
               onToggleRemotePanel={onToggleRemotePanel}
             />
           </Box>

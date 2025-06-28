@@ -3,6 +3,10 @@ import { Node, Edge } from 'reactflow';
 import { EdgeAction } from '../controller/Action_Types';
 import { Verification } from '../verification/Verification_Types';
 
+// Re-export centralized navigation types for convenience
+export * from './NavigationConfig_Types';
+export * from './NavigationContext_Types';
+
 // =====================================================
 // CORE NAVIGATION TYPES
 // =====================================================
@@ -188,23 +192,7 @@ export interface ConnectionResult {
   targetNodeUpdates?: Partial<UINavigationNodeData>;
 }
 
-export interface NavigationConfigState {
-  currentTreeName: string;
-  setCurrentTreeName: (name: string) => void;
-  setNodes: (nodes: UINavigationNode[]) => void;
-  setEdges: (edges: UINavigationEdge[]) => void;
-  setInitialState: (state: { nodes: UINavigationNode[]; edges: UINavigationEdge[] } | null) => void;
-  setHasUnsavedChanges: (hasChanges: boolean) => void;
-  setIsLoading: (loading: boolean) => void;
-  setError: (error: string | null) => void;
-  setSaveError: (error: string | null) => void;
-  setSaveSuccess: (success: boolean) => void;
-  setIsSaving: (saving: boolean) => void;
-  nodes: UINavigationNode[];
-  edges: UINavigationEdge[];
-  isSaving: boolean;
-  setUserInterface: (userInterface: any | null) => void;
-}
+// NavigationConfigState moved to NavigationConfig_Types.ts to avoid duplication
 
 export interface NodeEdgeManagementProps {
   nodes: UINavigationNode[];

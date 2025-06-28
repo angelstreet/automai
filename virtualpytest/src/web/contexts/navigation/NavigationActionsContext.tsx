@@ -1,37 +1,13 @@
 import React, { createContext, useContext, useCallback, useMemo } from 'react';
 
+import {
+  NavigationActionsContextType,
+  NavigationActionsProviderProps,
+} from '../../types/pages/NavigationContext_Types';
+
 import { useNavigationFlow } from './NavigationFlowContext';
 import { useNavigationNodes } from './NavigationNodesContext';
 import { useNavigationUI } from './NavigationUIContext';
-
-// ========================================
-// TYPES
-// ========================================
-
-export interface NavigationActionsContextType {
-  // Action coordination
-  resetAll: () => void;
-  resetSelectionAndDialogs: () => void;
-
-  // UI coordination
-  openNodeDialog: (node?: any) => void;
-  openEdgeDialog: (edge?: any) => void;
-  closeAllDialogs: () => void;
-
-  // State coordination
-  markUnsavedChanges: () => void;
-  clearUnsavedChanges: () => void;
-
-  // Navigation coordination
-  resetToHome: () => void;
-
-  // Flow coordination
-  fitViewToNodes: () => void;
-}
-
-interface NavigationActionsProviderProps {
-  children: React.ReactNode;
-}
 
 // ========================================
 // CONTEXT
@@ -158,35 +134,40 @@ export const NavigationActionsProvider: React.FC<NavigationActionsProviderProps>
   // CONTEXT VALUE
   // ========================================
 
-  const contextValue: NavigationActionsContextType = useMemo(
-    () => {
-      console.log(`[@context:NavigationActionsProvider] Creating new context value`);
-      return {
-        // Action coordination
-        resetAll,
-        resetSelectionAndDialogs,
+  const contextValue: NavigationActionsContextType = useMemo(() => {
+    console.log(`[@context:NavigationActionsProvider] Creating new context value`);
+    return {
+      // Action coordination
+      resetAll,
+      resetSelectionAndDialogs,
 
-        // UI coordination
-        openNodeDialog,
-        openEdgeDialog,
-        closeAllDialogs,
+      // UI coordination
+      openNodeDialog,
+      openEdgeDialog,
+      closeAllDialogs,
 
-        // State coordination
-        markUnsavedChanges,
-        clearUnsavedChanges,
+      // State coordination
+      markUnsavedChanges,
+      clearUnsavedChanges,
 
-        // Navigation coordination
-        resetToHome,
+      // Navigation coordination
+      resetToHome,
 
-        // Flow coordination
-        fitViewToNodes,
-      };
-    },
-    [
-      // Remove all function dependencies to prevent cascade re-renders
-      // Functions are stable due to their own useCallback dependencies
-    ],
-  );
+      // Flow coordination
+      fitViewToNodes,
+    };
+  }, [
+    // Add function dependencies
+    resetAll,
+    resetSelectionAndDialogs,
+    openNodeDialog,
+    openEdgeDialog,
+    closeAllDialogs,
+    markUnsavedChanges,
+    clearUnsavedChanges,
+    resetToHome,
+    fitViewToNodes,
+  ]);
 
   return (
     <NavigationActionsContext.Provider value={contextValue}>
