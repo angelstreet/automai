@@ -32,16 +32,6 @@ export interface NavigationHookResult {
   setFocusNodeId: (nodeId: string | null) => void;
   maxDisplayDepth: number;
   setMaxDisplayDepth: (depth: number) => void;
-
-  // Screenshot functionality
-  handleTakeScreenshot: (
-    selectedNode: any,
-    nodes: any[],
-    setNodes: any,
-    setAllNodes: any,
-    setSelectedNode: any,
-    setHasUnsavedChanges: any,
-  ) => Promise<void>;
 }
 
 export const useNavigation = (): NavigationHookResult => {
@@ -126,12 +116,12 @@ export const useNavigation = (): NavigationHookResult => {
       `[@hook:useNavigation] Available hosts device models:`,
       availableHosts.map((host) => ({
         host_name: host.host_name,
-        device_models: host.devices?.map((d) => d.model) || [],
+        device_models: host.devices?.map((d) => d.device_model) || [],
       })),
     );
 
     const filtered = availableHosts.filter((host) =>
-      host.devices?.some((device) => interfaceModels.includes(device.model)),
+      host.devices?.some((device) => interfaceModels.includes(device.device_model)),
     );
 
     console.log(
@@ -140,14 +130,14 @@ export const useNavigation = (): NavigationHookResult => {
 
     // Debug logging: Show which hosts were filtered out and why
     const filteredOut = availableHosts.filter(
-      (host) => !host.devices?.some((device) => interfaceModels.includes(device.model)),
+      (host) => !host.devices?.some((device) => interfaceModels.includes(device.device_model)),
     );
     if (filteredOut.length > 0) {
       console.log(
         `[@hook:useNavigation] Hosts filtered out:`,
         filteredOut.map((host) => ({
           host_name: host.host_name,
-          device_models: host.devices?.map((d) => d.model) || [],
+          device_models: host.devices?.map((d) => d.device_model) || [],
           reason: `No device models match interface models [${interfaceModels.join(', ')}]`,
         })),
       );
@@ -160,120 +150,6 @@ export const useNavigation = (): NavigationHookResult => {
   const handleTakeControl = useCallback(async () => {
     await handleToggleControl();
   }, [handleToggleControl]);
-
-  // Screenshot functionality - updated to use selected device from HostManager
-  const handleTakeScreenshot = useCallback(
-    async (
-      selectedNode: any,
-      nodes: any[],
-      setNodes: any,
-      setAllNodes: any,
-      setSelectedNode: any,
-      setHasUnsavedChanges: any,
-    ) => {
-      if (!selectedHost || !selectedDeviceId || !selectedNode) {
-        console.log(
-          '[@hook:useNavigation] Cannot take screenshot: no device selected or no node selected',
-        );
-        return;
-      }
-
-      // Get the specific device from the selected host
-      const device = selectedHost.devices?.find((d: any) => d.device_id === selectedDeviceId);
-      if (!device) {
-        console.error('[@hook:useNavigation] Device not found in selected host');
-        return;
-      }
-
-      try {
-        // Get node name from selected node
-        const nodeName = selectedNode.data.label || 'unknown';
-
-        // Get parent name from selected node
-        let parentName = 'root';
-        if (selectedNode.data.parent && selectedNode.data.parent.length > 0) {
-          // Find the parent node by ID
-          const parentId = selectedNode.data.parent[selectedNode.data.parent.length - 1]; // Get the immediate parent
-          const parentNode = nodes.find((node: any) => node.id === parentId);
-          if (parentNode) {
-            parentName = parentNode.data.label || 'unknown';
-          }
-        }
-
-        console.log(
-          `[@hook:useNavigation] Taking screenshot for device: ${device.model} (${device.name}) on host ${selectedHost.host_name}, parent: ${parentName}, node: ${nodeName}`,
-        );
-
-        // Call screenshot API with device model and host parameters
-        const response = await fetch('/api/virtualpytest/screen-definition/screenshot', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            device_model: device.device_model,
-            host_name: selectedHost.host_name,
-            device_id: selectedDeviceId,
-            video_device: '/dev/video0', // Use default video device
-            parent_name: parentName,
-            node_name: nodeName,
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('[@hook:useNavigation] Screenshot taken successfully:', data);
-
-          if (data.success) {
-            console.log(`[@hook:useNavigation] Screenshot saved to: ${data.screenshot_path}`);
-
-            // Use the additional_screenshot_path if available (parent/node structure), otherwise fall back to screenshot_path
-            const screenshotPath = data.additional_screenshot_path || data.screenshot_path;
-            const screenshotUrl = `/api/virtualpytest/screen-definition/images?path=${encodeURIComponent(screenshotPath)}`;
-
-            // Create updated node with screenshot
-            const updatedNode = {
-              ...selectedNode,
-              data: {
-                ...selectedNode.data,
-                screenshot: screenshotUrl,
-              },
-            };
-
-            // Create a function to update nodes consistently
-            const updateNodeFunction = (nodes: any[]) =>
-              nodes.map((node: any) => (node.id === selectedNode.id ? updatedNode : node));
-
-            // Update both filtered nodes and allNodes arrays
-            setNodes(updateNodeFunction);
-            setAllNodes(updateNodeFunction);
-
-            // Update selected node so the panel reflects the change
-            setSelectedNode(updatedNode);
-
-            // Mark tree as having unsaved changes
-            setHasUnsavedChanges(true);
-
-            console.log(
-              `[@hook:useNavigation] Updated node ${selectedNode.id} with screenshot: ${screenshotUrl}`,
-            );
-            console.log(`[@hook:useNavigation] Marked tree as having unsaved changes`);
-          } else {
-            console.error('[@hook:useNavigation] Screenshot failed:', data.error);
-          }
-        } else {
-          console.error(
-            '[@hook:useNavigation] Screenshot failed:',
-            response.status,
-            response.statusText,
-          );
-        }
-      } catch (error) {
-        console.error('[@hook:useNavigation] Error taking screenshot:', error);
-      }
-    },
-    [selectedHost, selectedDeviceId],
-  );
 
   return {
     // Interface data
@@ -303,8 +179,5 @@ export const useNavigation = (): NavigationHookResult => {
     setFocusNodeId,
     maxDisplayDepth,
     setMaxDisplayDepth,
-
-    // Screenshot functionality
-    handleTakeScreenshot,
   };
 };
