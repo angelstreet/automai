@@ -172,9 +172,9 @@ export const useVerificationEditor = ({
         (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground)
       ) {
         console.log(
-          '[@hook:useVerificationEditor] Using process-image endpoint with processing options',
+          '[@hook:useVerificationEditor] Using processImage endpoint with processing options',
         );
-        captureResponse = await fetch(`/server/verification/image/process-image`, {
+        captureResponse = await fetch(`/server/verification/image/processImage`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -191,8 +191,8 @@ export const useVerificationEditor = ({
           }),
         });
       } else {
-        console.log('[@hook:useVerificationEditor] Using standard crop-image endpoint');
-        captureResponse = await fetch(`/server/verification/image/crop-image`, {
+        console.log('[@hook:useVerificationEditor] Using standard cropImage endpoint');
+        captureResponse = await fetch(`/server/verification/image/cropImage`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -290,11 +290,11 @@ export const useVerificationEditor = ({
 
       // Handle saving based on reference type
       if (referenceType === 'text') {
-        // Text references should use processed image from detect-text (no cropping needed)
+        // Text references should use processed image from detectText (no cropping needed)
         console.log(
-          '[@hook:useVerificationEditor] Saving text reference using processed image from detect-text',
+          '[@hook:useVerificationEditor] Saving text reference using processed image from detectText',
         );
-        const response = await fetch('/server/verification/text/save-text', {
+        const response = await fetch('/server/verification/text/saveText', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -305,7 +305,7 @@ export const useVerificationEditor = ({
             reference_name: referenceName,
             area: selectedArea,
             text: referenceText,
-            image_textdetected_path: detectedTextData?.image_textdetected_path || '', // Use processed image from detect-text
+            image_textdetected_path: detectedTextData?.image_textdetected_path || '', // Use processed image from detectText
           }),
         });
 
@@ -335,7 +335,7 @@ export const useVerificationEditor = ({
 
         if (imageProcessingOptions.autocrop || imageProcessingOptions.removeBackground) {
           console.log('[@hook:useVerificationEditor] Capturing with processing options for save');
-          captureResponse = await fetch(`/server/verification/image/process-image`, {
+          captureResponse = await fetch(`/server/verification/image/processImage`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -353,7 +353,7 @@ export const useVerificationEditor = ({
           });
         } else {
           console.log('[@hook:useVerificationEditor] Capturing without processing for save');
-          captureResponse = await fetch(`/server/verification/image/crop-image`, {
+          captureResponse = await fetch(`/server/verification/image/cropImage`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -376,7 +376,7 @@ export const useVerificationEditor = ({
         }
 
         // Image references: Single call uploads to R2 and saves to database
-        const response = await fetch('/server/verification/image/save-image', {
+        const response = await fetch('/server/verification/image/saveImage', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -456,7 +456,7 @@ export const useVerificationEditor = ({
       const sourceFilename = captureSourcePath.split('/').pop() || '';
       console.log('[@hook:useVerificationEditor] Extracted source filename:', sourceFilename);
 
-      const response = await fetch(`/server/verification/text/detect-text`, {
+      const response = await fetch(`/server/verification/text/detectText`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

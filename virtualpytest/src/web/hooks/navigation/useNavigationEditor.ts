@@ -102,7 +102,7 @@ export const useNavigationEditor = () => {
         if (verificationsToSave && verificationsToSave.length > 0) {
           for (const verification of verificationsToSave) {
             try {
-              const response = await fetch('/server/verifications/save-verification', {
+              const response = await fetch('/server/verification/saveVerification', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

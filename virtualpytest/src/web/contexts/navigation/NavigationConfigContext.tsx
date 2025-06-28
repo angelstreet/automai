@@ -294,9 +294,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           let nodes = treeData.nodes || [];
           let edges = treeData.edges || [];
 
-          // Note: Verification and action definitions are now loaded dynamically by useReferences hook
-          // Tree only stores IDs, actual content is loaded when host control is active
-
           state.setNodes(nodes);
           state.setEdges(edges);
 
