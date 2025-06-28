@@ -285,13 +285,6 @@ def verification_execute_batch():
             'error': f'Batch verification coordination error: {str(e)}'
         }), 500
 
-# LEGACY ROUTE - for backward compatibility during transition
-@server_verification_common_bp.route('/batch/test', methods=['POST'])
-def batch_test_verification():
-    """LEGACY: Execute batch verification - redirects to new naming convention"""
-    print("[@route:server_verification_common:batch_test_verification] LEGACY route called - redirecting to verification_execute_batch")
-    return verification_execute_batch()
-
 @server_verification_common_bp.route('/batch/execute', methods=['POST'])
 def execute_batch_verification():
     """Execute batch verification by dispatching individual requests to host endpoints"""

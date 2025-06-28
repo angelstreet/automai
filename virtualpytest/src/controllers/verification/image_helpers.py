@@ -1,8 +1,8 @@
 """
 Image Helpers
 
-Core image processing helpers for 4 main operations:
-1. Wait for image to appear/disappear (template matching)
+Core image processing helpers for 3 main operations:
+1. Template matching (image verification)
 2. Crop image to area
 3. Process image (filters, background removal) 
 4. Save/download images
@@ -66,84 +66,8 @@ class ImageHelpers:
             return ""
     
     # =============================================================================
-    # Core Operation 1: Template Matching (Wait for Image)
+    # Core Operation 1: Template Matching
     # =============================================================================
-    
-    def wait_for_image_to_appear(self, reference_path: str, timeout: float = 10.0, 
-                                confidence: float = 0.8, area: dict = None) -> Tuple[bool, dict, str]:
-        """
-        Core function: Wait for image to appear on screen.
-        1. Take screenshots in loop
-        2. Template matching with confidence threshold
-        3. Return found status, location, screenshot path
-        """
-        try:
-            start_time = time.time()
-            screenshot_path = ""
-            
-            while time.time() - start_time < timeout:
-                # Take screenshot using AV controller
-                screenshot_path = self.av_controller.take_screenshot()
-                if not screenshot_path or not os.path.exists(screenshot_path):
-                    time.sleep(0.5)
-                    continue
-                
-                # Check if image matches
-                match_result = self.match_template_in_area(
-                    screenshot_path, reference_path, area, confidence
-                )
-                
-                if match_result['found']:
-                    elapsed_time = time.time() - start_time
-                    print(f"[@image_helpers] Image appeared after {elapsed_time:.2f}s")
-                    return True, match_result['location'], screenshot_path
-                
-                time.sleep(0.5)
-            
-            print(f"[@image_helpers] Image did not appear within {timeout}s")
-            return False, None, screenshot_path
-                
-        except Exception as e:
-            print(f"[@image_helpers] Error in wait_for_image_to_appear: {e}")
-            return False, None, ""
-    
-    def wait_for_image_to_disappear(self, reference_path: str, timeout: float = 10.0,
-                                   confidence: float = 0.8, area: dict = None) -> Tuple[bool, str]:
-        """
-        Core function: Wait for image to disappear from screen.
-        1. Take screenshots in loop
-        2. Template matching with confidence threshold
-        3. Return disappeared status, screenshot path
-        """
-        try:
-            start_time = time.time()
-            screenshot_path = ""
-            
-            while time.time() - start_time < timeout:
-                # Take screenshot using AV controller
-                screenshot_path = self.av_controller.take_screenshot()
-                if not screenshot_path or not os.path.exists(screenshot_path):
-                    time.sleep(0.5)
-                    continue
-                
-                # Check if image still matches
-                match_result = self.match_template_in_area(
-                    screenshot_path, reference_path, area, confidence
-                )
-                
-                if not match_result['found']:
-                    elapsed_time = time.time() - start_time
-                    print(f"[@image_helpers] Image disappeared after {elapsed_time:.2f}s")
-                    return True, screenshot_path
-                
-                time.sleep(0.5)
-            
-            print(f"[@image_helpers] Image did not disappear within {timeout}s")
-            return False, screenshot_path
-                
-        except Exception as e:
-            print(f"[@image_helpers] Error in wait_for_image_to_disappear: {e}")
-            return False, ""
     
     def match_template_in_area(self, image_source_path: str, template_path: str, 
                               area: Dict[str, Any] = None, threshold: float = 0.8) -> Dict[str, Any]:

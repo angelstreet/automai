@@ -20,11 +20,11 @@ def detect_text():
         
         print(f"[@route:host_detect_text] Text detection request for device: {device_id}")
         
-        # Get text verification controller for the specified device
+        # Get text verification controller and device info
         text_controller = get_controller(device_id, 'verification_text')
+        device = get_device_by_id(device_id)
         
         if not text_controller:
-            device = get_device_by_id(device_id)
             if not device:
                 return jsonify({
                     'success': False,
@@ -37,21 +37,15 @@ def detect_text():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
-        # Get device info for response
-        device = get_device_by_id(device_id)
-        
         # Get text detection result
         result = text_controller.detect_text(data)
         
-        # If successful, create a text detected image URL like image cropping does
+        # Build URL for text detected image
         if result.get('success') and result.get('image_textdetected_path'):
-            # Build proper URL for the text detected image
-            image_textdetected_url = buildHostImageUrl(data.get('host', {}), result['image_textdetected_path'])
-            result['image_textdetected_url'] = image_textdetected_url
-            
-            print(f"[@route:host_detect_text] Built text detected image URL: {image_textdetected_url}")
+            result['image_textdetected_url'] = buildHostImageUrl(data.get('host', {}), result['image_textdetected_path'])
+            print(f"[@route:host_detect_text] Built text detected image URL: {result['image_textdetected_url']}")
         
-        # Add device_model to response for server route (following established pattern)
+        # Add device info to response
         if device:
             result['device_model'] = device.model
             result['device_name'] = device.name
@@ -74,10 +68,11 @@ def save_text():
         
         print(f"[@route:host_save_text] Save text request for device: {device_id}")
         
+        # Get text verification controller and device info
         text_controller = get_controller(device_id, 'verification_text')
+        device = get_device_by_id(device_id)
         
         if not text_controller:
-            device = get_device_by_id(device_id)
             if not device:
                 return jsonify({
                     'success': False,
@@ -90,12 +85,9 @@ def save_text():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
-        # Get device info for response
-        device = get_device_by_id(device_id)
-        
         result = text_controller.save_text(data)
         
-        # Add device_model to response for server route (following established pattern)
+        # Add device info to response
         if device:
             result['device_model'] = device.model
             result['device_name'] = device.name
@@ -118,10 +110,11 @@ def execute_text_verification():
         
         print(f"[@route:host_verification_text:execute] Executing text verification for device: {device_id}")
         
+        # Get text verification controller and device info
         text_controller = get_controller(device_id, 'verification_text')
+        device = get_device_by_id(device_id)
         
         if not text_controller:
-            device = get_device_by_id(device_id)
             if not device:
                 return jsonify({
                     'success': False,
@@ -134,13 +127,21 @@ def execute_text_verification():
                 'available_capabilities': device.get_capabilities()
             }), 404
         
-        # Get device info for response
-        device = get_device_by_id(device_id)
-        
         verification = data.get('verification')
         result = text_controller.execute_verification(verification)
         
-        # Add device_model to response for server route (following established pattern)
+        # Build URLs for images in verification result
+        if result.get('screenshot_path'):
+            result['source_image_url'] = buildHostImageUrl(data.get('host', {}), result['screenshot_path'])
+            print(f"[@route:host_verification_text:execute] Built source image URL: {result['source_image_url']}")
+        
+        # Populate extracted text fields for the frontend
+        if result.get('extracted_info'):
+            extracted_info = result['extracted_info']
+            result['extracted_text'] = extracted_info.get('extracted_text', '')
+            result['searched_text'] = extracted_info.get('target_text', verification.get('params', {}).get('text', ''))
+        
+        # Build response
         response = {
             'success': True,
             'verification_result': result

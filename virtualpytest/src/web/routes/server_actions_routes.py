@@ -111,13 +111,6 @@ def action_execute_batch():
         print(f"[@route:server_actions:action_execute_batch] Error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# LEGACY ROUTE - for backward compatibility during transition
-@server_actions_bp.route('/actions/batch/execute', methods=['POST'])
-def execute_batch_actions():
-    """LEGACY: Execute batch actions - redirects to new naming convention"""
-    print("[@route:server_actions:execute_batch_actions] LEGACY route called - redirecting to action_execute_batch")
-    return action_execute_batch()
-
 def execute_single_action(action, host, execution_order, action_number, action_category):
     """Execute single action and return standardized result"""
     start_time = time.time()

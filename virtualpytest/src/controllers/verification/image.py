@@ -59,35 +59,39 @@ class ImageVerificationController:
         }
 
     def waitForImageToAppear(self, image_path: str, timeout: float = 10.0, confidence: float = 0.8,
-                            area: dict = None, model: str = None, verification_index: int = 0) -> tuple:
+                            area: dict = None) -> tuple:
         """
-        Wait for a specific image to appear on screen within a timeout period.
+        Check if a specific image appears on screen immediately.
         
         Args:
             image_path: Path to the reference image to search for
-            timeout: Maximum time to wait in seconds
+            timeout: Ignored - verification happens immediately
             confidence: Matching confidence threshold (0.0 to 1.0)
             area: Optional area to search within {x, y, width, height}
-            model: Model/device identifier for saving results
-            verification_index: Index for naming saved files
             
         Returns:
             tuple: (found, match_location, screenshot_path)
         """
         try:
-            print(f"[@controller:ImageVerification] Waiting for image to appear: {image_path}")
+            print(f"[@controller:ImageVerification] Searching for image: {image_path}")
             print(f"[@controller:ImageVerification] Timeout: {timeout}s, Confidence: {confidence}")
             
-            # Use helpers for core functionality
-            found, location, screenshot_path = self.helpers.wait_for_image_to_appear(
-                image_path, timeout, confidence, area
+            # Take screenshot
+            screenshot_path = self.av_controller.take_screenshot()
+            if not screenshot_path or not os.path.exists(screenshot_path):
+                print(f"[@controller:ImageVerification] Failed to take screenshot")
+                return False, None, ""
+            
+            # Perform template matching
+            match_result = self.helpers.match_template_in_area(
+                screenshot_path, image_path, area, confidence
             )
             
-            if found:
-                print(f"[@controller:ImageVerification] Image found at location: {location}")
-                return True, location, screenshot_path
+            if match_result['found']:
+                print(f"[@controller:ImageVerification] Image found at location: {match_result['location']}")
+                return True, match_result['location'], screenshot_path
             else:
-                print(f"[@controller:ImageVerification] Image not found within {timeout}s")
+                print(f"[@controller:ImageVerification] Image not found in current screenshot")
                 return False, None, screenshot_path
                 
         except Exception as e:
@@ -95,34 +99,38 @@ class ImageVerificationController:
             return False, None, ""
 
     def waitForImageToDisappear(self, image_path: str, timeout: float = 10.0, confidence: float = 0.8,
-                               area: dict = None, model: str = None, verification_index: int = 0) -> tuple:
+                               area: dict = None) -> tuple:
         """
-        Wait for a specific image to disappear from screen within a timeout period.
+        Check if a specific image has disappeared from screen immediately.
         
         Args:
             image_path: Path to the reference image to search for
-            timeout: Maximum time to wait in seconds  
+            timeout: Ignored - verification happens immediately
             confidence: Matching confidence threshold (0.0 to 1.0)
             area: Optional area to search within {x, y, width, height}
-            model: Model/device identifier for saving results
-            verification_index: Index for naming saved files
             
         Returns:
             tuple: (disappeared, screenshot_path)
         """
         try:
-            print(f"[@controller:ImageVerification] Waiting for image to disappear: {image_path}")
+            print(f"[@controller:ImageVerification] Checking if image disappeared: {image_path}")
             
-            # Use helpers for core functionality
-            disappeared, screenshot_path = self.helpers.wait_for_image_to_disappear(
-                image_path, timeout, confidence, area
+            # Take screenshot
+            screenshot_path = self.av_controller.take_screenshot()
+            if not screenshot_path or not os.path.exists(screenshot_path):
+                print(f"[@controller:ImageVerification] Failed to take screenshot")
+                return False, ""
+            
+            # Perform template matching
+            match_result = self.helpers.match_template_in_area(
+                screenshot_path, image_path, area, confidence
             )
             
-            if disappeared:
-                print(f"[@controller:ImageVerification] Image disappeared!")
+            if not match_result['found']:
+                print(f"[@controller:ImageVerification] Image has disappeared!")
                 return True, screenshot_path
             else:
-                print(f"[@controller:ImageVerification] Image did not disappear within {timeout}s")
+                print(f"[@controller:ImageVerification] Image still present in current screenshot")
                 return False, screenshot_path
                 
         except Exception as e:
@@ -316,9 +324,7 @@ class ImageVerificationController:
                 area = verification_config.get('area')
                 
                 found, location, screenshot_path = self.waitForImageToAppear(
-                    image_path, timeout, confidence, area,
-                    verification_config.get('model'),
-                    verification_config.get('verification_index', 0)
+                    image_path, timeout, confidence, area
                 )
                 
                 return {
@@ -338,9 +344,7 @@ class ImageVerificationController:
                 area = verification_config.get('area')
                 
                 disappeared, screenshot_path = self.waitForImageToDisappear(
-                    image_path, timeout, confidence, area,
-                    verification_config.get('model'),
-                    verification_config.get('verification_index', 0)
+                    image_path, timeout, confidence, area
                 )
                 
                 return {

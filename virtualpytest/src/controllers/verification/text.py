@@ -5,7 +5,6 @@ Clean text controller that uses helpers for all operations.
 Provides route interfaces and core domain logic.
 """
 
-import time
 import os
 from typing import Dict, Any, Optional, Tuple, List
 from .text_helpers import TextHelpers
@@ -46,44 +45,42 @@ class TextVerificationController:
 
     def waitForTextToAppear(self, text: str, timeout: float = 10.0, area: dict = None) -> tuple:
         """
-        Wait for specific text to appear on screen within a timeout period.
+        Check if specific text appears on screen immediately.
         
         Args:
             text: Text to search for
-            timeout: Maximum time to wait in seconds
+            timeout: Ignored - verification happens immediately
             area: Optional area to search within {x, y, width, height}
             
         Returns:
             tuple: (found, extracted_info, screenshot_path)
         """
         try:
+            print(f"[@text_controller] Searching for text: {text}")
             helpers = TextHelpers(self.captures_path)
-            start_time = time.time()
             
-            while time.time() - start_time < timeout:
-                # Take screenshot using correct method
-                screenshot_path = self.av_controller.take_screenshot()
-                if not screenshot_path or not os.path.exists(screenshot_path):
-                    time.sleep(0.5)
-                    continue
-                
-                # Detect text in area with filtering
-                result = helpers.detect_text_in_area(screenshot_path, area)
-                extracted_text = result.get('extracted_text', '')
-                
-                # Check if target text appears
-                if helpers.text_matches(extracted_text, text):
-                    elapsed_time = time.time() - start_time
-                    return True, {
-                        'extracted_text': extracted_text,
-                        'target_text': text,
-                        'elapsed_time': elapsed_time,
-                        'area': area
-                    }, screenshot_path
-                
-                time.sleep(0.5)
+            # Take screenshot
+            screenshot_path = self.av_controller.take_screenshot()
+            if not screenshot_path or not os.path.exists(screenshot_path):
+                print(f"[@text_controller] Failed to take screenshot")
+                return False, None, ""
             
-            return False, None, ""
+            # Detect text in area with filtering
+            result = helpers.detect_text_in_area(screenshot_path, area)
+            extracted_text = result.get('extracted_text', '')
+            
+            # Check if target text appears
+            if helpers.text_matches(extracted_text, text):
+                print(f"[@text_controller] Text found in current screenshot")
+                return True, {
+                    'extracted_text': extracted_text,
+                    'target_text': text,
+                    'elapsed_time': 0.0,
+                    'area': area
+                }, screenshot_path
+            else:
+                print(f"[@text_controller] Text not found in current screenshot")
+                return False, None, screenshot_path
                 
         except Exception as e:
             print(f"[@text_controller] Error in waitForTextToAppear: {e}")
@@ -91,39 +88,37 @@ class TextVerificationController:
 
     def waitForTextToDisappear(self, text: str, timeout: float = 10.0, area: dict = None) -> tuple:
         """
-        Wait for specific text to disappear from screen within a timeout period.
+        Check if specific text has disappeared from screen immediately.
         
         Args:
             text: Text to search for
-            timeout: Maximum time to wait in seconds  
+            timeout: Ignored - verification happens immediately
             area: Optional area to search within {x, y, width, height}
             
         Returns:
             tuple: (disappeared, screenshot_path)
         """
         try:
+            print(f"[@text_controller] Checking if text disappeared: {text}")
             helpers = TextHelpers(self.captures_path)
-            start_time = time.time()
             
-            while time.time() - start_time < timeout:
-                # Take screenshot using correct method
-                screenshot_path = self.av_controller.take_screenshot()
-                if not screenshot_path or not os.path.exists(screenshot_path):
-                    time.sleep(0.5)
-                    continue
-                
-                # Detect text in area with filtering
-                result = helpers.detect_text_in_area(screenshot_path, area)
-                extracted_text = result.get('extracted_text', '')
-                
-                # Check if target text is no longer present
-                if not helpers.text_matches(extracted_text, text):
-                    elapsed_time = time.time() - start_time
-                    return True, screenshot_path
-                
-                time.sleep(0.5)
+            # Take screenshot
+            screenshot_path = self.av_controller.take_screenshot()
+            if not screenshot_path or not os.path.exists(screenshot_path):
+                print(f"[@text_controller] Failed to take screenshot")
+                return False, ""
             
-            return False, ""
+            # Detect text in area with filtering
+            result = helpers.detect_text_in_area(screenshot_path, area)
+            extracted_text = result.get('extracted_text', '')
+            
+            # Check if target text is no longer present
+            if not helpers.text_matches(extracted_text, text):
+                print(f"[@text_controller] Text has disappeared from current screenshot")
+                return True, screenshot_path
+            else:
+                print(f"[@text_controller] Text still present in current screenshot")
+                return False, screenshot_path
                 
         except Exception as e:
             print(f"[@text_controller] Error in waitForTextToDisappear: {e}")

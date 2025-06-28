@@ -197,20 +197,23 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
                 },
               }}
             >
-              <VerificationsList
-                verifications={verification.verifications}
-                availableVerifications={verification.availableVerificationTypes}
-                onVerificationsChange={verification.handleVerificationsChange}
-                loading={verification.loading}
-                model={model}
-                onTest={verification.handleTest}
-                testResults={verification.testResults}
-                reloadTrigger={verification.referenceSaveCounter}
-                onReferenceSelected={verification.handleReferenceSelected}
-                selectedHost={verification.selectedHost}
-                modelReferences={verification.modelReferences}
-                referencesLoading={verification.referencesLoading}
-              />
+              {model && verification.selectedHost && (
+                <VerificationsList
+                  verifications={verification.verifications}
+                  availableVerifications={verification.availableVerificationTypes}
+                  onVerificationsChange={verification.handleVerificationsChange}
+                  loading={verification.loading}
+                  model={model}
+                  onTest={verification.handleTest}
+                  testResults={verification.testResults}
+                  onReferenceSelected={verification.handleReferenceSelected}
+                  selectedHost={verification.selectedHost}
+                  modelReferences={verification.modelReferences}
+                  referencesLoading={verification.referencesLoading}
+                  showCollapsible={false}
+                  title="Verifications"
+                />
+              )}
             </Box>
           </Collapse>
         </Box>

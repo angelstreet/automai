@@ -91,8 +91,7 @@ def get_references(team_id: str, reference_type: str = None, device_model: str =
         name: Filter by name (partial match)
         
     Returns:
-        Dict: {'success': bool, 'images': List[Dict], 'count': int, 'error': str}
-        Note: Using 'images' key for backward compatibility with existing code
+        Dict: {'success': bool, 'references': List[Dict], 'count': int, 'error': str}
     """
     try:
         supabase = get_supabase()
@@ -114,19 +113,11 @@ def get_references(team_id: str, reference_type: str = None, device_model: str =
         # Execute query with ordering
         result = query.order('created_at', desc=True).execute()
         
-        # Transform the data to match expected format (add 'type' field for backward compatibility)
-        references = []
-        for ref in result.data:
-            # Create a copy and add 'type' field
-            transformed_ref = dict(ref)
-            transformed_ref['type'] = ref['reference_type']  # Add 'type' field for backward compatibility
-            references.append(transformed_ref)
-        
-        print(f"[@db:verifications_references:get_references] Found {len(references)} references")
+        print(f"[@db:verifications_references:get_references] Found {len(result.data)} references")
         return {
             'success': True,
-            'images': references,  # Using 'images' key for backward compatibility
-            'count': len(references)
+            'references': result.data,
+            'count': len(result.data)
         }
         
     except Exception as e:
@@ -134,7 +125,7 @@ def get_references(team_id: str, reference_type: str = None, device_model: str =
         return {
             'success': False,
             'error': str(e),
-            'images': [],
+            'references': [],
             'count': 0
         }
 
@@ -146,8 +137,7 @@ def get_all_references(team_id: str) -> Dict:
         team_id: Team ID for RLS
         
     Returns:
-        Dict: {'success': bool, 'images': List[Dict], 'count': int, 'error': str}
-        Note: Using 'images' key for backward compatibility with existing code
+        Dict: {'success': bool, 'references': List[Dict], 'count': int, 'error': str}
     """
     try:
         supabase = get_supabase()
@@ -156,19 +146,11 @@ def get_all_references(team_id: str) -> Dict:
         
         result = supabase.table('verifications_references').select('*').eq('team_id', team_id).order('created_at', desc=True).execute()
         
-        # Transform the data to match expected format (add 'type' field for backward compatibility)
-        references = []
-        for ref in result.data:
-            # Create a copy and add 'type' field
-            transformed_ref = dict(ref)
-            transformed_ref['type'] = ref['reference_type']  # Add 'type' field for backward compatibility
-            references.append(transformed_ref)
-        
-        print(f"[@db:verifications_references:get_all_references] Found {len(references)} references")
+        print(f"[@db:verifications_references:get_all_references] Found {len(result.data)} references")
         return {
             'success': True,
-            'images': references,  # Using 'images' key for backward compatibility
-            'count': len(references)
+            'references': result.data,
+            'count': len(result.data)
         }
         
     except Exception as e:
@@ -176,7 +158,7 @@ def get_all_references(team_id: str) -> Dict:
         return {
             'success': False,
             'error': str(e),
-            'images': [],
+            'references': [],
             'count': 0
         }
 

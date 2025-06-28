@@ -34,6 +34,9 @@ const internalBuildHostUrl = (host: any, endpoint: string): string => {
  * Supports device-specific capture paths for multi-device hosts
  */
 export const buildCaptureUrl = (host: any, timestamp: string, deviceId?: string): string => {
+  if (!deviceId) {
+    throw new Error('deviceId is required for buildCaptureUrl');
+  }
   // Get device-specific capture path
   const capturePath = getDeviceCaptureUrlPath(host, deviceId);
   return internalBuildHostUrl(host, `host${capturePath}/capture_${timestamp}.jpg`);
@@ -44,6 +47,9 @@ export const buildCaptureUrl = (host: any, timestamp: string, deviceId?: string)
  * Supports device-specific capture paths for multi-device hosts
  */
 export const buildCroppedImageUrl = (host: any, filename: string, deviceId?: string): string => {
+  if (!deviceId) {
+    throw new Error('deviceId is required for buildCroppedImageUrl');
+  }
   // Get device-specific capture path
   const capturePath = getDeviceCaptureUrlPath(host, deviceId);
   return internalBuildHostUrl(host, `host${capturePath}/cropped/${filename}`);
@@ -58,6 +64,9 @@ export const buildReferenceImageUrl = (
   filename: string,
   deviceId?: string,
 ): string => {
+  if (!deviceId) {
+    throw new Error('deviceId is required for buildReferenceImageUrl');
+  }
   // Get device-specific capture path as base for resources
   const capturePath = getDeviceCaptureUrlPath(host, deviceId);
   return internalBuildHostUrl(host, `host${capturePath}/resources/${deviceModel}/${filename}`);
@@ -78,6 +87,9 @@ export const buildVerificationResultUrl = (host: any, resultsPath: string): stri
  * Supports device-specific stream paths for multi-device hosts
  */
 export const buildStreamUrl = (host: any, deviceId?: string): string => {
+  if (!deviceId) {
+    throw new Error('deviceId is required for buildStreamUrl');
+  }
   // Get device-specific stream path
   const streamPath = getDeviceStreamUrlPath(host, deviceId);
   return internalBuildHostUrl(host, `host${streamPath}/output.m3u8`);
@@ -136,12 +148,6 @@ export const buildCloudImageUrl = (
 
   return `${actualBaseUrl.replace(/\/$/, '')}/${bucketName}/${cleanPath}`;
 };
-
-/**
- * Legacy support - replaces local buildImageUrl functions in components
- * @deprecated Use buildHostImageUrl instead for host images, buildCloudImageUrl for cloud images
- */
-export const buildImageUrl = buildHostImageUrl;
 
 // =====================================================
 // MULTI-DEVICE HELPER FUNCTIONS (Frontend)
