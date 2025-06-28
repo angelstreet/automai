@@ -399,6 +399,85 @@ def delete_action_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
-
+@server_actions_bp.route('/actions/getAvailableActions', methods=['POST'])
+def get_available_actions():
+    """Get available actions for a specific host."""
+    try:
+        data = request.get_json()
+        host = data.get('host')
+        
+        if not host:
+            return jsonify({'success': False, 'error': 'Host data is required'}), 400
+        
+        host_name = host.get('host_name')
+        if not host_name:
+            return jsonify({'success': False, 'error': 'Host name is required'}), 400
+        
+        print(f"[@route:server_actions_routes:get_available_actions] Getting available actions for host: {host_name}")
+        
+        # Get host from host manager
+        from src.utils.app_utils import get_host_manager
+        host_manager = get_host_manager()
+        host_data = host_manager.get_host(host_name)
+        if not host_data:
+            print(f"[@route:server_actions_routes:get_available_actions] Host {host_name} not found in host manager")
+            return jsonify({'success': False, 'error': f'Host {host_name} not found'}), 404
+        
+        # Get available actions from all devices in the host
+        all_actions = {}
+        devices = host_data.get('devices', [])
+        
+        for device in devices:
+            device_action_types = device.get('device_action_types', {})
+            device_name = device.get('device_name', device.get('device_id', 'unknown'))
+            
+            print(f"[@route:server_actions_routes:get_available_actions] Device {device_name} has {len(device_action_types)} action categories")
+            
+            # Merge device actions into all_actions
+            for category, actions_list in device_action_types.items():
+                if category not in all_actions:
+                    all_actions[category] = []
+                if isinstance(actions_list, list):
+                    all_actions[category].extend(actions_list)
+        
+        if not all_actions:
+            print(f"[@route:server_actions_routes:get_available_actions] No actions available for host {host_name}")
+            return jsonify({'success': True, 'actions': []})
+        
+        # Transform actions to the expected format for the frontend
+        transformed_actions = []
+        
+        for category, actions_list in all_actions.items():
+            if isinstance(actions_list, list):
+                for action in actions_list:
+                    if isinstance(action, dict):
+                        # Action is already in the correct format
+                        transformed_action = {
+                            'id': action.get('id', ''),
+                            'label': action.get('label', ''),
+                            'command': action.get('command', ''),
+                            'params': action.get('params', {}),
+                            'description': action.get('description', ''),
+                            'category': category,
+                            'requiresInput': action.get('requiresInput', False)
+                        }
+                        
+                        # Add input fields if required
+                        if action.get('requiresInput', False):
+                            transformed_action['inputLabel'] = action.get('inputLabel', 'Input')
+                            transformed_action['inputPlaceholder'] = action.get('inputPlaceholder', '')
+                        
+                        transformed_actions.append(transformed_action)
+        
+        print(f"[@route:server_actions_routes:get_available_actions] Returning {len(transformed_actions)} actions for host {host_name}")
+        
+        return jsonify({
+            'success': True,
+            'actions': transformed_actions
+        })
+        
+    except Exception as e:
+        print(f"[@route:server_actions_routes:get_available_actions] Error: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
  

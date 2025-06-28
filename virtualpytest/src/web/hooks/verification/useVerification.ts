@@ -17,8 +17,8 @@ export const useVerification = ({
   deviceId,
   captureSourcePath,
 }: UseVerificationProps) => {
-  // Get verification types from centralized context
-  const { verificationTypes, getVerificationTypes } = useDeviceData();
+  // Get verification data from centralized context
+  const { getAvailableVerificationTypes } = useDeviceData();
 
   // State for verification execution (not data fetching)
   const [verifications, setVerifications] = useState<Verification[]>([]);
@@ -191,7 +191,7 @@ export const useVerification = ({
   );
 
   return {
-    verificationTypes: getVerificationTypes(), // Get from context
+    availableVerificationTypes: getAvailableVerificationTypes(), // Get from context
     verifications,
     loading,
     error,

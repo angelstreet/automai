@@ -273,7 +273,7 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
           `[DeviceDataContext] Fetching available actions for host: ${state.currentHost.host_name}`,
         );
 
-        const response = await fetch('/server/system/getAvailableActions', {
+        const response = await fetch('/server/actions/getAvailableActions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ host: state.currentHost }),
@@ -367,22 +367,11 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
           `[DeviceDataContext] Fetching available verifications for host: ${state.currentHost.host_name}`,
         );
 
-        const device = state.currentHost.devices?.find(
-          (d) => d.device_id === state.currentDeviceId,
-        );
-        const deviceModel = device?.device_model;
-
-        if (!deviceModel) {
-          throw new Error('Device model not found');
-        }
-
-        const response = await fetch(
-          `/server/verification/getAvailableVerifications?device_model=${encodeURIComponent(deviceModel)}`,
-          {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-          },
-        );
+        const response = await fetch('/server/verification/getAvailableVerifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ host: state.currentHost }),
+        });
 
         if (response.ok) {
           const result = await response.json();
@@ -424,7 +413,7 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
         }));
       }
     },
-    [state.currentHost, state.currentDeviceId, state.isControlActive, hostId],
+    [state.currentHost, state.isControlActive, hostId],
   );
 
   const fetchActions = useCallback(
@@ -533,7 +522,7 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
         console.log(`[DeviceDataContext] Fetching verifications for device model: ${deviceModel}`);
 
         const response = await fetch(
-          `/server/verification/getAvailableVerifications?device_model=${encodeURIComponent(deviceModel)}`,
+          `/server/verification/getVerifications?device_model=${encodeURIComponent(deviceModel)}`,
           {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
