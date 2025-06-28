@@ -86,7 +86,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         setIsCheckingLock(true);
 
         const response = await fetch(
-          `/server/navigation-trees/lock/status?userinterface_id=${userInterfaceId}`,
+          `/server/navigationTrees/lockStatus?userinterface_id=${userInterfaceId}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       try {
         setIsCheckingLock(true);
 
-        const response = await fetch(`/server/navigation-trees/lock/acquire`, {
+        const response = await fetch(`/server/navigationTrees/lockAcquire`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -190,7 +190,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       try {
         setIsCheckingLock(true);
 
-        const response = await fetch(`/server/navigation-trees/lock/release`, {
+        const response = await fetch(`/server/navigationTrees/lockRelease`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -271,7 +271,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
         // Get trees for this userInterface directly by ID
         const response = await fetch(
-          `/server/navigation-trees/list?userinterface_id=${userInterfaceId}`,
+          `/server/navigationTrees/getTreeByUserInterfaceId/${userInterfaceId}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -285,9 +285,9 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
         const data = await response.json();
 
-        if (data.success && data.trees && data.trees.length > 0) {
-          // Get the first tree (root tree)
-          const tree = data.trees[0];
+        if (data.success && data.tree) {
+          // Get the tree data
+          const tree = data.tree;
           const treeData = tree.metadata || {};
 
           // Update state with loaded data
@@ -375,7 +375,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           changes_summary: 'Updated navigation tree from editor',
         };
 
-        const response = await fetch(`/server/navigation-trees/save`, {
+        const response = await fetch(`/server/navigationTrees/saveTree`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -441,7 +441,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(true);
         state.setError(null);
 
-        const response = await fetch(`/server/navigation-trees/save`, {
+        const response = await fetch(`/server/navigationTrees/saveTree`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
