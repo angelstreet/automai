@@ -28,6 +28,9 @@ class TextVerificationController:
         
         # Set verification type for controller lookup
         self.verification_type = 'text'
+        
+        # Initialize helpers
+        self.helpers = TextHelpers(self.captures_path)
 
         print(f"[@controller:TextVerification] Initialized with captures path: {self.captures_path}")
         
@@ -393,8 +396,7 @@ class TextVerificationController:
 
     def _extract_text_from_area(self, image_path: str, area: dict = None, image_filter: str = None) -> tuple:
         """
-        Extract text from image area using Tesseract OCR.
-        Uses the exact same cropping approach as image verification.
+        Extract text from image area using TextHelpers.
         
         Args:
             image_path: Path to the image file
@@ -405,73 +407,13 @@ class TextVerificationController:
             Tuple of (extracted_text, detected_language, language_confidence, ocr_confidence)
         """
         try:
-            import cv2
-            
-            # Load image using OpenCV (same as image verification)
-            img = cv2.imread(image_path)
-            if img is None:
-                print(f"[@controller:TextVerification] Could not load image: {image_path}")
-                return "", "eng", 0.0, 0.0
-            
-            # Crop image to area if specified (exact same approach as image verification)
-            if area:
-                x = int(area['x'])
-                y = int(area['y'])
-                width = int(area['width'])
-                height = int(area['height'])
-                
-                # Ensure coordinates are within image bounds (same as image verification)
-                img_height, img_width = img.shape[:2]
-                x = max(0, min(x, img_width - 1))
-                y = max(0, min(y, img_height - 1))
-                width = min(width, img_width - x)
-                height = min(height, img_height - y)
-                
-                # Crop using OpenCV (exact same as image verification: img[y:y+height, x:x+width])
-                img = img[y:y+height, x:x+width]
-                
-                print(f"[@controller:TextVerification] Image cropped using OpenCV to area ({x},{y},{width},{height})")
-            
-            # Apply image filter if specified
-            if image_filter and image_filter != 'none':
-                if image_filter == 'greyscale':
-                    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)  # Convert back for consistency
-                elif image_filter == 'binary':
-                    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-                    _, img = cv2.threshold(gray_img, 128, 255, cv2.THRESH_BINARY)
-                    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)  # Convert back for consistency
-                print(f"[@controller:TextVerification] Applied {image_filter} filter")
-            
-            # Use TextHelpers for OCR
-            helpers = TextHelpers(self.captures_path)
-            
-            # Save processed image to temporary file for OCR
-            temp_dir = '/tmp/text_ocr'
-            os.makedirs(temp_dir, exist_ok=True)
-            
-            import time
-            temp_id = int(time.time()) % 10000  # Simple ID to avoid conflicts
-            temp_path = os.path.join(temp_dir, f"text_ocr_{temp_id}.png")
-            
-            success = cv2.imwrite(temp_path, img)
-            if not success:
-                print(f"[@controller:TextVerification] Failed to save temporary image for OCR")
-                return "", "eng", 0.0, 0.0
-            
-            # Use TextHelpers to extract text
-            result = helpers.detect_text_in_area(temp_path, None)  # Area already cropped
-            
-            # Clean up temporary file
-            try:
-                os.unlink(temp_path)
-            except:
-                pass
+            # Use TextHelpers to extract text (handles cropping, filtering, and OCR)
+            result = self.helpers.detect_text_in_area(image_path, area)
             
             extracted_text = result.get('extracted_text', '')
-            detected_language = result.get('detected_language', 'eng')
-            language_confidence = result.get('language_confidence', 0.0)
-            ocr_confidence = result.get('confidence', 0.0)
+            detected_language = result.get('language', 'eng')
+            language_confidence = 0.8 if extracted_text else 0.0  # Simple confidence
+            ocr_confidence = 0.8 if extracted_text else 0.0  # Simple confidence
             
             print(f"[@controller:TextVerification] OCR extracted: '{extracted_text.strip()}'")
             
@@ -483,7 +425,7 @@ class TextVerificationController:
 
     def _text_matches(self, extracted_text: str, target_text: str) -> bool:
         """
-        Check if extracted text matches target text.
+        Check if extracted text matches target text using TextHelpers.
         
         Args:
             extracted_text: Text extracted from OCR
@@ -494,15 +436,14 @@ class TextVerificationController:
         """
         try:
             # Use TextHelpers for consistent text matching
-            helpers = TextHelpers(self.captures_path)
-            return helpers.text_matches(extracted_text, target_text)
+            return self.helpers.text_matches(extracted_text, target_text)
         except Exception as e:
             print(f"[@controller:TextVerification] Error in text matching: {e}")
             return False
 
     def _save_cropped_source_image(self, source_path: str, area: dict, model: str, verification_index: int) -> Optional[str]:
         """
-        Save cropped source image for UI comparison.
+        Save cropped source image for UI comparison using ImageHelpers.
         
         Args:
             source_path: Path to source image
@@ -514,7 +455,9 @@ class TextVerificationController:
             str: Path to saved cropped image, None if failed
         """
         try:
-            import cv2
+            # Import ImageHelpers for cropping (reuse image cropping logic)
+            from .image_helpers import ImageHelpers
+            image_helpers = ImageHelpers(self.captures_path, self.av_controller)
             
             # Create results directory
             results_dir = '/var/www/html/stream/verification_results'
@@ -525,34 +468,14 @@ class TextVerificationController:
             
             print(f"[@controller:TextVerification] Cropping source image: {source_path} -> {cropped_result_path}")
             
-            # Load source image
-            source_img = cv2.imread(source_path)
-            if source_img is None:
-                print(f"[@controller:TextVerification] Failed to load source image: {source_path}")
-                return None
+            # Use ImageHelpers to crop the image (reuse existing crop functionality)
+            success = image_helpers.crop_image_to_area(source_path, cropped_result_path, area)
             
-            # Extract crop coordinates
-            x = int(area.get('x', 0))
-            y = int(area.get('y', 0))
-            width = int(area.get('width', source_img.shape[1]))
-            height = int(area.get('height', source_img.shape[0]))
-            
-            # Ensure coordinates are within image bounds
-            x = max(0, min(x, source_img.shape[1] - 1))
-            y = max(0, min(y, source_img.shape[0] - 1))
-            width = min(width, source_img.shape[1] - x)
-            height = min(height, source_img.shape[0] - y)
-            
-            # Crop the image
-            cropped_img = source_img[y:y+height, x:x+width]
-            
-            # Save cropped image
-            success = cv2.imwrite(cropped_result_path, cropped_img)
             if success:
-                print(f"[@controller:TextVerification] Successfully cropped text source image to {width}x{height} at ({x},{y})")
+                print(f"[@controller:TextVerification] Successfully cropped text source image")
                 return cropped_result_path
             else:
-                print(f"[@controller:TextVerification] Failed to save cropped image: {cropped_result_path}")
+                print(f"[@controller:TextVerification] Failed to crop source image")
                 return None
                 
         except Exception as e:
