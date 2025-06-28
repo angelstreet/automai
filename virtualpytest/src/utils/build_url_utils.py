@@ -102,25 +102,26 @@ def buildReferenceImageUrl(host_info: dict, device_model: str, filename: str) ->
     """
     return buildHostUrl(host_info, f'host/stream/resources/{device_model}/{filename}')
 
-def buildVerificationResultUrl(host_info: dict, results_path: str) -> str:
+def buildVerificationResultUrl(host_info: dict, filename: str, device_id: str) -> str:
     """
     Build URL for verification result images
     
     Args:
         host_info: Host information from registry
-        results_path: Local file path to verification result
+        filename: Verification result filename
+        device_id: Device ID for multi-device hosts (required)
         
     Returns:
         Complete URL to verification result image
         
     Example:
-        buildVerificationResultUrl(host_info, '/var/www/html/stream/verification_results/source_image_0.png')
-        -> 'https://host:444/host/stream/verification_results/source_image_0.png'
+        buildVerificationResultUrl(host_info, 'source_image_0.png', 'device1')
+        -> 'https://host:444/host/stream/capture1/verification_results/source_image_0.png'
     """
-    # Convert local path to URL path
-    url_path = results_path.replace('/var/www/html/', '')
-    # Add host/ prefix like other image URLs (cropping, captures, etc.)
-    return buildHostUrl(host_info, f'host/{url_path}')
+    # Get device-specific capture path
+    capture_path = _get_device_capture_path(host_info, device_id)
+    
+    return buildHostUrl(host_info, f'host{capture_path}/verification_results/{filename}')
 
 def buildStreamUrl(host_info: dict, device_id: str) -> str:
     """

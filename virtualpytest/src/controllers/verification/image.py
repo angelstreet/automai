@@ -500,11 +500,11 @@ class ImageVerificationController:
         Creates source, reference, and overlay images with public URLs.
         """
         try:
-            # Create results directory - simple path, just ensure it exists
-            results_dir = '/var/www/html/stream/verification_results'
+            # Create results directory using device-specific captures path + verification_results
+            results_dir = os.path.join(self.captures_path, 'verification_results')
             os.makedirs(results_dir, exist_ok=True)
             
-            # Create result file paths in stream directory
+            # Create result file paths in device-specific verification_results directory
             source_result_path = f'{results_dir}/source_image_{verification_index}.png'
             reference_result_path = f'{results_dir}/reference_image_{verification_index}.png'
             overlay_result_path = f'{results_dir}/result_overlay_{verification_index}.png'
@@ -583,7 +583,7 @@ class ImageVerificationController:
                 print(f"[@controller:ImageVerification] Failed to create pixel difference overlay")
                 return {}
             
-            # === STEP 4: Convert local paths to public URLs ===
+            # === STEP 4: Convert local paths to public URLs using URL builder ===
             # Get host device info for URL building
             try:
                 from src.utils.build_url_utils import buildVerificationResultUrl
@@ -593,31 +593,46 @@ class ImageVerificationController:
                 host_device = getattr(current_app, 'my_host_device', None)
                 if not host_device:
                     print(f"[@controller:ImageVerification] ERROR: No host device found for URL building")
-                    raise ValueError("Host device context required for URL building - ensure proper request context")
+                    raise ValueError("Host device context required for URL building")
                 
-                # Build public URLs
-                source_url = buildVerificationResultUrl(host_device, source_result_path)
-                reference_url = buildVerificationResultUrl(host_device, reference_result_path)
-                overlay_url = buildVerificationResultUrl(host_device, overlay_result_path)
+                # Get device_id from host_device
+                device_id = host_device.get('device_id', 'device1')  # Default fallback
                 
-                print(f"[@controller:ImageVerification] Built URLs:")
-                print(f"  Source URL: {source_url}")
-                print(f"  Reference URL: {reference_url}")
-                print(f"  Overlay URL: {overlay_url}")
+                # Build public URLs using device-specific URL builder
+                source_filename = os.path.basename(source_result_path)
+                reference_filename = os.path.basename(reference_result_path)
+                overlay_filename = os.path.basename(overlay_result_path)
+                
+                source_url = buildVerificationResultUrl(host_device, source_filename, device_id)
+                reference_url = buildVerificationResultUrl(host_device, reference_filename, device_id)
+                overlay_url = buildVerificationResultUrl(host_device, overlay_filename, device_id)
+                
+                print(f"[@controller:ImageVerification] Built verification result URLs:")
+                print(f"  Source: {source_url}")
+                print(f"  Reference: {reference_url}")
+                print(f"  Overlay: {overlay_url}")
                 
                 return {
-                    'source_image_path': source_result_path,
-                    'reference_image_path': reference_result_path,
-                    'result_overlay_path': overlay_result_path,
-                    'sourceImageUrl': source_url,
-                    'referenceImageUrl': reference_url,
-                    'resultOverlayUrl': overlay_url,
+                    "sourceImageUrl": source_url,
+                    "referenceImageUrl": reference_url,
+                    "resultOverlayUrl": overlay_url,
+                    "source_image_path": source_result_path,
+                    "reference_image_path": reference_result_path,
+                    "result_overlay_path": overlay_result_path
                 }
                 
             except Exception as url_error:
                 print(f"[@controller:ImageVerification] URL building error: {url_error}")
-                raise ValueError(f"Failed to build verification result URLs: {url_error}")
-                
+                # Return local paths as fallback
+                return {
+                    "sourceImageUrl": None,
+                    "referenceImageUrl": None,
+                    "resultOverlayUrl": None,
+                    "source_image_path": source_result_path,
+                    "reference_image_path": reference_result_path,
+                    "result_overlay_path": overlay_result_path
+                }
+            
         except Exception as e:
             print(f"[@controller:ImageVerification] Error generating comparison images: {e}")
             return {}
@@ -684,7 +699,7 @@ class ImageVerificationController:
     def _resolve_reference_image(self, image_path: str, model: str = None) -> Optional[str]:
         """
         Resolve reference image path by downloading from R2 if needed.
-        Uses the same directory structure as verification_results for proper permissions.
+        Uses the device-specific captures path + references subdirectory.
         """
         try:
             # Extract reference name from path
@@ -698,10 +713,9 @@ class ImageVerificationController:
             
             print(f"[@controller:ImageVerification] Resolving reference: {reference_name} for model: {model}")
             
-            # Use verification_results directory instead of resources - same permissions as comparison images
-            verification_results_path = '/var/www/html/stream/verification_results'
+            # Use device-specific captures path + references subdirectory
             device_model = model or 'default'
-            local_dir = f'{verification_results_path}/references/{device_model}'
+            local_dir = os.path.join(self.captures_path, 'references', device_model)
             os.makedirs(local_dir, exist_ok=True)
             
             # Use the reference name with proper extension

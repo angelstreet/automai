@@ -459,8 +459,8 @@ class TextVerificationController:
             from .image_helpers import ImageHelpers
             image_helpers = ImageHelpers(self.captures_path, self.av_controller)
             
-            # Create results directory
-            results_dir = '/var/www/html/stream/verification_results'
+            # Create results directory using device-specific captures path + verification_results
+            results_dir = os.path.join(self.captures_path, 'verification_results')
             os.makedirs(results_dir, exist_ok=True)
             
             # Create result file path
@@ -502,8 +502,12 @@ class TextVerificationController:
                 print(f"[@controller:TextVerification] ERROR: No host device found for URL building")
                 raise ValueError("Host device context required for URL building - ensure proper request context")
             
-            # Build public URL using device-specific path building (already supports multi-device)
-            public_url = buildVerificationResultUrl(host_device, local_path)
+            # Get device_id from host_device
+            device_id = host_device.get('device_id', 'device1')  # Default fallback
+            
+            # Build public URL using device-specific URL builder
+            filename = os.path.basename(local_path)
+            public_url = buildVerificationResultUrl(host_device, filename, device_id)
             print(f"[@controller:TextVerification] Built URL: {local_path} -> {public_url}")
             
             return public_url
