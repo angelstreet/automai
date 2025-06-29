@@ -16,14 +16,14 @@ from collections import defaultdict, deque
 import networkx as nx
 
 # Import existing NetworkX-based navigation utilities
-from navigation_pathfinding import (
+from src.navigation.navigation_pathfinding import (
     find_shortest_path,
     get_navigation_transitions,
     get_reachable_nodes as get_networkx_reachable_nodes,
     find_entry_point
 )
-from navigation_cache import get_cached_graph
-from navigation_graph import get_entry_points, get_node_info, create_networkx_graph
+from src.web.cache.navigation_cache import get_cached_graph
+from src.web.cache.navigation_graph import get_entry_points, get_node_info, create_networkx_graph
 
 class SmartValidationEngine:
     """Engine for smart path validation using NetworkX for graph operations"""

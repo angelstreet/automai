@@ -13,16 +13,11 @@ import logging
 from datetime import datetime
 import traceback
 
-# Add the parent directory to the path to import utils
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
+# Navigation executor - no path manipulation needed with proper imports
 
 # Import navigation cache
-cache_path = os.path.join(parent_dir, 'cache')
-sys.path.insert(0, cache_path)
-from navigation_cache import get_cached_graph
-from navigation_graph import get_node_info
+from src.web.cache.navigation_cache import get_cached_graph
+from src.web.cache.navigation_graph import get_node_info
 
 # Import centralized URL building from routes utils
 from src.utils.app_utils import buildServerUrl
@@ -43,7 +38,7 @@ def execute_navigation_to_node(tree_id: str, target_node_id: str, team_id: str, 
     print(f"[@navigation:executor:execute_navigation_to_node] Starting navigation to {target_node_id} in tree {tree_id}")
     
     # Get navigation steps
-    from navigation_pathfinding import get_navigation_transitions
+    from src.navigation.navigation_pathfinding import get_navigation_transitions
     
     transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
     
@@ -340,7 +335,7 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
     
     try:
         # Get navigation transitions with enhanced information
-        from navigation_pathfinding import get_navigation_transitions
+        from src.navigation.navigation_pathfinding import get_navigation_transitions
         
         transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
         
@@ -751,7 +746,7 @@ def get_navigation_preview(tree_id: str, target_node_id: str, team_id: str, curr
     """
     print(f"[@navigation:executor:get_navigation_preview] Getting navigation preview to {target_node_id}")
     
-    from navigation_pathfinding import get_navigation_transitions, find_entry_point
+    from src.navigation.navigation_pathfinding import get_navigation_transitions, find_entry_point
     
     # Determine starting point
     start_node = current_node_id or find_entry_point(tree_id, team_id)

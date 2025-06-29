@@ -24,8 +24,8 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
     print(f"[@navigation:pathfinding:find_shortest_path] Finding path to node {target_node_id}")
     
     # Get cached NetworkX graph
-    from navigation_cache import get_cached_graph
-    from navigation_graph import get_entry_points, get_node_info, get_edge_action
+    from src.web.cache.navigation_cache import get_cached_graph
+    from src.web.cache.navigation_graph import get_entry_points, get_node_info, get_edge_action
     
     G = get_cached_graph(tree_id, team_id)
     if not G:
@@ -252,8 +252,8 @@ def get_navigation_transitions(tree_id: str, target_node_id: str, team_id: str, 
         return []
     
     # Enhance transitions with additional information
-    from navigation_cache import get_cached_graph
-    from navigation_graph import get_node_info
+    from src.web.cache.navigation_cache import get_cached_graph
+    from src.web.cache.navigation_graph import get_node_info
     
     G = get_cached_graph(tree_id, team_id)
     if not G:
@@ -312,8 +312,8 @@ def find_entry_point(tree_id: str, team_id: str) -> Optional[str]:
     Returns:
         Entry point node ID or None if not found
     """
-    from navigation_cache import get_cached_graph
-    from navigation_graph import get_entry_points
+    from src.web.cache.navigation_cache import get_cached_graph
+    from src.web.cache.navigation_graph import get_entry_points
     
     G = get_cached_graph(tree_id, team_id)
     if not G:
@@ -343,8 +343,8 @@ def find_all_paths(tree_id: str, target_node_id: str, team_id: str, start_node_i
     """
     print(f"[@navigation:pathfinding:find_all_paths] Finding up to {max_paths} paths to {target_node_id}")
     
-    from navigation_cache import get_cached_graph
-    from navigation_graph import get_entry_points, get_node_info, get_edge_action
+    from src.web.cache.navigation_cache import get_cached_graph
+    from src.web.cache.navigation_graph import get_entry_points, get_node_info, get_edge_action
     
     G = get_cached_graph(tree_id, team_id)
     if not G:
@@ -408,8 +408,8 @@ def get_reachable_nodes(tree_id: str, team_id: str, from_node_id: str = None) ->
     Returns:
         List of reachable node IDs
     """
-    from navigation_cache import get_cached_graph
-    from navigation_graph import get_entry_points
+    from src.web.cache.navigation_cache import get_cached_graph
+    from src.web.cache.navigation_graph import get_entry_points
     
     G = get_cached_graph(tree_id, team_id)
     if not G:
@@ -449,8 +449,8 @@ def find_optimal_edge_validation_sequence(tree_id: str, team_id: str) -> List[Di
     print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] Finding optimal edge validation for tree {tree_id}")
     
     try:
-        from navigation_cache import get_cached_graph
-        from navigation_graph import get_entry_points, get_node_info
+        from src.web.cache.navigation_cache import get_cached_graph
+        from src.web.cache.navigation_graph import get_entry_points, get_node_info
         
         G = get_cached_graph(tree_id, team_id)
         if not G:
@@ -589,7 +589,7 @@ def _create_simple_networkx_validation_sequence(G: nx.DiGraph, edges_to_validate
     Simple NetworkX-based validation sequence using depth-first traversal.
     Focus on: finding ALL edges and using depth-first exploration for optimal ordering.
     """
-    from navigation_graph import get_entry_points, get_node_info
+    from src.web.cache.navigation_graph import get_entry_points, get_node_info
     
     print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Creating depth-first validation sequence")
     
@@ -796,7 +796,7 @@ def _create_validation_step(G: nx.DiGraph, from_node: str, to_node: str, edge_da
     """
     Create a validation step with consistent format.
     """
-    from navigation_graph import get_node_info
+    from src.web.cache.navigation_graph import get_node_info
     
     from_info = get_node_info(G, from_node) or {}
     to_info = get_node_info(G, to_node) or {}
@@ -817,7 +817,7 @@ def _create_validation_step(G: nx.DiGraph, from_node: str, to_node: str, edge_da
 
 def _create_simple_edge_validation_sequence(G: nx.DiGraph, edges_to_validate: List[Tuple]) -> List[Dict]:
     """Fallback: create simple sequential edge validation"""
-    from navigation_graph import get_node_info
+    from src.web.cache.navigation_graph import get_node_info
     
     validation_sequence = []
     

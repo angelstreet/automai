@@ -48,7 +48,7 @@ class NavigationService:
             
             if execute:
                 # Execute navigation with verification
-                from navigation_executor import execute_navigation_with_verification
+                from src.navigation.navigation_executor import execute_navigation_with_verification
                 
                 result = execute_navigation_with_verification(tree_id, target_node_id, team_id, current_node_id)
                 
@@ -66,7 +66,7 @@ class NavigationService:
                 return result
             else:
                 # Return navigation preview
-                from navigation_executor import get_navigation_preview
+                from src.navigation.navigation_executor import get_navigation_preview
                 
                 preview = get_navigation_preview(tree_id, target_node_id, team_id, current_node_id)
                 preview.update({
@@ -102,7 +102,7 @@ class NavigationService:
         print(f"[@navigation:service:get_navigation_preview] Getting preview for {target_node_id}")
         
         try:
-            from navigation_pathfinding import get_navigation_transitions
+            from src.navigation.navigation_pathfinding import get_navigation_transitions
             
             transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
             return transitions
@@ -122,12 +122,6 @@ class NavigationService:
         Returns:
             True if take control is active, False otherwise
         """
-        # Placeholder implementation
-        # In a real implementation, this would check:
-        # 1. Session state in database or memory
-        # 2. Device connection status
-        # 3. Permission levels
-        
         session_key = f"{tree_id}_{team_id}"
         
         # For now, assume take control is always active for demo purposes
@@ -221,8 +215,8 @@ class NavigationService:
         print(f"[@navigation:service:get_navigation_graph_stats] Getting stats for tree {tree_id}")
         
         try:
-            from navigation_cache import get_cached_graph
-            from navigation_graph import validate_graph, get_entry_points, get_exit_points
+            from src.web.cache.navigation_cache import get_cached_graph
+            from src.web.cache.navigation_graph import validate_graph, get_entry_points, get_exit_points
             
             G = get_cached_graph(tree_id, team_id)
             if not G:
@@ -278,7 +272,7 @@ class NavigationService:
         print(f"[@navigation:service:find_alternative_paths] Finding {max_paths} alternative paths to {target_node_id}")
         
         try:
-            from navigation_pathfinding import find_all_paths
+            from src.navigation.navigation_pathfinding import find_all_paths
             
             paths = find_all_paths(tree_id, target_node_id, team_id, current_node_id, max_paths)
             return paths
@@ -300,7 +294,7 @@ class NavigationService:
             List of reachable node IDs
         """
         try:
-            from navigation_pathfinding import get_reachable_nodes
+            from src.navigation.navigation_pathfinding import get_reachable_nodes
             
             reachable = get_reachable_nodes(tree_id, team_id, current_node_id)
             return reachable
@@ -321,7 +315,7 @@ class NavigationService:
             Dictionary with cache clearing results
         """
         try:
-            from navigation_cache import invalidate_cache, clear_all_cache
+            from src.web.cache.navigation_cache import invalidate_cache, clear_all_cache
             
             if tree_id:
                 invalidate_cache(tree_id, team_id)

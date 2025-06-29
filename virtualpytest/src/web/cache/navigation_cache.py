@@ -37,7 +37,7 @@ def get_cached_graph(tree_id: str, team_id: str, force_rebuild: bool = False) ->
         # Import from database layer and graph builder
         from src.lib.supabase.navigation_trees_db import get_navigation_tree
         from src.utils.app_utils import DEFAULT_TEAM_ID
-        from navigation_graph import create_networkx_graph
+        from src.web.cache.navigation_graph import create_networkx_graph
         
         # Get fresh data from database using new API
         success, message, tree_data = get_navigation_tree(tree_id, team_id or DEFAULT_TEAM_ID)

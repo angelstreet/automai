@@ -222,16 +222,14 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
         from src.navigation.navigation_pathfinding import find_shortest_path
         
         # Find path from current to target node
-        path_result = find_shortest_path(tree_id, current_node_id, target_node_id, team_id)
+        transitions = find_shortest_path(tree_id, target_node_id, team_id, current_node_id)
         
-        if not path_result.get('success', False):
+        if not transitions:
             return {
                 'success': False,
-                'error': path_result.get('error', 'Failed to find navigation path'),
+                'error': 'Failed to find navigation path',
                 'error_code': 'PATHFINDING_FAILED'
             }
-        
-        transitions = path_result.get('transitions', [])
         
         # For now, return successful execution simulation
         # In full implementation, this would execute actual device actions
@@ -258,12 +256,12 @@ def get_navigation_preview_internal(tree_id: str, target_node_id: str, team_id: 
         from src.navigation.navigation_pathfinding import find_shortest_path
         
         # Find path from current to target node
-        path_result = find_shortest_path(tree_id, current_node_id, target_node_id, team_id)
+        transitions = find_shortest_path(tree_id, target_node_id, team_id, current_node_id)
         
-        if path_result.get('success', False):
-            return path_result.get('transitions', [])
+        if transitions:
+            return transitions
         else:
-            print(f"[@pathfinding:preview_internal] Pathfinding failed: {path_result.get('error')}")
+            print(f"[@pathfinding:preview_internal] Pathfinding failed: No path found")
             return []
             
     except Exception as e:
