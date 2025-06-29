@@ -1,10 +1,11 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 
+import { useDeviceData } from '../../contexts/device/DeviceDataContext';
+import { Host } from '../../types/common/Host_Types';
+import { Actions } from '../../types/controller/Action_Types';
+import { UINavigationEdge, EdgeAction, EdgeForm } from '../../types/pages/Navigation_Types';
 import { useAction } from '../actions';
 import { useValidationColors } from '../validation';
-import { Host } from '../../types/common/Host_Types';
-import { UINavigationEdge, EdgeAction, EdgeForm } from '../../types/pages/Navigation_Types';
-import { Actions } from '../../types/controller/Action_Types';
 
 export interface UseEdgeProps {
   selectedHost?: Host | null;
@@ -19,6 +20,9 @@ export const useEdge = (props?: UseEdgeProps) => {
     selectedHost: props?.selectedHost || null,
     deviceId: props?.selectedDeviceId,
   });
+
+  // Device data hook for getting saved actions
+  const { getActions } = useDeviceData();
 
   // Validation colors hook for edge styling
   const { getEdgeColors } = useValidationColors([]);
@@ -58,42 +62,96 @@ export const useEdge = (props?: UseEdgeProps) => {
   /**
    * Get actions from edge data in consistent format
    */
-  const getActionsFromEdge = useCallback((edge: UINavigationEdge): EdgeAction[] => {
-    console.log(`[@hook:useEdge] Getting actions from edge:`, {
-      edgeId: edge.id,
-      edgeData: edge.data,
-      hasActions: !!edge.data?.actions,
-      actionsLength: edge.data?.actions?.length || 0,
-      hasLegacyAction: !!edge.data?.action,
-      legacyActionType: typeof edge.data?.action,
-    });
+  const getActionsFromEdge = useCallback(
+    (edge: UINavigationEdge): EdgeAction[] => {
+      console.log(`[@hook:useEdge] Getting actions from edge:`, {
+        edgeId: edge.id,
+        edgeData: edge.data,
+        hasActions: !!edge.data?.actions,
+        actionsLength: edge.data?.actions?.length || 0,
+        hasActionIds: !!edge.data?.action_ids,
+        actionIdsLength: edge.data?.action_ids?.length || 0,
+        hasLegacyAction: !!edge.data?.action,
+        legacyActionType: typeof edge.data?.action,
+      });
 
-    // Handle new format (multiple actions)
-    if (edge.data?.actions && edge.data.actions.length > 0) {
-      console.log(`[@hook:useEdge] Found ${edge.data.actions.length} actions in new format`);
-      return edge.data.actions;
-    }
+      // Handle new format (multiple actions)
+      if (edge.data?.actions && edge.data.actions.length > 0) {
+        console.log(`[@hook:useEdge] Found ${edge.data.actions.length} actions in new format`);
+        return edge.data.actions;
+      }
 
-    // Handle legacy format (single action) - convert to array
-    if (edge.data?.action && typeof edge.data.action === 'object') {
-      console.log(`[@hook:useEdge] Found legacy action, converting to array format`);
-      const legacyAction = edge.data.action as any;
-      return [
-        {
-          id: legacyAction.id,
-          label: legacyAction.label,
-          command: legacyAction.command,
-          params: legacyAction.params,
-          requiresInput: legacyAction.requiresInput,
-          inputValue: legacyAction.inputValue,
-          waitTime: legacyAction.waitTime || 2000, // Default wait time
-        },
-      ];
-    }
+      // Handle action_ids format (similar to verification_ids in nodes)
+      if (edge.data?.action_ids && edge.data.action_ids.length > 0) {
+        console.log(
+          `[@hook:useEdge] Found ${edge.data.action_ids.length} action IDs, resolving to action objects`,
+        );
+        console.log(`[@hook:useEdge] Action IDs:`, edge.data.action_ids);
 
-    console.log(`[@hook:useEdge] No actions found in edge data`);
-    return [];
-  }, []);
+        const allActions = getActions();
+        console.log(`[@hook:useEdge] Available saved actions:`, allActions.length);
+
+        // Match action_ids with actual action objects
+        const edgeActions: EdgeAction[] = [];
+        if (edge.data.action_ids && edge.data.action_ids.length > 0) {
+          for (const actionId of edge.data.action_ids) {
+            const action = allActions.find((a: any) => a.id === actionId);
+            if (action) {
+              // Convert saved action to EdgeAction format
+              const edgeAction: EdgeAction = {
+                id: action.id,
+                label: action.label || action.command || 'Unnamed Action',
+                command: action.command,
+                params: action.params || {},
+                requiresInput: action.requiresInput || false,
+                inputValue: action.inputValue || '',
+                waitTime: action.waitTime || 2000,
+              };
+              edgeActions.push(edgeAction);
+              console.log(`[@hook:useEdge] Resolved action ID ${actionId} to:`, edgeAction);
+            } else {
+              console.warn(`[@hook:useEdge] Could not find action with ID: ${actionId}`);
+              // Create a placeholder action for missing actions
+              const placeholderAction: EdgeAction = {
+                id: actionId,
+                label: `Missing Action (ID: ${actionId.substring(0, 8)}...)`,
+                command: '', // Empty command indicates it needs to be reconfigured
+                params: {},
+                requiresInput: false,
+                inputValue: '',
+                waitTime: 2000,
+              };
+              edgeActions.push(placeholderAction);
+            }
+          }
+        }
+
+        console.log(`[@hook:useEdge] Resolved ${edgeActions.length} actions from action IDs`);
+        return edgeActions;
+      }
+
+      // Handle legacy format (single action) - convert to array
+      if (edge.data?.action && typeof edge.data.action === 'object') {
+        console.log(`[@hook:useEdge] Found legacy action, converting to array format`);
+        const legacyAction = edge.data.action as any;
+        return [
+          {
+            id: legacyAction.id,
+            label: legacyAction.label,
+            command: legacyAction.command,
+            params: legacyAction.params,
+            requiresInput: legacyAction.requiresInput,
+            inputValue: legacyAction.inputValue,
+            waitTime: legacyAction.waitTime || 2000, // Default wait time
+          },
+        ];
+      }
+
+      console.log(`[@hook:useEdge] No actions found in edge data`);
+      return [];
+    },
+    [getActions],
+  );
 
   /**
    * Get retry actions from edge data
