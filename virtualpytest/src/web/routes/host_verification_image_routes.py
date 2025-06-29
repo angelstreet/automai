@@ -179,7 +179,14 @@ def execute_image_verification():
         
         verification = data.get('verification')
         
-        # Execute verification using controller
+        # Get host info for URL building
+        host = get_host()
+        host_info = host.to_dict() if host else None
+        
+        print(f"[@route:host_verification_image:execute] Host info available: {host_info is not None}")
+        print(f"[@route:host_verification_image:execute] Device ID: {device_id}")
+        
+        # Execute verification using controller with host info and device_id for URL building
         verification_result = image_controller.execute_verification({
             'command': verification.get('command', 'waitForImageToAppear'),
             'params': {
@@ -188,7 +195,9 @@ def execute_image_verification():
                 'timeout': verification.get('params', {}).get('timeout', 10.0),
                 'area': verification.get('params', {}).get('area'),
                 'image_filter': verification.get('params', {}).get('image_filter', 'none'),
-                'model': device.model  # Use device.model instead of device.model
+                'model': device.model,  # Use device.model for R2 reference resolution
+                'host_info': host_info,  # Pass host info for URL building
+                'device_id': device_id   # Pass device_id for URL building
             }
         })
         
