@@ -95,6 +95,43 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       imageFilter: undefined,
     });
 
+    // Image processing functions
+    const processImageUrl = useCallback((url: string): string => {
+      if (!url) return '';
+
+      console.log(`[@component:VerificationsList] Processing image URL: ${url}`);
+
+      // Handle data URLs (base64) - return as is
+      if (url.startsWith('data:')) {
+        console.log('[@component:VerificationsList] Using data URL');
+        return url;
+      }
+
+      // Handle HTTP URLs - use proxy to convert to HTTPS
+      if (url.startsWith('http:')) {
+        console.log('[@component:VerificationsList] HTTP URL detected, using proxy');
+        const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(url)}`;
+        console.log(`[@component:VerificationsList] Generated proxy URL: ${proxyUrl}`);
+        return proxyUrl;
+      }
+
+      // Handle HTTPS URLs - return as is (no proxy needed)
+      if (url.startsWith('https:')) {
+        console.log('[@component:VerificationsList] Using HTTPS URL directly');
+        return url;
+      }
+
+      // For relative paths or other formats, use directly
+      console.log('[@component:VerificationsList] Using URL directly');
+      return url;
+    }, []);
+
+    const getCacheBustedUrl = useCallback((url: string): string => {
+      if (!url) return '';
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}cache=${Date.now()}`;
+    }, []);
+
     // Debug logging for testResults changes
     useEffect(() => {
       console.log('[@component:VerificationsList] testResults updated:', testResults);
@@ -425,6 +462,8 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
               onRemoveVerification={removeVerification}
               onImageClick={handleImageClick}
               onSourceImageClick={handleTextSourceImageClick}
+              processImageUrl={processImageUrl}
+              getCacheBustedUrl={getCacheBustedUrl}
               onMoveUp={moveVerificationUp}
               onMoveDown={moveVerificationDown}
               canMoveUp={index > 0}
@@ -549,8 +588,8 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
           resultType={imageComparisonDialog.resultType}
           imageFilter={imageComparisonDialog.imageFilter}
           onClose={() => setImageComparisonDialog((prev) => ({ ...prev, open: false }))}
-          processImageUrl={(url) => url}
-          getCacheBustedUrl={(url) => `${url}${url.includes('?') ? '&' : '?'}cache=${Date.now()}`}
+          processImageUrl={processImageUrl}
+          getCacheBustedUrl={getCacheBustedUrl}
         />
 
         {/* Text Comparison Dialog */}

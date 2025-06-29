@@ -48,6 +48,8 @@ interface VerificationItemProps {
     imageFilter?: 'none' | 'greyscale' | 'binary',
   ) => void;
   onSourceImageClick: (sourceUrl: string, resultType: 'PASS' | 'FAIL' | 'ERROR') => void;
+  processImageUrl: (url: string) => string;
+  getCacheBustedUrl: (url: string) => string;
   canMoveUp: boolean;
   canMoveDown: boolean;
 }
@@ -69,6 +71,8 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
   onMoveDown,
   onImageClick,
   onSourceImageClick,
+  processImageUrl,
+  getCacheBustedUrl,
   canMoveUp,
   canMoveDown,
 }) => {
@@ -278,6 +282,8 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
         <VerificationTestResults
           verification={verification}
           testResult={testResult}
+          processImageUrl={processImageUrl}
+          getCacheBustedUrl={getCacheBustedUrl}
           onImageClick={onImageClick}
           onSourceImageClick={onSourceImageClick}
         />
