@@ -72,7 +72,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
     console.log(`[@component:NodeEditDialog] Dialog opened, initializing verifications`);
     nodeHook.initializeVerifications(nodeForm);
-  }, [isOpen, nodeForm, nodeHook]);
+  }, [isOpen, nodeForm]); // Remove nodeHook from dependencies to prevent infinite loop
 
   // Handle verification changes by creating a custom handler that updates nodeForm
   const handleVerificationsChange = useCallback(
@@ -84,7 +84,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
       nodeHook.handleVerificationsChange(newVerifications, nodeForm, setNodeForm);
     },
-    [nodeForm, nodeHook, setNodeForm],
+    [nodeForm, setNodeForm], // Remove nodeHook from dependencies to prevent infinite loop
   );
 
   // Handle reference selection
@@ -98,7 +98,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
       // Reset state when dialog closes
       nodeHook.resetDialogState();
     }
-  }, [isOpen, nodeHook]);
+  }, [isOpen]); // Remove nodeHook from dependencies to prevent infinite loop
 
   const handleSave = () => {
     nodeHook.handleSave(onSubmit);
