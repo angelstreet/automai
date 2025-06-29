@@ -27,6 +27,27 @@ export const useEdge = (props?: UseEdgeProps) => {
   // Validation colors hook for edge styling
   const { getEdgeColors } = useValidationColors([]);
 
+  /**
+   * Convert navigation EdgeAction to controller EdgeAction for action execution
+   */
+  const convertToControllerAction = useCallback((navAction: EdgeAction): any => {
+    return {
+      id: navAction.id,
+      label: navAction.description || navAction.command,
+      command: navAction.command,
+      params: navAction.params,
+      requiresInput: false, // We handle input differently now
+      inputValue:
+        navAction.params?.input ||
+        navAction.params?.text ||
+        navAction.params?.key ||
+        navAction.params?.package ||
+        navAction.params?.element_identifier ||
+        '',
+      waitTime: (navAction.params?.delay || 0.5) * 1000, // Convert seconds to milliseconds
+    };
+  }, []);
+
   // State for edge operations
   const [runResult, setRunResult] = useState<string | null>(null);
   const [actionResult, setActionResult] = useState<string | null>(null);
@@ -82,24 +103,22 @@ export const useEdge = (props?: UseEdgeProps) => {
               // Convert saved action to EdgeAction format
               const edgeAction: EdgeAction = {
                 id: action.id,
-                label: action.label || action.command || 'Unnamed Action',
                 command: action.command,
-                params: action.params || {},
-                requiresInput: action.requiresInput || false,
-                inputValue: action.inputValue || '',
-                waitTime: action.waitTime || 2000,
+                params: {
+                  ...action.params,
+                  delay: action.params?.delay || 0.5,
+                },
+                description:
+                  action.description || action.label || action.command || 'Unnamed Action',
               };
               edgeActions.push(edgeAction);
             } else {
               // Create a placeholder action for missing actions
               const placeholderAction: EdgeAction = {
                 id: actionId,
-                label: `Missing Action (ID: ${actionId.substring(0, 8)}...)`,
                 command: '', // Empty command indicates it needs to be reconfigured
-                params: {},
-                requiresInput: false,
-                inputValue: '',
-                waitTime: 2000,
+                params: { delay: 0.5 },
+                description: `Missing Action (ID: ${actionId.substring(0, 8)}...)`,
               };
               edgeActions.push(placeholderAction);
             }
@@ -114,13 +133,13 @@ export const useEdge = (props?: UseEdgeProps) => {
         const legacyAction = edge.data.action as any;
         return [
           {
-            id: legacyAction.id,
-            label: legacyAction.label,
+            id: legacyAction.id || `legacy_${Date.now()}`,
             command: legacyAction.command,
-            params: legacyAction.params,
-            requiresInput: legacyAction.requiresInput,
-            inputValue: legacyAction.inputValue,
-            waitTime: legacyAction.waitTime || 2000, // Default wait time
+            params: {
+              ...legacyAction.params,
+              delay: legacyAction.waitTime ? legacyAction.waitTime / 1000 : 0.5,
+            },
+            description: legacyAction.label || legacyAction.command || 'Legacy Action',
           },
         ];
       }
@@ -234,8 +253,8 @@ export const useEdge = (props?: UseEdgeProps) => {
 
       try {
         const result = await actionHook.executeActions(
-          actions,
-          retryActions,
+          actions.map(convertToControllerAction),
+          retryActions.map(convertToControllerAction),
           edge.data?.finalWaitTime || 2000,
         );
 
@@ -250,7 +269,7 @@ export const useEdge = (props?: UseEdgeProps) => {
         throw err;
       }
     },
-    [actionHook, getActionsFromEdge, getRetryActionsFromEdge],
+    [actionHook, getActionsFromEdge, getRetryActionsFromEdge, convertToControllerAction],
   );
 
   /**
@@ -272,8 +291,8 @@ export const useEdge = (props?: UseEdgeProps) => {
 
       try {
         const result = await actionHook.executeActions(
-          localActions,
-          localRetryActions,
+          localActions.map(convertToControllerAction),
+          localRetryActions.map(convertToControllerAction),
           edgeForm?.finalWaitTime || 2000,
         );
 
@@ -288,7 +307,7 @@ export const useEdge = (props?: UseEdgeProps) => {
         throw err;
       }
     },
-    [actionHook, localActions, localRetryActions],
+    [actionHook, localActions, localRetryActions, convertToControllerAction],
   );
 
   /**
@@ -342,10 +361,40 @@ export const useEdge = (props?: UseEdgeProps) => {
    * Check if edge form is valid
    */
   const isFormValid = useCallback((): boolean => {
-    return localActions.every(
-      (action) =>
-        !action.id || !action.requiresInput || (action.inputValue && action.inputValue.trim()),
-    );
+    return localActions.every((action) => {
+      // Action must have a command
+      if (!action.command || action.command.trim() === '') {
+        return false;
+      }
+
+      // Check if action has required input based on command
+      if (
+        action.command === 'input_text' &&
+        (!action.params?.text || action.params.text.trim() === '')
+      ) {
+        return false;
+      }
+      if (
+        action.command === 'click_element' &&
+        (!action.params?.element_identifier || action.params.element_identifier.trim() === '')
+      ) {
+        return false;
+      }
+      if (
+        (action.command === 'launch_app' || action.command === 'close_app') &&
+        (!action.params?.package || action.params.package.trim() === '')
+      ) {
+        return false;
+      }
+      if (
+        action.command === 'tap_coordinates' &&
+        (action.params?.x === undefined || action.params?.y === undefined)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
   }, [localActions]);
 
   /**

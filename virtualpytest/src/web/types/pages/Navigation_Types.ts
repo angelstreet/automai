@@ -1,6 +1,5 @@
 import { Node, Edge } from 'reactflow';
 
-import { EdgeAction } from '../controller/Action_Types';
 import { Verification } from '../verification/Verification_Types';
 
 // Re-export centralized navigation types for convenience
@@ -39,8 +38,40 @@ export interface UINavigationNodeData {
 // Define the navigation node type using ReactFlow's Node with our data type
 export type UINavigationNode = Node<UINavigationNodeData>;
 
-// EdgeAction is now imported from ActionTypes.ts to maintain consistency
-export type { EdgeAction } from '../controller/Action_Types';
+// =====================================================
+// NAVIGATION EDGE ACTION TYPES
+// =====================================================
+
+// Edge action for navigation workflows (simplified structure for navigation use)
+export interface EdgeAction {
+  id: string;
+  command: string;
+  params: {
+    // Common parameters for all actions
+    delay?: number; // Wait time after execution (in seconds)
+
+    // Remote action parameters
+    key?: string; // For press_key commands (UP, DOWN, LEFT, RIGHT, etc.)
+    text?: string; // For input_text commands
+    package?: string; // For launch_app/close_app commands
+    x?: number; // For coordinate tap commands
+    y?: number; // For coordinate tap commands
+    element_identifier?: string; // For click_element commands
+    input?: string; // Generic input field for requiresInput actions
+
+    // Legacy compatibility
+    [key: string]: any;
+  };
+  description?: string;
+
+  // Execution results (populated after execution)
+  success?: boolean;
+  message?: string;
+  error?: string;
+  executedAt?: string;
+  resultType?: 'SUCCESS' | 'FAIL' | 'ERROR';
+  executionTime?: number;
+}
 
 // Define the data type for navigation edges
 export interface UINavigationEdgeData {

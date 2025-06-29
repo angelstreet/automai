@@ -138,16 +138,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             size="small"
           />
 
-          <ActionsList
-            actions={edgeHook.localActions}
-            retryActions={edgeHook.localRetryActions}
-            finalWaitTime={edgeForm?.finalWaitTime || 2000}
-            availableActionTypes={controllerActions}
-            selectedHost={selectedHost || null}
-            onActionsChange={handleActionsChange}
-            onRetryActionsChange={handleRetryActionsChange}
-            onFinalWaitTimeChange={(finalWaitTime) => setEdgeForm({ ...edgeForm, finalWaitTime })}
-          />
+          <ActionsList actions={edgeHook.localActions} onActionsUpdate={handleActionsChange} />
 
           {edgeHook.actionResult && (
             <Box

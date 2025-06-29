@@ -3,19 +3,23 @@ import {
   KeyboardArrowUp as KeyboardArrowUpIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
 } from '@mui/icons-material';
-import { Box, FormControl, Select, MenuItem, IconButton, TextField } from '@mui/material';
+import {
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  IconButton,
+  TextField,
+} from '@mui/material';
 import React from 'react';
 
-import type { Actions, EdgeAction } from '../../types/controller/Action_Types';
-
-import { ActionControls } from './ActionControls';
-import { ActionTestResults } from './ActionTestResults';
+import { EdgeAction } from '../../types/pages/Navigation_Types';
 
 interface ActionItemProps {
   action: EdgeAction;
   index: number;
-  availableActionTypes: Actions;
-  testResult?: EdgeAction;
+  availableActions: Record<string, any[]>;
   onActionSelect: (index: number, command: string) => void;
   onUpdateAction: (index: number, updates: Partial<EdgeAction>) => void;
   onRemoveAction: (index: number) => void;
@@ -28,8 +32,7 @@ interface ActionItemProps {
 export const ActionItem: React.FC<ActionItemProps> = ({
   action,
   index,
-  availableActionTypes,
-  testResult,
+  availableActions,
   onActionSelect,
   onUpdateAction,
   onRemoveAction,
@@ -38,131 +41,53 @@ export const ActionItem: React.FC<ActionItemProps> = ({
   canMoveUp,
   canMoveDown,
 }) => {
+  // Find the selected action definition to get its configuration
+  const selectedActionDef = Object.values(availableActions)
+    .flat()
+    .find((actionDef) => actionDef.command === action.command);
+
   return (
     <Box
       sx={{ mb: 1, px: 0.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
     >
-      {/* Line 1: Action dropdown */}
+      {/* Line 1: Action command dropdown */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-        <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
+        <FormControl size="small" sx={{ flex: 1, minWidth: 200, maxWidth: 300 }}>
+          <InputLabel>Action</InputLabel>
           <Select
             value={action.command || ''}
             onChange={(e) => onActionSelect(index, e.target.value)}
-            displayEmpty
+            label="Action"
             size="small"
-            MenuProps={{
-              PaperProps: {
-                sx: {
-                  maxHeight: 200,
-                  '& .MuiMenuItem-root': {
-                    fontSize: '0.8rem',
-                    minHeight: '28px',
-                    paddingTop: '2px',
-                    paddingBottom: '2px',
-                    lineHeight: 0.8,
-                  },
-                },
-              },
-            }}
             sx={{
               '& .MuiSelect-select': {
                 fontSize: '0.8rem',
-                paddingTop: '4px',
-                paddingBottom: '2px',
               },
             }}
             renderValue={(selected) => {
-              if (!selected) {
-                return <em style={{ fontSize: '0.8rem' }}>Select action...</em>;
-              }
-
-              // For resolved actions, show the action label or generate a descriptive label
-              if (action.label && action.label !== action.command) {
-                return action.label;
-              }
-
-              // Generate descriptive label from command and parameters
-              switch (action.command) {
-                case 'click_element':
-                  if (action.params?.element_name) {
-                    return `Click on "${action.params.element_name}"`;
-                  } else if (action.params?.selector) {
-                    return `Click element "${action.params.selector}"`;
-                  }
-                  return 'Click Element';
-
-                case 'press_key':
-                  if (action.params?.key) {
-                    return `Press "${action.params.key}" key`;
-                  }
-                  return 'Press Key';
-
-                case 'type_text':
-                  if (action.params?.text) {
-                    const text =
-                      action.params.text.length > 20
-                        ? `${action.params.text.substring(0, 20)}...`
-                        : action.params.text;
-                    return `Type "${text}"`;
-                  }
-                  return 'Type Text';
-
-                case 'swipe':
-                  if (action.params?.direction) {
-                    return `Swipe ${action.params.direction}`;
-                  }
-                  return 'Swipe';
-
-                case 'wait':
-                  if (action.params?.duration) {
-                    return `Wait ${action.params.duration}ms`;
-                  }
-                  return 'Wait';
-
-                default:
-                  // Find the action in available types to get its label
-                  for (const [category, categoryData] of Object.entries(availableActionTypes)) {
-                    let actions: any[] = [];
-
-                    if (Array.isArray(categoryData)) {
-                      actions = categoryData;
-                    } else if (categoryData && typeof categoryData === 'object') {
-                      const nestedActions = categoryData[category];
-                      if (Array.isArray(nestedActions)) {
-                        actions = nestedActions;
-                      }
-                    }
-
-                    const actionItem = actions.find((a) => a.command === selected);
-                    if (actionItem) {
-                      return actionItem.label;
-                    }
-                  }
-
-                  // Fallback: format command name
-                  return selected
+              // Find the selected action and return its formatted label
+              const selectedAction = Object.values(availableActions)
+                .flat()
+                .find((actionDef) => actionDef.command === selected);
+              if (selectedAction) {
+                return (
+                  selectedAction.label ||
+                  selectedAction.command
                     .replace(/_/g, ' ')
-                    .replace(/\b\w/g, (l: string) => l.toUpperCase());
+                    .replace(/([A-Z])/g, ' $1')
+                    .trim()
+                );
               }
+              return selected;
             }}
           >
-            {Object.entries(availableActionTypes).map(([category, categoryData]) => {
-              // Handle nested structure: availableActionTypes.remote.remote = [actions...]
-              let actions: any[] = [];
-              if (Array.isArray(categoryData)) {
-                // Direct array (flat structure)
-                actions = categoryData;
-              } else if (categoryData && typeof categoryData === 'object') {
-                // Nested structure - get the array from the nested object
-                const nestedActions = categoryData[category];
-                if (Array.isArray(nestedActions)) {
-                  actions = nestedActions;
-                } else {
-                  // Skip invalid nested structures
-                  return null;
-                }
-              } else {
-                // Skip invalid category data
+            {Object.entries(availableActions).map(([category, actions]) => {
+              // Ensure actions is an array
+              if (!Array.isArray(actions)) {
+                console.warn(
+                  `[@component:ActionItem] Invalid actions for category ${category}:`,
+                  actions,
+                );
                 return null;
               }
 
@@ -174,13 +99,17 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                 >
                   {category.replace(/_/g, ' ').toUpperCase()}
                 </MenuItem>,
-                ...actions.map((actionItem, actionIndex) => (
+                ...actions.map((actionDef) => (
                   <MenuItem
-                    key={`${category}-${actionIndex}-${actionItem.command}`}
-                    value={actionItem.command}
+                    key={actionDef.command}
+                    value={actionDef.command}
                     sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
                   >
-                    {actionItem.label}
+                    {actionDef.label ||
+                      actionDef.command
+                        .replace(/_/g, ' ')
+                        .replace(/([A-Z])/g, ' $1')
+                        .trim()}
                   </MenuItem>
                 )),
               ];
@@ -188,49 +117,171 @@ export const ActionItem: React.FC<ActionItemProps> = ({
           </Select>
         </FormControl>
 
-        <TextField
-          size="small"
-          type="number"
-          value={action.waitTime}
-          onChange={(e) => onUpdateAction(index, { waitTime: parseInt(e.target.value) || 0 })}
-          sx={{
-            width: 80,
-            '& .MuiInputBase-input': {
-              fontSize: '0.8rem',
-              py: 0.5,
-            },
-          }}
-          inputProps={{ min: 0, step: 100 }}
-        />
+        {/* Move buttons */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <IconButton
+            size="small"
+            onClick={() => onMoveUp(index)}
+            disabled={!canMoveUp}
+            sx={{ p: 0.25, minWidth: 0, width: 20, height: 16 }}
+          >
+            <KeyboardArrowUpIcon sx={{ fontSize: '0.8rem' }} />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => onMoveDown(index)}
+            disabled={!canMoveDown}
+            sx={{ p: 0.25, minWidth: 0, width: 20, height: 16 }}
+          >
+            <KeyboardArrowDownIcon sx={{ fontSize: '0.8rem' }} />
+          </IconButton>
+        </Box>
 
+        {/* Remove button */}
         <IconButton
           size="small"
-          onClick={() => onMoveUp(index)}
-          disabled={!canMoveUp}
-          sx={{ opacity: !canMoveUp ? 0.3 : 1 }}
+          onClick={() => onRemoveAction(index)}
+          sx={{ p: 0.25, minWidth: 0, width: 20, height: 20 }}
         >
-          <KeyboardArrowUpIcon fontSize="small" />
-        </IconButton>
-
-        <IconButton
-          size="small"
-          onClick={() => onMoveDown(index)}
-          disabled={!canMoveDown}
-          sx={{ opacity: !canMoveDown ? 0.3 : 1 }}
-        >
-          <KeyboardArrowDownIcon fontSize="small" />
-        </IconButton>
-
-        <IconButton size="small" onClick={() => onRemoveAction(index)} color="error">
-          <CloseIcon fontSize="small" />
+          <CloseIcon sx={{ fontSize: '0.8rem' }} />
         </IconButton>
       </Box>
 
-      {/* Line 2: Parameter controls using extracted component */}
-      <ActionControls action={action} index={index} onUpdateAction={onUpdateAction} />
+      {/* Line 2: Parameter fields based on selected action */}
+      {action.command && selectedActionDef && (
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0, px: 0, mx: 0 }}>
+          {/* Input field for actions that require input */}
+          {selectedActionDef.requiresInput && (
+            <TextField
+              size="small"
+              label={selectedActionDef.inputLabel || 'Input'}
+              placeholder={selectedActionDef.inputPlaceholder || 'Enter value...'}
+              value={
+                action.params?.input ||
+                action.params?.text ||
+                action.params?.key ||
+                action.params?.package ||
+                action.params?.element_identifier ||
+                ''
+              }
+              autoComplete="off"
+              onChange={(e) => {
+                const value = e.target.value;
+                let paramKey = 'input';
 
-      {/* Test Results Display using extracted component */}
-      {testResult && <ActionTestResults testResult={testResult} />}
+                // Determine the correct parameter key based on the command
+                if (action.command === 'input_text') {
+                  paramKey = 'text';
+                } else if (action.command === 'press_key') {
+                  paramKey = 'key';
+                } else if (action.command === 'launch_app' || action.command === 'close_app') {
+                  paramKey = 'package';
+                } else if (action.command === 'click_element') {
+                  paramKey = 'element_identifier';
+                } else if (action.command === 'tap_coordinates') {
+                  // For tap_coordinates, we'll handle x,y separately
+                  paramKey = 'coordinates';
+                }
+
+                onUpdateAction(index, {
+                  params: {
+                    ...action.params,
+                    [paramKey]: value,
+                  },
+                });
+              }}
+              sx={{
+                flex: 1,
+                minWidth: 150,
+                '& .MuiInputBase-input': {
+                  padding: '4px 8px',
+                  fontSize: '0.8rem',
+                },
+              }}
+            />
+          )}
+
+          {/* Coordinates fields for tap_coordinates */}
+          {action.command === 'tap_coordinates' && (
+            <>
+              <TextField
+                size="small"
+                type="number"
+                label="X"
+                value={action.params?.x || 0}
+                autoComplete="off"
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  onUpdateAction(index, {
+                    params: {
+                      ...action.params,
+                      x: value,
+                    },
+                  });
+                }}
+                sx={{
+                  width: 70,
+                  '& .MuiInputBase-input': {
+                    padding: '4px 8px',
+                    fontSize: '0.8rem',
+                  },
+                }}
+                inputProps={{ min: 0, step: 1 }}
+              />
+              <TextField
+                size="small"
+                type="number"
+                label="Y"
+                value={action.params?.y || 0}
+                autoComplete="off"
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 0;
+                  onUpdateAction(index, {
+                    params: {
+                      ...action.params,
+                      y: value,
+                    },
+                  });
+                }}
+                sx={{
+                  width: 70,
+                  '& .MuiInputBase-input': {
+                    padding: '4px 8px',
+                    fontSize: '0.8rem',
+                  },
+                }}
+                inputProps={{ min: 0, step: 1 }}
+              />
+            </>
+          )}
+
+          {/* Delay field for all actions */}
+          <TextField
+            size="small"
+            type="number"
+            label="Delay (s)"
+            value={action.params?.delay !== undefined ? action.params.delay : 0.5}
+            autoComplete="off"
+            onChange={(e) => {
+              const value = parseFloat(e.target.value);
+              onUpdateAction(index, {
+                params: {
+                  ...action.params,
+                  delay: isNaN(value) ? 0.5 : value,
+                },
+              });
+            }}
+            sx={{
+              width: 80,
+              '& .MuiInputBase-input': {
+                padding: '4px 8px',
+                fontSize: '0.8rem',
+              },
+            }}
+            inputProps={{ min: 0, max: 10, step: 0.1 }}
+          />
+        </Box>
+      )}
     </Box>
   );
 };
