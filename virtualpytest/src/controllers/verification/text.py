@@ -260,7 +260,7 @@ class TextVerificationController:
                 return {'success': False, 'message': 'text is required for saving reference'}
             
             # Get device model from request data (frontend provides it)
-            device_model = data.get('device_model') or data.get('model', 'default')
+            device_model = data.get('device_model')
             
             if not device_model:
                 return {'success': False, 'message': 'device_model is required for saving reference'}
