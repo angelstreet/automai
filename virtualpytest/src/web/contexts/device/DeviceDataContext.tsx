@@ -58,7 +58,7 @@ interface DeviceDataActions {
   fetchAllData: (force?: boolean) => Promise<void>;
 
   // Data access helpers
-  getModelReferences: (model?: string) => ModelReferences;
+  getModelReferences: (model: string) => ModelReferences;
   getAvailableActions: () => Actions;
   getActions: () => any[];
   getAvailableVerificationTypes: () => Record<string, any>;
@@ -582,7 +582,7 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
   // ========================================
 
   const getModelReferences = useCallback(
-    (model?: string): ModelReferences => {
+    (model: string): ModelReferences => {
       if (!model || !state.references[model]) {
         const availableModels = Object.keys(state.references);
         console.log(

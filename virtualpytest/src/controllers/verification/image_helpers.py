@@ -25,10 +25,11 @@ from urllib.parse import urlparse
 class ImageHelpers:
     """Core image processing helpers for verification operations."""
     
-    def __init__(self, captures_path: str, av_controller):
+    def __init__(self, captures_path: str, av_controller, image_references_dir: str):
         """Initialize image helpers with captures path and AV controller."""
         self.captures_path = captures_path
         self.av_controller = av_controller
+        self.image_references_dir = image_references_dir
        
     def download_image(self, source_url: str) -> str:
         """Download image from URL only."""

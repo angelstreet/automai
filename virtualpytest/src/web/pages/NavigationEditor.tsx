@@ -241,12 +241,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const stableSelectedHost = useMemo(() => selectedHost, [selectedHost]);
 
     // Centralized reference management - both verification references and actions
-    const {
-      actions: availableActionsArray,
-      referencesLoading,
-      getModelReferences,
-      setControlState,
-    } = useDeviceData();
+    const { actions: availableActionsArray, referencesLoading, setControlState } = useDeviceData();
 
     // Convert actions array to Actions object format
     const availableActions = useMemo(() => {
@@ -266,13 +261,10 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       setControlState(stableSelectedHost, selectedDeviceId, isControlActive);
     }, [stableSelectedHost, selectedDeviceId, isControlActive, setControlState]);
 
-    // Memoize model references for current device to prevent unnecessary re-renders
+    // Keep an empty modelReferences object to satisfy component props
     const currentModelReferences = useMemo(() => {
-      if (!selectedDeviceId || !stableSelectedHost?.devices) return {};
-      const device = stableSelectedHost.devices.find((d) => d.device_id === selectedDeviceId);
-      if (!device?.device_model) return {};
-      return getModelReferences(device.model);
-    }, [getModelReferences, stableSelectedHost?.devices, selectedDeviceId]);
+      return {}; // Empty object for component props
+    }, []);
 
     // Memoize the RemotePanel props to prevent unnecessary re-renders
     const remotePanelProps = useMemo(

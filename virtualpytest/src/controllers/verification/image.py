@@ -26,7 +26,6 @@ class ImageVerificationController:
         self.av_controller = av_controller
         self.captures_path = os.path.join(av_controller.video_capture_path, 'captures')
         self.verification_type = 'image'
-        self.helpers = ImageHelpers(self.captures_path, av_controller)
 
         self.verification_results_dir = os.path.join(self.captures_path, 'verification_results')
         self.cropped_images_dir = os.path.join(self.captures_path, 'cropped')
@@ -35,6 +34,9 @@ class ImageVerificationController:
         # Ensure all directories exist
         for directory in [self.verification_results_dir, self.cropped_images_dir, self.references_dir]:
             os.makedirs(directory, exist_ok=True)
+        
+        # Initialize helpers with explicit references directory
+        self.helpers = ImageHelpers(self.captures_path, av_controller, self.references_dir)
         
         print(f"[@controller:ImageVerification] Initialized with paths:")
         print(f"  Captures: {self.captures_path}")
