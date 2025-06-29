@@ -291,14 +291,28 @@ class TextVerificationController:
     def execute_verification(self, verification_config: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for executing verification."""
         try:
-            # Take screenshot first
-            source_path = self.av_controller.take_screenshot()
-            if not source_path:
-                return {
-                    'success': False,
-                    'message': 'Failed to capture screenshot for text verification',
-                    'screenshot_path': None
-                }
+            # Check if a source image path is provided in the config
+            source_path = verification_config.get('source_image_path')
+            
+            if source_path:
+                print(f"[@controller:TextVerification] Using provided source image: {source_path}")
+                # Validate the provided source image exists
+                if not os.path.exists(source_path):
+                    return {
+                        'success': False,
+                        'message': f'Provided source image not found: {source_path}',
+                        'screenshot_path': None
+                    }
+            else:
+                # Fallback to taking a new screenshot if no source provided
+                print(f"[@controller:TextVerification] No source image provided, taking new screenshot")
+                source_path = self.av_controller.take_screenshot()
+                if not source_path:
+                    return {
+                        'success': False,
+                        'message': 'Failed to capture screenshot for text verification',
+                        'screenshot_path': None
+                    }
             
             # Extract parameters from nested structure
             params = verification_config.get('params', {})
@@ -320,6 +334,7 @@ class TextVerificationController:
             
             print(f"[@controller:TextVerification] Executing {command} with text: '{text}'")
             print(f"[@controller:TextVerification] Parameters: timeout={timeout}, area={area}, filter={image_filter}")
+            print(f"[@controller:TextVerification] Using source image: {source_path}")
             
             # Execute verification based on command
             if command == 'waitForTextToAppear':
@@ -357,7 +372,12 @@ class TextVerificationController:
             }
                 
         except Exception as e:
-            return {'success': False, 'message': f'Verification execution failed: {str(e)}'}
+            print(f"[@controller:TextVerification] Execution error: {e}")
+            return {
+                'success': False,
+                'message': f'Text verification execution error: {str(e)}',
+                'screenshot_path': source_path if 'source_path' in locals() else None
+            }
 
     def get_available_verifications(self) -> list:
         """Get list of available verification types."""

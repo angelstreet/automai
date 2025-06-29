@@ -388,14 +388,28 @@ class ImageVerificationController:
     def execute_verification(self, verification_config: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for executing verification."""
         try:
-            # Take screenshot first
-            source_path = self.av_controller.take_screenshot()
-            if not source_path:
-                return {
-                    'success': False,
-                    'message': 'Failed to capture screenshot for image verification',
-                    'screenshot_path': None
-                }
+            # Check if a source image path is provided in the config
+            source_path = verification_config.get('source_image_path')
+            
+            if source_path:
+                print(f"[@controller:ImageVerification] Using provided source image: {source_path}")
+                # Validate the provided source image exists
+                if not os.path.exists(source_path):
+                    return {
+                        'success': False,
+                        'message': f'Provided source image not found: {source_path}',
+                        'screenshot_path': None
+                    }
+            else:
+                # Fallback to taking a new screenshot if no source provided
+                print(f"[@controller:ImageVerification] No source image provided, taking new screenshot")
+                source_path = self.av_controller.take_screenshot()
+                if not source_path:
+                    return {
+                        'success': False,
+                        'message': 'Failed to capture screenshot for image verification',
+                        'screenshot_path': None
+                    }
             
             # Extract parameters from nested structure
             params = verification_config.get('params', {})
@@ -419,6 +433,7 @@ class ImageVerificationController:
             
             print(f"[@controller:ImageVerification] Searching for image: {image_path}")
             print(f"[@controller:ImageVerification] Timeout: {timeout}s, Confidence: {threshold}")
+            print(f"[@controller:ImageVerification] Using source image: {source_path}")
             
             # Execute verification based on command using provided device model
             if command == 'waitForImageToAppear':

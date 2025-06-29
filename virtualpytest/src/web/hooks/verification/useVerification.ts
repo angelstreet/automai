@@ -205,12 +205,10 @@ export const useVerification = ({
         setTestResults([]);
 
         // Extract capture filename from captureSourcePath for specific capture selection
-        let capture_filename = null;
+        let image_source_url = null;
         if (captureSourcePath) {
-          const url = new URL(captureSourcePath);
-          const pathname = url.pathname;
-          capture_filename = pathname.split('/').pop();
-          console.log('[useVerification] Using specific capture:', capture_filename);
+          image_source_url = captureSourcePath;
+          console.log('[useVerification] Using specific capture source:', image_source_url);
         }
 
         console.log('[useVerification] Submitting batch verification request');
@@ -223,7 +221,7 @@ export const useVerification = ({
           model: device?.device_model || 'unknown',
           node_id: 'verification-editor',
           tree_id: 'verification-tree',
-          capture_filename: capture_filename,
+          image_source_url: image_source_url,
         };
 
         console.log('[useVerification] Batch payload:', batchPayload);

@@ -117,7 +117,44 @@ def execute_text_verification():
             return error_response
         
         verification = data.get('verification')
-        result = text_controller.execute_verification(verification)
+        image_source_url = data.get('image_source_url')  # Get source image URL if provided
+        
+        # Convert image_source_url to local file path if provided
+        source_image_path = None
+        if image_source_url:
+            print(f"[@route:host_verification_text:execute] Image source URL provided: {image_source_url}")
+            try:
+                # Extract the filename from the URL
+                from urllib.parse import urlparse
+                parsed_url = urlparse(image_source_url)
+                filename = os.path.basename(parsed_url.path)
+                
+                # Build the local file path using the captures directory
+                captures_path = os.path.join(text_controller.captures_path)
+                source_image_path = os.path.join(captures_path, filename)
+                
+                print(f"[@route:host_verification_text:execute] Converted to local path: {source_image_path}")
+                
+                # Verify the file exists
+                if os.path.exists(source_image_path):
+                    print(f"[@route:host_verification_text:execute] Source image file exists, using provided image")
+                else:
+                    print(f"[@route:host_verification_text:execute] Warning: Source image file not found at {source_image_path}, will take new screenshot")
+                    source_image_path = None
+                    
+            except Exception as e:
+                print(f"[@route:host_verification_text:execute] Error processing image_source_url: {e}")
+                source_image_path = None
+        
+        # Prepare verification config
+        verification_config = verification.copy() if verification else {}
+        
+        # Add source image path if available
+        if source_image_path:
+            verification_config['source_image_path'] = source_image_path
+        
+        # Execute verification using controller
+        result = text_controller.execute_verification(verification_config)
         
         # Get host instance for URL building
         host = get_host()
