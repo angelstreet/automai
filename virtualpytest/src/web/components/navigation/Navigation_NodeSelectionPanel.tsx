@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
+import { useDeviceData } from '../../contexts/device/DeviceDataContext';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
 
@@ -63,27 +64,28 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       return null;
     }
 
+    // Get device data context to access loaded verifications
+    const { getVerifications } = useDeviceData();
+
     // Add state to control showing/hiding the NodeGotoPanel
     const [showGotoPanel, setShowGotoPanel] = useState(false);
 
     // Real screenshot implementation using existing working routes
     const takeAndSaveScreenshot = async (label: string, nodeId: string, onUpdateNode?: any) => {
+      if (!selectedHost || !selectedDeviceId) {
+        console.error(
+          '[@component:NodeSelectionPanel] Cannot take screenshot - host or device not available',
+        );
+        return { success: false, message: 'Host or device not available' };
+      }
+
       try {
-        if (!selectedHost || !selectedDeviceId) {
-          return { success: false, message: '❌ No host or device selected' };
-        }
+        console.log(
+          `[@component:NodeSelectionPanel] Taking screenshot for node: ${nodeId} (${label})`,
+        );
 
-        // Generate filename based on node label and timestamp
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        const sanitizedLabel = label.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
-        const filename = `${sanitizedLabel}_${timestamp}`;
-
-        // Get device model for R2 path organization
-        const selectedDevice = selectedHost.devices?.find((d) => d.device_id === selectedDeviceId);
-        const deviceModel = selectedDevice?.device_model || 'android_mobile';
-
-        // Call the existing working navigation screenshot API
-        const response = await fetch('/server/navigation/saveNavigationScreenshot', {
+        // Use the existing screenshot endpoint
+        const response = await fetch('/server/navigation/takeNodeScreenshot', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -91,29 +93,34 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
           body: JSON.stringify({
             host: selectedHost,
             device_id: selectedDeviceId,
-            filename: filename,
-            device_model: deviceModel,
+            node_id: nodeId,
+            label: label,
           }),
         });
 
         const result = await response.json();
 
         if (result.success) {
+          console.log(
+            `[@component:NodeSelectionPanel] Screenshot saved successfully: ${result.screenshot_url}`,
+          );
+
           // Update the node with the new screenshot URL
-          if (onUpdateNode && result.screenshot_url) {
-            const screenshotData = {
-              screenshot: result.screenshot_url,
-              screenshot_timestamp: Date.now(),
-            };
-            onUpdateNode(nodeId, screenshotData);
+          if (onUpdateNode) {
+            onUpdateNode(nodeId, { screenshot: result.screenshot_url });
           }
 
-          return { success: true, message: '✅ Screenshot saved successfully' };
+          return { success: true, screenshot_url: result.screenshot_url };
         } else {
-          return { success: false, message: `❌ Screenshot failed: ${result.error}` };
+          console.error(`[@component:NodeSelectionPanel] Screenshot failed: ${result.message}`);
+          return { success: false, message: result.message };
         }
       } catch (error) {
-        return { success: false, message: `❌ Screenshot failed: ${error}` };
+        console.error('[@component:NodeSelectionPanel] Screenshot error:', error);
+        return {
+          success: false,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        };
       }
     };
 
@@ -138,6 +145,24 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     }, [selectedNode.id]);
 
     const handleEdit = () => {
+      // Get loaded verifications from device context
+      const allVerifications = getVerifications();
+
+      // Match verification_ids with actual verification objects
+      const nodeVerifications = [];
+      if (selectedNode.data.verification_ids && selectedNode.data.verification_ids.length > 0) {
+        for (const verificationId of selectedNode.data.verification_ids) {
+          const verification = allVerifications.find((v) => v.verification_id === verificationId);
+          if (verification) {
+            nodeVerifications.push(verification);
+          }
+        }
+      }
+
+      console.log(
+        `[@component:NodeSelectionPanel] Found ${nodeVerifications.length} verifications for node ${selectedNode.data.label}`,
+      );
+
       setNodeForm({
         label: selectedNode.data.label,
         type: selectedNode.data.type,
@@ -146,7 +171,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         depth: selectedNode.data.depth || 0,
         parent: selectedNode.data.parent || [],
         menu_type: selectedNode.data.menu_type,
-        verifications: selectedNode.data.verifications || [],
+        verifications: nodeVerifications, // Use matched verifications from device context
         verification_ids: selectedNode.data.verification_ids || [],
       });
       setIsNodeDialogOpen(true);
