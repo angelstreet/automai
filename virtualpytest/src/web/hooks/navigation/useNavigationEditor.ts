@@ -108,7 +108,7 @@ export const useNavigationEditor = () => {
                   'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                  name: `${nodeForm.label || 'node'}_${verification.verification_type}_${Date.now()}`,
+                  name: verification.name,
                   device_model: verification.device_model || 'android_mobile',
                   verification_type: verification.verification_type || 'image',
                   command: verification.command || '',
