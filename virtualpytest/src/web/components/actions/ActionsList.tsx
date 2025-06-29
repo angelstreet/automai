@@ -13,8 +13,8 @@ interface ActionsListProps {
 }
 
 export const ActionsList: React.FC<ActionsListProps> = ({ actions, onActionsUpdate }) => {
-  const { getActions } = useDeviceData();
-  const availableActions = getActions();
+  const { getAvailableActions } = useDeviceData();
+  const availableActions = getAvailableActions();
 
   const handleAddAction = () => {
     const newAction: EdgeAction = {
@@ -27,26 +27,26 @@ export const ActionsList: React.FC<ActionsListProps> = ({ actions, onActionsUpda
   };
 
   const handleActionSelect = (index: number, command: string) => {
-    // Find the action definition to get default parameters
-    const actionDef = Object.values(availableActions)
-      .flat()
-      .find((action) => action.command === command);
-
-    const updatedActions = [...actions];
-    updatedActions[index] = {
-      ...updatedActions[index],
-      command,
-      params: {
-        ...actionDef?.params, // Use default params from action definition
-        delay: updatedActions[index].params?.delay || 0.5, // Preserve existing delay or default
-      },
-    };
+    const updatedActions = actions.map((action, i) => {
+      if (i === index) {
+        return {
+          ...action,
+          command,
+          params: {}, // Reset params when command changes
+        };
+      }
+      return action;
+    });
     onActionsUpdate(updatedActions);
   };
 
   const handleUpdateAction = (index: number, updates: Partial<EdgeAction>) => {
-    const updatedActions = [...actions];
-    updatedActions[index] = { ...updatedActions[index], ...updates };
+    const updatedActions = actions.map((action, i) => {
+      if (i === index) {
+        return { ...action, ...updates };
+      }
+      return action;
+    });
     onActionsUpdate(updatedActions);
   };
 
@@ -56,64 +56,59 @@ export const ActionsList: React.FC<ActionsListProps> = ({ actions, onActionsUpda
   };
 
   const handleMoveUp = (index: number) => {
-    if (index > 0) {
-      const updatedActions = [...actions];
-      [updatedActions[index - 1], updatedActions[index]] = [
-        updatedActions[index],
-        updatedActions[index - 1],
-      ];
-      onActionsUpdate(updatedActions);
-    }
+    if (index === 0) return;
+    const updatedActions = [...actions];
+    [updatedActions[index - 1], updatedActions[index]] = [
+      updatedActions[index],
+      updatedActions[index - 1],
+    ];
+    onActionsUpdate(updatedActions);
   };
 
   const handleMoveDown = (index: number) => {
-    if (index < actions.length - 1) {
-      const updatedActions = [...actions];
-      [updatedActions[index], updatedActions[index + 1]] = [
-        updatedActions[index + 1],
-        updatedActions[index],
-      ];
-      onActionsUpdate(updatedActions);
-    }
+    if (index === actions.length - 1) return;
+    const updatedActions = [...actions];
+    [updatedActions[index], updatedActions[index + 1]] = [
+      updatedActions[index + 1],
+      updatedActions[index],
+    ];
+    onActionsUpdate(updatedActions);
   };
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="subtitle2" sx={{ fontSize: '0.9rem', fontWeight: 600 }}>
-          Actions ({actions.length})
-        </Typography>
-        <Button
-          size="small"
-          startIcon={<AddIcon />}
-          onClick={handleAddAction}
-          sx={{ fontSize: '0.75rem', minHeight: 24 }}
-        >
-          Add Action
-        </Button>
-      </Box>
+      {actions.length > 0 && (
+        <Box sx={{ mb: 2 }}>
+          {actions.map((action, index) => (
+            <ActionItem
+              key={action.id}
+              action={action}
+              index={index}
+              availableActions={availableActions}
+              onActionSelect={handleActionSelect}
+              onUpdateAction={handleUpdateAction}
+              onRemoveAction={handleRemoveAction}
+              onMoveUp={handleMoveUp}
+              onMoveDown={handleMoveDown}
+              canMoveUp={index > 0}
+              canMoveDown={index < actions.length - 1}
+            />
+          ))}
+        </Box>
+      )}
 
-      {actions.map((action, index) => (
-        <ActionItem
-          key={action.id}
-          action={action}
-          index={index}
-          availableActions={availableActions}
-          onActionSelect={handleActionSelect}
-          onUpdateAction={handleUpdateAction}
-          onRemoveAction={handleRemoveAction}
-          onMoveUp={handleMoveUp}
-          onMoveDown={handleMoveDown}
-          canMoveUp={index > 0}
-          canMoveDown={index < actions.length - 1}
-        />
-      ))}
+      <Button
+        variant="outlined"
+        startIcon={<AddIcon />}
+        onClick={handleAddAction}
+        fullWidth
+        sx={{ mt: 1 }}
+      >
+        Add Action
+      </Button>
 
       {actions.length === 0 && (
-        <Typography
-          variant="body2"
-          sx={{ color: 'text.secondary', fontStyle: 'italic', fontSize: '0.8rem' }}
-        >
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 2 }}>
           No actions configured. Click "Add Action" to get started.
         </Typography>
       )}

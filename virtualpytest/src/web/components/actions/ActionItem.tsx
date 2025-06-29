@@ -14,12 +14,13 @@ import {
 } from '@mui/material';
 import React from 'react';
 
+import type { Actions } from '../../types/controller/Action_Types';
 import { EdgeAction } from '../../types/pages/Navigation_Types';
 
 interface ActionItemProps {
   action: EdgeAction;
   index: number;
-  availableActions: Record<string, any[]>;
+  availableActions: Actions;
   onActionSelect: (index: number, command: string) => void;
   onUpdateAction: (index: number, updates: Partial<EdgeAction>) => void;
   onRemoveAction: (index: number) => void;
@@ -41,21 +42,190 @@ export const ActionItem: React.FC<ActionItemProps> = ({
   canMoveUp,
   canMoveDown,
 }) => {
-  // Find the selected action definition to get its configuration
-  const selectedActionDef = Object.values(availableActions)
-    .flat()
-    .find((actionDef) => actionDef.command === action.command);
+  const handleParamChange = (paramName: string, value: string | number) => {
+    onUpdateAction(index, {
+      params: {
+        ...action.params,
+        [paramName]: value,
+      },
+    });
+  };
+
+  const renderParameterFields = () => {
+    if (!action.command) return null;
+
+    const fields = [];
+
+    // Common delay field for all actions
+    fields.push(
+      <TextField
+        key="delay"
+        label="Delay (s)"
+        type="number"
+        size="small"
+        value={action.params?.delay || 0.5}
+        onChange={(e) => handleParamChange('delay', parseFloat(e.target.value) || 0)}
+        inputProps={{ min: 0, max: 60, step: 0.1 }}
+        sx={{ width: 120 }}
+      />,
+    );
+
+    // Action-specific parameter fields
+    switch (action.command) {
+      case 'press_key':
+        fields.push(
+          <TextField
+            key="key"
+            label="Key"
+            size="small"
+            value={action.params?.key || ''}
+            onChange={(e) => handleParamChange('key', e.target.value)}
+            placeholder="e.g., UP, DOWN, HOME, BACK"
+            sx={{ width: 200 }}
+          />,
+        );
+        break;
+
+      case 'input_text':
+        fields.push(
+          <TextField
+            key="text"
+            label="Text"
+            size="small"
+            value={action.params?.text || ''}
+            onChange={(e) => handleParamChange('text', e.target.value)}
+            placeholder="Text to input"
+            sx={{ width: 250 }}
+          />,
+        );
+        break;
+
+      case 'click_element':
+        fields.push(
+          <TextField
+            key="element_identifier"
+            label="Element Identifier"
+            size="small"
+            value={action.params?.element_identifier || ''}
+            onChange={(e) => handleParamChange('element_identifier', e.target.value)}
+            placeholder="e.g., Home Button, Menu Icon"
+            sx={{ width: 250 }}
+          />,
+        );
+        break;
+
+      case 'tap_coordinates':
+        fields.push(
+          <TextField
+            key="x"
+            label="X"
+            type="number"
+            size="small"
+            value={action.params?.x || ''}
+            onChange={(e) => handleParamChange('x', parseInt(e.target.value) || 0)}
+            sx={{ width: 80 }}
+          />,
+          <TextField
+            key="y"
+            label="Y"
+            type="number"
+            size="small"
+            value={action.params?.y || ''}
+            onChange={(e) => handleParamChange('y', parseInt(e.target.value) || 0)}
+            sx={{ width: 80 }}
+          />,
+        );
+        break;
+
+      case 'swipe':
+        fields.push(
+          <TextField
+            key="direction"
+            label="Direction"
+            size="small"
+            value={action.params?.direction || ''}
+            onChange={(e) => handleParamChange('direction', e.target.value)}
+            placeholder="e.g., up, down, left, right"
+            sx={{ width: 150 }}
+          />,
+        );
+        break;
+
+      case 'launch_app':
+      case 'close_app':
+        fields.push(
+          <TextField
+            key="package"
+            label="Package Name"
+            size="small"
+            value={action.params?.package || ''}
+            onChange={(e) => handleParamChange('package', e.target.value)}
+            placeholder="e.g., com.example.app"
+            sx={{ width: 250 }}
+          />,
+        );
+        break;
+
+      case 'wait':
+        fields.push(
+          <TextField
+            key="duration"
+            label="Duration (s)"
+            type="number"
+            size="small"
+            value={action.params?.duration || 1}
+            onChange={(e) => handleParamChange('duration', parseFloat(e.target.value) || 1)}
+            inputProps={{ min: 0.1, max: 60, step: 0.1 }}
+            sx={{ width: 120 }}
+          />,
+        );
+        break;
+
+      case 'scroll':
+        fields.push(
+          <TextField
+            key="direction"
+            label="Direction"
+            size="small"
+            value={action.params?.direction || ''}
+            onChange={(e) => handleParamChange('direction', e.target.value)}
+            placeholder="e.g., up, down"
+            sx={{ width: 150 }}
+          />,
+          <TextField
+            key="amount"
+            label="Amount"
+            type="number"
+            size="small"
+            value={action.params?.amount || 1}
+            onChange={(e) => handleParamChange('amount', parseInt(e.target.value) || 1)}
+            sx={{ width: 100 }}
+          />,
+        );
+        break;
+    }
+
+    return fields;
+  };
 
   return (
     <Box
-      sx={{ mb: 1, px: 0.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+      sx={{
+        mb: 1,
+        px: 1,
+        py: 1,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+        backgroundColor: 'background.paper',
+      }}
     >
       {/* Line 1: Action command dropdown */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200, maxWidth: 300 }}>
           <InputLabel>Action</InputLabel>
           <Select
-            value={action.command || ''}
+            value={action.command}
             onChange={(e) => onActionSelect(index, e.target.value)}
             label="Action"
             size="small"
@@ -65,18 +235,15 @@ export const ActionItem: React.FC<ActionItemProps> = ({
               },
             }}
             renderValue={(selected) => {
-              // Find the selected action and return its formatted label
+              // Find the selected action and return its formatted name
               const selectedAction = Object.values(availableActions)
                 .flat()
-                .find((actionDef) => actionDef.command === selected);
+                .find((act) => act.command === selected);
               if (selectedAction) {
-                return (
-                  selectedAction.label ||
-                  selectedAction.command
-                    .replace(/_/g, ' ')
-                    .replace(/([A-Z])/g, ' $1')
-                    .trim()
-                );
+                return selectedAction.command
+                  .replace(/_/g, ' ')
+                  .replace(/([A-Z])/g, ' $1')
+                  .trim();
               }
               return selected;
             }}
@@ -105,11 +272,10 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                     value={actionDef.command}
                     sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
                   >
-                    {actionDef.label ||
-                      actionDef.command
-                        .replace(/_/g, ' ')
-                        .replace(/([A-Z])/g, ' $1')
-                        .trim()}
+                    {actionDef.command
+                      .replace(/_/g, ' ')
+                      .replace(/([A-Z])/g, ' $1')
+                      .trim()}
                   </MenuItem>
                 )),
               ];
@@ -147,139 +313,10 @@ export const ActionItem: React.FC<ActionItemProps> = ({
         </IconButton>
       </Box>
 
-      {/* Line 2: Parameter fields based on selected action */}
-      {action.command && selectedActionDef && (
-        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0, px: 0, mx: 0 }}>
-          {/* Input field for actions that require input */}
-          {selectedActionDef.requiresInput && (
-            <TextField
-              size="small"
-              label={selectedActionDef.inputLabel || 'Input'}
-              placeholder={selectedActionDef.inputPlaceholder || 'Enter value...'}
-              value={
-                action.params?.input ||
-                action.params?.text ||
-                action.params?.key ||
-                action.params?.package ||
-                action.params?.element_identifier ||
-                ''
-              }
-              autoComplete="off"
-              onChange={(e) => {
-                const value = e.target.value;
-                let paramKey = 'input';
-
-                // Determine the correct parameter key based on the command
-                if (action.command === 'input_text') {
-                  paramKey = 'text';
-                } else if (action.command === 'press_key') {
-                  paramKey = 'key';
-                } else if (action.command === 'launch_app' || action.command === 'close_app') {
-                  paramKey = 'package';
-                } else if (action.command === 'click_element') {
-                  paramKey = 'element_identifier';
-                } else if (action.command === 'tap_coordinates') {
-                  // For tap_coordinates, we'll handle x,y separately
-                  paramKey = 'coordinates';
-                }
-
-                onUpdateAction(index, {
-                  params: {
-                    ...action.params,
-                    [paramKey]: value,
-                  },
-                });
-              }}
-              sx={{
-                flex: 1,
-                minWidth: 150,
-                '& .MuiInputBase-input': {
-                  padding: '4px 8px',
-                  fontSize: '0.8rem',
-                },
-              }}
-            />
-          )}
-
-          {/* Coordinates fields for tap_coordinates */}
-          {action.command === 'tap_coordinates' && (
-            <>
-              <TextField
-                size="small"
-                type="number"
-                label="X"
-                value={action.params?.x || 0}
-                autoComplete="off"
-                onChange={(e) => {
-                  const value = parseInt(e.target.value) || 0;
-                  onUpdateAction(index, {
-                    params: {
-                      ...action.params,
-                      x: value,
-                    },
-                  });
-                }}
-                sx={{
-                  width: 70,
-                  '& .MuiInputBase-input': {
-                    padding: '4px 8px',
-                    fontSize: '0.8rem',
-                  },
-                }}
-                inputProps={{ min: 0, step: 1 }}
-              />
-              <TextField
-                size="small"
-                type="number"
-                label="Y"
-                value={action.params?.y || 0}
-                autoComplete="off"
-                onChange={(e) => {
-                  const value = parseInt(e.target.value) || 0;
-                  onUpdateAction(index, {
-                    params: {
-                      ...action.params,
-                      y: value,
-                    },
-                  });
-                }}
-                sx={{
-                  width: 70,
-                  '& .MuiInputBase-input': {
-                    padding: '4px 8px',
-                    fontSize: '0.8rem',
-                  },
-                }}
-                inputProps={{ min: 0, step: 1 }}
-              />
-            </>
-          )}
-
-          {/* Delay field for all actions */}
-          <TextField
-            size="small"
-            type="number"
-            label="Delay (s)"
-            value={action.params?.delay !== undefined ? action.params.delay : 0.5}
-            autoComplete="off"
-            onChange={(e) => {
-              const value = parseFloat(e.target.value);
-              onUpdateAction(index, {
-                params: {
-                  ...action.params,
-                  delay: isNaN(value) ? 0.5 : value,
-                },
-              });
-            }}
-            sx={{
-              width: 80,
-              '& .MuiInputBase-input': {
-                padding: '4px 8px',
-                fontSize: '0.8rem',
-              },
-            }}
-            inputProps={{ min: 0, max: 10, step: 0.1 }}
-          />
+      {/* Line 2: Parameter fields - conditional based on action type */}
+      {action.command && (
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+          {renderParameterFields()}
         </Box>
       )}
     </Box>
