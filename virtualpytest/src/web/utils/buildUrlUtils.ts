@@ -30,23 +30,16 @@ const internalBuildHostUrl = (host: any, endpoint: string): string => {
 };
 
 /**
- * Build URL for live screenshot/video captures using device-specific paths
+ * Build URL for live screenshot captures
+ * Supports device-specific capture paths for multi-device hosts
  */
-export const buildCaptureUrl = (host: any, timestamp: string, deviceId: string): string => {
-  // Get device-specific capture path
-  const deviceCapturePath = getDeviceCaptureUrlPath(host, deviceId);
-  const capturePath = `host${deviceCapturePath}/capture_${timestamp}.jpg`;
-
-  const hostName = host?.host_name || '';
-
-  // Handle HTTPS URLs - return as is (no proxy needed)
-  if (hostName.startsWith('https:')) {
-    return `${hostName}${capturePath}`;
+export const buildCaptureUrl = (host: any, timestamp: string, deviceId?: string): string => {
+  if (!deviceId) {
+    throw new Error('deviceId is required for buildCaptureUrl');
   }
-
-  // Handle HTTP or plain hostnames - use proxy
-  const baseUrl = hostName.startsWith('http') ? hostName : `https://${hostName}`;
-  return `/api/proxy-image?url=${baseUrl}${capturePath}`;
+  // Get device-specific capture path
+  const capturePath = getDeviceCaptureUrlPath(host, deviceId);
+  return internalBuildHostUrl(host, `host${capturePath}/capture_${timestamp}.jpg`);
 };
 
 /**

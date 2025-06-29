@@ -14,7 +14,6 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
 import { useHdmiStream, useStream } from '../../../hooks/controller';
 import { Host } from '../../../types/common/Host_Types';
-import { buildCaptureUrl } from '../../../utils/buildUrlUtils';
 import { VerificationEditor } from '../verification';
 
 import { RecordingOverlay, LoadingOverlay, ModeIndicatorDot } from './ScreenEditorOverlay';
@@ -259,7 +258,7 @@ export const HDMIStream = React.memo(
       return isExpanded ? expandedHeight : collapsedHeight;
     };
 
-    // Generate current video frame URL using centralized builder
+    // Generate current video frame URL - same as ScreenshotCapture
     const currentVideoFramePath = useMemo(() => {
       if (captureMode !== 'video' || totalFrames <= 0 || !captureStartTime) {
         return '';
@@ -276,9 +275,20 @@ export const HDMIStream = React.memo(
       const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
       const frameTimestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
 
-      // Use centralized URL builder with deviceId
-      return buildCaptureUrl(host, frameTimestamp, deviceId);
-    }, [captureMode, totalFrames, captureStartTime, currentFrame, host, deviceId]);
+      // Simple path construction like ScreenshotCapture
+      const capturePath = `/host/stream/capture1/captures/capture_${frameTimestamp}.jpg`;
+
+      // Handle HTTPS URLs - return as is (no proxy needed)
+      if (host.host_name.startsWith('https:')) {
+        return `${host.host_name}${capturePath}`;
+      }
+
+      // Handle HTTP or plain hostnames - use proxy
+      const baseUrl = host.host_name.startsWith('http')
+        ? host.host_name
+        : `https://${host.host_name}`;
+      return `/api/proxy-image?url=${encodeURIComponent(`${baseUrl}${capturePath}`)}`;
+    }, [captureMode, totalFrames, captureStartTime, currentFrame, host.host_name]);
 
     // Check if verification editor should be visible
     const isVerificationVisible = captureMode === 'screenshot' || captureMode === 'video';

@@ -44,12 +44,12 @@ def buildHostUrl(host_info: dict, endpoint: str) -> str:
 
 def buildCaptureUrl(host_info: dict, timestamp: str, device_id: str) -> str:
     """
-    Build URL for live screenshot/video captures using device-specific paths
+    Build URL for live screenshot captures
     
     Args:
         host_info: Host information from registry
         timestamp: Screenshot timestamp (YYYYMMDDHHMMSS format)
-        device_id: Device ID (required)
+        device_id: Device ID for multi-device hosts (required)
         
     Returns:
         Complete URL to screenshot capture
@@ -60,17 +60,8 @@ def buildCaptureUrl(host_info: dict, timestamp: str, device_id: str) -> str:
     """
     # Get device-specific capture path
     capture_path = _get_device_capture_path(host_info, device_id)
-    capture_path = f"host{capture_path}/capture_{timestamp}.jpg"
     
-    host_name = host_info.get('host_name', '')
-    
-    # Handle HTTPS URLs - return as is (no proxy needed)
-    if host_name.startswith('https:'):
-        return f"{host_name}{capture_path}"
-    
-    # Handle HTTP or plain hostnames - use proxy
-    base_url = host_name if host_name.startswith('http') else f"https://{host_name}"
-    return f"/api/proxy-image?url={base_url}{capture_path}"
+    return buildHostUrl(host_info, f'host{capture_path}/capture_{timestamp}.jpg')
 
 def buildCroppedImageUrl(host_info: dict, filename: str, device_id: str) -> str:
     """
