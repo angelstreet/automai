@@ -13,7 +13,7 @@ def get_supabase():
     """Get the Supabase client instance."""
     return get_supabase_client()
 
-def find_existing_verification(team_id: str, device_model: str, verification_type: str, command: str, parameters: Dict = None) -> Dict:
+def find_existing_verification(team_id: str, device_model: str, verification_type: str, command: str, params: Dict = None) -> Dict:
     """
     Find existing verification with the same parameters to avoid duplicates.
     
@@ -22,7 +22,7 @@ def find_existing_verification(team_id: str, device_model: str, verification_typ
         device_model: Device model (e.g., 'android_mobile')
         verification_type: Verification type ('adb', 'image', 'text', etc.)
         command: The verification command
-        parameters: Parameters to match (includes timeout if applicable)
+        params: Parameters to match (includes timeout if applicable)
         
     Returns:
         Dict: {'success': bool, 'verification': Dict | None, 'error': str}
@@ -38,10 +38,10 @@ def find_existing_verification(team_id: str, device_model: str, verification_typ
         if result.data:
             # Check for exact parameter match (timeout is included in parameters)
             for verification in result.data:
-                existing_params = verification.get('parameters', {})
+                existing_params = verification.get('params', {})
                 
                 # Compare parameters (which includes timeout)
-                if existing_params == (parameters or {}):
+                if existing_params == (params or {}):
                     print(f"[@db:verifications:find_existing_verification] Found matching verification: {verification['id']}")
                     return {
                         'success': True,
@@ -62,7 +62,7 @@ def find_existing_verification(team_id: str, device_model: str, verification_typ
             'verification': None
         }
 
-def save_verification(name: str, device_model: str, verification_type: str, command: str, team_id: str, parameters: Dict = None) -> Dict:
+def save_verification(name: str, device_model: str, verification_type: str, command: str, team_id: str, params: Dict = None) -> Dict:
     """
     Save verification definition to database.
     
@@ -72,7 +72,7 @@ def save_verification(name: str, device_model: str, verification_type: str, comm
         verification_type: Verification type ('adb', 'image', 'text', etc.)
         command: The verification command/search term
         team_id: Team ID for RLS
-        parameters: JSONB parameters including timeout, references, etc. (optional)
+        params: JSONB parameters including timeout, references, etc. (optional)
         
     Returns:
         Dict: {'success': bool, 'verification_id': str, 'verification': Dict, 'reused': bool, 'error': str}
@@ -84,7 +84,7 @@ def save_verification(name: str, device_model: str, verification_type: str, comm
             device_model=device_model,
             verification_type=verification_type,
             command=command,
-            parameters=parameters
+            params=params
         )
         
         if not existing_result['success']:
@@ -111,7 +111,7 @@ def save_verification(name: str, device_model: str, verification_type: str, comm
             'verification_type': verification_type,
             'command': command,
             'team_id': team_id,
-            'parameters': parameters or {},  # Store as JSONB directly (includes timeout, references, etc.)
+            'params': params or {},  # Store as JSONB directly (includes timeout, references, etc.)
             'updated_at': datetime.now().isoformat()
         }
         

@@ -14,13 +14,14 @@ import {
   Typography,
   IconButton,
 } from '@mui/material';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 
 // Import proper types from navigationTypes
-import { useVerification } from '../../hooks/verification/useVerification';
+import { useNode } from '../../hooks/navigation/useNode';
 import { NodeEditDialogProps } from '../../types/pages/Navigation_Types';
 import { Verification } from '../../types/verification/Verification_Types';
 import { VerificationsList } from '../verification/VerificationsList';
+
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   isOpen,
   nodeForm,
@@ -57,50 +58,19 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     );
   }
 
-  // Use the same verification hooks as VerificationEditor - now safe to call
-  const verification = useVerification({
-    selectedHost: selectedHost,
-    captureSourcePath: undefined, // NodeEditDialog doesn't capture images
+  // Use the consolidated node hook
+  const nodeHook = useNode({
+    selectedHost,
+    isControlActive,
   });
-
-  // Simple node operations replacement
-  const [gotoResult, setGotoResult] = useState<string>('');
-  const [isRunningGoto, setIsRunningGoto] = useState(false);
-  const canRunGoto = isControlActive && selectedHost && nodeForm;
-
-  const runGoto = useCallback(async () => {
-    if (!canRunGoto) return;
-
-    setIsRunningGoto(true);
-    setGotoResult('Running goto operation...');
-
-    try {
-      // Mock implementation - replace with actual goto logic
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setGotoResult('✅ Goto operation completed successfully');
-    } catch (error) {
-      setGotoResult(`❌ Goto operation failed: ${error}`);
-    } finally {
-      setIsRunningGoto(false);
-    }
-  }, [canRunGoto]);
-
-  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Initialize verifications from nodeForm when dialog opens
   useEffect(() => {
     if (!isOpen) return;
 
     console.log(`[@component:NodeEditDialog] Dialog opened, initializing verifications`);
-
-    // Use verifications directly from nodeForm (no database fetching needed)
-    const nodeVerifications = nodeForm?.verifications || [];
-    console.log(
-      `[@component:NodeEditDialog] Using verifications from nodeForm:`,
-      nodeVerifications,
-    );
-    verification.handleVerificationsChange(nodeVerifications);
-  }, [isOpen, nodeForm?.verifications]); // Only depend on isOpen and verifications
+    nodeHook.initializeVerifications(nodeForm);
+  }, [isOpen, nodeForm, nodeHook]);
 
   // Handle verification changes by creating a custom handler that updates nodeForm
   const handleVerificationsChange = useCallback(
@@ -110,14 +80,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
         newVerifications,
       );
 
-      // Update both the verification hook and the nodeForm
-      verification.handleVerificationsChange(newVerifications);
-      setNodeForm({
-        ...nodeForm,
-        verifications: newVerifications,
-      });
+      nodeHook.handleVerificationsChange(newVerifications, nodeForm, setNodeForm);
     },
-    [nodeForm, verification.handleVerificationsChange, setNodeForm],
+    [nodeForm, nodeHook, setNodeForm],
   );
 
   // Handle reference selection
@@ -126,60 +91,20 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     // Reference selection is handled internally by VerificationsList
   };
 
-  // Helper function to get parent names from IDs
-  const getParentNames = (parentIds: string[]): string => {
-    if (!parentIds || parentIds.length === 0) return 'None';
-    if (!nodes || !Array.isArray(nodes)) return 'None';
-
-    const parentNames = parentIds.map((id) => {
-      const parentNode = nodes.find((node) => node.id === id);
-      return parentNode ? parentNode.data.label : id;
-    });
-
-    return parentNames.join(' > ');
-  };
-
   useEffect(() => {
     if (!isOpen) {
       // Reset state when dialog closes
-      setSaveSuccess(false);
-      // Also clear verifications to prevent stale data
-      verification.handleVerificationsChange([]);
+      nodeHook.resetDialogState();
     }
-  }, [isOpen, verification.handleVerificationsChange]);
+  }, [isOpen, nodeHook]);
 
   const handleSave = () => {
-    onSubmit();
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2000);
-  };
-
-  const isFormValid = () => {
-    const basicFormValid = nodeForm?.label?.trim();
-    const verificationsValid =
-      !verification.verifications ||
-      verification.verifications.every((verificationItem) => {
-        // Skip verifications that don't have a command (not configured yet)
-        if (!verificationItem.command) return true;
-
-        if (verificationItem.verification_type === 'image') {
-          // Image verifications need a reference image
-          const hasImagePath = verificationItem.params?.image_path;
-          return Boolean(hasImagePath);
-        } else if (verificationItem.verification_type === 'text') {
-          // Text verifications need text to search for
-          const hasText = verificationItem.params?.text;
-          return Boolean(hasText);
-        }
-
-        return true;
-      });
-    return basicFormValid && verificationsValid;
+    nodeHook.handleSave(onSubmit);
   };
 
   // Use the runGoto function
   const handleRunGoto = () => {
-    runGoto();
+    nodeHook.runGoto();
   };
 
   return (
@@ -231,7 +156,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             />
             <TextField
               label="Parent"
-              value={getParentNames(nodeForm?.parent || [])}
+              value={nodeHook.getParentNames(nodeForm?.parent || [], nodes)}
               fullWidth
               InputProps={{ readOnly: true }}
               variant="outlined"
@@ -259,46 +184,29 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             />
           )}
 
-          {/* Debug info - remove in production */}
-          {process.env.NODE_ENV === 'development' && (
-            <Box sx={{ p: 1, bgcolor: 'grey.100', borderRadius: 1, fontSize: '0.75rem' }}>
-              <Typography variant="caption" component="div">
-                Debug - NodeForm verifications: {nodeForm?.verifications?.length || 0}
-              </Typography>
-              <Typography variant="caption" component="div">
-                Debug - NodeForm verification_ids: {nodeForm?.verification_ids?.length || 0}
-              </Typography>
-              <Typography variant="caption" component="div">
-                Debug - Hook verifications: {verification.verifications?.length || 0}
-              </Typography>
-              <Typography variant="caption" component="div">
-                Debug - Verification loading: {verification.loading ? 'Yes' : 'No'}
-              </Typography>
-            </Box>
-          )}
-
           {/* Verification Section - using same hooks as VerificationEditor */}
           <VerificationsList
-            verifications={verification.verifications}
-            availableVerifications={verification.availableVerificationTypes}
+            verifications={nodeHook.verification.verifications}
+            availableVerifications={nodeHook.verification.availableVerificationTypes}
             onVerificationsChange={handleVerificationsChange}
-            loading={verification.loading}
+            loading={nodeHook.verification.loading}
             model={model || 'android_mobile'}
             selectedHost={selectedHost}
-            onTest={verification.handleTest}
-            testResults={verification.testResults}
-            reloadTrigger={0}
+            onTest={nodeHook.verification.handleTest}
+            testResults={nodeHook.verification.testResults}
             onReferenceSelected={handleReferenceSelected}
             modelReferences={modelReferences}
             referencesLoading={referencesLoading}
+            showCollapsible={false}
+            title="Verifications"
           />
 
-          {gotoResult && (
+          {nodeHook.gotoResult && (
             <Box
               sx={{
                 p: 2,
                 bgcolor:
-                  gotoResult.includes('❌') || gotoResult.includes('⚠️')
+                  nodeHook.gotoResult.includes('❌') || nodeHook.gotoResult.includes('⚠️')
                     ? 'error.light'
                     : 'success.light',
                 borderRadius: 1,
@@ -308,7 +216,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               }}
             >
               <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
-                {gotoResult}
+                {nodeHook.gotoResult}
               </Typography>
             </Box>
           )}
@@ -328,44 +236,44 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             Reset Node
           </Button>
         )}
-        <Button onClick={handleSave} variant="contained" disabled={!isFormValid()}>
-          {saveSuccess ? '✓' : 'Save'}
+        <Button onClick={handleSave} variant="contained" disabled={!nodeHook.isFormValid(nodeForm)}>
+          {nodeHook.saveSuccess ? '✓' : 'Save'}
         </Button>
         <Button
-          onClick={verification.handleTest}
+          onClick={nodeHook.verification.handleTest}
           variant="contained"
           disabled={
             !isControlActive ||
             !selectedHost ||
-            verification.verifications.length === 0 ||
-            verification.loading
+            nodeHook.verification.verifications.length === 0 ||
+            nodeHook.verification.loading
           }
           sx={{
             opacity:
               !isControlActive ||
               !selectedHost ||
-              verification.verifications.length === 0 ||
-              verification.loading
+              nodeHook.verification.verifications.length === 0 ||
+              nodeHook.verification.loading
                 ? 0.5
                 : 1,
           }}
         >
-          {verification.loading ? 'Running...' : 'Run'}
+          {nodeHook.verification.loading ? 'Running...' : 'Run'}
         </Button>
         <Button
           onClick={handleRunGoto}
           variant="contained"
           color="primary"
-          disabled={!canRunGoto || isRunningGoto}
+          disabled={!nodeHook.getButtonVisibility().canRunGoto || nodeHook.isRunningGoto}
           sx={{
-            opacity: !canRunGoto || isRunningGoto ? 0.5 : 1,
+            opacity: !nodeHook.getButtonVisibility().canRunGoto || nodeHook.isRunningGoto ? 0.5 : 1,
             bgcolor: 'primary.main',
             '&:hover': {
               bgcolor: 'primary.dark',
             },
           }}
         >
-          {isRunningGoto ? 'Going...' : 'Go To'}
+          {nodeHook.isRunningGoto ? 'Going...' : 'Go To'}
         </Button>
       </DialogActions>
     </Dialog>

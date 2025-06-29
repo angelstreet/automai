@@ -10,11 +10,11 @@ import {
   Typography,
   IconButton,
 } from '@mui/material';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useEffect, useCallback } from 'react';
 
-import { useAction } from '../../hooks/actions';
+import { useEdge } from '../../hooks/navigation/useEdge';
 import { Host } from '../../types/common/Host_Types';
-import type { Actions, EdgeAction } from '../../types/controller/Action_Types';
+import type { Actions } from '../../types/controller/Action_Types';
 import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
 import { ActionsList } from '../actions';
 
@@ -48,77 +48,44 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     return null;
   }
 
-  // Use centralized action hook
-  const actionHook = useAction({
+  // Use the consolidated edge hook
+  const edgeHook = useEdge({
     selectedHost: selectedHost || null,
-    deviceId: selectedDeviceId,
+    selectedDeviceId,
+    isControlActive,
+    availableActions,
   });
-
-  // Local state for actions to mirror verification pattern
-  const [localActions, setLocalActions] = useState<EdgeAction[]>([]);
-  const [localRetryActions, setLocalRetryActions] = useState<EdgeAction[]>([]);
-  const [actionResult, setActionResult] = useState<string | null>(null);
 
   // Use availableActions passed from parent (NavigationEditor)
   const controllerActions: Actions = availableActions;
 
-  const canRunActions =
-    isControlActive && selectedHost && localActions.length > 0 && !actionHook.loading;
-
-  // Initialize actions from edgeForm when dialog opens (mirrors verification pattern)
+  // Initialize actions from edgeForm when dialog opens
   useEffect(() => {
-    if (isOpen && edgeForm?.actions) {
-      console.log(
-        `[@component:EdgeEditDialog] Initializing actions from edgeForm:`,
-        edgeForm.actions,
-      );
-      setLocalActions(edgeForm.actions);
+    if (isOpen && edgeForm) {
+      console.log(`[@component:EdgeEditDialog] Initializing actions from edgeForm`);
+      edgeHook.initializeActions(edgeForm);
     }
-    if (isOpen && edgeForm?.retryActions) {
-      console.log(
-        `[@component:EdgeEditDialog] Initializing retry actions from edgeForm:`,
-        edgeForm.retryActions,
-      );
-      setLocalRetryActions(edgeForm.retryActions);
-    }
-  }, [isOpen, edgeForm?.actions, edgeForm?.retryActions]);
+  }, [isOpen, edgeForm, edgeHook]);
 
   useEffect(() => {
     if (!isOpen) {
-      setActionResult(null);
+      edgeHook.resetDialogState();
     }
-  }, [isOpen]);
+  }, [isOpen, edgeHook]);
 
-  // Handle action changes by creating custom handlers that update both local state AND edgeForm (mirrors verification pattern)
+  // Handle action changes using hook functions
   const handleActionsChange = useCallback(
-    (newActions: EdgeAction[]) => {
-      console.log(`[@component:EdgeEditDialog] Updating edgeForm with new actions:`, newActions);
-
-      // Update both local state and edgeForm
-      setLocalActions(newActions);
-      setEdgeForm({
-        ...edgeForm,
-        actions: newActions,
-      });
+    (newActions: any[]) => {
+      edgeHook.handleActionsChange(newActions, edgeForm, setEdgeForm);
     },
-    [edgeForm, setEdgeForm],
+    [edgeForm, edgeHook, setEdgeForm],
   );
 
   const handleRetryActionsChange = useCallback(
-    (newRetryActions: EdgeAction[]) => {
-      console.log(
-        `[@component:EdgeEditDialog] Updating edgeForm with new retry actions:`,
-        newRetryActions,
-      );
-
-      // Update both local state and edgeForm
-      setLocalRetryActions(newRetryActions);
-      setEdgeForm({
-        ...edgeForm,
-        retryActions: newRetryActions,
-      });
+    (newRetryActions: any[]) => {
+      edgeHook.handleRetryActionsChange(newRetryActions, edgeForm, setEdgeForm);
     },
-    [edgeForm, setEdgeForm],
+    [edgeForm, edgeHook, setEdgeForm],
   );
 
   useEffect(() => {
@@ -136,42 +103,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     }
   }, [isOpen, selectedHost, selectedDeviceId, controllerActions]);
 
-  const isFormValid = () => {
-    return localActions.every(
-      (action) =>
-        !action.id || !action.requiresInput || (action.inputValue && action.inputValue.trim()),
-    );
-  };
-
   const handleRunActions = async () => {
-    if (!localActions || localActions.length === 0) return;
-
-    if (actionHook.loading) {
-      console.log(
-        '[@component:EdgeEditDialog] Execution already in progress, ignoring duplicate request',
-      );
-      return;
-    }
-
-    setActionResult(null);
-    console.log(
-      `[@component:EdgeEditDialog] Starting batch execution of ${localActions.length} actions with ${localRetryActions.length} retry actions`,
-    );
-
-    try {
-      const result = await actionHook.executeActions(
-        localActions,
-        localRetryActions,
-        edgeForm?.finalWaitTime || 2000,
-      );
-
-      // Format the result for display
-      const formattedResult = actionHook.formatExecutionResults(result);
-      setActionResult(formattedResult);
-    } catch (err: any) {
-      console.error('[@component:EdgeEditDialog] Error executing actions:', err);
-      setActionResult(`❌ Network error: ${err.message}`);
-    }
+    await edgeHook.executeLocalActions(edgeForm);
   };
 
   return (
@@ -214,8 +147,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           />
 
           <ActionsList
-            actions={localActions}
-            retryActions={localRetryActions}
+            actions={edgeHook.localActions}
+            retryActions={edgeHook.localRetryActions}
             finalWaitTime={edgeForm?.finalWaitTime || 2000}
             availableActionTypes={controllerActions}
             selectedHost={selectedHost || null}
@@ -224,17 +157,17 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             onFinalWaitTimeChange={(finalWaitTime) => setEdgeForm({ ...edgeForm, finalWaitTime })}
           />
 
-          {actionResult && (
+          {edgeHook.actionResult && (
             <Box
               sx={{
                 p: 2,
-                bgcolor: actionResult.includes('❌ OVERALL RESULT: FAILED')
+                bgcolor: edgeHook.actionResult.includes('❌ OVERALL RESULT: FAILED')
                   ? 'error.light'
-                  : actionResult.includes('✅ OVERALL RESULT: SUCCESS')
+                  : edgeHook.actionResult.includes('✅ OVERALL RESULT: SUCCESS')
                     ? 'success.light'
-                    : actionResult.includes('❌') && !actionResult.includes('✅')
+                    : edgeHook.actionResult.includes('❌') && !edgeHook.actionResult.includes('✅')
                       ? 'error.light'
-                      : actionResult.includes('⚠️')
+                      : edgeHook.actionResult.includes('⚠️')
                         ? 'warning.light'
                         : 'success.light',
                 borderRadius: 1,
@@ -243,23 +176,27 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               }}
             >
               <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
-                {actionResult}
+                {edgeHook.actionResult}
               </Typography>
             </Box>
           )}
         </Box>
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => onSubmit(edgeForm)} variant="contained" disabled={!isFormValid()}>
+        <Button
+          onClick={() => onSubmit(edgeForm)}
+          variant="contained"
+          disabled={!edgeHook.isFormValid()}
+        >
           Save
         </Button>
         <Button
           onClick={handleRunActions}
           variant="contained"
-          disabled={!canRunActions}
-          sx={{ opacity: !canRunActions ? 0.5 : 1 }}
+          disabled={!edgeHook.canRunLocalActions()}
+          sx={{ opacity: !edgeHook.canRunLocalActions() ? 0.5 : 1 }}
         >
-          {actionHook.loading ? 'Running...' : 'Run'}
+          {edgeHook.actionHook.loading ? 'Running...' : 'Run'}
         </Button>
       </DialogActions>
     </Dialog>

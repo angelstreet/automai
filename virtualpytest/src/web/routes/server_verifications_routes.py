@@ -35,7 +35,7 @@ def save_verification_endpoint():
         "device_model": "android_mobile",
         "verification_type": "image|text|adb",
         "command": "verification_command",
-        "parameters": {...}
+        "params": {...}
     }
     """
     try:
@@ -60,7 +60,7 @@ def save_verification_endpoint():
             device_model=data['device_model'],
             verification_type=data['verification_type'],
             command=data['command'],
-            parameters=data.get('parameters', {})
+            params=data.get('params', {})
         )
         
         if result['success']:

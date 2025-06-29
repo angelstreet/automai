@@ -17,7 +17,7 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
-import { useDeviceData } from '../../contexts/device/DeviceDataContext';
+import { useNode } from '../../hooks/navigation/useNode';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
 
@@ -39,7 +39,6 @@ interface NodeSelectionPanelProps {
   // Navigation props
   treeId?: string;
   currentNodeId?: string;
-  // ❌ DELETED: Obsolete verification props after capture-first implementation
 }
 
 export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
@@ -57,72 +56,27 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     selectedDeviceId,
     treeId = '',
     currentNodeId,
-    // ❌ DELETED: Obsolete verification props removed
   }) => {
     // Don't render the panel for entry nodes - MUST be before any hooks
     if ((selectedNode.data.type as string) === 'entry') {
       return null;
     }
 
-    // Get device data context to access loaded verifications
-    const { getVerifications } = useDeviceData();
+    // Use the consolidated node hook
+    const nodeHook = useNode({
+      selectedHost,
+      selectedDeviceId,
+      isControlActive,
+      treeId,
+      currentNodeId,
+    });
 
     // Add state to control showing/hiding the NodeGotoPanel
     const [showGotoPanel, setShowGotoPanel] = useState(false);
 
-    // Real screenshot implementation using existing working routes
-    const takeAndSaveScreenshot = async (label: string, nodeId: string, onUpdateNode?: any) => {
-      if (!selectedHost || !selectedDeviceId) {
-        console.error(
-          '[@component:NodeSelectionPanel] Cannot take screenshot - host or device not available',
-        );
-        return { success: false, message: 'Host or device not available' };
-      }
-
-      try {
-        console.log(
-          `[@component:NodeSelectionPanel] Taking screenshot for node: ${nodeId} (${label})`,
-        );
-
-        // Use the existing screenshot endpoint
-        const response = await fetch('/server/navigation/takeNodeScreenshot', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            host: selectedHost,
-            device_id: selectedDeviceId,
-            node_id: nodeId,
-            label: label,
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          console.log(
-            `[@component:NodeSelectionPanel] Screenshot saved successfully: ${result.screenshot_url}`,
-          );
-
-          // Update the node with the new screenshot URL
-          if (onUpdateNode) {
-            onUpdateNode(nodeId, { screenshot: result.screenshot_url });
-          }
-
-          return { success: true, screenshot_url: result.screenshot_url };
-        } else {
-          console.error(`[@component:NodeSelectionPanel] Screenshot failed: ${result.message}`);
-          return { success: false, message: result.message };
-        }
-      } catch (error) {
-        console.error('[@component:NodeSelectionPanel] Screenshot error:', error);
-        return {
-          success: false,
-          message: error instanceof Error ? error.message : 'Unknown error',
-        };
-      }
-    };
+    // Add states for confirmation dialogs
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [showScreenshotConfirm, setShowScreenshotConfirm] = useState(false);
 
     // Clear the goto panel when the component unmounts or when a new node is selected
     useEffect(() => {
@@ -130,55 +84,12 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       setShowGotoPanel(false);
     }, [selectedNode.id]);
 
-    // Add states for confirmation dialogs
-    const [showResetConfirm, setShowResetConfirm] = useState(false);
-    const [showScreenshotConfirm, setShowScreenshotConfirm] = useState(false);
-
-    // Add state for screenshot save status
-    const [screenshotSaveStatus, setScreenshotSaveStatus] = useState<'idle' | 'success' | 'error'>(
-      'idle',
-    );
-
-    // Clear screenshot status when node selection changes
-    useEffect(() => {
-      setScreenshotSaveStatus('idle');
-    }, [selectedNode.id]);
-
     const handleEdit = () => {
-      // Get loaded verifications from device context
-      const allVerifications = getVerifications();
-
-      // Match verification_ids with actual verification objects
-      const nodeVerifications = [];
-      if (selectedNode.data.verification_ids && selectedNode.data.verification_ids.length > 0) {
-        for (const verificationId of selectedNode.data.verification_ids) {
-          // Database verifications have 'id' property (Supabase primary key)
-          const verification = allVerifications.find((v) => v.id === verificationId);
-          if (verification) {
-            nodeVerifications.push(verification);
-          } else {
-            console.warn(
-              `[@component:NodeSelectionPanel] Could not find verification with ID: ${verificationId}`,
-            );
-          }
-        }
-      }
-
+      const nodeForm = nodeHook.getNodeFormWithVerifications(selectedNode);
       console.log(
-        `[@component:NodeSelectionPanel] Found ${nodeVerifications.length} verifications for node ${selectedNode.data.label}`,
+        `[@component:NodeSelectionPanel] Found ${nodeForm.verifications?.length || 0} verifications for node ${selectedNode.data.label}`,
       );
-
-      setNodeForm({
-        label: selectedNode.data.label,
-        type: selectedNode.data.type,
-        description: selectedNode.data.description || '',
-        screenshot: selectedNode.data.screenshot,
-        depth: selectedNode.data.depth || 0,
-        parent: selectedNode.data.parent || [],
-        menu_type: selectedNode.data.menu_type,
-        verifications: nodeVerifications, // Use matched verifications from device context
-        verification_ids: selectedNode.data.verification_ids || [],
-      });
+      setNodeForm(nodeForm);
       setIsNodeDialogOpen(true);
     };
 
@@ -206,56 +117,13 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         onUpdateNode: !!onUpdateNode,
       });
 
-      if (!isControlActive || !selectedHost) {
-        console.warn(
-          '[@component:NodeSelectionPanel] Cannot take screenshot - device control not active or host not available',
-        );
-        setShowScreenshotConfirm(false);
-        return;
-      }
-
-      if (!selectedDeviceId) {
-        console.warn('[@component:NodeSelectionPanel] Cannot take screenshot - no device selected');
-        setShowScreenshotConfirm(false);
-        return;
-      }
-
-      // Use the real takeAndSaveScreenshot function
-      const result = await takeAndSaveScreenshot(
-        selectedNode.data.label,
-        selectedNode.id,
-        onUpdateNode,
-      );
-
-      if (result.success) {
-        // Set success status and auto-hide after 3 seconds
-        setScreenshotSaveStatus('success');
-        setTimeout(() => setScreenshotSaveStatus('idle'), 3000);
-      } else {
-        console.error('[@component:NodeSelectionPanel] Screenshot failed:', result.message);
-        setScreenshotSaveStatus('error');
-        setTimeout(() => setScreenshotSaveStatus('idle'), 3000);
-      }
-
+      await nodeHook.handleScreenshotConfirm(selectedNode, onUpdateNode);
       setShowScreenshotConfirm(false);
     };
 
-    // Verification functionality removed - use VerificationEditor component instead
-
-    const getParentNames = (parentIds: string[]): string => {
-      if (!parentIds || parentIds.length === 0) return 'None';
-      if (!nodes || !Array.isArray(nodes)) return 'None';
-
-      const parentNames = parentIds.map((id) => {
-        const parentNode = nodes.find((node) => node.id === id);
-        return parentNode ? parentNode.data.label : id;
-      });
-
-      return parentNames.join(' > ');
-    };
-
-    // Check if screenshot button should be displayed
-    const showSaveScreenshotButton = isControlActive && selectedHost;
+    // Get button visibility and other computed values from hook
+    const { showSaveScreenshotButton, showGoToButton } = nodeHook.getButtonVisibility();
+    const isProtected = nodeHook.isProtectedNode(selectedNode);
 
     // DEBUG: Log button visibility state
     console.log('[@component:NodeSelectionPanel] Button visibility state:', {
@@ -264,19 +132,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       showSaveScreenshotButton,
       selectedNodeLabel: selectedNode.data.label,
     });
-
-    // Check if Go To button should be displayed
-    // Show for all nodes when device is under control
-    const showGoToButton = isControlActive && selectedHost && treeId;
-
-    // Check if node can be deleted (protect entry points and home nodes)
-    const isProtectedNode =
-      selectedNode.data.is_root ||
-      selectedNode.data.type === 'entry' ||
-      selectedNode.id === 'entry-node' ||
-      selectedNode.data.label?.toLowerCase() === 'home' ||
-      selectedNode.id?.toLowerCase().includes('entry') ||
-      selectedNode.id?.toLowerCase().includes('home');
 
     // ❌ REMOVED: Confidence calculation moved to database
     // TODO: Replace with database query in Step 2
@@ -339,7 +194,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             {/* Parent and Depth Info */}
             <Box sx={{ mb: 1.5, fontSize: '0.75rem', color: 'text.secondary' }}>
               <Typography variant="caption" display="block">
-                <strong>Parent:</strong> {getParentNames(selectedNode.data.parent || [])} -{' '}
+                <strong>Parent:</strong>{' '}
+                {nodeHook.getParentNames(selectedNode.data.parent || [], nodes)} -{' '}
                 <strong>Depth:</strong> {selectedNode.data.depth || 0}
               </Typography>
             </Box>
@@ -360,7 +216,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                   Edit
                 </Button>
                 {/* Only show delete button if not a protected node */}
-                {!isProtectedNode && (
+                {!isProtected && (
                   <Button
                     size="small"
                     variant="outlined"
@@ -403,7 +259,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                     Screenshot
                   </Button>
                   {/* Success indicator */}
-                  {screenshotSaveStatus === 'success' && (
+                  {nodeHook.screenshotSaveStatus === 'success' && (
                     <CheckCircleIcon
                       fontSize="small"
                       sx={{
@@ -473,8 +329,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             </Button>
           </DialogActions>
         </Dialog>
-
-        {/* Verification Confirmation Dialog */}
       </>
     );
   },

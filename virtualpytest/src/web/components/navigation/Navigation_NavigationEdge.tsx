@@ -1,7 +1,7 @@
 import React from 'react';
 import { EdgeProps, getBezierPath, useReactFlow } from 'reactflow';
 
-import { useValidationColors } from '../../hooks/validation';
+import { useEdge } from '../../hooks/navigation/useEdge';
 import { UINavigationEdge as UINavigationEdgeType } from '../../types/pages/Navigation_Types';
 
 export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['data']>> = (
@@ -24,10 +24,11 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
   // Access sourceHandle from props directly
   const sourceHandle = (props as any).sourceHandle;
 
-  const { getEdges, getNodes } = useReactFlow();
-  const currentEdges = getEdges();
+  const { getNodes } = useReactFlow();
   const currentNodes = getNodes();
-  const { getEdgeColors } = useValidationColors(currentEdges);
+
+  // Use the consolidated edge hook
+  const edgeHook = useEdge();
 
   // Validate that both nodes exist
   const sourceNode = currentNodes.find((node) => node.id === source);
@@ -46,8 +47,8 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
   const isEntryEdge =
     (data as any)?.isEntryEdge || sourceHandle === 'entry-source' || isSourceEntryNode;
 
-  // Get edge colors based on validation status
-  const edgeColors = getEdgeColors(id, isEntryEdge);
+  // Get edge colors based on validation status using the hook
+  const edgeColors = edgeHook.getEdgeColorsForEdge(id, isEntryEdge);
 
   const [edgePath] = getBezierPath({
     sourceX,

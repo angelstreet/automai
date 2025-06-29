@@ -1,12 +1,10 @@
 import { Close as CloseIcon } from '@mui/icons-material';
 import { Box, Typography, Button, IconButton, Paper, LinearProgress } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 
-import { useAction } from '../../hooks/actions';
+import { useEdge } from '../../hooks/navigation/useEdge';
 import { Host } from '../../types/common/Host_Types';
-import { UINavigationEdge, EdgeAction, EdgeForm } from '../../types/pages/Navigation_Types';
-// ❌ REMOVED: Direct database access - using API endpoints instead
-// ❌ REMOVED: Confidence utils moved to database
+import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
 
 interface EdgeSelectionPanelProps {
   selectedEdge: UINavigationEdge;
@@ -33,163 +31,37 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
     isControlActive = false,
     selectedHost,
   }) => {
-    // Use centralized action hook
-    const actionHook = useAction({
+    // Use the consolidated edge hook
+    const edgeHook = useEdge({
       selectedHost: selectedHost || null,
-      deviceId: undefined, // EdgeSelectionPanel doesn't have specific device selection
+      isControlActive,
     });
 
-    const [runResult, setRunResult] = useState<string | null>(null);
-    // ❌ REMOVED: Local action updates for confidence tracking
-
-    // Extract controller types from device model
-
-    // Get actions in consistent format (handle both new and legacy formats)
-    const getActions = (): EdgeAction[] => {
-      // Handle new format (multiple actions)
-      if (selectedEdge.data?.actions && selectedEdge.data.actions.length > 0) {
-        return selectedEdge.data.actions;
-      }
-
-      // Handle legacy format (single action) - convert to array
-      if (selectedEdge.data?.action && typeof selectedEdge.data.action === 'object') {
-        const legacyAction = selectedEdge.data.action as any;
-        return [
-          {
-            id: legacyAction.id,
-            label: legacyAction.label,
-            command: legacyAction.command,
-            params: legacyAction.params,
-            requiresInput: legacyAction.requiresInput,
-            inputValue: legacyAction.inputValue,
-            waitTime: legacyAction.waitTime || 2000, // Default wait time
-            // ❌ REMOVED: Confidence tracking moved to database
-          },
-        ];
-      }
-
-      return [];
-    };
-
-    // Get retry actions
-    const getRetryActions = (): EdgeAction[] => {
-      return selectedEdge.data?.retryActions || [];
-    };
-
-    const actions = getActions();
-    const retryActions = getRetryActions();
+    // Get actions and retry actions using hook functions
+    const actions = edgeHook.getActionsFromEdge(selectedEdge);
     const hasActions = actions.length > 0;
-    const canRunActions = isControlActive && selectedHost && hasActions && !actionHook.loading;
+    const canRunActions = edgeHook.canRunActions(selectedEdge);
 
     // Clear run results when edge selection changes
     useEffect(() => {
-      setRunResult(null);
-    }, [selectedEdge.id]);
+      edgeHook.clearResults();
+    }, [selectedEdge.id, edgeHook]);
 
-    // Check if edge can be deleted (protect edges from entry points and home nodes)
-    const isProtectedEdge =
-      selectedEdge.data?.from === 'entry' ||
-      selectedEdge.data?.from === 'home' ||
-      selectedEdge.data?.from?.toLowerCase() === 'entry point' ||
-      selectedEdge.data?.from?.toLowerCase().includes('entry') ||
-      selectedEdge.data?.from?.toLowerCase().includes('home') ||
-      selectedEdge.source === 'entry-node' ||
-      selectedEdge.source?.toLowerCase().includes('entry') ||
-      selectedEdge.source?.toLowerCase().includes('home');
-
-    // ❌ REMOVED: Confidence calculation moved to database
+    // Check if edge can be deleted using hook function
+    const isProtectedEdge = edgeHook.isProtectedEdge(selectedEdge);
 
     const handleEdit = () => {
       console.log('[@component:EdgeSelectionPanel] Opening edit dialog for edge');
 
-      // Populate the form with current edge data
-      setEdgeForm({
-        description: selectedEdge.data?.description || '',
-        actions: getActions(),
-        retryActions: getRetryActions(),
-        finalWaitTime: selectedEdge.data?.finalWaitTime ?? 2000,
-      });
-
+      // Create edge form using hook function
+      const edgeForm = edgeHook.createEdgeForm(selectedEdge);
+      setEdgeForm(edgeForm);
       setIsEdgeDialogOpen(true);
     };
 
-    // ❌ REMOVED: Action result updates moved to database
-
-    // Execute all edge actions using centralized hook
+    // Execute all edge actions using hook function
     const handleRunActions = async () => {
-      if (actions.length === 0) {
-        console.log('[@component:EdgeSelectionPanel] No actions to run');
-        return;
-      }
-
-      if (actionHook.loading) {
-        console.log(
-          '[@component:EdgeSelectionPanel] Execution already in progress, ignoring duplicate request',
-        );
-        return;
-      }
-
-      setRunResult(null);
-      console.log(
-        `[@component:EdgeSelectionPanel] Starting batch execution of ${actions.length} actions with ${retryActions.length} retry actions`,
-      );
-
-      try {
-        const result = await actionHook.executeActions(
-          actions,
-          retryActions,
-          selectedEdge.data?.finalWaitTime || 2000,
-        );
-
-        // Format the result for display
-        const formattedResult = actionHook.formatExecutionResults(result);
-        setRunResult(formattedResult);
-      } catch (err: any) {
-        console.error('[@component:EdgeSelectionPanel] Error executing actions:', err);
-        setRunResult(`❌ Network error: ${err.message}`);
-      }
-    };
-
-    // Format result for compact display
-    const formatRunResult = (result: string): string => {
-      if (!result) return '';
-
-      const lines = result.split('\n');
-      const formattedLines: string[] = [];
-
-      for (const line of lines) {
-        // Skip verbose messages we don't want
-        if (
-          line.includes('⏹️ Execution stopped due to failed action') ||
-          line.includes('📋 Processing') ||
-          line.includes('retry action(s)')
-        ) {
-          continue;
-        }
-
-        // Format action lines to be more compact
-        if (line.includes('Action') && (line.includes('✅') || line.includes('❌'))) {
-          formattedLines.push(line);
-        }
-        // Format retry action lines to be more compact
-        else if (line.includes('Retry Action') && (line.includes('✅') || line.includes('❌'))) {
-          formattedLines.push(line);
-        }
-        // Keep confidence lines
-        else if (line.includes('📊 Confidence:')) {
-          formattedLines.push(line);
-        }
-        // Keep overall result
-        else if (line.includes('OVERALL RESULT:')) {
-          formattedLines.push(line);
-        }
-        // Keep starting retry actions message but make it shorter
-        else if (line.includes('🔄 Main actions failed. Starting retry actions...')) {
-          formattedLines.push('🔄 Starting retry actions...');
-        }
-      }
-
-      return formattedLines.join('\n');
+      await edgeHook.executeEdgeActions(selectedEdge);
     };
 
     return (
@@ -303,26 +175,26 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
                   !isControlActive || !selectedHost ? 'Device control required to test actions' : ''
                 }
               >
-                {actionHook.loading ? 'Running...' : 'Run'}
+                {edgeHook.actionHook.loading ? 'Running...' : 'Run'}
               </Button>
             )}
 
             {/* Linear Progress - shown when running */}
-            {actionHook.loading && <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />}
+            {edgeHook.actionHook.loading && <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />}
 
             {/* Run result display - with scrolling */}
-            {runResult && (
+            {edgeHook.runResult && (
               <Box
                 sx={{
                   mt: 0.5,
                   p: 0.5,
-                  bgcolor: runResult.includes('❌ OVERALL RESULT: FAILED')
+                  bgcolor: edgeHook.runResult.includes('❌ OVERALL RESULT: FAILED')
                     ? 'error.light'
-                    : runResult.includes('✅ OVERALL RESULT: SUCCESS')
+                    : edgeHook.runResult.includes('✅ OVERALL RESULT: SUCCESS')
                       ? 'success.light'
-                      : runResult.includes('❌') && !runResult.includes('✅')
+                      : edgeHook.runResult.includes('❌') && !edgeHook.runResult.includes('✅')
                         ? 'error.light'
-                        : runResult.includes('⚠️')
+                        : edgeHook.runResult.includes('⚠️')
                           ? 'warning.light'
                           : 'success.light',
                   borderRadius: 0.5,
@@ -340,7 +212,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
                     lineHeight: 1.2, // Tighter line spacing
                   }}
                 >
-                  {formatRunResult(runResult)}
+                  {edgeHook.formatRunResult(edgeHook.runResult)}
                 </Typography>
               </Box>
             )}
