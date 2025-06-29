@@ -36,13 +36,10 @@ export const useNode = (props?: UseNodeProps) => {
   // Get model references using the device model
   const modelReferences = useMemo(() => {
     if (!deviceModel) {
-      console.log('[useNode] No device model available, returning empty references');
       return {}; // Return empty object without calling getModelReferences when deviceModel is undefined
     }
     const references = getModelReferences(deviceModel);
-    console.log(
-      `[useNode] Got ${Object.keys(references).length} model references for device model: ${deviceModel}`,
-    );
+   
     return references;
   }, [getModelReferences, deviceModel]);
 
@@ -470,15 +467,20 @@ export const useNode = (props?: UseNodeProps) => {
   }, []);
 
   /**
-   * Check button visibility states
+   * Check button visibility states - memoized to prevent unnecessary re-renders
    */
-  const getButtonVisibility = useCallback(() => {
+  const buttonVisibility = useMemo(() => {
     return {
       showSaveScreenshotButton: props?.isControlActive && props?.selectedHost,
       showGoToButton: props?.isControlActive && props?.selectedHost && props?.treeId,
       canRunGoto: props?.isControlActive && props?.selectedHost,
     };
   }, [props?.isControlActive, props?.selectedHost, props?.treeId]);
+
+  /**
+   * Memoized function to get button visibility
+   */
+  const getButtonVisibility = useCallback(() => buttonVisibility, [buttonVisibility]);
 
   // Auto-clear screenshot status when node selection might change
   useEffect(() => {

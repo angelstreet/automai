@@ -15,7 +15,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 
 import { useNode } from '../../hooks/navigation/useNode';
 import { Host } from '../../types/common/Host_Types';
@@ -41,6 +41,48 @@ interface NodeSelectionPanelProps {
   currentNodeId?: string;
 }
 
+// Custom comparison function for React.memo to prevent unnecessary re-renders
+const arePropsEqual = (prevProps: NodeSelectionPanelProps, nextProps: NodeSelectionPanelProps) => {
+  // Compare primitive values
+  if (
+    prevProps.isControlActive !== nextProps.isControlActive ||
+    prevProps.selectedDeviceId !== nextProps.selectedDeviceId ||
+    prevProps.treeId !== nextProps.treeId ||
+    prevProps.currentNodeId !== nextProps.currentNodeId
+  ) {
+    return false;
+  }
+
+  // Compare selectedNode (most likely to change)
+  if (
+    prevProps.selectedNode.id !== nextProps.selectedNode.id ||
+    prevProps.selectedNode.data.label !== nextProps.selectedNode.data.label ||
+    prevProps.selectedNode.data.screenshot !== nextProps.selectedNode.data.screenshot
+  ) {
+    return false;
+  }
+
+  // Compare selectedHost by reference and key properties
+  if (prevProps.selectedHost !== nextProps.selectedHost) {
+    if (!prevProps.selectedHost || !nextProps.selectedHost) {
+      return false;
+    }
+    if (
+      prevProps.selectedHost.host_name !== nextProps.selectedHost.host_name ||
+      prevProps.selectedHost.devices?.length !== nextProps.selectedHost.devices?.length
+    ) {
+      return false;
+    }
+  }
+
+  // Only compare nodes array length (full comparison would be too expensive)
+  if (prevProps.nodes.length !== nextProps.nodes.length) {
+    return false;
+  }
+
+  return true;
+};
+
 export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
   ({
     selectedNode,
@@ -62,14 +104,20 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       return null;
     }
 
+    // Memoize hook props to prevent unnecessary hook re-executions
+    const nodeHookProps = useMemo(
+      () => ({
+        selectedHost,
+        selectedDeviceId,
+        isControlActive,
+        treeId,
+        currentNodeId,
+      }),
+      [selectedHost, selectedDeviceId, isControlActive, treeId, currentNodeId],
+    );
+
     // Use the consolidated node hook
-    const nodeHook = useNode({
-      selectedHost,
-      selectedDeviceId,
-      isControlActive,
-      treeId,
-      currentNodeId,
-    });
+    const nodeHook = useNode(nodeHookProps);
 
     // Add state to control showing/hiding the NodeGotoPanel
     const [showGotoPanel, setShowGotoPanel] = useState(false);
@@ -84,58 +132,92 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       setShowGotoPanel(false);
     }, [selectedNode.id]);
 
-    const handleEdit = () => {
+    // Memoize handlers to prevent unnecessary re-renders of child components
+    const handleEdit = useCallback(() => {
       const nodeForm = nodeHook.getNodeFormWithVerifications(selectedNode);
       console.log(
         `[@component:NodeSelectionPanel] Found ${nodeForm.verifications?.length || 0} verifications for node ${selectedNode.data.label}`,
       );
       setNodeForm(nodeForm);
       setIsNodeDialogOpen(true);
-    };
+    }, [nodeHook, selectedNode, setNodeForm, setIsNodeDialogOpen]);
 
     // Confirmation handlers
-    const handleResetConfirm = () => {
+    const handleResetConfirm = useCallback(() => {
       if (onReset) {
         onReset(selectedNode.id);
       }
       setShowResetConfirm(false);
-    };
+    }, [onReset, selectedNode.id]);
 
-    const handleScreenshotConfirm = async () => {
+    const handleScreenshotConfirm = useCallback(async () => {
       const selectedDevice = selectedHost?.devices?.find((d) => d.device_id === selectedDeviceId);
 
-      console.log('[@component:NodeSelectionPanel] Screenshot button clicked - DEBUG INFO:', {
-        isControlActive,
-        selectedHost: selectedHost
-          ? {
-              host_name: selectedHost.host_name,
-              device_id: selectedDeviceId,
-              device_model: selectedDevice?.device_model || 'unknown',
-            }
-          : null,
-        selectedNodeLabel: selectedNode.data.label,
-        onUpdateNode: !!onUpdateNode,
+      // Only log when actually taking a screenshot, not on every render
+      console.log('[@component:NodeSelectionPanel] Taking screenshot for node:', {
+        nodeId: selectedNode.id,
+        nodeLabel: selectedNode.data.label,
+        deviceModel: selectedDevice?.device_model || 'unknown',
       });
 
       await nodeHook.handleScreenshotConfirm(selectedNode, onUpdateNode);
       setShowScreenshotConfirm(false);
-    };
+    }, [nodeHook, selectedNode, onUpdateNode, selectedHost?.devices, selectedDeviceId]);
 
-    // Get button visibility and other computed values from hook
+    // Get memoized button visibility from hook
     const { showSaveScreenshotButton, showGoToButton } = nodeHook.getButtonVisibility();
-    const isProtected = nodeHook.isProtectedNode(selectedNode);
 
-    // DEBUG: Log button visibility state
-    console.log('[@component:NodeSelectionPanel] Button visibility state:', {
-      isControlActive,
-      selectedHost: !!selectedHost,
-      showSaveScreenshotButton,
-      selectedNodeLabel: selectedNode.data.label,
-    });
+    const isProtected = useMemo(
+      () => nodeHook.isProtectedNode(selectedNode),
+      [nodeHook, selectedNode],
+    );
+
+    // Memoize parent names calculation
+    const parentNames = useMemo(
+      () => nodeHook.getParentNames(selectedNode.data.parent || [], nodes),
+      [nodeHook, selectedNode.data.parent, nodes],
+    );
 
     // ❌ REMOVED: Confidence calculation moved to database
     // TODO: Replace with database query in Step 2
-    const confidenceInfo = { score: null, text: 'unknown' };
+    const confidenceInfo = useMemo(() => ({ score: null, text: 'unknown' }), []);
+
+    // Memoize event handlers to prevent unnecessary re-renders
+    const handleCloseClick = useCallback(
+      (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent event from bubbling to ReactFlow pane
+        onClose();
+      },
+      [onClose],
+    );
+
+    const handlePaperClick = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
+    }, []);
+
+    const handleScreenshotButtonClick = useCallback(() => {
+      setShowScreenshotConfirm(true);
+    }, []);
+
+    const handleGoToButtonClick = useCallback(() => {
+      setShowGotoPanel(true);
+    }, []);
+
+    const handleGotoPanelClose = useCallback(() => {
+      setShowGotoPanel(false);
+    }, []);
+
+    const handleResetConfirmClose = useCallback(() => {
+      setShowResetConfirm(false);
+    }, []);
+
+    const handleResetButtonClick = useCallback(() => {
+      setShowResetConfirm(true);
+    }, []);
+
+    const handleScreenshotConfirmClose = useCallback(() => {
+      setShowScreenshotConfirm(false);
+    }, []);
 
     return (
       <>
@@ -148,7 +230,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             p: 1.5,
             zIndex: 1000,
           }}
-          onClick={(e) => e.stopPropagation()}
+          onClick={handlePaperClick}
         >
           <Box>
             <Box
@@ -179,14 +261,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                   </Typography>
                 )}
               </Box>
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent event from bubbling to ReactFlow pane
-                  onClose();
-                }}
-                sx={{ p: 0.25 }}
-              >
+              <IconButton size="small" onClick={handleCloseClick} sx={{ p: 0.25 }}>
                 <CloseIcon fontSize="small" />
               </IconButton>
             </Box>
@@ -194,9 +269,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             {/* Parent and Depth Info */}
             <Box sx={{ mb: 1.5, fontSize: '0.75rem', color: 'text.secondary' }}>
               <Typography variant="caption" display="block">
-                <strong>Parent:</strong>{' '}
-                {nodeHook.getParentNames(selectedNode.data.parent || [], nodes)} -{' '}
-                <strong>Depth:</strong> {selectedNode.data.depth || 0}
+                <strong>Parent:</strong> {parentNames} - <strong>Depth:</strong>{' '}
+                {selectedNode.data.depth || 0}
               </Typography>
             </Box>
 
@@ -236,7 +310,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                   variant="outlined"
                   color="warning"
                   sx={{ fontSize: '0.75rem', px: 1 }}
-                  onClick={() => setShowResetConfirm(true)}
+                  onClick={handleResetButtonClick}
                 >
                   Reset Node
                 </Button>
@@ -250,10 +324,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                     variant="outlined"
                     color="primary"
                     sx={{ fontSize: '0.75rem', px: 1, flex: 1 }}
-                    onClick={() => {
-                      console.log('[@component:NodeSelectionPanel] Screenshot button clicked!');
-                      setShowScreenshotConfirm(true);
-                    }}
+                    onClick={handleScreenshotButtonClick}
                     startIcon={<CameraIcon fontSize="small" />}
                   >
                     Screenshot
@@ -278,7 +349,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                   variant="outlined"
                   color="primary"
                   sx={{ fontSize: '0.75rem', px: 1 }}
-                  onClick={() => setShowGotoPanel(true)}
+                  onClick={handleGoToButtonClick}
                   startIcon={<RouteIcon fontSize="small" />}
                 >
                   Go To
@@ -294,19 +365,19 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             selectedNode={selectedNode}
             nodes={nodes}
             treeId={treeId}
-            onClose={() => setShowGotoPanel(false)}
+            onClose={handleGotoPanelClose}
             currentNodeId={currentNodeId}
           />
         )}
 
         {/* Reset Node Confirmation Dialog */}
-        <Dialog open={showResetConfirm} onClose={() => setShowResetConfirm(false)}>
+        <Dialog open={showResetConfirm} onClose={handleResetConfirmClose}>
           <DialogTitle>Reset Node</DialogTitle>
           <DialogContent>
             <Typography>Are you sure you want to reset this node ?</Typography>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setShowResetConfirm(false)}>Cancel</Button>
+            <Button onClick={handleResetConfirmClose}>Cancel</Button>
             <Button onClick={handleResetConfirm} color="warning" variant="contained">
               Confirm
             </Button>
@@ -314,7 +385,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         </Dialog>
 
         {/* Screenshot Confirmation Dialog */}
-        <Dialog open={showScreenshotConfirm} onClose={() => setShowScreenshotConfirm(false)}>
+        <Dialog open={showScreenshotConfirm} onClose={handleScreenshotConfirmClose}>
           <DialogTitle>Take Screenshot</DialogTitle>
           <DialogContent>
             <Typography>
@@ -323,7 +394,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             </Typography>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setShowScreenshotConfirm(false)}>Cancel</Button>
+            <Button onClick={handleScreenshotConfirmClose}>Cancel</Button>
             <Button onClick={handleScreenshotConfirm} color="primary" variant="contained">
               Confirm
             </Button>
@@ -332,4 +403,5 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       </>
     );
   },
+  arePropsEqual, // Use custom comparison function
 );
