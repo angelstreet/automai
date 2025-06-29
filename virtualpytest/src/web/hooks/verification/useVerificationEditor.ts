@@ -508,7 +508,11 @@ export const useVerificationEditor = ({
         // Mark as captured
         setHasCaptured(true);
       } else {
-        console.error('[@hook:useVerificationEditor] Text auto-detection failed:', result.error);
+        console.error('[@hook:useVerificationEditor] Text auto-detection failed:', result);
+        console.error(
+          '[@hook:useVerificationEditor] Error message:',
+          result.error || result.message || 'Unknown error',
+        );
       }
     } catch (error) {
       console.error('[@hook:useVerificationEditor] Error during text auto-detection:', error);

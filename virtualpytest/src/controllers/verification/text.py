@@ -220,17 +220,31 @@ class TextVerificationController:
             
             print(f"[@controller:TextVerification] Detecting text in: {image_source_url}")
             
-            # Build full path for local files, keep URLs as-is
+            # Handle URL-to-path conversion the same way as image verification
             if image_source_url.startswith(('http://', 'https://')):
-                # URL case - pass to helpers for downloading
+                # URL case - download first
                 image_source_path = helpers.download_image(image_source_url)
                 print(f"[@controller:TextVerification] Downloaded image to: {image_source_path}")
             else:
-                # Local filename case - build full path directly
-                image_source_path = os.path.join(self.captures_path, image_source_url)
-                
-                if not os.path.exists(image_source_path):
-                    return {'success': False, 'message': f'Local file not found: {image_source_path}'}
+                # Local filename case - use URL conversion utility like image verification
+                try:
+                    from src.utils.build_url_utils import convertHostUrlToLocalPath
+                    # Build a proper URL first if it's just a filename
+                    if not image_source_url.startswith('/'):
+                        # Assume it's a filename from captures directory
+                        image_source_path = os.path.join(self.captures_path, image_source_url)
+                    else:
+                        # Use URL conversion utility
+                        image_source_path = convertHostUrlToLocalPath(image_source_url)
+                    
+                    print(f"[@controller:TextVerification] Resolved path: {image_source_path}")
+                    
+                    if not os.path.exists(image_source_path):
+                        return {'success': False, 'message': f'Local file not found: {image_source_path}'}
+                        
+                except Exception as e:
+                    print(f"[@controller:TextVerification] Path resolution error: {e}")
+                    return {'success': False, 'message': f'Path resolution failed: {str(e)}'}
             
             # Detect text in area (includes crop, filter, OCR, language detection)
             result = helpers.detect_text_in_area(image_source_path, area)

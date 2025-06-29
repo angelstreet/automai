@@ -108,9 +108,6 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
               return selected;
             }}
           >
-            <MenuItem value="" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
-              Select a verification...
-            </MenuItem>
             {Object.entries(availableVerifications).map(([category, verifications]) => {
               // Ensure verifications is an array
               if (!Array.isArray(verifications)) {
