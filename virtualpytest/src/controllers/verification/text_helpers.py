@@ -67,8 +67,8 @@ class TextHelpers:
                 device_model=device_model,
                 reference_type='reference_text',
                 team_id=DEFAULT_TEAM_ID,
-                r2_path=None,  # Text doesn't need R2 storage
-                r2_url=None,   # Text doesn't need R2 storage
+                r2_path=f'text-references/{device_model}/{reference_name}',  # Placeholder path (required by schema)
+                r2_url='',  # Empty URL for text references
                 area=extended_area  # Store text data in area field
             )
             
