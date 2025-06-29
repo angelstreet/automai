@@ -50,7 +50,8 @@ export const VerificationTextComparisonDisplay: React.FC<
     // Handle HTTP URLs - use proxy to convert to HTTPS
     if (url.startsWith('http:')) {
       console.log('[@component:VerificationTextComparisonDisplay] HTTP URL detected, using proxy');
-      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(url)}`;
+      // URL is already processed by backend
+      const proxyUrl = url;
       console.log(
         `[@component:VerificationTextComparisonDisplay] Generated proxy URL: ${proxyUrl}`,
       );

@@ -101,10 +101,15 @@ def save_navigation_screenshot():
             # Navigation screenshots are stored in the tree nodes, no database save needed
             print(f"[@route:host_navigation:save_screenshot] Screenshot uploaded to R2 successfully, no database save required")
             
+            # Process URLs for client consumption
+            from src.utils.build_url_utils import buildClientImageUrl
+            client_r2_url = buildClientImageUrl(r2_url)
+            client_local_path = buildClientImageUrl(local_screenshot_path)
+            
             return jsonify({
                 'success': True,
-                'screenshot_url': r2_url,  # R2 URL for permanent storage
-                'screenshot_path': local_screenshot_path, 
+                'screenshot_url': client_r2_url,  # R2 URL for permanent storage
+                'screenshot_path': client_local_path, 
                 'device_id': device_id
             })
             

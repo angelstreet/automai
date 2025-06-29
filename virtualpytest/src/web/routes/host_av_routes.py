@@ -350,18 +350,22 @@ def take_screenshot():
         print(f"[@route:host_av:take_screenshot] Screenshot path from controller: {screenshot_path}")
         
         # Use URL building utilities
-        from src.utils.build_url_utils import buildCaptureUrlFromPath
+        from src.utils.build_url_utils import buildCaptureUrlFromPath, buildClientImageUrl
         from src.controllers.controller_manager import get_host
         
         try:
             host = get_host()
             screenshot_url = buildCaptureUrlFromPath(host.to_dict(), screenshot_path, device_id)
             
+            # Process URL for client consumption
+            client_screenshot_url = buildClientImageUrl(screenshot_url)
+            
             print(f"[@route:host_av:take_screenshot] Built screenshot URL: {screenshot_url}")
+            print(f"[@route:host_av:take_screenshot] Client screenshot URL: {client_screenshot_url}")
             
             return jsonify({
                 'success': True,
-                'screenshot_url': screenshot_url,
+                'screenshot_url': client_screenshot_url,
                 'device_id': device_id
             })
         except ValueError as e:

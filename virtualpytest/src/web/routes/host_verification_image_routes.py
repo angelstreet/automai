@@ -156,27 +156,34 @@ def execute_image_verification():
         if image_source_url:
             print(f"[@route:host_verification_image:execute] Image source URL provided: {image_source_url}")
             try:
-                # Extract the filename from the URL
-                from urllib.parse import urlparse
-                parsed_url = urlparse(image_source_url)
-                filename = os.path.basename(parsed_url.path)
-                
-                # Build the local file path using the captures directory
-                captures_path = os.path.join(image_controller.captures_path)
-                source_image_path = os.path.join(captures_path, filename)
+                # Use centralized URL conversion function
+                from src.utils.build_url_utils import convertHostUrlToLocalPath
+                source_image_path = convertHostUrlToLocalPath(image_source_url)
                 
                 print(f"[@route:host_verification_image:execute] Converted to local path: {source_image_path}")
                 
-                # Verify the file exists
+                # Verify the file exists - if not, FAIL immediately (no fallback)
                 if os.path.exists(source_image_path):
                     print(f"[@route:host_verification_image:execute] Source image file exists, using provided image")
                 else:
-                    print(f"[@route:host_verification_image:execute] Warning: Source image file not found at {source_image_path}, will take new screenshot")
-                    source_image_path = None
+                    error_msg = f"Source image file not found: {source_image_path}. No fallback allowed."
+                    print(f"[@route:host_verification_image:execute] ERROR: {error_msg}")
+                    return jsonify({
+                        'success': False,
+                        'error': error_msg,
+                        'verification_type': 'image',
+                        'resultType': 'ERROR'
+                    }), 400
                     
             except Exception as e:
-                print(f"[@route:host_verification_image:execute] Error processing image_source_url: {e}")
-                source_image_path = None
+                error_msg = f"Error processing image_source_url: {e}"
+                print(f"[@route:host_verification_image:execute] ERROR: {error_msg}")
+                return jsonify({
+                    'success': False,
+                    'error': error_msg,
+                    'verification_type': 'image',
+                    'resultType': 'ERROR'
+                }), 400
         
         # Prepare verification config
         verification_config = {

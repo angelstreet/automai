@@ -42,28 +42,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   }, [isTransitioning]);
 
   // Process screenshot URL with conditional HTTP to HTTPS proxy (similar to ScreenshotCapture)
-  const getImageUrl = useCallback((screenshotPath: string) => {
-    if (!screenshotPath) return '';
-
-    // Handle data URLs (base64 from remote system) - return as is
-    if (screenshotPath.startsWith('data:')) {
-      return screenshotPath;
-    }
-
-    // Handle HTTPS URLs - return as is (no proxy needed)
-    if (screenshotPath.startsWith('https:')) {
-      return screenshotPath;
-    }
-
-    // Handle HTTP URLs - use proxy to convert to HTTPS
-    if (screenshotPath.startsWith('http:')) {
-      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(screenshotPath)}`;
-      return proxyUrl;
-    }
-
-    // For relative paths or other formats, use directly (assuming they are accessible)
-    return screenshotPath;
-  }, []);
+  // Use processed URL directly from backend
+  const getImageUrl = useCallback((screenshotPath: string) => screenshotPath || '', []);
 
   // Optimized approach - just generate URL with current timestamp (no server calls after init)
   const handleTakeScreenshot = useCallback(async () => {

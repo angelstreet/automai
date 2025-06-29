@@ -529,4 +529,88 @@ def resolveImageFilePath(image_path: str) -> str:
     if not (image_path.startswith('/tmp/') or image_path.startswith('/home/pi/virtualpytest/')):
         raise ValueError(f'Invalid image path: {image_path}')
     
-    return image_path 
+    return image_path
+
+def buildClientImageUrl(image_path: str) -> str:
+    """
+    Build client-safe image URL with HTTP-to-HTTPS proxy handling.
+    Centralizes all URL processing logic from frontend components.
+    
+    Args:
+        image_path: Raw image path/URL from backend
+        
+    Returns:
+        Processed URL ready for frontend consumption
+        
+    Example:
+        buildClientImageUrl('http://host:444/image.jpg')
+        -> '/server/av/proxy-image?url=http%3A//host%3A444/image.jpg'
+    """
+    if not image_path:
+        return ''
+    
+    # Handle data URLs (base64) - return as is
+    if image_path.startswith('data:'):
+        return image_path
+    
+    # Handle HTTPS URLs - return as is (no proxy needed)
+    if image_path.startswith('https:'):
+        return image_path
+    
+    # Handle HTTP URLs - use proxy to convert to HTTPS
+    if image_path.startswith('http:'):
+        from urllib.parse import quote
+        return f'/server/av/proxy-image?url={quote(image_path)}'
+    
+    # For relative paths or other formats, use directly
+    return image_path
+
+def convertHostUrlToLocalPath(host_url: str) -> str:
+    """
+    Convert a host URL back to local file system path.
+    This is the reverse operation of buildHostImageUrl.
+    
+    Args:
+        host_url: Host URL (e.g., 'https://host.com/host/stream/capture1/captures/image.jpg')
+        
+    Returns:
+        Local file system path (e.g., '/var/www/html/stream/capture1/captures/image.jpg')
+        
+    Raises:
+        ValueError: If URL format is invalid or unsafe
+        
+    Example:
+        convertHostUrlToLocalPath('https://host.com/host/stream/capture1/captures/image.jpg')
+        -> '/var/www/html/stream/capture1/captures/image.jpg'
+    """
+    if not host_url:
+        raise ValueError("host_url is required")
+    
+    from urllib.parse import urlparse
+    
+    try:
+        parsed_url = urlparse(host_url)
+        url_path = parsed_url.path
+        
+        # Validate URL format - must start with /host/
+        if not url_path.startswith('/host/'):
+            raise ValueError(f"Invalid host URL format - expected /host/ prefix: {host_url}")
+        
+        # Remove '/host/' prefix to get the relative path
+        relative_path = url_path[6:]  # Remove '/host/' prefix
+        
+        # Security validation - prevent path traversal
+        if '..' in relative_path or relative_path.startswith('/'):
+            raise ValueError(f"Unsafe path detected in URL: {host_url}")
+        
+        # Convert to absolute local path using nginx document root
+        local_path = f"/var/www/html/{relative_path}"
+        
+        return local_path
+        
+    except Exception as e:
+        raise ValueError(f"Failed to convert host URL to local path: {e}")
+
+# =====================================================
+# LEGACY/COMPATIBILITY FUNCTIONS
+# ===================================================== 

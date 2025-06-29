@@ -59,7 +59,7 @@ export const HDMIStream = React.memo(
     const effectiveDeviceModel = useMemo(() => {
       if (deviceModel) return deviceModel;
       const device = host.devices?.find((d) => d.device_id === deviceId);
-      return device?.model || 'unknown';
+      return device?.device_model || 'unknown';
     }, [deviceModel, host.devices, deviceId]);
 
     // Load AV config
@@ -86,7 +86,6 @@ export const HDMIStream = React.memo(
       screenshotPath,
       totalFrames,
       currentFrame,
-      captureStartTime,
       recordingStartTime,
 
       // Actions from hook
@@ -258,37 +257,9 @@ export const HDMIStream = React.memo(
       return isExpanded ? expandedHeight : collapsedHeight;
     };
 
-    // Generate current video frame URL - same as ScreenshotCapture
-    const currentVideoFramePath = useMemo(() => {
-      if (captureMode !== 'video' || totalFrames <= 0 || !captureStartTime) {
-        return '';
-      }
-
-      const frameTime = new Date(captureStartTime.getTime() + currentFrame * 1000);
-      const zurichTime = new Date(frameTime.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }));
-
-      const year = zurichTime.getFullYear();
-      const month = String(zurichTime.getMonth() + 1).padStart(2, '0');
-      const day = String(zurichTime.getDate()).padStart(2, '0');
-      const hours = String(zurichTime.getHours()).padStart(2, '0');
-      const minutes = String(zurichTime.getMinutes()).padStart(2, '0');
-      const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
-      const frameTimestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
-
-      // Simple path construction like ScreenshotCapture
-      const capturePath = `/host/stream/capture1/captures/capture_${frameTimestamp}.jpg`;
-
-      // Handle HTTPS URLs - return as is (no proxy needed)
-      if (host.host_name.startsWith('https:')) {
-        return `${host.host_name}${capturePath}`;
-      }
-
-      // Handle HTTP or plain hostnames - use proxy
-      const baseUrl = host.host_name.startsWith('http')
-        ? host.host_name
-        : `https://${host.host_name}`;
-      return `/api/proxy-image?url=${encodeURIComponent(`${baseUrl}${capturePath}`)}`;
-    }, [captureMode, totalFrames, captureStartTime, currentFrame, host.host_name]);
+    // Video frame URLs should come from backend API calls
+    // For now, use empty string - this needs to be implemented via API
+    const currentVideoFramePath = '';
 
     // Check if verification editor should be visible
     const isVerificationVisible = captureMode === 'screenshot' || captureMode === 'video';

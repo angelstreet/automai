@@ -1,6 +1,6 @@
 import { PlayArrow, Pause } from '@mui/icons-material';
 import { Box, Slider, IconButton, Typography } from '@mui/material';
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { getStreamViewerLayout } from '../../../config/layoutConfig';
 
@@ -97,36 +97,8 @@ export function VideoCapture({
     }
   };
 
-  // Get image URL with conditional HTTP to HTTPS proxy
-  const imageUrl = useMemo(() => {
-    if (!videoFramePath) return '';
-
-    console.log(`[@component:VideoCapture] Processing video frame path: ${videoFramePath}`);
-
-    // Handle data URLs (base64) - return as is
-    if (videoFramePath.startsWith('data:')) {
-      console.log('[@component:VideoCapture] Using data URL');
-      return videoFramePath;
-    }
-
-    // Handle HTTPS URLs - return as is (no proxy needed)
-    if (videoFramePath.startsWith('https:')) {
-      console.log('[@component:VideoCapture] Using HTTPS URL directly');
-      return videoFramePath;
-    }
-
-    // Handle HTTP URLs - use proxy to convert to HTTPS
-    if (videoFramePath.startsWith('http:')) {
-      console.log('[@component:VideoCapture] HTTP URL detected, using proxy');
-      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(videoFramePath)}`;
-      console.log(`[@component:VideoCapture] Generated proxy URL: ${proxyUrl}`);
-      return proxyUrl;
-    }
-
-    // For relative paths or other formats, use directly (assuming they are accessible)
-    console.log('[@component:VideoCapture] Using video frame path directly');
-    return videoFramePath;
-  }, [videoFramePath]);
+  // Use processed URL directly from backend
+  const imageUrl = videoFramePath || '';
 
   // Determine if drag selection should be enabled
   const allowDragSelection = totalFrames > 0 && onAreaSelected && imageRef.current;

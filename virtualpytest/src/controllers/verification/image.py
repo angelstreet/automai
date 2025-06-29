@@ -401,15 +401,12 @@ class ImageVerificationController:
                         'screenshot_path': None
                     }
             else:
-                # Fallback to taking a new screenshot if no source provided
-                print(f"[@controller:ImageVerification] No source image provided, taking new screenshot")
-                source_path = self.av_controller.take_screenshot()
-                if not source_path:
-                    return {
-                        'success': False,
-                        'message': 'Failed to capture screenshot for image verification',
-                        'screenshot_path': None
-                    }
+                # No fallback allowed - source image must be provided
+                return {
+                    'success': False,
+                    'message': 'No source image provided for image verification. Source image is required.',
+                    'screenshot_path': None
+                }
             
             # Extract parameters from nested structure
             params = verification_config.get('params', {})

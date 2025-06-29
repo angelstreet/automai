@@ -64,7 +64,8 @@ export const useVerification = ({
     // Handle HTTP URLs - use proxy to convert to HTTPS
     if (url.startsWith('http:')) {
       console.log('[@hook:useVerification] HTTP URL detected, using proxy');
-      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(url)}`;
+      // URL is already processed by backend
+      const proxyUrl = url;
       console.log(`[@hook:useVerification] Generated proxy URL: ${proxyUrl}`);
       return proxyUrl;
     }

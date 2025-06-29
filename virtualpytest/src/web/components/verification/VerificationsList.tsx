@@ -110,7 +110,8 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       // Handle HTTP URLs - use proxy to convert to HTTPS
       if (url.startsWith('http:')) {
         console.log('[@component:VerificationsList] HTTP URL detected, using proxy');
-        const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(url)}`;
+        // URL is already processed by backend
+        const proxyUrl = url;
         console.log(`[@component:VerificationsList] Generated proxy URL: ${proxyUrl}`);
         return proxyUrl;
       }

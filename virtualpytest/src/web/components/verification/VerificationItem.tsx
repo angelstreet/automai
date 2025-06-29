@@ -112,7 +112,6 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
               variant: 'menu',
               disableAutoFocus: true,
               disableEnforceFocus: true,
-              getContentAnchorEl: null,
             }}
             sx={{
               '& .MuiSelect-select': {

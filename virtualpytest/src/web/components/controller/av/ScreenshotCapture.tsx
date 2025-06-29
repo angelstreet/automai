@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material';
-import React, { useMemo, useRef } from 'react';
+import React, { useRef } from 'react';
 
 import { getStreamViewerLayout } from '../../../config/layoutConfig';
 
@@ -59,36 +59,8 @@ export function ScreenshotCapture({
     }
   };
 
-  // Get image URL with conditional HTTP to HTTPS proxy
-  const imageUrl = useMemo(() => {
-    if (!screenshotPath) return '';
-
-    console.log(`[@component:ScreenshotCapture] Processing screenshot path: ${screenshotPath}`);
-
-    // Handle data URLs (base64 from remote system) - return as is
-    if (screenshotPath.startsWith('data:')) {
-      console.log('[@component:ScreenshotCapture] Using data URL from remote system');
-      return screenshotPath;
-    }
-
-    // Handle HTTPS URLs - return as is (no proxy needed)
-    if (screenshotPath.startsWith('https:')) {
-      console.log('[@component:ScreenshotCapture] Using HTTPS URL directly');
-      return screenshotPath;
-    }
-
-    // Handle HTTP URLs - use proxy to convert to HTTPS
-    if (screenshotPath.startsWith('http:')) {
-      console.log('[@component:ScreenshotCapture] HTTP URL detected, using proxy');
-      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(screenshotPath)}`;
-      console.log(`[@component:ScreenshotCapture] Generated proxy URL: ${proxyUrl}`);
-      return proxyUrl;
-    }
-
-    // For relative paths or other formats, use directly (assuming they are accessible)
-    console.log('[@component:ScreenshotCapture] Using path directly');
-    return screenshotPath;
-  }, [screenshotPath]);
+  // Use processed URL directly from backend
+  const imageUrl = screenshotPath || '';
 
   // Determine if drag selection should be enabled
   const allowDragSelection =
