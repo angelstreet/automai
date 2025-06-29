@@ -226,6 +226,7 @@ def verification_execute_batch():
                     'resultType': 'PASS' if verification_result.get('success', False) else 'FAIL',
                     'sourceImageUrl': verification_result.get('sourceUrl'),
                     'referenceImageUrl': verification_result.get('referenceUrl'),
+                    'resultOverlayUrl': verification_result.get('overlayUrl'),
                     'extractedText': verification_result.get('extractedText', ''),
                     'searchedText': verification_result.get('searchedText', ''),
                     'imageFilter': verification_result.get('imageFilter', 'none'),
