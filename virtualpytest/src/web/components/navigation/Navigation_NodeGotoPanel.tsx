@@ -16,10 +16,10 @@ import {
   Alert,
   LinearProgress,
 } from '@mui/material';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 
-import { UINavigationNode } from '../../types/pages/Navigation_Types';
 import { useNode } from '../../hooks/navigation/useNode';
+import { UINavigationNode } from '../../types/pages/Navigation_Types';
 
 interface NodeGotoPanelProps {
   selectedNode: UINavigationNode;
@@ -43,12 +43,28 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     currentNodeId,
   });
 
-  // Load navigation preview on component mount
+  // Memoize the functions we need to avoid recreating them on every render
+  const { clearNavigationState, loadNavigationPreview } = useMemo(
+    () => ({
+      clearNavigationState: nodeHook.clearNavigationState,
+      loadNavigationPreview: nodeHook.loadNavigationPreview,
+    }),
+    [nodeHook.clearNavigationState, nodeHook.loadNavigationPreview],
+  );
+
+  // Load navigation preview on component mount and when key dependencies change
   useEffect(() => {
     // Clear any previous execution messages when loading for a new node
-    nodeHook.clearNavigationState();
-    nodeHook.loadNavigationPreview(selectedNode);
-  }, [treeId, selectedNode.id, currentNodeId, nodeHook]);
+    clearNavigationState();
+    loadNavigationPreview(selectedNode);
+  }, [
+    treeId,
+    selectedNode.id,
+    currentNodeId,
+    selectedNode,
+    clearNavigationState,
+    loadNavigationPreview,
+  ]);
 
   return (
     <Paper

@@ -1,6 +1,6 @@
 import { Close as CloseIcon } from '@mui/icons-material';
 import { Box, Typography, Button, IconButton, Paper, LinearProgress } from '@mui/material';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 
 import { useEdge } from '../../hooks/navigation/useEdge';
 import { Host } from '../../types/common/Host_Types';
@@ -42,10 +42,13 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
     const hasActions = actions.length > 0;
     const canRunActions = edgeHook.canRunActions(selectedEdge);
 
+    // Memoize the clearResults function to avoid recreating it on every render
+    const clearResults = useMemo(() => edgeHook.clearResults, [edgeHook.clearResults]);
+
     // Clear run results when edge selection changes
     useEffect(() => {
-      edgeHook.clearResults();
-    }, [selectedEdge.id, edgeHook]);
+      clearResults();
+    }, [selectedEdge.id, clearResults]);
 
     // Check if edge can be deleted using hook function
     const isProtectedEdge = edgeHook.isProtectedEdge(selectedEdge);
@@ -110,14 +113,64 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
           {/* Show actions list */}
           {actions.length > 0 && (
             <Box sx={{ mb: 1 }}>
-              {actions.map((action, index) => (
-                <Typography key={index} variant="body2" sx={{ fontSize: '0.75rem', mb: 0.3 }}>
-                  {index + 1}. {action.label || 'No action selected'}
-                  {action.requiresInput && action.inputValue && (
-                    <span style={{ color: '#666', marginLeft: '4px' }}>→ {action.inputValue}</span>
-                  )}
-                </Typography>
-              ))}
+              {actions.map((action, index) => {
+                // Format action display with command and parameters
+                const formatActionDisplay = (action: any) => {
+                  if (!action.command) return 'No action selected';
+
+                  const commandDisplay = action.command.replace(/_/g, ' ').trim();
+                  const params = action.params || {};
+
+                  // Build parameter display based on action type
+                  const paramParts = [];
+
+                  switch (action.command) {
+                    case 'press_key':
+                      if (params.key) paramParts.push(`"${params.key}"`);
+                      break;
+                    case 'input_text':
+                      if (params.text) paramParts.push(`"${params.text}"`);
+                      break;
+                    case 'click_element':
+                      if (params.element_identifier)
+                        paramParts.push(`"${params.element_identifier}"`);
+                      break;
+                    case 'tap_coordinates':
+                      if (params.x !== undefined && params.y !== undefined) {
+                        paramParts.push(`(${params.x}, ${params.y})`);
+                      }
+                      break;
+                    case 'swipe':
+                      if (params.direction) paramParts.push(`"${params.direction}"`);
+                      break;
+                    case 'launch_app':
+                    case 'close_app':
+                      if (params.package) paramParts.push(`"${params.package}"`);
+                      break;
+                    case 'wait':
+                      if (params.duration) paramParts.push(`${params.duration}s`);
+                      break;
+                    case 'scroll':
+                      if (params.direction) paramParts.push(`"${params.direction}"`);
+                      if (params.amount) paramParts.push(`${params.amount}x`);
+                      break;
+                  }
+
+                  // Add delay if specified and not default
+                  if (params.delay && params.delay !== 0.5) {
+                    paramParts.push(`delay: ${params.delay}s`);
+                  }
+
+                  const paramDisplay = paramParts.length > 0 ? ` → ${paramParts.join(', ')}` : '';
+                  return `${commandDisplay}${paramDisplay}`;
+                };
+
+                return (
+                  <Typography key={index} variant="body2" sx={{ fontSize: '0.75rem', mb: 0.3 }}>
+                    {index + 1}. {formatActionDisplay(action)}
+                  </Typography>
+                );
+              })}
             </Box>
           )}
 
