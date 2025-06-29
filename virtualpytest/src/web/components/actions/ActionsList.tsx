@@ -32,7 +32,11 @@ export const ActionsList: React.FC<ActionsListProps> = ({ actions, onActionsUpda
         return {
           ...action,
           command,
-          params: {}, // Reset params when command changes
+          // Keep existing params but ensure delay is set
+          params: {
+            ...action.params,
+            delay: action.params?.delay || 0.5,
+          },
         };
       }
       return action;

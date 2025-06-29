@@ -66,7 +66,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({
         value={action.params?.delay || 0.5}
         onChange={(e) => handleParamChange('delay', parseFloat(e.target.value) || 0)}
         inputProps={{ min: 0, max: 60, step: 0.1 }}
-        sx={{ width: 120 }}
+        sx={{
+          width: 120,
+          '& .MuiInputBase-input': {
+            padding: '4px 8px',
+            fontSize: '0.8rem',
+          },
+        }}
       />,
     );
 
@@ -81,7 +87,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             value={action.params?.key || ''}
             onChange={(e) => handleParamChange('key', e.target.value)}
             placeholder="e.g., UP, DOWN, HOME, BACK"
-            sx={{ width: 200 }}
+            sx={{
+              width: 200,
+              '& .MuiInputBase-input': {
+                padding: '4px 8px',
+                fontSize: '0.8rem',
+              },
+            }}
           />,
         );
         break;
@@ -95,7 +107,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             value={action.params?.text || ''}
             onChange={(e) => handleParamChange('text', e.target.value)}
             placeholder="Text to input"
-            sx={{ width: 250 }}
+            sx={{
+              width: 250,
+              '& .MuiInputBase-input': {
+                padding: '4px 8px',
+                fontSize: '0.8rem',
+              },
+            }}
           />,
         );
         break;
@@ -109,7 +127,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             value={action.params?.element_identifier || ''}
             onChange={(e) => handleParamChange('element_identifier', e.target.value)}
             placeholder="e.g., Home Button, Menu Icon"
-            sx={{ width: 250 }}
+            sx={{
+              width: 250,
+              '& .MuiInputBase-input': {
+                padding: '4px 8px',
+                fontSize: '0.8rem',
+              },
+            }}
           />,
         );
         break;
@@ -123,7 +147,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             size="small"
             value={action.params?.x || ''}
             onChange={(e) => handleParamChange('x', parseInt(e.target.value) || 0)}
-            sx={{ width: 80 }}
+            sx={{
+              width: 80,
+              '& .MuiInputBase-input': {
+                padding: '4px 8px',
+                fontSize: '0.8rem',
+              },
+            }}
           />,
           <TextField
             key="y"
@@ -132,7 +162,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             size="small"
             value={action.params?.y || ''}
             onChange={(e) => handleParamChange('y', parseInt(e.target.value) || 0)}
-            sx={{ width: 80 }}
+            sx={{
+              width: 80,
+              '& .MuiInputBase-input': {
+                padding: '4px 8px',
+                fontSize: '0.8rem',
+              },
+            }}
           />,
         );
         break;
@@ -146,7 +182,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             value={action.params?.direction || ''}
             onChange={(e) => handleParamChange('direction', e.target.value)}
             placeholder="e.g., up, down, left, right"
-            sx={{ width: 150 }}
+            sx={{
+              width: 150,
+              '& .MuiInputBase-input': {
+                padding: '4px 8px',
+                fontSize: '0.8rem',
+              },
+            }}
           />,
         );
         break;
@@ -161,7 +203,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             value={action.params?.package || ''}
             onChange={(e) => handleParamChange('package', e.target.value)}
             placeholder="e.g., com.example.app"
-            sx={{ width: 250 }}
+            sx={{
+              width: 250,
+              '& .MuiInputBase-input': {
+                padding: '4px 8px',
+                fontSize: '0.8rem',
+              },
+            }}
           />,
         );
         break;
@@ -176,7 +224,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             value={action.params?.duration || 1}
             onChange={(e) => handleParamChange('duration', parseFloat(e.target.value) || 1)}
             inputProps={{ min: 0.1, max: 60, step: 0.1 }}
-            sx={{ width: 120 }}
+            sx={{
+              width: 120,
+              '& .MuiInputBase-input': {
+                padding: '4px 8px',
+                fontSize: '0.8rem',
+              },
+            }}
           />,
         );
         break;
@@ -190,7 +244,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             value={action.params?.direction || ''}
             onChange={(e) => handleParamChange('direction', e.target.value)}
             placeholder="e.g., up, down"
-            sx={{ width: 150 }}
+            sx={{
+              width: 150,
+              '& .MuiInputBase-input': {
+                padding: '4px 8px',
+                fontSize: '0.8rem',
+              },
+            }}
           />,
           <TextField
             key="amount"
@@ -199,7 +259,13 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             size="small"
             value={action.params?.amount || 1}
             onChange={(e) => handleParamChange('amount', parseInt(e.target.value) || 1)}
-            sx={{ width: 100 }}
+            sx={{
+              width: 100,
+              '& .MuiInputBase-input': {
+                padding: '4px 8px',
+                fontSize: '0.8rem',
+              },
+            }}
           />,
         );
         break;
@@ -210,15 +276,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
 
   return (
     <Box
-      sx={{
-        mb: 1,
-        px: 1,
-        py: 1,
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 1,
-        backgroundColor: 'background.paper',
-      }}
+      sx={{ mb: 1, px: 0.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
     >
       {/* Line 1: Action command dropdown */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
@@ -315,7 +373,17 @@ export const ActionItem: React.FC<ActionItemProps> = ({
 
       {/* Line 2: Parameter fields - conditional based on action type */}
       {action.command && (
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 0.5,
+            alignItems: 'center',
+            mb: 0,
+            px: 0,
+            mx: 0,
+            flexWrap: 'wrap',
+          }}
+        >
           {renderParameterFields()}
         </Box>
       )}
