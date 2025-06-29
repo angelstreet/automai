@@ -76,11 +76,11 @@ type DeviceDataContextType = DeviceDataState & DeviceDataActions;
 // CONTEXT
 // ========================================
 
-const DeviceDataContext = createContext<DeviceDataContextType | null>(null);
+const DeviceDataContext = createContext<DeviceDataContextType | undefined>(undefined);
 
-const useDeviceData = (): DeviceDataContextType => {
+export const useDeviceData = (): DeviceDataContextType => {
   const context = useContext(DeviceDataContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useDeviceData must be used within a DeviceDataProvider');
   }
   return context;
@@ -194,12 +194,12 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
                 references[deviceModel] = {};
               }
 
-              let filename = baseName;
-              if (refType === 'image' && references[deviceModel][baseName]) {
-                filename = `${baseName}_image`;
-              }
+              // Create internal key with type suffix to avoid conflicts
+              // But preserve original name for display in UI
+              const internalKey = `${baseName}_${refType}`;
 
-              references[deviceModel][filename] = {
+              references[deviceModel][internalKey] = {
+                name: baseName, // Store original name for display
                 type: refType,
                 url: ref.r2_url || ref.url,
                 area: ref.area || { x: 0, y: 0, width: 0, height: 0 },
@@ -759,5 +759,3 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
 
   return <DeviceDataContext.Provider value={contextValue}>{children}</DeviceDataContext.Provider>;
 };
-
-export { useDeviceData };

@@ -83,129 +83,65 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
       {/* Line 1: Verification dropdown */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200, maxWidth: 300 }}>
+          <InputLabel>Verification</InputLabel>
           <Select
-            value={typeof verification.command === 'string' ? verification.command : ''}
+            value={verification.command}
             onChange={(e) => onVerificationSelect(index, e.target.value)}
-            displayEmpty
+            label="Verification"
             size="small"
-            MenuProps={{
-              PaperProps: {
-                sx: {
-                  '& .MuiMenuItem-root': {
-                    fontSize: '0.8rem',
-                    minHeight: '28px',
-                    paddingTop: '2px',
-                    paddingBottom: '2px',
-                    lineHeight: 0.8,
-                  },
-                },
-              },
-              disablePortal: true,
-              anchorOrigin: {
-                vertical: 'bottom',
-                horizontal: 'left',
-              },
-              transformOrigin: {
-                vertical: 'top',
-                horizontal: 'left',
-              },
-              variant: 'menu',
-              disableAutoFocus: true,
-              disableEnforceFocus: true,
-            }}
             sx={{
               '& .MuiSelect-select': {
                 fontSize: '0.8rem',
-                paddingTop: '4px',
-                paddingBottom: '2px',
               },
             }}
-            renderValue={(selected) => {
-              if (!selected) {
-                return <em style={{ fontSize: '0.8rem' }}>Select verification...</em>;
-              }
-              // Find the selected verification to display its command as label
-              let selectedLabel = '';
-              Object.values(availableVerifications).forEach((verifications) => {
-                if (Array.isArray(verifications)) {
-                  const verification = verifications.find((v) => v.command === selected);
-                  if (verification) {
-                    selectedLabel = verification.command
-                      .replace(/_/g, ' ')
-                      .replace(/([A-Z])/g, ' $1')
-                      .trim();
-                  }
-                }
-              });
-              return selectedLabel || selected;
-            }}
           >
-            {Object.entries(availableVerifications).map(([category, verifications]) => {
-              // Ensure verifications is an array
-              if (!Array.isArray(verifications)) {
-                console.warn(
-                  `[@component:VerificationItem] Invalid verifications for category ${category}:`,
-                  verifications,
-                );
-                return null;
-              }
-
-              return [
-                <MenuItem
-                  key={`header-${category}`}
-                  disabled
-                  sx={{ fontWeight: 'bold', fontSize: '0.65rem', minHeight: '24px' }}
-                >
-                  {category.replace(/_/g, ' ').toUpperCase()}
-                </MenuItem>,
-                ...verifications.map((verification) => (
-                  <MenuItem
-                    key={verification.command}
-                    value={verification.command}
-                    sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
-                  >
-                    {verification.command
-                      .replace(/_/g, ' ')
-                      .replace(/([A-Z])/g, ' $1')
-                      .trim()}
-                  </MenuItem>
-                )),
-              ];
-            })}
+            <MenuItem value="" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+              Select a verification...
+            </MenuItem>
+            {Object.entries(availableVerifications).map(([category, verifications]) =>
+              verifications.map((verif) => (
+                <MenuItem key={verif.command} value={verif.command} sx={{ fontSize: '0.75rem' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>[{category}]</span>
+                    <span>{verif.label}</span>
+                  </Box>
+                </MenuItem>
+              )),
+            )}
           </Select>
         </FormControl>
 
+        {/* Move buttons */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <IconButton
+            size="small"
+            onClick={() => onMoveUp(index)}
+            disabled={!canMoveUp}
+            sx={{ p: 0.25, minWidth: 0, width: 20, height: 16 }}
+          >
+            <KeyboardArrowUpIcon sx={{ fontSize: '0.8rem' }} />
+          </IconButton>
+          <IconButton
+            size="small"
+            onClick={() => onMoveDown(index)}
+            disabled={!canMoveDown}
+            sx={{ p: 0.25, minWidth: 0, width: 20, height: 16 }}
+          >
+            <KeyboardArrowDownIcon sx={{ fontSize: '0.8rem' }} />
+          </IconButton>
+        </Box>
+
+        {/* Remove button */}
         <IconButton
           size="small"
-          onClick={() => onMoveUp(index)}
-          disabled={!canMoveUp}
-          sx={{ opacity: !canMoveUp ? 0.3 : 1 }}
+          onClick={() => onRemoveVerification(index)}
+          sx={{ p: 0.25, minWidth: 0, width: 20, height: 20 }}
         >
-          <KeyboardArrowUpIcon fontSize="small" />
-        </IconButton>
-
-        <IconButton
-          size="small"
-          onClick={() => onMoveDown(index)}
-          disabled={!canMoveDown}
-          sx={{ opacity: !canMoveDown ? 0.3 : 1 }}
-        >
-          <KeyboardArrowDownIcon fontSize="small" />
-        </IconButton>
-
-        <IconButton size="small" onClick={() => onRemoveVerification(index)} color="error">
-          <CloseIcon fontSize="small" />
+          <CloseIcon sx={{ fontSize: '0.8rem' }} />
         </IconButton>
       </Box>
 
-      {/* Line 2: Parameter controls using extracted component */}
-      <VerificationControls
-        verification={verification}
-        index={index}
-        onUpdateVerification={onUpdateVerification}
-      />
-
-      {/* Line 3: Reference selector for text/image, nothing for ADB */}
+      {/* Line 2: Reference dropdowns - conditional based on verification type */}
       {verification.command && verification.verification_type === 'text' && (
         <FormControl size="small" sx={{ width: 250 }}>
           <InputLabel>Text Reference</InputLabel>
@@ -221,31 +157,15 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
             }}
           >
             {Object.entries(modelReferences)
-              .filter(([_filename, ref]) => ref.type === 'text')
-              .map(([filename, ref]) => (
-                <MenuItem key={filename} value={filename} sx={{ fontSize: '0.75rem' }}>
+              .filter(([_internalKey, ref]) => ref.type === 'text')
+              .map(([internalKey, ref]) => (
+                <MenuItem key={internalKey} value={internalKey} sx={{ fontSize: '0.75rem' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    📝 <span>{filename}</span>
-                    {ref.text && (
-                      <Typography
-                        variant="caption"
-                        sx={{
-                          fontSize: '0.65rem',
-                          color: 'text.secondary',
-                          ml: 0.5,
-                          maxWidth: 100,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        ({ref.text})
-                      </Typography>
-                    )}
+                    📝 <span>{ref.name || internalKey}</span>
                   </Box>
                 </MenuItem>
               ))}
-            {Object.entries(modelReferences).filter(([_filename, ref]) => ref.type === 'text')
+            {Object.entries(modelReferences).filter(([_internalKey, ref]) => ref.type === 'text')
               .length === 0 && (
               <MenuItem disabled value="" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
                 No text references available
@@ -270,15 +190,15 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
             }}
           >
             {Object.entries(modelReferences)
-              .filter(([_filename, ref]) => ref.type === 'image')
-              .map(([filename, _ref]) => (
-                <MenuItem key={filename} value={filename} sx={{ fontSize: '0.75rem' }}>
+              .filter(([_internalKey, ref]) => ref.type === 'image')
+              .map(([internalKey, ref]) => (
+                <MenuItem key={internalKey} value={internalKey} sx={{ fontSize: '0.75rem' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    🖼️ <span>{filename}</span>
+                    🖼️ <span>{ref.name || internalKey}</span>
                   </Box>
                 </MenuItem>
               ))}
-            {Object.entries(modelReferences).filter(([_filename, ref]) => ref.type === 'image')
+            {Object.entries(modelReferences).filter(([_internalKey, ref]) => ref.type === 'image')
               .length === 0 && (
               <MenuItem disabled value="" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
                 No image references available
@@ -288,17 +208,21 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
         </FormControl>
       )}
 
+      {/* Verification Controls */}
+      <VerificationControls
+        verification={verification}
+        onUpdateVerification={onUpdateVerification}
+        index={index}
+      />
+
       {/* Test Results Display using extracted component */}
-      {testResult && (
-        <VerificationTestResults
-          verification={verification}
-          testResult={testResult}
-          processImageUrl={processImageUrl}
-          getCacheBustedUrl={getCacheBustedUrl}
-          onImageClick={onImageClick}
-          onSourceImageClick={onSourceImageClick}
-        />
-      )}
+      <VerificationTestResults
+        testResult={testResult}
+        onImageClick={onImageClick}
+        onSourceImageClick={onSourceImageClick}
+        processImageUrl={processImageUrl}
+        getCacheBustedUrl={getCacheBustedUrl}
+      />
     </Box>
   );
 };

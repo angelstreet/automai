@@ -24,12 +24,9 @@ from urllib.parse import urlparse
 class TextHelpers:
     """Simple text processing helpers for core operations."""
     
-    def __init__(self, captures_path: str, text_references_dir: str = None):
+    def __init__(self, captures_path: str):
         """Initialize text helpers with captures path."""
         self.captures_path = captures_path
-        
-        # Initialize text_references_dir
-        self.text_references_dir = text_references_dir or os.path.join(self.captures_path, 'text_references')
         
     def download_image(self, source_url: str) -> str:
         """Download image from URL only."""
@@ -45,29 +42,52 @@ class TextHelpers:
             print(f"[@text_helpers] Error downloading image from URL: {e}")
             raise
     
-    def save_text_reference(self, text: str, reference_name: str, 
-                           area: Dict[str, Any] = None) -> str:
-        """Save text reference for future use."""
+    def save_text_reference(self, text: str, reference_name: str, device_model: str,
+                           area: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Save text reference to database."""
         try:
-            timestamp = int(time.time())
-            ref_filename = f'{reference_name}_{timestamp}.txt'
-            ref_path = os.path.join(self.text_references_dir, ref_filename)
+            print(f"[@text_helpers] Saving text reference to database: {reference_name} for model: {device_model}")
             
-            reference_data = {
+            # Save reference to database
+            from src.lib.supabase.verifications_references_db import save_reference
+            from src.utils.app_utils import DEFAULT_TEAM_ID
+            
+            # Create text data structure
+            text_data = {
                 'text': text,
-                'reference_name': reference_name,
-                'area': area,
-                'created_at': timestamp
+                'font_size': 12.0,  # Default font size
+                'confidence': 0.8   # Default confidence
             }
             
-            with open(ref_path, 'w', encoding='utf-8') as f:
-                json.dump(reference_data, f, indent=2, ensure_ascii=False)
+            db_result = save_reference(
+                name=reference_name,
+                device_model=device_model,
+                reference_type='reference_text',
+                team_id=DEFAULT_TEAM_ID,
+                r2_path=None,  # Text doesn't need R2 storage
+                r2_url=None,   # Text doesn't need R2 storage
+                area=area,
+                text_data=text_data
+            )
             
-            return ref_path
+            if not db_result.get('success'):
+                return {
+                    'success': False,
+                    'error': f"Database save failed: {db_result.get('error')}"
+                }
+            
+            print(f"[@text_helpers] Successfully saved text reference to database: {reference_name}")
+            
+            return {
+                'success': True,
+                'reference_name': reference_name,
+                'reference_id': db_result.get('reference_id'),
+                'text_data': text_data
+            }
             
         except Exception as e:
             print(f"[@text_helpers] Error saving text reference: {e}")
-            return ""
+            return {'success': False, 'error': str(e)}
     
     def detect_text_in_area(self, image_path: str, area: dict = None) -> Dict[str, Any]:
         """

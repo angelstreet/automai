@@ -237,18 +237,19 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
     );
 
     const handleReferenceSelect = useCallback(
-      (index: number, referenceName: string) => {
+      (index: number, internalKey: string) => {
         console.log('[@component:VerificationsList] Reference selected:', {
           index,
-          referenceName,
+          internalKey,
           model,
         });
 
-        const selectedRef = modelReferences[referenceName];
+        const selectedRef = modelReferences[internalKey];
 
         if (selectedRef) {
           console.log('[@component:VerificationsList] Selected reference details:', {
-            name: referenceName,
+            internalKey: internalKey,
+            name: selectedRef.name,
             model: model,
             type: selectedRef.type,
             url: selectedRef.url,
@@ -266,51 +267,54 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
           };
 
           if (selectedRef.type === 'image') {
-            // Image reference parameters - store image_path as primary field
+            // Image reference parameters - store internal key as image_path
             updateVerification(index, {
               params: {
                 ...baseParams,
-                image_path: referenceName, // Primary field for image references
-                reference_name: referenceName, // Secondary field for UI display
+                image_path: internalKey, // Store internal key for backend lookup
+                reference_name: selectedRef.name, // Store display name for UI
               },
             });
             console.log(
               '[@component:VerificationsList] Updated verification with image reference:',
               {
-                reference_image: referenceName,
+                internal_key: internalKey,
+                display_name: selectedRef.name,
                 reference_url: selectedRef.url,
                 updatedParams: {
                   ...baseParams,
-                  image_path: referenceName,
-                  reference_name: referenceName,
+                  image_path: internalKey,
+                  reference_name: selectedRef.name,
                 },
               },
             );
           } else if (selectedRef.type === 'text') {
-            // Text reference parameters - store text and reference_name
+            // Text reference parameters - store text and internal key
             updateVerification(index, {
               params: {
                 ...baseParams,
                 text: selectedRef.text || '',
-                reference_name: referenceName, // Primary field for text references
+                reference_name: internalKey, // Store internal key for backend lookup
               },
             });
             console.log(
               '[@component:VerificationsList] Updated verification with text reference:',
               {
+                internal_key: internalKey,
+                display_name: selectedRef.name,
                 reference_text: selectedRef.text,
-                reference_name: referenceName,
                 font_size: selectedRef.font_size,
                 updatedParams: {
                   ...baseParams,
                   text: selectedRef.text || '',
-                  reference_name: referenceName,
+                  reference_name: internalKey,
                 },
               },
             );
           }
 
-          onReferenceSelected(referenceName, selectedRef);
+          // Pass the display name to the callback, not the internal key
+          onReferenceSelected(selectedRef.name || internalKey, selectedRef);
         }
       },
       [model, modelReferences, verifications, updateVerification, onReferenceSelected],

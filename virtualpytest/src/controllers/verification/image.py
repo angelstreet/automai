@@ -36,7 +36,7 @@ class ImageVerificationController:
             os.makedirs(directory, exist_ok=True)
         
         # Initialize helpers with explicit references directory
-        self.helpers = ImageHelpers(self.captures_path, av_controller, self.references_dir)
+        self.helpers = ImageHelpers(self.captures_path, av_controller)
         
         print(f"[@controller:ImageVerification] Initialized")
         print(f"[@controller:ImageVerification] Initialized with paths:")
@@ -360,8 +360,20 @@ class ImageVerificationController:
             # Create filtered versions
             self.helpers.create_filtered_versions(image_saved_path)
             
-            # Save reference metadata locally (for local file backup)
-            saved_ref_path = self.helpers.save_image_reference(image_saved_path, reference_name, area)
+            # Get device model from request data (frontend provides it)
+            device_model = data.get('device_model')
+            
+            if not device_model:
+                return {'success': False, 'message': 'device_model is required for saving reference'}
+            
+            # Save reference using helpers (handles R2 upload and database save)
+            save_result = self.helpers.save_image_reference(image_saved_path, reference_name, device_model, area)
+            
+            if not save_result.get('success'):
+                return {
+                    'success': False,
+                    'message': save_result.get('error', 'Failed to save image reference')
+                }
             
             # Clean up temp file if we downloaded it
             if image_source_url.startswith(('http://', 'https://')) and image_source_path.startswith('/tmp/'):
@@ -371,15 +383,12 @@ class ImageVerificationController:
                     pass
             
             return {
-                'success': bool(saved_ref_path),
-                'message': 'Image reference saved successfully' if saved_ref_path else 'Failed to save image reference',
-                'saved_path': saved_ref_path,
-                'image_saved_path': image_saved_path,
-                'filename': filename,
-                # Data for server step
-                'reference_name': reference_name,
-                'area': area,
-                'source_was_url': image_source_url.startswith(('http://', 'https://'))
+                'success': True,
+                'message': f'Image reference saved successfully: {reference_name}',
+                'reference_name': save_result.get('reference_name'),
+                'r2_url': save_result.get('r2_url'),
+                'r2_path': save_result.get('r2_path'),
+                'reference_id': save_result.get('reference_id')
             }
             
         except Exception as e:
@@ -426,7 +435,7 @@ class ImageVerificationController:
             timeout = params.get('timeout', 1.0)
             area = params.get('area')
             image_filter = params.get('image_filter', 'none')
-            model = params.get('model', 'default')
+            model = params.get('model')
             
             print(f"[@controller:ImageVerification] Searching for image: {image_path}")
             print(f"[@controller:ImageVerification] Timeout: {timeout}s, Confidence: {threshold}")

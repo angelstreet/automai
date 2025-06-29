@@ -29,11 +29,8 @@ class TextVerificationController:
         # Set verification type for controller lookup
         self.verification_type = 'text'
         
-        # Set up text references directory
-        self.text_references_dir = os.path.join(self.captures_path, 'text_references')
-        
-        # Initialize helpers with text references directory
-        self.helpers = TextHelpers(self.captures_path, self.text_references_dir)
+        # Initialize helpers
+        self.helpers = TextHelpers(self.captures_path)
 
         print(f"[@controller:TextVerification] Initialized with captures path: {self.captures_path}")
         
@@ -258,31 +255,31 @@ class TextVerificationController:
             text = data.get('text', '')
             reference_name = data.get('reference_name', 'text_reference')
             area = data.get('area')
-            image_textdetected_path = data.get('image_textdetected_path', '')
             
             if not text:
                 return {'success': False, 'message': 'text is required for saving reference'}
             
-            if not image_textdetected_path or not os.path.exists(image_textdetected_path):
-                return {'success': False, 'message': 'text detected image not found'}
+            # Get device model from request data (frontend provides it)
+            device_model = data.get('device_model') or data.get('model', 'default')
             
-            # Save text reference locally (for local file backup)
-            saved_path = self.helpers.save_text_reference(text, reference_name, area)
+            if not device_model:
+                return {'success': False, 'message': 'device_model is required for saving reference'}
             
-            # Return data needed for server step database save
-            return {
-                'success': bool(saved_path),
-                'message': 'Text reference saved successfully' if saved_path else 'Failed to save text reference',
-                'saved_path': saved_path,
-                'image_textdetected_path': image_textdetected_path,
-                # Data for server step
-                'reference_name': reference_name,
-                'area': area,
-                'text_data': {
-                    'text': text,
-                    'font_size': 12.0,  # Default font size
-                    'confidence': 0.8   # Default confidence
+            # Save text reference using helpers (handles database save)
+            save_result = self.helpers.save_text_reference(text, reference_name, device_model, area)
+            
+            if not save_result.get('success'):
+                return {
+                    'success': False,
+                    'message': save_result.get('error', 'Failed to save text reference')
                 }
+            
+            return {
+                'success': True,
+                'message': f'Text reference saved successfully: {reference_name}',
+                'reference_name': save_result.get('reference_name'),
+                'reference_id': save_result.get('reference_id'),
+                'text_data': save_result.get('text_data')
             }
             
         except Exception as e:

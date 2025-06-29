@@ -202,6 +202,7 @@ export interface Reference {
   area: ReferenceArea;
   created_at: string;
   updated_at: string;
+  name?: string; // Original name for display (added to support UI)
   // Text reference specific fields
   text?: string;
   font_size?: number;

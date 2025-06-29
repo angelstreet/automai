@@ -25,11 +25,10 @@ from urllib.parse import urlparse
 class ImageHelpers:
     """Core image processing helpers for verification operations."""
     
-    def __init__(self, captures_path: str, av_controller, image_references_dir: str):
+    def __init__(self, captures_path: str, av_controller):
         """Initialize image helpers with captures path and AV controller."""
         self.captures_path = captures_path
         self.av_controller = av_controller
-        self.image_references_dir = image_references_dir
        
     def download_image(self, source_url: str) -> str:
         """Download image from URL only."""
@@ -45,22 +44,78 @@ class ImageHelpers:
             print(f"[@image_helpers] Error downloading image from URL: {e}")
             raise
     
-    def save_image_reference(self, image_path: str, reference_name: str, 
-                           area: Dict[str, Any] = None) -> str:
-        """Save image reference for future use."""
+    def save_image_reference(self, image_path: str, reference_name: str, device_model: str, area: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Save image reference with R2 upload and database save."""
         try:
-            timestamp = int(time.time())
-            ref_filename = f'{reference_name}_{timestamp}.png'
-            ref_path = os.path.join(self.image_references_dir, ref_filename)
+            print(f"[@image_helpers] Uploading reference to R2: {reference_name} for model: {device_model}")
             
-            # Copy image to references directory
-            shutil.copy2(image_path, ref_path)
+            # Upload to R2 using cloudflare utils
+            from src.utils.cloudflare_utils import upload_reference_image
             
-            return ref_path
+            # Use reference name with .jpg extension for R2
+            r2_filename = f"{reference_name}.jpg"
+            upload_result = upload_reference_image(image_path, device_model, r2_filename)
+            
+            if not upload_result.get('success'):
+                return {
+                    'success': False,
+                    'error': f"R2 upload failed: {upload_result.get('error')}"
+                }
+            
+            r2_url = upload_result.get('url', '')
+            r2_path = upload_result.get('remote_path', '')
+            
+            print(f"[@image_helpers] Successfully uploaded to R2: {r2_url}")
+            
+            # Upload filtered versions to R2
+            import os
+            base_path, ext = os.path.splitext(image_path)
+            
+            # Upload greyscale version
+            greyscale_path = f"{base_path}_greyscale{ext}"
+            if os.path.exists(greyscale_path):
+                greyscale_filename = f"{reference_name}_greyscale.jpg"
+                upload_reference_image(greyscale_path, device_model, greyscale_filename)
+            
+            # Upload binary version
+            binary_path = f"{base_path}_binary{ext}"
+            if os.path.exists(binary_path):
+                binary_filename = f"{reference_name}_binary.jpg"
+                upload_reference_image(binary_path, device_model, binary_filename)
+            
+            # Save reference to database
+            from src.lib.supabase.verifications_references_db import save_reference
+            from src.utils.app_utils import DEFAULT_TEAM_ID
+            
+            db_result = save_reference(
+                name=reference_name,
+                device_model=device_model,
+                reference_type='reference_image',
+                team_id=DEFAULT_TEAM_ID,
+                r2_path=r2_path,
+                r2_url=r2_url,
+                area=area
+            )
+            
+            if not db_result.get('success'):
+                return {
+                    'success': False,
+                    'error': f"Database save failed: {db_result.get('error')}"
+                }
+            
+            print(f"[@image_helpers] Successfully saved reference to database: {reference_name}")
+            
+            return {
+                'success': True,
+                'reference_name': reference_name,
+                'r2_url': r2_url,
+                'r2_path': r2_path,
+                'reference_id': db_result.get('reference_id')
+            }
             
         except Exception as e:
             print(f"[@image_helpers] Error saving image reference: {e}")
-            return ""
+            return {'success': False, 'error': str(e)}
     
     # =============================================================================
     # Core Operation 1: Template Matching

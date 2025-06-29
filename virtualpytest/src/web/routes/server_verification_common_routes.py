@@ -325,7 +325,7 @@ def verification_image_crop():
 
 @server_verification_common_bp.route('/image/saveImage', methods=['POST'])
 def verification_image_save():
-    """Proxy save image request to host"""
+    """Proxy save image request to host - host handles R2 upload and database save"""
     try:
         print("[@route:server_verification_common:verification_image_save] Proxying save image request to host")
         
