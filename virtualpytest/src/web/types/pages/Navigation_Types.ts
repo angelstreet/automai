@@ -290,6 +290,7 @@ export interface NodeEditDialogProps {
   onClose: () => void;
   onResetNode?: () => void;
   selectedHost?: any; // Host object for verification/navigation
+  selectedDeviceId?: string; // Device ID for getting model references
   isControlActive?: boolean;
   model?: string;
   // Centralized verification references props - required

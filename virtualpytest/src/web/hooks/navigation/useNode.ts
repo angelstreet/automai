@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useMemo } from 'react';
 
 import { useDeviceData } from '../../contexts/device/DeviceDataContext';
 import { Host } from '../../types/common/Host_Types';
@@ -21,7 +21,30 @@ export interface UseNodeProps {
 }
 
 export const useNode = (props?: UseNodeProps) => {
-  const { getVerifications } = useDeviceData();
+  const { getVerifications, getModelReferences, referencesLoading } = useDeviceData();
+
+  // Get the selected device from the host's devices array
+  const selectedDevice = useMemo(() => {
+    return props?.selectedHost?.devices?.find(
+      (device) => device.device_id === props?.selectedDeviceId,
+    );
+  }, [props?.selectedHost, props?.selectedDeviceId]);
+
+  // Get the device model from the selected device
+  const deviceModel = selectedDevice?.device_model;
+
+  // Get model references using the device model
+  const modelReferences = useMemo(() => {
+    if (!deviceModel) {
+      console.log('[useNode] No device model available, returning empty references');
+      return {}; // Return empty object without calling getModelReferences when deviceModel is undefined
+    }
+    const references = getModelReferences(deviceModel);
+    console.log(
+      `[useNode] Got ${Object.keys(references).length} model references for device model: ${deviceModel}`,
+    );
+    return references;
+  }, [getModelReferences, deviceModel]);
 
   // State for various node operations
   const [screenshotSaveStatus, setScreenshotSaveStatus] = useState<'idle' | 'success' | 'error'>(
@@ -466,6 +489,11 @@ export const useNode = (props?: UseNodeProps) => {
     takeAndSaveScreenshot,
     handleScreenshotConfirm,
     screenshotSaveStatus,
+
+    // Model references (for VerificationsList)
+    modelReferences,
+    referencesLoading,
+    deviceModel,
 
     // NodeEditDialog operations
     verification,

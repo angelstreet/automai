@@ -31,6 +31,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   onClose,
   onResetNode,
   selectedHost,
+  selectedDeviceId,
   isControlActive = false,
   model,
   modelReferences,
@@ -61,6 +62,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   // Use the consolidated node hook
   const nodeHook = useNode({
     selectedHost,
+    selectedDeviceId,
     isControlActive,
   });
 
@@ -190,13 +192,13 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             availableVerifications={nodeHook.verification.availableVerificationTypes}
             onVerificationsChange={handleVerificationsChange}
             loading={nodeHook.verification.loading}
-            model={model || 'android_mobile'}
+            model={nodeHook.deviceModel || model || 'android_mobile'}
             selectedHost={selectedHost}
             onTest={nodeHook.verification.handleTest}
             testResults={nodeHook.verification.testResults}
             onReferenceSelected={handleReferenceSelected}
-            modelReferences={modelReferences}
-            referencesLoading={referencesLoading}
+            modelReferences={nodeHook.modelReferences}
+            referencesLoading={nodeHook.referencesLoading}
             showCollapsible={false}
             title="Verifications"
           />

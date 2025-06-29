@@ -622,7 +622,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                         onDelete={deleteSelected}
                         setEdgeForm={setEdgeForm as React.Dispatch<React.SetStateAction<EdgeForm>>}
                         setIsEdgeDialogOpen={setIsEdgeDialogOpen}
-                        onUpdateEdge={handleUpdateEdge}
                         isControlActive={isControlActive}
                         selectedHost={selectedHost || undefined}
                       />
@@ -656,6 +655,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
             model={userInterface?.models?.[0] || 'android_mobile'}
             isControlActive={isControlActive}
             selectedHost={selectedHost}
+            selectedDeviceId={selectedDeviceId || undefined}
             modelReferences={currentModelReferences}
             referencesLoading={referencesLoading}
           />
