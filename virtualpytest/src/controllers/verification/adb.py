@@ -37,14 +37,7 @@ class ADBVerificationController(VerificationControllerInterface):
         self.device_ip = device_ip
         self.device_port = device_port
         self.verification_type = 'adb'
-        
-        # Create device identifier for ADB operations
-        if self.device_ip:
-            self.device_id = f"{self.device_ip}:{self.device_port}"
-        else:
-            # Fallback for cases where device_ip is not provided
-            print(f"[@controller:ADBVerification] WARNING: No device_ip provided, using fallback device_id")
-            self.device_id = "adb_verification"
+        self.device_id = f"{self.device_ip}:{self.device_port}"
         
         self.adb_utils = ADBUtils()
         self.is_connected = True  # Assume connected since we're using direct ADB
@@ -110,17 +103,6 @@ class ADBVerificationController(VerificationControllerInterface):
             
         Returns:
             Tuple of (success, enhanced_element_data, error_message)
-            
-            enhanced_element_data contains:
-            {
-                "total_elements": int,
-                "elements": [list of all elements],
-                "search_results": {
-                    "search_term": str,
-                    "total_matches": int, 
-                    "matches": [list of matching elements with details]
-                } if search_term provided
-            }
         """
         try:
             print(f"[@controller:ADBVerification:getElementListsWithSmartSearch] Getting enhanced element list for device {self.device_id}")
@@ -249,8 +231,6 @@ class ADBVerificationController(VerificationControllerInterface):
         
         Returns:
             Tuple of (success, message, result_data)
-            
-            result_data contains rich match information with all found elements
         """
         try:
             print(f"[@controller:ADBVerification:waitForElementToAppear] Waiting for '{search_term}' (timeout: {timeout}s)")
@@ -264,14 +244,6 @@ class ADBVerificationController(VerificationControllerInterface):
                 print(f"[@controller:ADBVerification:waitForElementToAppear] Using single search term: '{search_term}'")
             
             start_time = time.time()
-            consecutive_infrastructure_failures = 0
-            max_consecutive_failures = 3  # After 3 consecutive infrastructure failures, give up
-            
-            # Initialize variables outside loop to avoid scope issues
-            found_match = False
-            successful_term = None
-            final_matches = []
-            final_error = None
             
             # Always do at least one check, then continue if timeout > 0
             while True:
@@ -279,6 +251,7 @@ class ADBVerificationController(VerificationControllerInterface):
                 found_match = False
                 successful_term = None
                 final_matches = []
+                final_error = None
                 
                 for i, term in enumerate(terms):
                     if len(terms) > 1:
@@ -289,40 +262,7 @@ class ADBVerificationController(VerificationControllerInterface):
                     if error:
                         print(f"[@controller:ADBVerification:waitForElementToAppear] Search failed for term '{term}': {error}")
                         final_error = error
-                        
-                        # Check if this is an infrastructure error (SSH timeout, ADB connection issues, etc.)
-                        if any(infrastructure_error in error.lower() for infrastructure_error in [
-                            'infrastructure failure', 'timeout opening channel', 'failed to dump ui', 'ssh', 'connection', 
-                            'adb connect failed', 'device not found', 'no devices', 'offline'
-                        ]):
-                            consecutive_infrastructure_failures += 1
-                            print(f"[@controller:ADBVerification:waitForElementToAppear] Infrastructure failure #{consecutive_infrastructure_failures}: {error}")
-                            
-                            if consecutive_infrastructure_failures >= max_consecutive_failures:
-                                elapsed = time.time() - start_time
-                                error_message = f"Infrastructure failure: {error}"
-                                print(f"[@controller:ADBVerification:waitForElementToAppear] ERROR: Too many consecutive infrastructure failures")
-                                
-                                result_data = {
-                                    'search_term': search_term,
-                                    'wait_time': elapsed,
-                                    'infrastructure_error': True,
-                                    'error_details': error,
-                                    'consecutive_failures': consecutive_infrastructure_failures,
-                                    'attempted_terms': terms
-                                }
-                                
-                                return False, error_message, result_data
-                            
-                            # Break out of term loop on infrastructure failure to retry all terms
-                            break
-                        else:
-                            # Reset counter for non-infrastructure errors and continue with next term
-                            consecutive_infrastructure_failures = 0
                     else:
-                        # Reset counter on successful search
-                        consecutive_infrastructure_failures = 0
-                        
                         if success and matches:
                             found_match = True
                             successful_term = term
@@ -359,14 +299,13 @@ class ADBVerificationController(VerificationControllerInterface):
                 # Check if we should continue polling
                 elapsed = time.time() - start_time
                 if timeout <= 0 or elapsed >= timeout:
-                    # Either single check mode (timeout=0) or timeout reached
                     break
                 
                 # Sleep before next check
-                time.sleep(1.0)  # Simple 1-second polling interval
+                time.sleep(1.0)
             
             elapsed = time.time() - start_time
-            message = f"Element '{search_term}' did not appear within {elapsed:.1f}s"
+            message = f"Element '{search_term}' not found after {elapsed:.1f}s"
             print(f"[@controller:ADBVerification:waitForElementToAppear] FAILED: {message}")
             
             result_data = {
@@ -391,7 +330,6 @@ class ADBVerificationController(VerificationControllerInterface):
             
             result_data = {
                 'search_term': search_term,
-                'infrastructure_error': True,
                 'error_details': str(e)
             }
             
@@ -421,14 +359,6 @@ class ADBVerificationController(VerificationControllerInterface):
                 print(f"[@controller:ADBVerification:waitForElementToDisappear] Using single search term: '{search_term}'")
             
             start_time = time.time()
-            consecutive_infrastructure_failures = 0
-            max_consecutive_failures = 3  # After 3 consecutive infrastructure failures, give up
-            
-            # Initialize variables outside loop to avoid scope issues
-            any_term_found = False
-            successful_term = None
-            final_matches = []
-            final_error = None
             
             # Always do at least one check, then continue if timeout > 0
             while True:
@@ -436,6 +366,7 @@ class ADBVerificationController(VerificationControllerInterface):
                 any_term_found = False
                 successful_term = None
                 final_matches = []
+                final_error = None
                 
                 for i, term in enumerate(terms):
                     if len(terms) > 1:
@@ -446,40 +377,7 @@ class ADBVerificationController(VerificationControllerInterface):
                     if error:
                         print(f"[@controller:ADBVerification:waitForElementToDisappear] Search failed for term '{term}': {error}")
                         final_error = error
-                        
-                        # Check if this is an infrastructure error (SSH timeout, ADB connection issues, etc.)
-                        if any(infrastructure_error in error.lower() for infrastructure_error in [
-                            'infrastructure failure', 'timeout opening channel', 'failed to dump ui', 'ssh', 'connection', 
-                            'adb connect failed', 'device not found', 'no devices', 'offline'
-                        ]):
-                            consecutive_infrastructure_failures += 1
-                            print(f"[@controller:ADBVerification:waitForElementToDisappear] Infrastructure failure #{consecutive_infrastructure_failures}: {error}")
-                            
-                            if consecutive_infrastructure_failures >= max_consecutive_failures:
-                                elapsed = time.time() - start_time
-                                error_message = f"Infrastructure failure: {error}"
-                                print(f"[@controller:ADBVerification:waitForElementToDisappear] ERROR: Too many consecutive infrastructure failures")
-                                
-                                result_data = {
-                                    'search_term': search_term,
-                                    'wait_time': elapsed,
-                                    'infrastructure_error': True,
-                                    'error_details': error,
-                                    'consecutive_failures': consecutive_infrastructure_failures,
-                                    'attempted_terms': terms
-                                }
-                                
-                                return False, error_message, result_data
-                            
-                            # Break out of term loop on infrastructure failure to retry all terms
-                            break
-                        else:
-                            # Reset counter for non-infrastructure errors and continue with next term
-                            consecutive_infrastructure_failures = 0
                     else:
-                        # Reset counter on successful search
-                        consecutive_infrastructure_failures = 0
-                        
                         if success and matches:
                             any_term_found = True
                             successful_term = term
@@ -510,17 +408,15 @@ class ADBVerificationController(VerificationControllerInterface):
                 # Check if we should continue polling
                 elapsed = time.time() - start_time
                 if timeout <= 0 or elapsed >= timeout:
-                    # Either single check mode (timeout=0) or timeout reached
                     break
                 
                 # Sleep before next check
-                time.sleep(1.0)  # Simple 1-second polling interval
+                time.sleep(1.0)
             
             elapsed = time.time() - start_time
             message = f"Element '{search_term}' still present after {elapsed:.1f}s"
             print(f"[@controller:ADBVerification:waitForElementToDisappear] FAILED: {message}")
             
-            # Include details of still present elements in failure response
             result_data = {
                 'search_term': search_term,
                 'attempted_terms': terms,
@@ -536,17 +432,14 @@ class ADBVerificationController(VerificationControllerInterface):
                 'last_error': final_error
             }
             
-            # Get final check to include element details in failure
-            try:
-                if successful_term and final_matches:
-                    result_data['still_present_elements'] = final_matches
-                    result_data['total_still_present'] = len(final_matches)
-                    result_data['successful_term'] = successful_term
-                    print(f"[@controller:ADBVerification:waitForElementToDisappear] {len(final_matches)} elements still present using term '{successful_term}'")
-                    for match in final_matches:
-                        print(f"[@controller:ADBVerification:waitForElementToDisappear] Still present: Element {match['element_id']} - {match['match_reason']}")
-            except:
-                pass  # Don't fail the whole operation if final check fails
+            # Include details of still present elements in failure response
+            if successful_term and final_matches:
+                result_data['still_present_elements'] = final_matches
+                result_data['total_still_present'] = len(final_matches)
+                result_data['successful_term'] = successful_term
+                print(f"[@controller:ADBVerification:waitForElementToDisappear] {len(final_matches)} elements still present using term '{successful_term}'")
+                for match in final_matches:
+                    print(f"[@controller:ADBVerification:waitForElementToDisappear] Still present: Element {match['element_id']} - {match['match_reason']}")
             
             return False, message, result_data
             
@@ -556,7 +449,6 @@ class ADBVerificationController(VerificationControllerInterface):
             
             result_data = {
                 'search_term': search_term,
-                'infrastructure_error': True,
                 'error_details': str(e)
             }
             
@@ -569,7 +461,7 @@ class ADBVerificationController(VerificationControllerInterface):
                 'command': 'waitForElementToAppear',
                 'params': {
                     'search_term': '',      # Empty string for user input
-                    'timeout': 0.0,         # Default: single check, no polling
+                    'timeout': 0,           # Default: single check, no polling
                 },
                 'verification_type': 'adb'
             },
@@ -577,7 +469,7 @@ class ADBVerificationController(VerificationControllerInterface):
                 'command': 'waitForElementToDisappear',
                 'params': {
                     'search_term': '',      # Empty string for user input
-                    'timeout': 0.0,         # Default: single check, no polling
+                    'timeout': 0,           # Default: single check, no polling
                 },
                 'verification_type': 'adb'
             }
@@ -585,26 +477,19 @@ class ADBVerificationController(VerificationControllerInterface):
 
     def execute_verification(self, verification_config: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Unified verification execution interface for centralized controller.
+        Execute verification and return frontend-expected format (consistent with image/text).
         
         Args:
             verification_config: {
-                'verification_type': 'adb',
                 'command': 'waitForElementToAppear',
                 'params': {
                     'search_term': 'Settings',
-                    'timeout': 10.0,
-                    'check_interval': 1.0
+                    'timeout': 10.0
                 }
             }
             
         Returns:
-            {
-                'success': bool,
-                'message': str,
-                'confidence': float,
-                'details': dict
-            }
+            Frontend-expected format matching image/text verification
         """
         try:
             # Extract parameters
@@ -617,7 +502,11 @@ class ADBVerificationController(VerificationControllerInterface):
                 return {
                     'success': False,
                     'message': 'No search term specified for ADB verification',
-                    'confidence': 0.0,
+                    'matching_result': 0.0,
+                    'user_threshold': 0.8,
+                    'image_filter': 'none',
+                    'searchedText': search_term,
+                    'extractedText': '',
                     'details': {'error': 'Missing search_term parameter'}
                 }
             
@@ -642,29 +531,49 @@ class ADBVerificationController(VerificationControllerInterface):
                 return {
                     'success': False,
                     'message': f'Unknown ADB verification command: {command}',
-                    'confidence': 0.0,
+                    'matching_result': 0.0,
+                    'user_threshold': 0.8,
+                    'image_filter': 'none',
+                    'searchedText': search_term,
+                    'extractedText': '',
                     'details': {'error': f'Unsupported command: {command}'}
                 }
             
-            # Return unified format
-            return {
+            # Return frontend-expected format (consistent with image/text verification + ADB-specific properties)
+            response = {
                 'success': success,
                 'message': message,
-                'confidence': 1.0 if success else 0.0,
-                'details': details,
-                # ADB-specific fields for frontend compatibility
-                'search_term': search_term,
-                'wait_time': details.get('wait_time', 0),
-                'total_matches': details.get('total_matches', 0),
-                'matches': details.get('matches', [])
+                'matching_result': 1.0 if success else 0.0,  # Binary for ADB (found/not found)
+                'user_threshold': 0.8,                       # Default for consistency
+                'image_filter': 'none',                      # Not applicable for ADB
+                'searchedText': search_term,                 # What we searched for
+                'extractedText': f"Found {details.get('total_matches', 0)} matches" if success else "No matches found",
+                
+                # ADB-specific properties for frontend compatibility
+                'search_term': search_term,                  # Frontend expects this
+                'wait_time': details.get('wait_time', 0.0),  # Frontend expects this
+                'total_matches': details.get('total_matches', 0),  # Frontend expects this
+                'matches': details.get('matches', []),       # Frontend expects this
+                
+                'details': details  # Keep for route processing, will be removed by route
             }
+            
+            return response
             
         except Exception as e:
             print(f"[@controller:ADBVerification] Execution error: {e}")
             return {
                 'success': False,
                 'message': f'ADB verification execution error: {str(e)}',
-                'confidence': 0.0,
+                'matching_result': 0.0,
+                'user_threshold': 0.8,
+                'image_filter': 'none',
+                'searchedText': search_term if 'search_term' in locals() else '',
+                'extractedText': '',
+                'search_term': search_term if 'search_term' in locals() else '',
+                'wait_time': 0.0,
+                'total_matches': 0,
+                'matches': [],
                 'details': {'error': str(e)}
             }
     

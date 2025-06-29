@@ -15,6 +15,39 @@ from src.utils.host_utils import get_controller, get_device_by_id
 # Create blueprint
 verification_adb_host_bp = Blueprint('verification_adb_host', __name__, url_prefix='/host/verification/adb')
 
+def get_verification_controller(device_id: str, controller_type: str, check_device: bool = False):
+    """
+    Helper function to get verification controller and handle common validation.
+    
+    Args:
+        device_id: ID of the device
+        controller_type: Type of controller ('verification_adb', 'verification_image', 'verification_text')
+        check_device: Whether to also validate device existence
+        
+    Returns:
+        Tuple of (controller, device, error_response) where error_response is None if successful
+    """
+    controller = get_controller(device_id, controller_type)
+    device = None
+    
+    if not controller:
+        error_response = jsonify({
+            'success': False,
+            'error': f'No {controller_type} controller found for device {device_id}'
+        }), 404
+        return None, None, error_response
+    
+    if check_device:
+        device = get_device_by_id(device_id)
+        if not device:
+            error_response = jsonify({
+                'success': False,
+                'error': f'Device {device_id} not found'
+            }), 404
+            return None, None, error_response
+    
+    return controller, device, None
+
 # =====================================================
 # HOST-SIDE ADB VERIFICATION ENDPOINTS
 # =====================================================
@@ -23,79 +56,44 @@ verification_adb_host_bp = Blueprint('verification_adb_host', __name__, url_pref
 def execute_adb_verification():
     """Execute single ADB verification on host"""
     try:
-        print("[@route:host_verification_adb:execute] Executing ADB verification on host")
-        
-        data = request.get_json()
-        verification = data.get('verification')
-        image_source_url = data.get('image_source_url')  # Not used for ADB but kept for consistency
-        model = data.get('model', 'default')
+        data = request.get_json() or {}
         device_id = data.get('device_id', 'device1')
         
-        print(f"[@route:host_verification_adb:execute] Verification: {verification} for device: {device_id}")
+        print(f"[@route:host_verification_adb:execute] Executing ADB verification for device: {device_id}")
         
-        # Validate required parameters
+        # Get ADB verification controller using helper
+        adb_controller, _, error_response = get_verification_controller(device_id, 'verification_adb')
+        if error_response:
+            return error_response
+        
+        verification = data.get('verification')
         if not verification:
             return jsonify({
                 'success': False,
                 'error': 'verification is required'
             }), 400
         
-        # Get ADB verification controller for the specified device
-        adb_controller = get_controller(device_id, 'verification_adb')
-        if not adb_controller:
-            device = get_device_by_id(device_id)
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
-            return jsonify({
-                'success': False,
-                'error': f'ADB verification controller not available for device {device_id}',
-                'available_capabilities': device.get_capabilities()
-            }), 404
+        # Execute verification using controller - let controller handle everything
+        result = adb_controller.execute_verification(verification)
         
-        # Extract verification parameters
-        params = verification.get('params', {})
-        command = verification.get('command', '')
+        # Build clean response with frontend-expected properties (consistent with image/text)
+        response = {
+            'success': result.get('success', False),
+            'message': result.get('message', 'Unknown result'),
+            'verification_type': 'adb',
+            'resultType': 'PASS' if result.get('success') else 'FAIL',
+            'matchingResult': result.get('matching_result', 0.0),  # Binary for ADB (1.0 or 0.0)
+            'userThreshold': result.get('user_threshold', 0.8),    # Default for consistency
+            'imageFilter': result.get('image_filter', 'none'),     # Not applicable for ADB
+            'extractedText': result.get('extractedText', ''),      # What was found
+            'searchedText': result.get('searchedText', '')         # What was searched for
+            # No URLs for ADB verification
+            # Removed details object
+        }
         
-        # Execute based on command type
-        if command == 'waitForElementToAppear':
-            search_term = params.get('search_term', '')
-            timeout = params.get('timeout', 0.0)
-            
-            success, message, result_data = adb_controller.waitForElementToAppear(
-                search_term=search_term,
-                timeout=timeout
-            )
-            
-        elif command == 'waitForElementToDisappear':
-            search_term = params.get('search_term', '')
-            timeout = params.get('timeout', 0.0)
-            
-            success, message, result_data = adb_controller.waitForElementToDisappear(
-                search_term=search_term,
-                timeout=timeout
-            )
-            
-        else:
-            return jsonify({
-                'success': False,
-                'error': f'Unknown ADB command: {command}. Supported commands: waitForElementToAppear, waitForElementToDisappear'
-            }), 400
+        print(f"[@route:host_verification_adb:execute] Final result: {response}")
         
-        return jsonify({
-            'success': True,
-            'verification_result': {
-                'success': success,
-                'message': message,
-                'result_data': result_data,
-                'verification_type': 'adb',
-                'command': command,
-                'device_id': device_id
-            }
-        })
+        return jsonify(response)
         
     except Exception as e:
         print(f"[@route:host_verification_adb:execute] Error: {str(e)}")
@@ -123,36 +121,38 @@ def wait_for_element_to_appear():
                 'error': 'search_term is required'
             }), 400
         
-        # Get ADB verification controller for the specified device
-        adb_controller = get_controller(device_id, 'verification_adb')
-        if not adb_controller:
-            device = get_device_by_id(device_id)
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
-            return jsonify({
-                'success': False,
-                'error': f'ADB verification controller not available for device {device_id}',
-                'available_capabilities': device.get_capabilities()
-            }), 404
+        # Get ADB verification controller using helper
+        adb_controller, _, error_response = get_verification_controller(device_id, 'verification_adb')
+        if error_response:
+            return error_response
         
-        # Execute the verification
-        success, message, result_data = adb_controller.waitForElementToAppear(
-            search_term=search_term,
-            timeout=timeout
-        )
+        # Execute verification using unified method
+        verification_config = {
+            'command': 'waitForElementToAppear',
+            'params': {
+                'search_term': search_term,
+                'timeout': timeout
+            }
+        }
         
-        return jsonify({
-            'success': success,
-            'message': message,
-            'result_data': result_data,
+        result = adb_controller.execute_verification(verification_config)
+        
+        # Build clean response with frontend-expected properties
+        response = {
+            'success': result.get('success', False),
+            'message': result.get('message', 'Unknown result'),
             'verification_type': 'adb',
+            'resultType': 'PASS' if result.get('success') else 'FAIL',
+            'matchingResult': result.get('matching_result', 0.0),
+            'userThreshold': result.get('user_threshold', 0.8),
+            'imageFilter': result.get('image_filter', 'none'),
+            'extractedText': result.get('extractedText', ''),
+            'searchedText': result.get('searchedText', ''),
             'command': 'waitForElementToAppear',
             'device_id': device_id
-        })
+        }
+        
+        return jsonify(response)
         
     except Exception as e:
         print(f"[@route:host_verification_adb:waitForElementToAppear] Error: {str(e)}")
@@ -180,36 +180,38 @@ def wait_for_element_to_disappear():
                 'error': 'search_term is required'
             }), 400
         
-        # Get ADB verification controller for the specified device
-        adb_controller = get_controller(device_id, 'verification_adb')
-        if not adb_controller:
-            device = get_device_by_id(device_id)
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
-            return jsonify({
-                'success': False,
-                'error': f'ADB verification controller not available for device {device_id}',
-                'available_capabilities': device.get_capabilities()
-            }), 404
+        # Get ADB verification controller using helper
+        adb_controller, _, error_response = get_verification_controller(device_id, 'verification_adb')
+        if error_response:
+            return error_response
         
-        # Execute the verification
-        success, message, result_data = adb_controller.waitForElementToDisappear(
-            search_term=search_term,
-            timeout=timeout
-        )
+        # Execute verification using unified method
+        verification_config = {
+            'command': 'waitForElementToDisappear',
+            'params': {
+                'search_term': search_term,
+                'timeout': timeout
+            }
+        }
         
-        return jsonify({
-            'success': success,
-            'message': message,
-            'result_data': result_data,
+        result = adb_controller.execute_verification(verification_config)
+        
+        # Build clean response with frontend-expected properties
+        response = {
+            'success': result.get('success', False),
+            'message': result.get('message', 'Unknown result'),
             'verification_type': 'adb',
+            'resultType': 'PASS' if result.get('success') else 'FAIL',
+            'matchingResult': result.get('matching_result', 0.0),
+            'userThreshold': result.get('user_threshold', 0.8),
+            'imageFilter': result.get('image_filter', 'none'),
+            'extractedText': result.get('extractedText', ''),
+            'searchedText': result.get('searchedText', ''),
             'command': 'waitForElementToDisappear',
             'device_id': device_id
-        })
+        }
+        
+        return jsonify(response)
         
     except Exception as e:
         print(f"[@route:host_verification_adb:waitForElementToDisappear] Error: {str(e)}")
