@@ -68,16 +68,16 @@ class TextVerificationController:
         if not text or text.strip() == '':
             error_msg = "No text specified. Please provide text to search for."
             print(f"[@controller:TextVerification] {error_msg}")
-            return False, error_msg, {"searched_text": text or "", "image_filter": image_filter, "threshold": 0.0, "ocr_confidence": 0.0}
+            return False, error_msg, {"searchedText": text or "", "image_filter": image_filter, "matching_result": 0.0, "user_threshold": 0.8}
         
         print(f"[@controller:TextVerification] Looking for text pattern: '{text}'")
         if image_filter and image_filter != 'none':
             print(f"[@controller:TextVerification] Using image filter: {image_filter}")
         
         additional_data = {
-            "searched_text": text,
+            "searchedText": text,  # Frontend-expected property name
             "image_filter": image_filter,
-            "searchedText": text  # Add this for frontend compatibility
+            "user_threshold": 0.8  # Default threshold for consistency with image verification
         }
         
         if image_list:
@@ -109,32 +109,23 @@ class TextVerificationController:
                     if area and model is not None:
                         cropped_source_path = self._save_cropped_source_image(source_path, area, model, verification_index)
                         if cropped_source_path:
-                            # Convert local path to public URL like image verification
-                            source_url = self._build_image_url(cropped_source_path)
                             additional_data["source_image_path"] = cropped_source_path
-                            additional_data["sourceImageUrl"] = source_url
                     
-                    additional_data["extracted_text"] = extracted_text.strip()
+                    additional_data["extractedText"] = extracted_text.strip()  # Frontend-expected property name
                     additional_data["detected_language"] = detected_language
                     additional_data["language_confidence"] = language_confidence
-                    additional_data["ocr_confidence"] = ocr_confidence
-                    # For text verification, set threshold to 1.0 when text is found
-                    additional_data["threshold"] = 1.0
+                    additional_data["matching_result"] = ocr_confidence  # Use OCR confidence as matching result
                     return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
             
             # If no match found, still save the best source for comparison
             if best_source_path and area and model is not None:
                 cropped_source_path = self._save_cropped_source_image(best_source_path, area, model, verification_index)
                 if cropped_source_path:
-                    # Convert local path to public URL like image verification
-                    source_url = self._build_image_url(cropped_source_path)
                     additional_data["source_image_path"] = cropped_source_path
-                    additional_data["sourceImageUrl"] = source_url
             
             # Set failure data
-            additional_data["extracted_text"] = closest_text
-            additional_data["ocr_confidence"] = best_ocr_confidence
-            additional_data["threshold"] = 0.0
+            additional_data["extractedText"] = closest_text  # Frontend-expected property name
+            additional_data["matching_result"] = best_ocr_confidence  # Use OCR confidence as matching result
             return False, f"Text pattern '{text}' not found", additional_data
         
         else:
@@ -156,32 +147,24 @@ class TextVerificationController:
                 if area and model is not None:
                     cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
                     if cropped_source_path:
-                        # Convert local path to public URL like image verification
-                        source_url = self._build_image_url(cropped_source_path)
                         additional_data["source_image_path"] = cropped_source_path
-                        additional_data["sourceImageUrl"] = source_url
                 
-                additional_data["extracted_text"] = extracted_text.strip()
+                additional_data["extractedText"] = extracted_text.strip()  # Frontend-expected property name
                 additional_data["detected_language"] = detected_language
                 additional_data["language_confidence"] = language_confidence
-                additional_data["ocr_confidence"] = ocr_confidence
-                additional_data["threshold"] = 1.0
+                additional_data["matching_result"] = ocr_confidence  # Use OCR confidence as matching result
                 return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
             else:
                 # Save cropped source for comparison even on failure
                 if area and model is not None:
                     cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
                     if cropped_source_path:
-                        # Convert local path to public URL like image verification
-                        source_url = self._build_image_url(cropped_source_path)
                         additional_data["source_image_path"] = cropped_source_path
-                        additional_data["sourceImageUrl"] = source_url
                 
-                additional_data["extracted_text"] = extracted_text.strip()
+                additional_data["extractedText"] = extracted_text.strip()  # Frontend-expected property name
                 additional_data["detected_language"] = detected_language
                 additional_data["language_confidence"] = language_confidence
-                additional_data["ocr_confidence"] = ocr_confidence
-                additional_data["threshold"] = 0.0
+                additional_data["matching_result"] = ocr_confidence  # Use OCR confidence as matching result
                 return False, f"Text pattern '{text}' not found", additional_data
 
     def waitForTextToDisappear(self, text: str, timeout: float = 10.0, area: dict = None, 
@@ -194,7 +177,7 @@ class TextVerificationController:
         if not text or text.strip() == '':
             error_msg = "No text specified. Please provide text to search for."
             print(f"[@controller:TextVerification] {error_msg}")
-            return False, error_msg, {"searched_text": text or "", "image_filter": image_filter, "threshold": 0.0}
+            return False, error_msg, {"searchedText": text or "", "image_filter": image_filter, "matching_result": 0.0, "user_threshold": 0.8}
             
         print(f"[@controller:TextVerification] Looking for text pattern to disappear: '{text}'")
         
@@ -204,16 +187,16 @@ class TextVerificationController:
         # Invert the boolean result and adjust the message
         success = not found
         
-        # For disappear operations, invert the threshold for UI display to make it intuitive
-        # If original threshold was 1.0 (text still there), show 0.0 (0% disappeared)
-        # If original threshold was 0.0 (text not found), show 1.0 (100% disappeared)
-        if 'threshold' in additional_data and additional_data['threshold'] is not None:
-            original_threshold = additional_data['threshold']
-            # Invert threshold for disappear operations: 1.0 - original gives intuitive "disappear percentage"
-            inverted_threshold = 1.0 - original_threshold
-            additional_data['threshold'] = inverted_threshold
-            additional_data['original_threshold'] = original_threshold  # Keep original for debugging
-            print(f"[@controller:TextVerification] Disappear threshold display: {original_threshold:.3f} -> {inverted_threshold:.3f} (inverted for UI)")
+        # For disappear operations, invert the matching result for UI display to make it intuitive
+        # If original confidence was high (text still there), show low (low disappear confidence)
+        # If original confidence was low (text not found), show high (high disappear confidence)
+        if 'matching_result' in additional_data and additional_data['matching_result'] is not None:
+            original_confidence = additional_data['matching_result']
+            # Invert confidence for disappear operations: 1.0 - original gives intuitive "disappear percentage"
+            inverted_confidence = 1.0 - original_confidence
+            additional_data['matching_result'] = inverted_confidence
+            additional_data['original_confidence'] = original_confidence  # Keep original for debugging
+            print(f"[@controller:TextVerification] Disappear confidence display: {original_confidence:.3f} -> {inverted_confidence:.3f} (inverted for UI)")
         
         if success:
             # Text has disappeared (was not found)
@@ -356,16 +339,17 @@ class TextVerificationController:
             else:
                 return {'success': False, 'message': f'Unsupported verification command: {command}'}
             
-            # Return unified format
+            # Return frontend-expected format (consistent with image verification)
             return {
                 'success': success,
                 'message': message,
-                'command': command,
-                'text': text,
                 'screenshot_path': source_path,
-                'extracted_info': details.get('extracted_text', ''),
-                'confidence': details.get('threshold', 1.0 if success else 0.0),
-                'details': details
+                'matching_result': details.get('matching_result', 0.0),  # OCR confidence
+                'user_threshold': details.get('user_threshold', 0.8),    # User's threshold setting
+                'image_filter': details.get('image_filter', image_filter),  # Applied filter
+                'extractedText': details.get('extractedText', ''),       # Frontend-expected property name
+                'searchedText': details.get('searchedText', text),       # Frontend-expected property name
+                'details': details  # Keep for route processing, will be removed by route
             }
                 
         except Exception as e:
@@ -482,36 +466,4 @@ class TextVerificationController:
             print(f"[@controller:TextVerification] Error cropping source image: {e}")
             return None
 
-    def _build_image_url(self, local_path: str) -> str:
-        """
-        Convert local image path to public URL using device-specific path building.
-        
-        Args:
-            local_path: Local file path
-            
-        Returns:
-            Public URL for the image
-        """
-        try:
-            from src.utils.build_url_utils import buildVerificationResultUrl
-            from flask import current_app
-            
-            # Get host info from current app context
-            host_device = getattr(current_app, 'my_host_device', None)
-            if not host_device:
-                print(f"[@controller:TextVerification] ERROR: No host device found for URL building")
-                raise ValueError("Host device context required for URL building - ensure proper request context")
-            
-            # Get device_id from host_device
-            device_id = host_device.get('device_id', 'device1')  # Default fallback
-            
-            # Build public URL using device-specific URL builder
-            filename = os.path.basename(local_path)
-            public_url = buildVerificationResultUrl(host_device, filename, device_id)
-            print(f"[@controller:TextVerification] Built URL: {local_path} -> {public_url}")
-            
-            return public_url
-            
-        except Exception as url_error:
-            print(f"[@controller:TextVerification] URL building error: {url_error}")
-            raise ValueError(f"Failed to build verification result URL: {url_error}") 
+ 

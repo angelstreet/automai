@@ -12,6 +12,39 @@ import os
 # Create blueprint
 verification_image_host_bp = Blueprint('verification_image_host', __name__, url_prefix='/host/verification/image')
 
+def get_verification_controller(device_id: str, controller_type: str, check_device: bool = False):
+    """
+    Helper function to get verification controller and handle common validation.
+    
+    Args:
+        device_id: ID of the device
+        controller_type: Type of controller ('verification_image' or 'verification_text')
+        check_device: Whether to also validate device existence
+        
+    Returns:
+        Tuple of (controller, device, error_response) where error_response is None if successful
+    """
+    controller = get_controller(device_id, controller_type)
+    device = None
+    
+    if not controller:
+        error_response = jsonify({
+            'success': False,
+            'error': f'No {controller_type} controller found for device {device_id}'
+        }), 404
+        return None, None, error_response
+    
+    if check_device:
+        device = get_device_by_id(device_id)
+        if not device:
+            error_response = jsonify({
+                'success': False,
+                'error': f'Device {device_id} not found'
+            }), 404
+            return None, None, error_response
+    
+    return controller, device, None
+
 @verification_image_host_bp.route('/cropImage', methods=['POST'])
 def crop_area():
     """Crop area from image for verification"""
@@ -22,21 +55,9 @@ def crop_area():
         print(f"[@route:host_crop_area] Host cropping request for device: {device_id}")
         
         # Get image verification controller and device info
-        image_controller = get_controller(device_id, 'verification_image')
-        device = get_device_by_id(device_id)
-        
-        if not image_controller:
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
-            return jsonify({
-                'success': False,
-                'error': f'No image verification controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
-            }), 404
+        image_controller, device, error_response = get_verification_controller(device_id, 'verification_image', check_device=True)
+        if error_response:
+            return error_response
         
         # Controller handles everything
         result = image_controller.crop_image(data)
@@ -46,11 +67,6 @@ def crop_area():
             host = get_host()
             result['image_cropped_url'] = buildHostImageUrl(host.to_dict(), result['image_cropped_path'])
             print(f"[@route:host_crop_area] Built image cropped URL: {result['image_cropped_url']}")
-        
-        # Add device info to response
-        if device:
-            result['device_model'] = device.model
-            result['device_name'] = device.name
         
         return jsonify(result)
         
@@ -71,21 +87,9 @@ def process_area():
         print(f"[@route:host_process_area] Host processing request for device: {device_id}")
         
         # Get image verification controller and device info
-        image_controller = get_controller(device_id, 'verification_image')
-        device = get_device_by_id(device_id)
-        
-        if not image_controller:
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
-            return jsonify({
-                'success': False,
-                'error': f'No image verification controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
-            }), 404
+        image_controller, device, error_response = get_verification_controller(device_id, 'verification_image', check_device=True)
+        if error_response:
+            return error_response
         
         result = image_controller.process_image(data)
         
@@ -94,11 +98,6 @@ def process_area():
             host = get_host()
             result['image_filtered_url'] = buildHostImageUrl(host.to_dict(), result['image_filtered_path'])
             print(f"[@route:host_process_area] Built image filtered URL: {result['image_filtered_url']}")
-        
-        # Add device info to response
-        if device:
-            result['device_model'] = device.model
-            result['device_name'] = device.name
         
         return jsonify(result)
         
@@ -119,28 +118,11 @@ def save_resource():
         print(f"[@route:host_save_resource] Save image reference request for device: {device_id}")
         
         # Get image verification controller and device info
-        image_controller = get_controller(device_id, 'verification_image')
-        device = get_device_by_id(device_id)
-        
-        if not image_controller:
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
-            return jsonify({
-                'success': False,
-                'error': f'No image verification controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
-            }), 404
+        image_controller, device, error_response = get_verification_controller(device_id, 'verification_image', check_device=True)
+        if error_response:
+            return error_response
         
         result = image_controller.save_image(data)
-        
-        # Add device info to response
-        if device:
-            result['device_model'] = device.model
-            result['device_name'] = device.name
         
         return jsonify(result)
         
@@ -160,33 +142,14 @@ def execute_image_verification():
         
         print(f"[@route:host_verification_image:execute] Executing image verification for device: {device_id}")
         
-        # Get image verification controller and device info
-        image_controller = get_controller(device_id, 'verification_image')
-        device = get_device_by_id(device_id)
-        
-        if not image_controller:
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
-            return jsonify({
-                'success': False,
-                'error': f'No image verification controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
-            }), 404
+        # Get image verification controller
+        image_controller, _, error_response = get_verification_controller(device_id, 'verification_image')
+        if error_response:
+            return error_response
         
         verification = data.get('verification')
         
-        # Get host info for URL building
-        host = get_host()
-        host_info = host.to_dict() if host else None
-        
-        print(f"[@route:host_verification_image:execute] Host info available: {host_info is not None}")
-        print(f"[@route:host_verification_image:execute] Device ID: {device_id}")
-        
-        # Execute verification using controller with host info and device_id for URL building
+        # Execute verification using controller - let controller handle everything
         verification_result = image_controller.execute_verification({
             'command': verification.get('command', 'waitForImageToAppear'),
             'params': {
@@ -195,25 +158,53 @@ def execute_image_verification():
                 'timeout': verification.get('params', {}).get('timeout', 10.0),
                 'area': verification.get('params', {}).get('area'),
                 'image_filter': verification.get('params', {}).get('image_filter', 'none'),
-                'model': device.model,  # Use device.model for R2 reference resolution
-                'host_info': host_info,  # Pass host info for URL building
-                'device_id': device_id   # Pass device_id for URL building
+                'model': verification.get('params', {}).get('model', 'default')
             }
         })
         
         print(f"[@route:host_verification_image:execute] Verification result: {verification_result}")
         
-        # Build response with proper URLs
+        # Build URLs from file paths if verification generated images
+        if verification_result.get('success') and 'source_image_path' in verification_result.get('details', {}):
+            from src.utils.build_url_utils import buildVerificationResultUrl
+            
+            # Get host info for URL building
+            host = get_host()
+            host_info = host.to_dict() if host else None
+            
+            details = verification_result.get('details', {})
+            
+            # Build URLs for the generated images using frontend-expected property names
+            if details.get('source_image_path'):
+                filename = os.path.basename(details['source_image_path'])
+                verification_result['sourceUrl'] = buildVerificationResultUrl(host_info, filename, device_id)
+            
+            if details.get('reference_image_path'):
+                filename = os.path.basename(details['reference_image_path'])
+                verification_result['referenceUrl'] = buildVerificationResultUrl(host_info, filename, device_id)
+                
+            if details.get('result_overlay_path'):
+                filename = os.path.basename(details['result_overlay_path'])
+                verification_result['overlayUrl'] = buildVerificationResultUrl(host_info, filename, device_id)
+            
+            print(f"[@route:host_verification_image:execute] Built URLs:")
+            print(f"  Source: {verification_result.get('sourceUrl')}")
+            print(f"  Reference: {verification_result.get('referenceUrl')}")
+            print(f"  Overlay: {verification_result.get('overlayUrl')}")
+        
+        # Build clean response with frontend-expected properties
         result = {
             'success': verification_result.get('success', False),
             'message': verification_result.get('message', 'Unknown result'),
             'verification_type': 'image',
             'resultType': 'PASS' if verification_result.get('success') else 'FAIL',
-            'threshold': verification_result.get('threshold', 0.0),
-            'details': verification_result.get('details', {}),
-            'sourceImageUrl': verification_result.get('sourceImageUrl'),
-            'referenceImageUrl': verification_result.get('referenceImageUrl'),
-            'resultOverlayUrl': verification_result.get('resultOverlayUrl')
+            'matchingResult': verification_result.get('matching_result', 0.0),  # Actual confidence
+            'userThreshold': verification_result.get('user_threshold', 0.8),    # User's threshold
+            'imageFilter': verification_result.get('image_filter', 'none'),     # Applied filter
+            'sourceUrl': verification_result.get('sourceUrl'),                  # Frontend-expected names
+            'referenceUrl': verification_result.get('referenceUrl'),
+            'overlayUrl': verification_result.get('overlayUrl')
+            # Removed empty details object
         }
         
         print(f"[@route:host_verification_image:execute] Final result: {result}")

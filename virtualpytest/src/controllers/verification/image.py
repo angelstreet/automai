@@ -118,7 +118,8 @@ class ImageVerificationController:
         
         additional_data = {
             "reference_image_path": filtered_reference_path,
-            "image_filter": image_filter
+            "image_filter": image_filter,
+            "user_threshold": threshold  # Store user's original threshold setting
         }
         
         if image_list:
@@ -149,8 +150,8 @@ class ImageVerificationController:
                     image_urls = self._generate_comparison_images(source_path, resolved_image_path, area, verification_index, model, image_filter)
                     additional_data.update(image_urls)
                     
-                    # Save actual confidence for threshold display and disappear operations
-                    additional_data["threshold"] = confidence
+                    # Save actual confidence (separate from user threshold)
+                    additional_data["matching_result"] = confidence  # Actual confidence score
                     
                     return True, f"Image found with confidence {confidence:.3f} (threshold: {threshold:.3f})", additional_data
             
@@ -159,8 +160,8 @@ class ImageVerificationController:
                 image_urls = self._generate_comparison_images(best_source_path, resolved_image_path, area, verification_index, model, image_filter)
                 additional_data.update(image_urls)
             
-            # Save best confidence for threshold display and disappear operations
-            additional_data["threshold"] = max_confidence
+            # Save best confidence (separate from user threshold)
+            additional_data["matching_result"] = max_confidence  # Actual confidence score
             
             return False, f"Image not found. Best confidence: {max_confidence:.3f} (threshold: {threshold:.3f})", additional_data
         
@@ -189,14 +190,14 @@ class ImageVerificationController:
         # Invert the boolean result and adjust the message
         success = not found
         
-        # For disappear operations, invert the threshold for UI display to make it intuitive
-        if 'threshold' in additional_data and additional_data['threshold'] is not None:
-            original_threshold = additional_data['threshold']
-            # Invert threshold for disappear operations: 1.0 - original gives intuitive "disappear percentage"
-            inverted_threshold = 1.0 - original_threshold
-            additional_data['threshold'] = inverted_threshold
-            additional_data['original_threshold'] = original_threshold  # Keep original for debugging
-            print(f"[@controller:ImageVerification] Disappear threshold display: {original_threshold:.3f} -> {inverted_threshold:.3f} (inverted for UI)")
+        # For disappear operations, invert the matching result for UI display to make it intuitive
+        if 'matching_result' in additional_data and additional_data['matching_result'] is not None:
+            original_confidence = additional_data['matching_result']
+            # Invert confidence for disappear operations: 1.0 - original gives intuitive "disappear percentage"
+            inverted_confidence = 1.0 - original_confidence
+            additional_data['matching_result'] = inverted_confidence
+            additional_data['original_confidence'] = original_confidence  # Keep original for debugging
+            print(f"[@controller:ImageVerification] Disappear confidence display: {original_confidence:.3f} -> {inverted_confidence:.3f} (inverted for UI)")
         
         if success:
             # Image has disappeared (was not found)
@@ -445,22 +446,16 @@ class ImageVerificationController:
                     'screenshot_path': source_path
                 }
             
-            # Return results in the expected format
+            # Return results in frontend-expected format
             result = {
                 'success': success,
                 'message': message,
                 'screenshot_path': source_path,
-                'threshold': details.get('threshold', 0.0),
-                'details': details
+                'matching_result': details.get('matching_result', 0.0),  # Actual confidence
+                'user_threshold': details.get('user_threshold', threshold),  # User's threshold setting
+                'image_filter': details.get('image_filter', image_filter),  # Applied filter
+                'details': details  # Keep for route processing, will be removed by route
             }
-            
-            # Add image URLs from details if they exist
-            if 'sourceImageUrl' in details:
-                result['sourceImageUrl'] = details['sourceImageUrl']
-            if 'referenceImageUrl' in details:
-                result['referenceImageUrl'] = details['referenceImageUrl']
-            if 'resultOverlayUrl' in details:
-                result['resultOverlayUrl'] = details['resultOverlayUrl']
             
             return result
             
