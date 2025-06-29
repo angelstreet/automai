@@ -23,19 +23,24 @@ class ImageVerificationController:
         Args:
             av_controller: AV controller for capturing images (dependency injection)
         """
-        # Dependency injection
         self.av_controller = av_controller
-        
-        # Use AV controller's capture path with captures subdirectory
         self.captures_path = os.path.join(av_controller.video_capture_path, 'captures')
-        
-        # Set verification type for controller lookup
         self.verification_type = 'image'
-        
-        # Initialize helpers
         self.helpers = ImageHelpers(self.captures_path, av_controller)
 
-        print(f"[@controller:ImageVerification] Initialized with captures path: {self.captures_path}")
+        self.verification_results_dir = os.path.join(self.captures_path, 'verification_results')
+        self.cropped_images_dir = os.path.join(self.captures_path, 'cropped')
+        self.references_dir = os.path.join(self.captures_path, 'references')
+        
+        # Ensure all directories exist
+        for directory in [self.verification_results_dir, self.cropped_images_dir, self.references_dir]:
+            os.makedirs(directory, exist_ok=True)
+        
+        print(f"[@controller:ImageVerification] Initialized with paths:")
+        print(f"  Captures: {self.captures_path}")
+        print(f"  Verification results: {self.verification_results_dir}")
+        print(f"  Cropped images: {self.cropped_images_dir}")
+        print(f"  References: {self.references_dir}")
         
         # Controller is always ready
         self.is_connected = True
@@ -62,21 +67,19 @@ class ImageVerificationController:
 
     def waitForImageToAppear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8, 
                             area: tuple = None, image_list: List[str] = None, model: str = None, 
-                            verification_index: int = 0, image_filter: str = 'none', host_info: dict = None, device_id: str = None) -> Tuple[bool, str, dict]:
+                            verification_index: int = 0, image_filter: str = 'none') -> Tuple[bool, str, dict]:
         """
         Wait for image to appear either in provided image list or by capturing new frames.
         
         Args:
-            image_path: Path to reference image or reference name
-            timeout: Timeout for capture if no image_list provided
-            threshold: Match threshold (0.0 to 1.0)
-            area: Optional area to search (x, y, width, height)
-            image_list: Optional list of source image paths to search
-            model: Model name for organizing output images
+            image_path: Path to reference image to search for
+            timeout: Maximum time to wait (seconds)
+            threshold: Confidence threshold (0.0 to 1.0)
+            area: Optional area to search within
+            image_list: List of image paths to search in (if None, captures new frames)
+            model: Device model for R2 reference resolution
             verification_index: Index of verification for naming
             image_filter: Filter to apply ('none', 'greyscale', 'binary')
-            host_info: Host information for URL building
-            device_id: Device ID for URL building
             
         Returns:
             Tuple of (success, message, additional_data)
@@ -143,7 +146,7 @@ class ImageVerificationController:
                     print(f"[@controller:ImageVerification] Match found in {source_path} with confidence {confidence:.3f}")
                     
                     # Generate comparison images and URLs like the original working version
-                    image_urls = self._generate_comparison_images(source_path, resolved_image_path, area, verification_index, model, image_filter, host_info, device_id)
+                    image_urls = self._generate_comparison_images(source_path, resolved_image_path, area, verification_index, model, image_filter)
                     additional_data.update(image_urls)
                     
                     # Save actual confidence for threshold display and disappear operations
@@ -153,7 +156,7 @@ class ImageVerificationController:
             
             # Generate comparison images even for failed matches
             if best_source_path and model is not None:
-                image_urls = self._generate_comparison_images(best_source_path, resolved_image_path, area, verification_index, model, image_filter, host_info, device_id)
+                image_urls = self._generate_comparison_images(best_source_path, resolved_image_path, area, verification_index, model, image_filter)
                 additional_data.update(image_urls)
             
             # Save best confidence for threshold display and disappear operations
@@ -168,7 +171,7 @@ class ImageVerificationController:
 
     def waitForImageToDisappear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8,
                                area: tuple = None, image_list: List[str] = None, model: str = None,
-                               verification_index: int = 0, image_filter: str = 'none', host_info: dict = None, device_id: str = None) -> Tuple[bool, str, dict]:
+                               verification_index: int = 0, image_filter: str = 'none') -> Tuple[bool, str, dict]:
         """
         Wait for image to disappear by calling waitForImageToAppear and inverting the result.
         """
@@ -181,7 +184,7 @@ class ImageVerificationController:
         print(f"[@controller:ImageVerification] Looking for image to disappear: {image_path}")
         
         # Smart reuse: call waitForImageToAppear and invert result
-        found, message, additional_data = self.waitForImageToAppear(image_path, timeout, threshold, area, image_list, model, verification_index, image_filter, host_info, device_id)
+        found, message, additional_data = self.waitForImageToAppear(image_path, timeout, threshold, area, image_list, model, verification_index, image_filter)
         
         # Invert the boolean result and adjust the message
         success = not found
@@ -409,14 +412,8 @@ class ImageVerificationController:
             image_filter = params.get('image_filter', 'none')
             model = params.get('model', 'default')  # Get device model for R2 download
             
-            # URL building parameters (passed from route)
-            host_info = params.get('host_info')
-            device_id = params.get('device_id')
-            
             print(f"[@controller:ImageVerification] Searching for image: {image_path}")
             print(f"[@controller:ImageVerification] Timeout: {timeout}s, Confidence: {threshold}")
-            print(f"[@controller:ImageVerification] Host info available: {host_info is not None}")
-            print(f"[@controller:ImageVerification] Device ID: {device_id}")
             
             # Execute verification based on command using the exact same method signature as before
             if command == 'waitForImageToAppear':
@@ -428,9 +425,7 @@ class ImageVerificationController:
                     image_list=[source_path],  # Use source_path as image list
                     model=model,  # Pass device model for R2 reference resolution
                     verification_index=0,
-                    image_filter=image_filter,
-                    host_info=host_info,  # Pass host info for URL building
-                    device_id=device_id   # Pass device_id for URL building
+                    image_filter=image_filter
                 )
             elif command == 'waitForImageToDisappear':
                 success, message, details = self.waitForImageToDisappear(
@@ -441,9 +436,7 @@ class ImageVerificationController:
                     image_list=[source_path],  # Use source_path as image list
                     model=model,  # Pass device model for R2 reference resolution
                     verification_index=0,
-                    image_filter=image_filter,
-                    host_info=host_info,  # Pass host info for URL building
-                    device_id=device_id   # Pass device_id for URL building
+                    image_filter=image_filter
                 )
             else:
                 return {
@@ -506,18 +499,16 @@ class ImageVerificationController:
 
     def _generate_comparison_images(self, source_path: str, reference_path: str, area: dict = None, 
                                    verification_index: int = 0, model: str = None, 
-                                   image_filter: str = 'none', host_info: dict = None, device_id: str = None) -> dict:
+                                   image_filter: str = 'none') -> dict:
         """
-        Generate comparison images exactly like the original working version.
-        Creates source, reference, and overlay images with public URLs.
+        Generate comparison images and return local file paths.
+        Route will handle URL building.
         """
         try:
-            # Create results directory using device-specific captures path + verification_results
-            results_dir = os.path.join(self.captures_path, 'verification_results')
-            os.makedirs(results_dir, exist_ok=True)
+            # Use predefined verification results directory
+            results_dir = self.verification_results_dir
             
             # Generate unique filenames for this verification
-            timestamp = int(time.time())
             source_result_path = f'{results_dir}/source_image_{verification_index}.png'
             reference_result_path = f'{results_dir}/reference_image_{verification_index}.png'
             overlay_result_path = f'{results_dir}/result_overlay_{verification_index}.png'
@@ -528,15 +519,12 @@ class ImageVerificationController:
             print(f"  Overlay: {overlay_result_path}")
             
             # === STEP 1: Handle Source Image ===
-            # Crop source image to search area and apply filter if needed
             if area:
                 print(f"[@controller:ImageVerification] Cropping source to area: {area}")
-                # Crop source image to search area using helpers
                 if not self.helpers.crop_image_to_area(source_path, source_result_path, area):
                     print(f"[@controller:ImageVerification] Failed to crop source image")
                     return {}
             else:
-                # Use full source image
                 print(f"[@controller:ImageVerification] Using full source image: {source_path}")
                 self.helpers.copy_image_file(source_path, source_result_path)
             
@@ -547,9 +535,7 @@ class ImageVerificationController:
                     print(f"[@controller:ImageVerification] Warning: Failed to apply {image_filter} filter to source")
             
             # === STEP 2: Handle Reference Image ===
-            # Copy reference image and apply filter if needed
             if image_filter and image_filter != 'none':
-                # User wants filtered comparison - check if filtered reference exists
                 base_path, ext = os.path.splitext(reference_path)
                 filtered_reference_path = f"{base_path}_{image_filter}{ext}"
                 
@@ -557,23 +543,16 @@ class ImageVerificationController:
                     print(f"[@controller:ImageVerification] Using existing filtered reference: {filtered_reference_path}")
                     self.helpers.copy_image_file(filtered_reference_path, reference_result_path)
                 else:
-                    print(f"[@controller:ImageVerification] Filtered reference not found, creating dynamically from original: {reference_path}")
-                    # Copy original reference first using helpers
+                    print(f"[@controller:ImageVerification] Creating filtered reference dynamically")
                     self.helpers.copy_image_file(reference_path, reference_result_path)
-                    # Apply filter dynamically to the copied reference
                     if not self.helpers.apply_image_filter(reference_result_path, image_filter):
-                        print(f"[@controller:ImageVerification] Warning: Failed to apply {image_filter} filter to reference, using original")
-                        # If filter fails, copy original again to ensure clean state
+                        print(f"[@controller:ImageVerification] Warning: Failed to apply {image_filter} filter to reference")
                         self.helpers.copy_image_file(reference_path, reference_result_path)
-                    else:
-                        print(f"[@controller:ImageVerification] Successfully applied {image_filter} filter to reference image")
             else:
-                # User wants original comparison - use original reference
                 print(f"[@controller:ImageVerification] Using original reference: {reference_path}")
                 self.helpers.copy_image_file(reference_path, reference_result_path)
             
-            # === STEP 3: Create Pixel-by-Pixel Difference Overlay ===
-            # Load both images for comparison
+            # === STEP 3: Create Overlay ===
             source_img = cv2.imread(source_result_path)
             ref_img = cv2.imread(reference_result_path)
             
@@ -581,64 +560,20 @@ class ImageVerificationController:
                 print(f"[@controller:ImageVerification] Failed to load images for comparison")
                 return {}
             
-            print(f"[@controller:ImageVerification] Source image shape: {source_img.shape}")
-            print(f"[@controller:ImageVerification] Reference image shape: {ref_img.shape}")
-            
-            # Create pixel-by-pixel difference overlay
             overlay_img = self._create_pixel_difference_overlay(source_img, ref_img)
-            
             if overlay_img is not None:
                 cv2.imwrite(overlay_result_path, overlay_img)
-                print(f"[@controller:ImageVerification] Created pixel-by-pixel difference overlay")
+                print(f"[@controller:ImageVerification] Created overlay image")
             else:
-                print(f"[@controller:ImageVerification] Failed to create pixel difference overlay")
+                print(f"[@controller:ImageVerification] Failed to create overlay")
                 return {}
             
-            # === STEP 4: Convert local paths to public URLs using URL builder ===
-            # Build public URLs using provided host_info and device_id
-            try:
-                from src.utils.build_url_utils import buildVerificationResultUrl
-                
-                if not host_info or not device_id:
-                    print(f"[@controller:ImageVerification] ERROR: host_info and device_id required for URL building")
-                    print(f"  host_info: {host_info}")
-                    print(f"  device_id: {device_id}")
-                    raise ValueError("host_info and device_id are required for URL building")
-                
-                # Build public URLs using device-specific URL builder
-                source_filename = os.path.basename(source_result_path)
-                reference_filename = os.path.basename(reference_result_path)
-                overlay_filename = os.path.basename(overlay_result_path)
-                
-                source_url = buildVerificationResultUrl(host_info, source_filename, device_id)
-                reference_url = buildVerificationResultUrl(host_info, reference_filename, device_id)
-                overlay_url = buildVerificationResultUrl(host_info, overlay_filename, device_id)
-                
-                print(f"[@controller:ImageVerification] Built verification result URLs:")
-                print(f"  Source: {source_url}")
-                print(f"  Reference: {reference_url}")
-                print(f"  Overlay: {overlay_url}")
-                
-                return {
-                    "sourceImageUrl": source_url,
-                    "referenceImageUrl": reference_url,
-                    "resultOverlayUrl": overlay_url,
-                    "source_image_path": source_result_path,
-                    "reference_image_path": reference_result_path,
-                    "result_overlay_path": overlay_result_path
-                }
-                
-            except Exception as url_error:
-                print(f"[@controller:ImageVerification] URL building error: {url_error}")
-                # Return local paths as fallback
-                return {
-                    "sourceImageUrl": None,
-                    "referenceImageUrl": None,
-                    "resultOverlayUrl": None,
-                    "source_image_path": source_result_path,
-                    "reference_image_path": reference_result_path,
-                    "result_overlay_path": overlay_result_path
-                }
+            # Return only local file paths - route will build URLs
+            return {
+                "source_image_path": source_result_path,
+                "reference_image_path": reference_result_path,
+                "result_overlay_path": overlay_result_path
+            }
             
         except Exception as e:
             print(f"[@controller:ImageVerification] Error generating comparison images: {e}")
@@ -706,7 +641,7 @@ class ImageVerificationController:
     def _resolve_reference_image(self, image_path: str, model: str = None) -> Optional[str]:
         """
         Resolve reference image path by downloading from R2 if needed.
-        Uses the device-specific captures path + references subdirectory.
+        Uses the predefined references directory.
         """
         try:
             # Extract reference name from path
@@ -720,9 +655,9 @@ class ImageVerificationController:
             
             print(f"[@controller:ImageVerification] Resolving reference: {reference_name} for model: {model}")
             
-            # Use device-specific captures path + references subdirectory
+            # Use predefined references directory with device model subdirectory
             device_model = model or 'default'
-            local_dir = os.path.join(self.captures_path, 'references', device_model)
+            local_dir = os.path.join(self.references_dir, device_model)
             os.makedirs(local_dir, exist_ok=True)
             
             # Use the reference name with proper extension

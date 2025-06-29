@@ -9,6 +9,8 @@ import { VerificationTextComparisonDisplay } from './VerificationTextComparisonD
 interface VerificationTestResultsProps {
   verification: Verification;
   testResult: Verification;
+  processImageUrl: (url: string) => string;
+  getCacheBustedUrl: (url: string) => string;
   onImageClick: (
     sourceUrl: string,
     referenceUrl: string,
@@ -32,6 +34,8 @@ interface VerificationTestResultsProps {
 export const VerificationTestResults: React.FC<VerificationTestResultsProps> = ({
   verification,
   testResult,
+  processImageUrl,
+  getCacheBustedUrl,
   onImageClick,
   onSourceImageClick,
 }) => {
@@ -87,6 +91,8 @@ export const VerificationTestResults: React.FC<VerificationTestResultsProps> = (
             userThreshold={verification.params?.threshold}
             matchingResult={testResult.threshold}
             imageFilter={verification.params?.image_filter || 'none'}
+            processImageUrl={processImageUrl}
+            getCacheBustedUrl={getCacheBustedUrl}
             onImageClick={onImageClick}
           />
         )}

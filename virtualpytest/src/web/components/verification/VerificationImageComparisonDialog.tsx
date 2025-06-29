@@ -18,6 +18,8 @@ interface VerificationImageComparisonDialogProps {
   matchingResult?: number;
   resultType?: 'PASS' | 'FAIL' | 'ERROR';
   imageFilter?: 'none' | 'greyscale' | 'binary';
+  processImageUrl: (url: string) => string;
+  getCacheBustedUrl: (url: string) => string;
   onClose: () => void;
 }
 
@@ -32,6 +34,8 @@ export const VerificationImageComparisonDialog: React.FC<
   imageFilter,
   matchingResult,
   userThreshold,
+  processImageUrl,
+  getCacheBustedUrl,
   onClose,
 }) => {
   const getResultColor = () => {
@@ -45,47 +49,6 @@ export const VerificationImageComparisonDialog: React.FC<
       default:
         return '#757575';
     }
-  };
-
-  // Process image URLs with HTTP to HTTPS proxy logic (same as ScreenshotCapture)
-  const processImageUrl = (url: string): string => {
-    if (!url) return '';
-
-    console.log(`[@component:VerificationImageComparisonDialog] Processing image URL: ${url}`);
-
-    // Handle data URLs (base64) - return as is
-    if (url.startsWith('data:')) {
-      console.log('[@component:VerificationImageComparisonDialog] Using data URL');
-      return url;
-    }
-
-    // Handle HTTP URLs - use proxy to convert to HTTPS
-    if (url.startsWith('http:')) {
-      console.log('[@component:VerificationImageComparisonDialog] HTTP URL detected, using proxy');
-      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(url)}`;
-      console.log(
-        `[@component:VerificationImageComparisonDialog] Generated proxy URL: ${proxyUrl}`,
-      );
-      return proxyUrl;
-    }
-
-    // Handle HTTPS URLs - return as is (no proxy needed)
-    if (url.startsWith('https:')) {
-      console.log('[@component:VerificationImageComparisonDialog] Using HTTPS URL directly');
-      return url;
-    }
-
-    // For relative paths or other formats, use directly
-    console.log('[@component:VerificationImageComparisonDialog] Using URL directly');
-    return url;
-  };
-
-  // Add cache-busting parameters to force browser to reload images
-  const getCacheBustedUrl = (url: string) => {
-    if (!url) return url;
-    const timestamp = Date.now();
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}t=${timestamp}`;
   };
 
   // Get CSS filter based on the selected filter

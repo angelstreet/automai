@@ -5,6 +5,16 @@ import { Host } from '../../types/common/Host_Types';
 import { Verification } from '../../types/verification/Verification_Types';
 
 // Define interfaces for verification data structures
+interface ImageComparisonDialogData {
+  open: boolean;
+  sourceUrl: string;
+  referenceUrl: string;
+  overlayUrl?: string;
+  userThreshold?: number;
+  matchingResult?: number;
+  resultType?: 'PASS' | 'FAIL' | 'ERROR';
+  imageFilter?: 'none' | 'greyscale' | 'binary';
+}
 
 interface UseVerificationProps {
   selectedHost: Host | null;
@@ -26,6 +36,77 @@ export const useVerification = ({
   const [error, setError] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Verification[]>([]);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Image comparison modal state
+  const [imageComparisonDialog, setImageComparisonDialog] = useState<ImageComparisonDialogData>({
+    open: false,
+    sourceUrl: '',
+    referenceUrl: '',
+    overlayUrl: '',
+    userThreshold: undefined,
+    matchingResult: undefined,
+    resultType: undefined,
+    imageFilter: 'none',
+  });
+
+  // URL processing utilities
+  const processImageUrl = useCallback((url: string): string => {
+    if (!url) return '';
+
+    console.log(`[@hook:useVerification] Processing image URL: ${url}`);
+
+    // Handle data URLs (base64) - return as is
+    if (url.startsWith('data:')) {
+      console.log('[@hook:useVerification] Using data URL');
+      return url;
+    }
+
+    // Handle HTTP URLs - use proxy to convert to HTTPS
+    if (url.startsWith('http:')) {
+      console.log('[@hook:useVerification] HTTP URL detected, using proxy');
+      const proxyUrl = `/server/av/proxy-image?url=${encodeURIComponent(url)}`;
+      console.log(`[@hook:useVerification] Generated proxy URL: ${proxyUrl}`);
+      return proxyUrl;
+    }
+
+    // Handle HTTPS URLs - return as is (no proxy needed)
+    if (url.startsWith('https:')) {
+      console.log('[@hook:useVerification] Using HTTPS URL directly');
+      return url;
+    }
+
+    // For relative paths or other formats, use directly
+    console.log('[@hook:useVerification] Using URL directly');
+    return url;
+  }, []);
+
+  const getCacheBustedUrl = useCallback((url: string) => {
+    if (!url) return url;
+    const timestamp = Date.now();
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}t=${timestamp}`;
+  }, []);
+
+  // Image comparison modal handlers
+  const openImageComparisonModal = useCallback((data: Partial<ImageComparisonDialogData>) => {
+    setImageComparisonDialog({
+      open: true,
+      sourceUrl: data.sourceUrl || '',
+      referenceUrl: data.referenceUrl || '',
+      overlayUrl: data.overlayUrl || '',
+      userThreshold: data.userThreshold,
+      matchingResult: data.matchingResult,
+      resultType: data.resultType,
+      imageFilter: data.imageFilter || 'none',
+    });
+  }, []);
+
+  const closeImageComparisonModal = useCallback(() => {
+    setImageComparisonDialog((prev) => ({
+      ...prev,
+      open: false,
+    }));
+  }, []);
 
   // Effect to clear success message after delay
   useEffect(() => {
@@ -201,6 +282,13 @@ export const useVerification = ({
     handleTest,
     selectedHost,
     deviceId,
+    // Image comparison modal
+    imageComparisonDialog,
+    openImageComparisonModal,
+    closeImageComparisonModal,
+    // URL processing utilities
+    processImageUrl,
+    getCacheBustedUrl,
   };
 };
 

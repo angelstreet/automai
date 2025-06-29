@@ -28,10 +28,6 @@ class TextHelpers:
         """Initialize text helpers with captures path."""
         self.captures_path = captures_path
         
-        # Create text references directory
-        self.text_references_dir = os.path.join(captures_path, 'text_references')
-        os.makedirs(self.text_references_dir, exist_ok=True)
-    
     def download_image(self, source_url: str) -> str:
         """Download image from URL only."""
         try:
@@ -110,9 +106,6 @@ class TextHelpers:
             processed_filename = f'text_detection_{timestamp}.png'
             processed_path = os.path.join(self.captures_path, processed_filename)
             
-            # Ensure captures directory exists
-            os.makedirs(self.captures_path, exist_ok=True)
-            
             # Save the cropped image (before filters) for display
             cv2.imwrite(processed_path, img)
             
@@ -163,20 +156,4 @@ class TextHelpers:
         return target_clean in extracted_clean
 
 
-def create_text_helpers(device_id: str) -> TextHelpers:
-    """Factory function to create TextHelpers for standalone scripts."""
-    try:
-        from ..controller_config_factory import ControllerConfigFactory
-        
-        config_factory = ControllerConfigFactory()
-        controller_manager = config_factory.create_controller_manager(device_id)
-        
-        av_controller = controller_manager.get_controller('av')
-        if not av_controller:
-            raise ValueError("Failed to get AV controller for capture path")
-        
-        return TextHelpers(av_controller.video_capture_path)
-        
-    except Exception as e:
-        print(f"[@text_helpers] Error creating text helpers: {e}")
-        raise 
+ 

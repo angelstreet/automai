@@ -2,7 +2,17 @@ import {
   KeyboardArrowDown as ArrowDownIcon,
   KeyboardArrowRight as ArrowRightIcon,
 } from '@mui/icons-material';
-import { Box, Typography, IconButton, Collapse } from '@mui/material';
+import {
+  Box,
+  Typography,
+  IconButton,
+  Collapse,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+} from '@mui/material';
 import React from 'react';
 
 import {
@@ -14,7 +24,6 @@ import { Host } from '../../../types/common/Host_Types';
 import { VerificationsList } from '../../verification/VerificationsList';
 
 import VerificationCapture from './VerificationCapture';
-import VerificationResultModal from './VerificationResultModal';
 
 interface DragArea {
   x: number;
@@ -218,8 +227,61 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
           </Collapse>
         </Box>
 
-        {/* =================== RESULT MODAL =================== */}
-        <VerificationResultModal verification={verification} />
+        {/* =================== CONFIRMATION DIALOG =================== */}
+        <Dialog
+          open={verification.showConfirmDialog}
+          onClose={verification.handleCancelOverwrite}
+          PaperProps={{
+            sx: {
+              backgroundColor: '#2E2E2E',
+              color: '#ffffff',
+            },
+          }}
+        >
+          <DialogTitle sx={{ color: '#ffffff', fontSize: '1rem' }}>
+            Warning: Overwrite Reference
+          </DialogTitle>
+          <DialogContent>
+            <Typography sx={{ color: '#ffffff', fontSize: '0.875rem' }}>
+              A {verification.referenceType} reference named "{verification.referenceName}" already
+              exists.
+              <br />
+              Do you want to overwrite it?
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ gap: 1, p: 2 }}>
+            <Button
+              onClick={verification.handleCancelOverwrite}
+              variant="outlined"
+              size="small"
+              sx={{
+                borderColor: '#666',
+                color: '#ffffff',
+                fontSize: '0.75rem',
+                '&:hover': {
+                  borderColor: '#888',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                },
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={verification.handleConfirmOverwrite}
+              variant="contained"
+              size="small"
+              sx={{
+                bgcolor: '#f44336',
+                fontSize: '0.75rem',
+                '&:hover': {
+                  bgcolor: '#d32f2f',
+                },
+              }}
+            >
+              Confirm
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     );
   },

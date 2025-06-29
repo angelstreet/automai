@@ -29,11 +29,7 @@ class ImageHelpers:
         """Initialize image helpers with captures path and AV controller."""
         self.captures_path = captures_path
         self.av_controller = av_controller
-        
-        # Create image references directory
-        self.image_references_dir = os.path.join(captures_path, 'image_references')
-        os.makedirs(self.image_references_dir, exist_ok=True)
-    
+       
     def download_image(self, source_url: str) -> str:
         """Download image from URL only."""
         try:
@@ -202,10 +198,6 @@ class ImageHelpers:
             
             # Crop image
             cropped_img = img[y:y+height, x:x+width]
-            
-            # Ensure target directory exists
-            target_dir = os.path.dirname(image_cropped_path)
-            os.makedirs(target_dir, exist_ok=True)
             
             # Save cropped image
             success = cv2.imwrite(image_cropped_path, cropped_img)
@@ -377,10 +369,6 @@ class ImageHelpers:
                 print(f"[@image_helpers] Source image not found: {image_source_path}")
                 return False
             
-            # Ensure target directory exists
-            target_dir = os.path.dirname(image_target_path)
-            os.makedirs(target_dir, exist_ok=True)
-            
             # Copy the image
             shutil.copy2(image_source_path, image_target_path)
             print(f"[@image_helpers] Copied image: {image_source_path} -> {image_target_path}")
@@ -427,22 +415,3 @@ class ImageHelpers:
         """Generate unique filename with timestamp."""
         timestamp = int(time.time() * 1000)
         return f"{base_name}_{timestamp}{extension}"
-
-
-def create_image_helpers(device_id: str) -> ImageHelpers:
-    """Factory function to create ImageHelpers for standalone scripts."""
-    try:
-        from ..controller_config_factory import ControllerConfigFactory
-        
-        config_factory = ControllerConfigFactory()
-        controller_manager = config_factory.create_controller_manager(device_id)
-        
-        av_controller = controller_manager.get_controller('av')
-        if not av_controller:
-            raise ValueError("Failed to get AV controller for capture path")
-        
-        return ImageHelpers(av_controller.video_capture_path, av_controller)
-        
-    except Exception as e:
-        print(f"[@image_helpers] Error creating image helpers: {e}")
-        raise
