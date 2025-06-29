@@ -18,8 +18,8 @@ interface VerificationImageComparisonDialogProps {
   matchingResult?: number;
   resultType?: 'PASS' | 'FAIL' | 'ERROR';
   imageFilter?: 'none' | 'greyscale' | 'binary';
-  processImageUrl: (url: string) => string;
-  getCacheBustedUrl: (url: string) => string;
+  processImageUrl?: (url: string) => string;
+  getCacheBustedUrl?: (url: string) => string;
   onClose: () => void;
 }
 
@@ -34,8 +34,8 @@ export const VerificationImageComparisonDialog: React.FC<
   imageFilter,
   matchingResult,
   userThreshold,
-  processImageUrl,
-  getCacheBustedUrl,
+  processImageUrl = (url) => url,
+  getCacheBustedUrl = (url) => `${url}${url.includes('?') ? '&' : '?'}cache=${Date.now()}`,
   onClose,
 }) => {
   const getResultColor = () => {

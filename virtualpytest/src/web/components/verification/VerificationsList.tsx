@@ -549,6 +549,8 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
           resultType={imageComparisonDialog.resultType}
           imageFilter={imageComparisonDialog.imageFilter}
           onClose={() => setImageComparisonDialog((prev) => ({ ...prev, open: false }))}
+          processImageUrl={(url) => url}
+          getCacheBustedUrl={(url) => `${url}${url.includes('?') ? '&' : '?'}cache=${Date.now()}`}
         />
 
         {/* Text Comparison Dialog */}
