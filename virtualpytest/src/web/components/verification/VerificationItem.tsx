@@ -91,7 +91,6 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
             MenuProps={{
               PaperProps: {
                 sx: {
-                  maxHeight: 200,
                   '& .MuiMenuItem-root': {
                     fontSize: '0.8rem',
                     minHeight: '28px',

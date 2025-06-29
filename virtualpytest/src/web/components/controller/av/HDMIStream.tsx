@@ -276,9 +276,9 @@ export const HDMIStream = React.memo(
       const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
       const frameTimestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
 
-      // Use centralized URL builder
-      return buildCaptureUrl(host, frameTimestamp);
-    }, [captureMode, totalFrames, captureStartTime, currentFrame, host]);
+      // Use centralized URL builder with deviceId
+      return buildCaptureUrl(host, frameTimestamp, deviceId);
+    }, [captureMode, totalFrames, captureStartTime, currentFrame, host, deviceId]);
 
     // Check if verification editor should be visible
     const isVerificationVisible = captureMode === 'screenshot' || captureMode === 'video';

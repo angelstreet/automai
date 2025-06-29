@@ -42,24 +42,25 @@ def buildHostUrl(host_info: dict, endpoint: str) -> str:
 # SPECIALIZED URL BUILDERS
 # =====================================================
 
-def buildCaptureUrl(host_info: dict, timestamp: str, device_id: str = None) -> str:
+def buildCaptureUrl(host_info: dict, timestamp: str, device_id: str) -> str:
     """
-    Build URL for live screenshot/video captures - simple approach like ScreenshotCapture
+    Build URL for live screenshot/video captures using device-specific paths
     
     Args:
         host_info: Host information from registry
         timestamp: Screenshot timestamp (YYYYMMDDHHMMSS format)
-        device_id: Device ID (optional - uses simple path if not provided)
+        device_id: Device ID (required)
         
     Returns:
         Complete URL to screenshot capture
         
     Example:
-        buildCaptureUrl(host_info, '20250117134500')
+        buildCaptureUrl(host_info, '20250117134500', 'device1')
         -> 'https://host:444/host/stream/capture1/captures/capture_20250117134500.jpg'
     """
-    # Simple path construction like ScreenshotCapture component
-    capture_path = f"/host/stream/capture1/captures/capture_{timestamp}.jpg"
+    # Get device-specific capture path
+    capture_path = _get_device_capture_path(host_info, device_id)
+    capture_path = f"host{capture_path}/capture_{timestamp}.jpg"
     
     host_name = host_info.get('host_name', '')
     
