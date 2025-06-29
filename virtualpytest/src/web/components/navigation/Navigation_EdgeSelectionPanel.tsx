@@ -15,7 +15,7 @@ interface EdgeSelectionPanelProps {
   onDelete: () => void;
   setEdgeForm: React.Dispatch<React.SetStateAction<EdgeForm>>;
   setIsEdgeDialogOpen: (open: boolean) => void;
-  onUpdateEdge?: (edgeId: string, updatedData: any) => void; // Add callback for updating edge data
+
   // Device control props
   isControlActive?: boolean;
   selectedHost?: Host; // Make optional to fix regression
@@ -29,7 +29,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
     onDelete,
     setEdgeForm,
     setIsEdgeDialogOpen,
-    onUpdateEdge,
+
     isControlActive = false,
     selectedHost,
   }) => {

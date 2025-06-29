@@ -152,9 +152,14 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       const nodeVerifications = [];
       if (selectedNode.data.verification_ids && selectedNode.data.verification_ids.length > 0) {
         for (const verificationId of selectedNode.data.verification_ids) {
-          const verification = allVerifications.find((v) => v.verification_id === verificationId);
+          // Database verifications have 'id' property (Supabase primary key)
+          const verification = allVerifications.find((v) => v.id === verificationId);
           if (verification) {
             nodeVerifications.push(verification);
+          } else {
+            console.warn(
+              `[@component:NodeSelectionPanel] Could not find verification with ID: ${verificationId}`,
+            );
           }
         }
       }

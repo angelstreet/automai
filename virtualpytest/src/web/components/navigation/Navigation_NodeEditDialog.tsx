@@ -68,25 +68,22 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const [isRunningGoto, setIsRunningGoto] = useState(false);
   const canRunGoto = isControlActive && selectedHost && nodeForm;
 
-  const runGoto = useCallback(
-    async (verifications: any[]) => {
-      if (!canRunGoto) return;
+  const runGoto = useCallback(async () => {
+    if (!canRunGoto) return;
 
-      setIsRunningGoto(true);
-      setGotoResult('Running goto operation...');
+    setIsRunningGoto(true);
+    setGotoResult('Running goto operation...');
 
-      try {
-        // Mock implementation - replace with actual goto logic
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setGotoResult('✅ Goto operation completed successfully');
-      } catch (error) {
-        setGotoResult(`❌ Goto operation failed: ${error}`);
-      } finally {
-        setIsRunningGoto(false);
-      }
-    },
-    [canRunGoto],
-  );
+    try {
+      // Mock implementation - replace with actual goto logic
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      setGotoResult('✅ Goto operation completed successfully');
+    } catch (error) {
+      setGotoResult(`❌ Goto operation failed: ${error}`);
+    } finally {
+      setIsRunningGoto(false);
+    }
+  }, [canRunGoto]);
 
   const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -182,7 +179,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
   // Use the runGoto function
   const handleRunGoto = () => {
-    runGoto(verification.verifications);
+    runGoto();
   };
 
   return (
@@ -286,7 +283,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             availableVerifications={verification.availableVerificationTypes}
             onVerificationsChange={handleVerificationsChange}
             loading={verification.loading}
-            error={verification.error}
             model={model || 'android_mobile'}
             selectedHost={selectedHost}
             onTest={verification.handleTest}
