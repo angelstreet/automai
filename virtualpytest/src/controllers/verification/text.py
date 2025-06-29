@@ -29,8 +29,11 @@ class TextVerificationController:
         # Set verification type for controller lookup
         self.verification_type = 'text'
         
-        # Initialize helpers
-        self.helpers = TextHelpers(self.captures_path)
+        # Set up text references directory
+        self.text_references_dir = os.path.join(self.captures_path, 'text_references')
+        
+        # Initialize helpers with text references directory
+        self.helpers = TextHelpers(self.captures_path, self.text_references_dir)
 
         print(f"[@controller:TextVerification] Initialized with captures path: {self.captures_path}")
         
@@ -208,7 +211,8 @@ class TextVerificationController:
     def detect_text(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Route interface for text detection."""
         try:
-            helpers = TextHelpers(self.captures_path)
+            # Use the controller's helper instance instead of creating a new one
+            helpers = self.helpers
             
             # Get source filename from frontend
             image_source_url = data.get('image_source_url', '')
@@ -217,10 +221,13 @@ class TextVerificationController:
             if not image_source_url:
                 return {'success': False, 'message': 'image_source_url is required'}
             
+            print(f"[@controller:TextVerification] Detecting text in: {image_source_url}")
+            
             # Build full path for local files, keep URLs as-is
             if image_source_url.startswith(('http://', 'https://')):
                 # URL case - pass to helpers for downloading
                 image_source_path = helpers.download_image(image_source_url)
+                print(f"[@controller:TextVerification] Downloaded image to: {image_source_path}")
             else:
                 # Local filename case - build full path directly
                 image_source_path = os.path.join(self.captures_path, image_source_url)
@@ -242,6 +249,7 @@ class TextVerificationController:
             }
             
         except Exception as e:
+            print(f"[@controller:TextVerification] Error in detect_text: {str(e)}")
             return {'success': False, 'message': f'Text detection failed: {str(e)}'}
     
     def save_text(self, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -259,8 +267,7 @@ class TextVerificationController:
                 return {'success': False, 'message': 'text detected image not found'}
             
             # Save text reference locally (for local file backup)
-            helpers = TextHelpers(self.captures_path)
-            saved_path = helpers.save_text_reference(text, reference_name, area)
+            saved_path = self.helpers.save_text_reference(text, reference_name, area)
             
             # Return data needed for server step database save
             return {

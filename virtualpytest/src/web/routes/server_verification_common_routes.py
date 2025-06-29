@@ -223,19 +223,21 @@ def verification_execute_batch():
                     'verification_type': verification_type
                 }
             else:
-                # Flatten the nested verification_result structure
-                verification_result = result.get('verification_result', {})
+                # All verification controllers return flat structures
+                # Use the result directly without looking for a nested verification_result
+                verification_result = result
+                
                 flattened_result = {
                     'success': verification_result.get('success', False),
                     'message': verification_result.get('message'),
                     'error': verification_result.get('error'),
-                    'threshold': verification_result.get('threshold') or verification_result.get('confidence'),
+                    'threshold': verification_result.get('threshold') or verification_result.get('confidence') or verification_result.get('userThreshold', 0.8),
                     'resultType': 'PASS' if verification_result.get('success', False) else 'FAIL',
-                    'sourceImageUrl': verification_result.get('source_image_url'),
-                    'referenceImageUrl': verification_result.get('reference_image_url'),
-                    'extractedText': verification_result.get('extracted_text'),
-                    'searchedText': verification_result.get('searched_text'),
-                    'imageFilter': verification_result.get('image_filter'),
+                    'sourceImageUrl': verification_result.get('sourceUrl'),
+                    'referenceImageUrl': verification_result.get('referenceUrl'),
+                    'extractedText': verification_result.get('extractedText', ''),
+                    'searchedText': verification_result.get('searchedText', ''),
+                    'imageFilter': verification_result.get('imageFilter', 'none'),
                     'detectedLanguage': verification_result.get('detected_language'),
                     'languageConfidence': verification_result.get('language_confidence'),
                     # ADB-specific fields
@@ -366,19 +368,21 @@ def execute_batch_verification():
                     'verification_type': verification_type
                 }
             else:
-                # Flatten the nested verification_result structure
-                verification_result = result.get('verification_result', {})
+                # All verification controllers return flat structures
+                # Use the result directly without looking for a nested verification_result
+                verification_result = result
+                
                 flattened_result = {
                     'success': verification_result.get('success', False),
                     'message': verification_result.get('message'),
                     'error': verification_result.get('error'),
-                    'threshold': verification_result.get('threshold') or verification_result.get('confidence'),
+                    'threshold': verification_result.get('threshold') or verification_result.get('confidence') or verification_result.get('userThreshold', 0.8),
                     'resultType': 'PASS' if verification_result.get('success', False) else 'FAIL',
-                    'sourceImageUrl': verification_result.get('source_image_url'),
-                    'referenceImageUrl': verification_result.get('reference_image_url'),
-                    'extractedText': verification_result.get('extracted_text'),
-                    'searchedText': verification_result.get('searched_text'),
-                    'imageFilter': verification_result.get('image_filter'),
+                    'sourceImageUrl': verification_result.get('sourceUrl'),
+                    'referenceImageUrl': verification_result.get('referenceUrl'),
+                    'extractedText': verification_result.get('extractedText', ''),
+                    'searchedText': verification_result.get('searchedText', ''),
+                    'imageFilter': verification_result.get('imageFilter', 'none'),
                     'detectedLanguage': verification_result.get('detected_language'),
                     'languageConfidence': verification_result.get('language_confidence'),
                     # ADB-specific fields

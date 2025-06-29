@@ -24,9 +24,12 @@ from urllib.parse import urlparse
 class TextHelpers:
     """Simple text processing helpers for core operations."""
     
-    def __init__(self, captures_path: str):
+    def __init__(self, captures_path: str, text_references_dir: str = None):
         """Initialize text helpers with captures path."""
         self.captures_path = captures_path
+        
+        # Initialize text_references_dir
+        self.text_references_dir = text_references_dir or os.path.join(self.captures_path, 'text_references')
         
     def download_image(self, source_url: str) -> str:
         """Download image from URL only."""
