@@ -187,7 +187,7 @@ export function useHdmiStream({
             image_source_url: captureSourcePath,
 
             reference_name: referenceName,
-            model: deviceModel,
+            device_model: deviceModel,
             autocrop: imageProcessingOptions.autocrop,
             remove_background: imageProcessingOptions.removeBackground,
           }),
@@ -205,7 +205,7 @@ export function useHdmiStream({
             image_source_url: captureSourcePath,
 
             reference_name: referenceName,
-            model: deviceModel,
+            device_model: deviceModel,
           }),
         });
       }
@@ -299,7 +299,7 @@ export function useHdmiStream({
         },
         body: JSON.stringify({
           host_name: host.host_name,
-          model: deviceModel,
+          device_model: deviceModel,
           area: selectedArea,
           image_source_url: captureSourcePath,
           image_filter: 'none',

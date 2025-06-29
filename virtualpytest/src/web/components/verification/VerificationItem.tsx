@@ -216,13 +216,16 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
       />
 
       {/* Test Results Display using extracted component */}
-      <VerificationTestResults
-        testResult={testResult}
-        onImageClick={onImageClick}
-        onSourceImageClick={onSourceImageClick}
-        processImageUrl={processImageUrl}
-        getCacheBustedUrl={getCacheBustedUrl}
-      />
+      {testResult && (
+        <VerificationTestResults
+          verification={verification}
+          testResult={testResult}
+          onImageClick={onImageClick}
+          onSourceImageClick={onSourceImageClick}
+          processImageUrl={processImageUrl}
+          getCacheBustedUrl={getCacheBustedUrl}
+        />
+      )}
     </Box>
   );
 };

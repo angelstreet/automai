@@ -188,7 +188,7 @@ export const useVerificationEditor = ({
             area: selectedArea,
             image_source_url: captureSourcePath,
             reference_name: referenceName || 'temp_capture',
-            model: deviceModel,
+            device_model: deviceModel,
             autocrop: imageProcessingOptions.autocrop,
             remove_background: imageProcessingOptions.removeBackground,
           }),
@@ -206,7 +206,7 @@ export const useVerificationEditor = ({
             area: selectedArea,
             image_source_url: captureSourcePath,
             reference_name: referenceName || 'temp_capture',
-            model: deviceModel,
+            device_model: deviceModel,
           }),
         });
       }
@@ -284,7 +284,7 @@ export const useVerificationEditor = ({
     try {
       console.log('[@hook:useVerificationEditor] Saving reference with data:', {
         name: referenceName,
-        model: deviceModel,
+        device_model: deviceModel,
         area: selectedArea,
         captureSourcePath: captureSourcePath,
         referenceType: referenceType,
@@ -306,7 +306,7 @@ export const useVerificationEditor = ({
             host: selectedHost,
             device_id: selectedDeviceId,
             reference_name: referenceName,
-            model: deviceModel, // Add device model for server-side processing
+            device_model: deviceModel, // Changed from 'model' to 'device_model'
             area: selectedArea,
             text: referenceText,
             image_textdetected_path: detectedTextData?.image_textdetected_path || '', // Use processed image from detectText
@@ -350,7 +350,7 @@ export const useVerificationEditor = ({
               area: selectedArea,
               image_source_url: captureSourcePath,
               reference_name: referenceName,
-              model: deviceModel,
+              device_model: deviceModel,
               autocrop: imageProcessingOptions.autocrop,
               remove_background: imageProcessingOptions.removeBackground,
             }),
@@ -368,7 +368,7 @@ export const useVerificationEditor = ({
               area: selectedArea,
               image_source_url: captureSourcePath,
               reference_name: referenceName,
-              model: deviceModel,
+              device_model: deviceModel,
             }),
           });
         }
@@ -388,7 +388,7 @@ export const useVerificationEditor = ({
           body: JSON.stringify({
             host: selectedHost,
             reference_name: referenceName,
-            model: deviceModel,
+            device_model: deviceModel,
             area:
               imageProcessingOptions.autocrop && captureResult.processed_area
                 ? captureResult.processed_area
@@ -467,7 +467,7 @@ export const useVerificationEditor = ({
         },
         body: JSON.stringify({
           host: selectedHost, // Send full host object
-          model: deviceModel,
+          device_model: deviceModel,
           area: selectedArea,
           image_source_url: sourceFilename,
           image_filter: textImageFilter,
