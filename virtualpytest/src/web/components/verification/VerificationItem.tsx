@@ -82,7 +82,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
     >
       {/* Line 1: Verification dropdown */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-        <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
+        <FormControl size="small" sx={{ flex: 1, minWidth: 200, maxWidth: 300 }}>
           <Select
             value={typeof verification.command === 'string' ? verification.command : ''}
             onChange={(e) => onVerificationSelect(index, e.target.value)}
@@ -101,6 +101,19 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                   },
                 },
               },
+              disablePortal: true,
+              anchorOrigin: {
+                vertical: 'bottom',
+                horizontal: 'left',
+              },
+              transformOrigin: {
+                vertical: 'top',
+                horizontal: 'left',
+              },
+              variant: 'menu',
+              disableAutoFocus: true,
+              disableEnforceFocus: true,
+              getContentAnchorEl: null,
             }}
             sx={{
               '& .MuiSelect-select': {

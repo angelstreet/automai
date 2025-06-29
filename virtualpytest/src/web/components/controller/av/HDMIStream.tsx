@@ -259,26 +259,26 @@ export const HDMIStream = React.memo(
       return isExpanded ? expandedHeight : collapsedHeight;
     };
 
-    // Generate current video frame URL when in video mode
+    // Generate current video frame URL using centralized builder
     const currentVideoFramePath = useMemo(() => {
-      if (captureMode === 'video' && totalFrames > 0 && captureStartTime) {
-        // Generate current frame URL for video capture
-        const frameTime = new Date(captureStartTime.getTime() + currentFrame * 1000);
-        const zurichTime = new Date(
-          frameTime.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }),
-        );
-        const year = zurichTime.getFullYear();
-        const month = String(zurichTime.getMonth() + 1).padStart(2, '0');
-        const day = String(zurichTime.getDate()).padStart(2, '0');
-        const hours = String(zurichTime.getHours()).padStart(2, '0');
-        const minutes = String(zurichTime.getMinutes()).padStart(2, '0');
-        const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
-        const frameTimestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
-        // Use centralized URL builder for capture URLs
-        return buildCaptureUrl(host, frameTimestamp, deviceId);
+      if (captureMode !== 'video' || totalFrames <= 0 || !captureStartTime) {
+        return '';
       }
-      return undefined;
-    }, [captureMode, totalFrames, captureStartTime, currentFrame, host.host_name, deviceId]);
+
+      const frameTime = new Date(captureStartTime.getTime() + currentFrame * 1000);
+      const zurichTime = new Date(frameTime.toLocaleString('en-US', { timeZone: 'Europe/Zurich' }));
+
+      const year = zurichTime.getFullYear();
+      const month = String(zurichTime.getMonth() + 1).padStart(2, '0');
+      const day = String(zurichTime.getDate()).padStart(2, '0');
+      const hours = String(zurichTime.getHours()).padStart(2, '0');
+      const minutes = String(zurichTime.getMinutes()).padStart(2, '0');
+      const seconds = String(zurichTime.getSeconds()).padStart(2, '0');
+      const frameTimestamp = `${year}${month}${day}${hours}${minutes}${seconds}`;
+
+      // Use centralized URL builder
+      return buildCaptureUrl(host, frameTimestamp);
+    }, [captureMode, totalFrames, captureStartTime, currentFrame, host]);
 
     // Check if verification editor should be visible
     const isVerificationVisible = captureMode === 'screenshot' || captureMode === 'video';

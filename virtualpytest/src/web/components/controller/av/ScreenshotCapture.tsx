@@ -2,6 +2,7 @@ import { Box, Typography } from '@mui/material';
 import React, { useMemo, useRef } from 'react';
 
 import { getStreamViewerLayout } from '../../../config/layoutConfig';
+import { buildCaptureUrl } from '../../../utils/buildUrlUtils';
 
 import { DragSelectionOverlay } from './DragSelectionOverlay';
 

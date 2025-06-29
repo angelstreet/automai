@@ -431,7 +431,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
     }
 
     const content = (
-      <>
+      <Box sx={{ overflow: 'visible', position: 'relative' }}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1 }}>
           <Button
             size="small"
@@ -444,7 +444,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
           </Button>
         </Box>
 
-        <Box sx={{ mb: 1 }}>
+        <Box sx={{ mb: 1, overflow: 'visible' }}>
           {verifications.map((verification, index) => (
             <VerificationItem
               key={index}
@@ -604,7 +604,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
           imageFilter={textComparisonDialog.imageFilter}
           onClose={() => setTextComparisonDialog((prev) => ({ ...prev, open: false }))}
         />
-      </>
+      </Box>
     );
 
     // If collapsible is requested, wrap in collapsible container
@@ -629,6 +629,8 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
           {!collapsed && (
             <Box
               sx={{
+                overflow: 'visible',
+                position: 'relative',
                 '& .MuiTypography-subtitle2': {
                   fontSize: '0.75rem',
                 },
@@ -661,7 +663,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
     }
 
     // Otherwise return content directly
-    return <Box>{content}</Box>;
+    return <Box sx={{ overflow: 'visible', position: 'relative' }}>{content}</Box>;
   },
   (prevProps, nextProps) => {
     // Shallow comparison helper function
@@ -681,14 +683,28 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       return true;
     };
 
-    // Array comparison helper
+    // Array comparison helper - improved for better performance
     const arraysEqual = (arr1: any[], arr2: any[]): boolean => {
       if (arr1 === arr2) return true;
       if (!arr1 || !arr2) return arr1 === arr2;
       if (arr1.length !== arr2.length) return false;
 
+      // For verifications array, do a more thorough comparison
+      // to avoid re-renders when only internal state changes
       for (let i = 0; i < arr1.length; i++) {
-        if (!shallowEqual(arr1[i], arr2[i])) return false;
+        const item1 = arr1[i];
+        const item2 = arr2[i];
+
+        // Compare essential fields that would affect rendering
+        if (
+          item1.command !== item2.command ||
+          item1.verification_type !== item2.verification_type ||
+          JSON.stringify(item1.params) !== JSON.stringify(item2.params) ||
+          item1.success !== item2.success ||
+          item1.error !== item2.error
+        ) {
+          return false;
+        }
       }
 
       return true;
@@ -713,7 +729,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
     const showCollapsibleChanged = prevProps.showCollapsible !== nextProps.showCollapsible;
     const titleChanged = prevProps.title !== nextProps.title;
 
-    // Function references
+    // Function references - only check if they're different functions
     const onVerificationsChangeChanged =
       prevProps.onVerificationsChange !== nextProps.onVerificationsChange;
     const onTestChanged = prevProps.onTest !== nextProps.onTest;
@@ -736,22 +752,9 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       onTestChanged ||
       onReferenceSelectedChanged;
 
-    if (shouldRerender) {
-      console.log('[@component:VerificationsList] Props changed, re-rendering:', {
-        verificationsChanged,
-        availableVerificationsChanged,
-        loadingChanged,
-        modelChanged,
-        testResultsChanged,
-        selectedHostChanged,
-        modelReferencesChanged,
-        referencesLoadingChanged,
-        showCollapsibleChanged,
-        titleChanged,
-        onVerificationsChangeChanged,
-        onTestChanged,
-        onReferenceSelectedChanged,
-      });
+    // Reduce logging frequency to avoid console spam
+    if (shouldRerender && verificationsChanged) {
+      console.log('[@component:VerificationsList] Verifications changed, re-rendering');
     }
 
     return !shouldRerender; // Return true to skip re-render, false to re-render
