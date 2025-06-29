@@ -370,102 +370,20 @@ def verification_text_detect():
 
 @server_verification_common_bp.route('/text/saveText', methods=['POST'])
 def verification_text_save():
-    """Save text reference to database - Two-step process like image references"""
+    """Proxy save text request to host - host handles database save"""
     try:
-        print("[@route:server_verification_common:verification_text_save] Processing text reference save request")
+        print("[@route:server_verification_common:verification_text_save] Proxying save text request to host")
         
         # Get request data
         request_data = request.get_json() or {}
         
-        # Step 1: Get text data from host (fast, no git operations)
-        print("[@route:server_verification_common:verification_text_save] Step 1: Getting text data from host")
-        host_response_data, host_status_code = proxy_to_host('/host/verification/text/saveText', 'POST', request_data)
+        # Proxy to host verification text save endpoint
+        response_data, status_code = proxy_to_host('/host/verification/text/saveText', 'POST', request_data)
         
-        if host_status_code != 200 or not host_response_data.get('success'):
-            print(f"[@route:server_verification_common:verification_text_save] Host step failed: {host_response_data}")
-            return jsonify(host_response_data), host_status_code
-        
-        # Step 2: Save text reference to database
-        print("[@route:server_verification_common:verification_text_save] Step 2: Saving text reference to database")
-        
-        from src.lib.supabase.verifications_references_db import save_reference
-        from src.utils.app_utils import get_team_id
-        
-        # Get team ID
-        team_id = get_team_id()
-        if not team_id:
-            return jsonify({
-                'success': False,
-                'error': 'Team ID not found in request'
-            }), 400
-        
-        # Extract data from host response and original request
-        reference_name = host_response_data.get('reference_name')
-        device_id = request_data.get('device_id')
-        
-        if not device_id:
-            return jsonify({
-                'success': False,
-                'error': 'device_id is required'
-            }), 400
-        
-        # Get device model from host info (controllers are model-aware)
-        host_info, error = get_host_from_request()
-        if not host_info:
-            return jsonify({
-                'success': False,
-                'error': error or 'Host information required for device model'
-            }), 400
-        
-        device_model = host_info.get('device_model')
-        if not device_model:
-            return jsonify({
-                'success': False,
-                'error': 'device_model not found in host information'
-            }), 400
-        
-        area = host_response_data.get('area')
-        text_data = host_response_data.get('text_data', {})
-        
-        print(f"[@route:server_verification_common:verification_text_save] Saving to database: {reference_name} for model: {device_model}")
-        
-        # Save text reference to database using save_reference function
-        # For text references, we store text data in area field and use a placeholder R2 path
-        extended_area = {
-            **(area or {}),
-            'text': text_data.get('text', ''),
-            'font_size': text_data.get('font_size', 12.0),
-            'confidence': text_data.get('confidence', 0.8)
-        }
-        
-        db_result = save_reference(
-            name=reference_name,
-            device_model=device_model,
-            reference_type='reference_text',  # Use reference_text type for text references
-            r2_path=f'text-references/{device_model}/{reference_name}',  # Placeholder path for consistency
-            r2_url='',  # No R2 URL needed for text references
-            team_id=team_id,
-            area=extended_area  # Store text data in area field
-        )
-        
-        if db_result['success']:
-            print(f"[@route:server_verification_common:verification_text_save] Successfully saved text reference to database")
-            return jsonify({
-                'success': True,
-                'message': f'Text reference saved: {reference_name}',
-                'reference_name': reference_name,
-                'text': text_data.get('text', ''),
-                'reference_id': db_result.get('reference_id')
-            })
-        else:
-            print(f"[@route:server_verification_common:verification_text_save] Database save failed: {db_result.get('error')}")
-            return jsonify({
-                'success': False,
-                'error': f"Database save failed: {db_result.get('error')}"
-            }), 500
+        return jsonify(response_data), status_code
         
     except Exception as e:
-        print(f"[@route:server_verification_common:verification_text_save] Error: {str(e)}")
+        print(f"[@route:server_verification_common:verification_text_save] ERROR: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
