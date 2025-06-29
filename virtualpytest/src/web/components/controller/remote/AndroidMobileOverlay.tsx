@@ -118,7 +118,7 @@ export const AndroidMobileOverlay = React.memo(
     // Direct server tap function - bypasses useRemoteConfigs double conversion
     const handleDirectTap = async (deviceX: number, deviceY: number) => {
       try {
-        const response = await fetch('/server/remote/tap-coordinates', {
+        const response = await fetch('/server/remote/tapCoordinates', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

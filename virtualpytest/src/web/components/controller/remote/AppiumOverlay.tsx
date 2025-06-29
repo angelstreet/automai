@@ -133,7 +133,7 @@ export const AppiumOverlay = React.memo(function AppiumOverlay({
         `[@component:AppiumOverlay] Direct tap at device coordinates (${deviceX}, ${deviceY})`,
       );
 
-      const response = await fetch('/server/remote/tap-coordinates', {
+      const response = await fetch('/server/remote/tapCoordinates', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -355,15 +355,15 @@ export const AppiumOverlay = React.memo(function AppiumOverlay({
       {/* Base tap layer - positioned over the entire panel area */}
       <div
         style={{
-        position: 'fixed',
+          position: 'fixed',
           left: panelInfo.position.x + horizontalOffset,
           top: panelInfo.position.y,
           width: actualContentWidth,
           height: panelInfo.size.height,
           zIndex: 1000,
-        pointerEvents: 'auto',
+          pointerEvents: 'auto',
           cursor: 'crosshair',
-      }}
+        }}
         onClick={handleBaseTap}
       />
 
@@ -391,13 +391,13 @@ export const AppiumOverlay = React.memo(function AppiumOverlay({
           {/* Element ID label */}
           <div
             style={{
-                  position: 'absolute',
+              position: 'absolute',
               top: -20,
-                  left: 0,
+              left: 0,
               backgroundColor: scaledElement.color,
-                    color: 'white',
+              color: 'white',
               padding: '2px 4px',
-                    fontSize: '10px',
+              fontSize: '10px',
               borderRadius: '2px',
               whiteSpace: 'nowrap',
               zIndex: 1002,
@@ -412,7 +412,7 @@ export const AppiumOverlay = React.memo(function AppiumOverlay({
       {clickAnimation && (
         <div
           style={{
-          position: 'fixed',
+            position: 'fixed',
             left: clickAnimation.x - 15,
             top: clickAnimation.y - 15,
             width: 30,

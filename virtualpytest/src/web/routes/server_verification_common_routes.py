@@ -417,13 +417,13 @@ def verification_text_save():
                 'error': 'device_id is required'
             }), 400
         
-        # Get device_model from host response (host route includes it following established pattern)
-        device_model = host_response_data.get('device_model')
-        
+        # Extract device_model from frontend request data
+        device_model = request_data.get('model')
+ 
         if not device_model:
             return jsonify({
                 'success': False,
-                'error': 'device_model not provided by host'
+                'error': 'device_model is required but not found in request data'
             }), 400
         
         area = host_response_data.get('area')

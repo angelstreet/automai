@@ -306,6 +306,7 @@ export const useVerificationEditor = ({
             host: selectedHost,
             device_id: selectedDeviceId,
             reference_name: referenceName,
+            model: deviceModel, // Add device model for server-side processing
             area: selectedArea,
             text: referenceText,
             image_textdetected_path: detectedTextData?.image_textdetected_path || '', // Use processed image from detectText

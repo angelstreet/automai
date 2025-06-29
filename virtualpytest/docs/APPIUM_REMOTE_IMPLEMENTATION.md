@@ -194,14 +194,14 @@ appium driver install mac2  # For macOS
 
 The Appium Remote Controller uses the following server endpoints:
 
-- `POST /server/control/take-control` - Establish Appium connection
-- `POST /server/control/release-control` - Disconnect from device
-- `POST /server/remote/take-screenshot` - Capture device screenshot
-- `POST /server/remote/execute-command` - Execute remote commands
-- `POST /server/remote/screenshot-and-dump` - Screenshot + UI dump
-- `POST /server/remote/get-apps` - Get installed applications
-- `POST /server/remote/click-element` - Click UI element
-- `POST /server/remote/tap-coordinates` - Tap at coordinates
+- `POST /server/control/takeControl` - Establish Appium connection
+- `POST /server/control/releaseControl` - Disconnect from device
+- `POST /server/remote/takeScreenshot` - Capture device screenshot
+- `POST /server/remote/executeCommand` - Execute remote commands
+- `POST /server/remote/screenshotAndDump` - Screenshot + UI dump
+- `POST /server/remote/getApps` - Get installed applications
+- `POST /server/remote/clickElement` - Click UI element
+- `POST /server/remote/tapCoordinates` - Tap at coordinates
 - `POST /server/remote/get-status` - Get connection status
 
 ## Error Handling

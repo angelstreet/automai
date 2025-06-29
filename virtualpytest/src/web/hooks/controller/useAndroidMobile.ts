@@ -139,7 +139,7 @@ export function useAndroidMobile(
 
       console.log(`[@hook:useAndroidMobile] Executing tap at (${x}, ${y})`);
       try {
-        const response = await fetch('/server/remote/tap-coordinates', {
+        const response = await fetch('/server/remote/tapCoordinates', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -194,7 +194,7 @@ export function useAndroidMobile(
 
     setIsDumpingUI(true);
     try {
-      const response = await fetch('/server/remote/dump-ui', {
+      const response = await fetch('/server/remote/dumpUi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

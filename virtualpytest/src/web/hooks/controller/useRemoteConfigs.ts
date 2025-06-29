@@ -31,7 +31,7 @@ export const ANDROID_MOBILE_CONFIG: RemoteDeviceConfig = {
     command: '/server/remote/executeCommand',
     screenshotAndDump: '/server/remote/screenshotAndDump',
     getApps: '/server/remote/getApps',
-    tapElement: '/server/remote/tap-element',
+    tapElement: '/server/remote/tapCoordinates',
   },
 };
 
@@ -49,7 +49,7 @@ export const APPIUM_REMOTE_CONFIG: RemoteDeviceConfig = {
     command: '/server/remote/executeCommand',
     screenshotAndDump: '/server/remote/screenshotAndDump',
     getApps: '/server/remote/getApps',
-    tapElement: '/server/remote/tap-coordinates',
+    tapElement: '/server/remote/tapCoordinates',
     getStatus: '/server/remote/getStatus',
   },
 };
@@ -193,7 +193,7 @@ export function useRemoteConfigs({
         );
 
         // Use centralized server route for stream tap
-        const response = await fetch('/server/remote/stream-tap', {
+        const response = await fetch('/server/remote/streamTap', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -237,7 +237,7 @@ export function useRemoteConfigs({
         console.log(`[@hook:useRemoteConfigs] Handling coordinate tap at (${x}, ${y})`);
 
         // Use centralized server route for coordinate tap
-        const response = await fetch('/server/remote/tap-coordinates', {
+        const response = await fetch('/server/remote/tapCoordinates', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

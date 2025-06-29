@@ -165,14 +165,13 @@
     "tap_animation_duration": 300
   },
   "server_endpoints": {
-    "connect": "/server/control/take-control",
-    "disconnect": "/server/control/release-control",
+    "connect": "/server/control/takeControl",
+    "disconnect": "/server/control/releaseControl",
     "screenshot": "/server/remote/takeScreenshot",
     "command": "/server/remote/executeCommand",
     "screenshotAndDump": "/server/remote/screenshotAndDump",
     "getApps": "/server/remote/getApps",
-    "clickElement": "/server/remote/click-element",
-    "tapCoordinates": "/server/remote/tap-coordinates",
-    "getStatus": "/server/remote/get-status"
+    "clickElement": "/server/remote/clickElement",
+    "tapCoordinates": "/server/remote/tapCoordinates"
   }
 }
