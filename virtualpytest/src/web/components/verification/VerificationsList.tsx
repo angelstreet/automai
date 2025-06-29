@@ -267,11 +267,11 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
           };
 
           if (selectedRef.type === 'image') {
-            // Image reference parameters - store internal key as image_path
+            // Image reference parameters - use original database name for backend
             updateVerification(index, {
               params: {
                 ...baseParams,
-                image_path: internalKey, // Store internal key for backend lookup
+                image_path: selectedRef.name || internalKey, // Use original name for backend lookup
                 reference_name: selectedRef.name, // Store display name for UI
               },
             });
@@ -281,20 +281,21 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
                 internal_key: internalKey,
                 display_name: selectedRef.name,
                 reference_url: selectedRef.url,
+                backend_image_path: selectedRef.name || internalKey,
                 updatedParams: {
                   ...baseParams,
-                  image_path: internalKey,
+                  image_path: selectedRef.name || internalKey,
                   reference_name: selectedRef.name,
                 },
               },
             );
           } else if (selectedRef.type === 'text') {
-            // Text reference parameters - store text and internal key
+            // Text reference parameters - store text and use original name
             updateVerification(index, {
               params: {
                 ...baseParams,
                 text: selectedRef.text || '',
-                reference_name: internalKey, // Store internal key for backend lookup
+                reference_name: selectedRef.name || internalKey, // Use original name for backend lookup
               },
             });
             console.log(

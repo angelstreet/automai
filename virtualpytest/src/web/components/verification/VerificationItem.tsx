@@ -94,20 +94,55 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                 fontSize: '0.8rem',
               },
             }}
+            renderValue={(selected) => {
+              // Find the selected verification and return its formatted name
+              const selectedVerification = Object.values(availableVerifications)
+                .flat()
+                .find((verif) => verif.command === selected);
+              if (selectedVerification) {
+                return selectedVerification.command
+                  .replace(/_/g, ' ')
+                  .replace(/([A-Z])/g, ' $1')
+                  .trim();
+              }
+              return selected;
+            }}
           >
             <MenuItem value="" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
               Select a verification...
             </MenuItem>
-            {Object.entries(availableVerifications).map(([category, verifications]) =>
-              verifications.map((verif) => (
-                <MenuItem key={verif.command} value={verif.command} sx={{ fontSize: '0.75rem' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>[{category}]</span>
-                    <span>{verif.command}</span>
-                  </Box>
-                </MenuItem>
-              )),
-            )}
+            {Object.entries(availableVerifications).map(([category, verifications]) => {
+              // Ensure verifications is an array
+              if (!Array.isArray(verifications)) {
+                console.warn(
+                  `[@component:VerificationItem] Invalid verifications for category ${category}:`,
+                  verifications,
+                );
+                return null;
+              }
+
+              return [
+                <MenuItem
+                  key={`header-${category}`}
+                  disabled
+                  sx={{ fontWeight: 'bold', fontSize: '0.65rem', minHeight: '24px' }}
+                >
+                  {category.replace(/_/g, ' ').toUpperCase()}
+                </MenuItem>,
+                ...verifications.map((verification) => (
+                  <MenuItem
+                    key={verification.command}
+                    value={verification.command}
+                    sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
+                  >
+                    {verification.command
+                      .replace(/_/g, ' ')
+                      .replace(/([A-Z])/g, ' $1')
+                      .trim()}
+                  </MenuItem>
+                )),
+              ];
+            })}
           </Select>
         </FormControl>
 
