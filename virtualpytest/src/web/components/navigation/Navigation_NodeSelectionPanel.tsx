@@ -147,6 +147,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         parent: selectedNode.data.parent || [],
         menu_type: selectedNode.data.menu_type,
         verifications: selectedNode.data.verifications || [],
+        verification_ids: selectedNode.data.verification_ids || [],
       });
       setIsNodeDialogOpen(true);
     };
