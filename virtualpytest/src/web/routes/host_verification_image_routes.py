@@ -148,8 +148,9 @@ def execute_image_verification():
             return error_response
         
         verification = data.get('verification')
+        model = data.get('model')  # Get model from request
         
-        # Execute verification using controller - let controller handle everything
+        # Execute verification using controller
         verification_result = image_controller.execute_verification({
             'command': verification.get('command', 'waitForImageToAppear'),
             'params': {
@@ -158,7 +159,7 @@ def execute_image_verification():
                 'timeout': verification.get('params', {}).get('timeout', 10.0),
                 'area': verification.get('params', {}).get('area'),
                 'image_filter': verification.get('params', {}).get('image_filter', 'none'),
-                'model': verification.get('params', {}).get('model', 'default')
+                'model': model  # Pass model to controller
             }
         })
         
@@ -204,7 +205,6 @@ def execute_image_verification():
             'sourceUrl': verification_result.get('sourceUrl'),                  # Frontend-expected names
             'referenceUrl': verification_result.get('referenceUrl'),
             'overlayUrl': verification_result.get('overlayUrl')
-            # Removed empty details object
         }
         
         print(f"[@route:host_verification_image:execute] Final result: {result}")

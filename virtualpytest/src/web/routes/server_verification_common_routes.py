@@ -144,7 +144,7 @@ def verification_video_execute():
 
 @server_verification_common_bp.route('/executeBatch', methods=['POST'])
 def verification_execute_batch():
-    """Execute batch verification by dispatching individual requests to host endpoints (NEW NAMING CONVENTION)"""
+    """Execute batch verification by dispatching individual requests to host endpoints"""
     try:
         print("[@route:server_verification_common:verification_execute_batch] Starting batch verification coordination")
         
@@ -152,19 +152,10 @@ def verification_execute_batch():
         data = request.get_json() or {}
         verifications = data.get('verifications', [])
         image_source_url = data.get('image_source_url')
-        host = data.get('host', {})
-        
-        # Extract model from host device (required)
-        device_model = data.get('model') or host.get('device_model')
-        
-        if not device_model:
-            return jsonify({
-                'success': False,
-                'error': 'device_model is required but not found in host object'
-            }), 400
+        model = data.get('model')  # Get model from frontend request
         
         print(f"[@route:server_verification_common:verification_execute_batch] Processing {len(verifications)} verifications")
-        print(f"[@route:server_verification_common:verification_execute_batch] Source: {image_source_url}, Model: {device_model}")
+        print(f"[@route:server_verification_common:verification_execute_batch] Source: {image_source_url}")
         
         # Validate required parameters
         if not verifications:
@@ -184,11 +175,11 @@ def verification_execute_batch():
             
             print(f"[@route:server_verification_common:verification_execute_batch] Processing verification {i+1}/{len(verifications)}: {verification_type}")
             
-            # Prepare individual request data
+            # Prepare individual request data with model from frontend
             individual_request = {
                 'verification': verification,
                 'image_source_url': image_source_url,
-                'model': device_model
+                'model': model  # Pass model to host for image verification
             }
             
             # Dispatch to appropriate host endpoint based on verification type
@@ -417,13 +408,19 @@ def verification_text_save():
                 'error': 'device_id is required'
             }), 400
         
-        # Extract device_model from frontend request data
-        device_model = request_data.get('model')
- 
+        # Get device model from host info (controllers are model-aware)
+        host_info, error = get_host_from_request()
+        if not host_info:
+            return jsonify({
+                'success': False,
+                'error': error or 'Host information required for device model'
+            }), 400
+        
+        device_model = host_info.get('device_model')
         if not device_model:
             return jsonify({
                 'success': False,
-                'error': 'device_model is required but not found in request data'
+                'error': 'device_model not found in host information'
             }), 400
         
         area = host_response_data.get('area')
@@ -456,7 +453,6 @@ def verification_text_save():
                 'success': True,
                 'message': f'Text reference saved: {reference_name}',
                 'reference_name': reference_name,
-                'model': device_model,
                 'text': text_data.get('text', ''),
                 'reference_id': db_result.get('reference_id')
             })

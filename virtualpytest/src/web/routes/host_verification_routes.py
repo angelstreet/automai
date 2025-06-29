@@ -73,5 +73,3 @@ def verification_status():
             'success': False,
             'error': f'Verification status error: {str(e)}'
         }), 500
-
-# ADB verification has been removed - use remote controller instead 

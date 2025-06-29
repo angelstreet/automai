@@ -38,6 +38,7 @@ class ImageVerificationController:
         # Initialize helpers with explicit references directory
         self.helpers = ImageHelpers(self.captures_path, av_controller, self.references_dir)
         
+        print(f"[@controller:ImageVerification] Initialized")
         print(f"[@controller:ImageVerification] Initialized with paths:")
         print(f"  Captures: {self.captures_path}")
         print(f"  Verification results: {self.verification_results_dir}")
@@ -64,12 +65,13 @@ class ImageVerificationController:
             "connected": self.is_connected,
             "av_controller": self.av_controller.device_name if self.av_controller else None,
             "controller_type": "image",
+
             "captures_path": self.captures_path
         }
 
     def waitForImageToAppear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8, 
-                            area: tuple = None, image_list: List[str] = None, model: str = None, 
-                            verification_index: int = 0, image_filter: str = 'none') -> Tuple[bool, str, dict]:
+                            area: tuple = None, image_list: List[str] = None, 
+                            verification_index: int = 0, image_filter: str = 'none', model: str = 'default') -> Tuple[bool, str, dict]:
         """
         Wait for image to appear either in provided image list or by capturing new frames.
         
@@ -79,9 +81,9 @@ class ImageVerificationController:
             threshold: Confidence threshold (0.0 to 1.0)
             area: Optional area to search within
             image_list: List of image paths to search in (if None, captures new frames)
-            model: Device model for R2 reference resolution
             verification_index: Index of verification for naming
             image_filter: Filter to apply ('none', 'greyscale', 'binary')
+            model: Device model for reference image resolution
             
         Returns:
             Tuple of (success, message, additional_data)
@@ -96,7 +98,7 @@ class ImageVerificationController:
         if image_filter and image_filter != 'none':
             print(f"[@controller:ImageVerification] Using image filter: {image_filter}")
         
-        # Resolve reference image path - download from R2 if needed
+        # Resolve reference image path using provided device model
         resolved_image_path = self._resolve_reference_image(image_path, model)
         if not resolved_image_path:
             error_msg = f"Reference image not found and could not be downloaded: {image_path}"
@@ -148,8 +150,8 @@ class ImageVerificationController:
                 if confidence >= threshold:
                     print(f"[@controller:ImageVerification] Match found in {source_path} with confidence {confidence:.3f}")
                     
-                    # Generate comparison images and URLs like the original working version
-                    image_urls = self._generate_comparison_images(source_path, resolved_image_path, area, verification_index, model, image_filter)
+                    # Generate comparison images using stored device model
+                    image_urls = self._generate_comparison_images(source_path, resolved_image_path, area, verification_index, image_filter)
                     additional_data.update(image_urls)
                     
                     # Save actual confidence (separate from user threshold)
@@ -158,8 +160,8 @@ class ImageVerificationController:
                     return True, f"Image found with confidence {confidence:.3f} (threshold: {threshold:.3f})", additional_data
             
             # Generate comparison images even for failed matches
-            if best_source_path and model is not None:
-                image_urls = self._generate_comparison_images(best_source_path, resolved_image_path, area, verification_index, model, image_filter)
+            if best_source_path:
+                image_urls = self._generate_comparison_images(best_source_path, resolved_image_path, area, verification_index, image_filter)
                 additional_data.update(image_urls)
             
             # Save best confidence (separate from user threshold)
@@ -173,8 +175,8 @@ class ImageVerificationController:
             return False, "Image not found in current screenshot", additional_data
 
     def waitForImageToDisappear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8,
-                               area: tuple = None, image_list: List[str] = None, model: str = None,
-                               verification_index: int = 0, image_filter: str = 'none') -> Tuple[bool, str, dict]:
+                               area: tuple = None, image_list: List[str] = None,
+                               verification_index: int = 0, image_filter: str = 'none', model: str = 'default') -> Tuple[bool, str, dict]:
         """
         Wait for image to disappear by calling waitForImageToAppear and inverting the result.
         """
@@ -187,7 +189,7 @@ class ImageVerificationController:
         print(f"[@controller:ImageVerification] Looking for image to disappear: {image_path}")
         
         # Smart reuse: call waitForImageToAppear and invert result
-        found, message, additional_data = self.waitForImageToAppear(image_path, timeout, threshold, area, image_list, model, verification_index, image_filter)
+        found, message, additional_data = self.waitForImageToAppear(image_path, timeout, threshold, area, image_list, verification_index, image_filter, model)
         
         # Invert the boolean result and adjust the message
         success = not found
@@ -395,7 +397,7 @@ class ImageVerificationController:
                     'screenshot_path': None
                 }
             
-            # Extract parameters from nested structure (matching previous working commit)
+            # Extract parameters from nested structure
             params = verification_config.get('params', {})
             command = verification_config.get('command', 'waitForImageToAppear')
             
@@ -413,12 +415,12 @@ class ImageVerificationController:
             timeout = params.get('timeout', 1.0)
             area = params.get('area')
             image_filter = params.get('image_filter', 'none')
-            model = params.get('model', 'default')  # Get device model for R2 download
+            model = params.get('model', 'default')
             
             print(f"[@controller:ImageVerification] Searching for image: {image_path}")
             print(f"[@controller:ImageVerification] Timeout: {timeout}s, Confidence: {threshold}")
             
-            # Execute verification based on command using the exact same method signature as before
+            # Execute verification based on command using provided device model
             if command == 'waitForImageToAppear':
                 success, message, details = self.waitForImageToAppear(
                     image_path=image_path,
@@ -426,9 +428,9 @@ class ImageVerificationController:
                     threshold=threshold,
                     area=area,
                     image_list=[source_path],  # Use source_path as image list
-                    model=model,  # Pass device model for R2 reference resolution
                     verification_index=0,
-                    image_filter=image_filter
+                    image_filter=image_filter,
+                    model=model
                 )
             elif command == 'waitForImageToDisappear':
                 success, message, details = self.waitForImageToDisappear(
@@ -437,9 +439,9 @@ class ImageVerificationController:
                     threshold=threshold,
                     area=area,
                     image_list=[source_path],  # Use source_path as image list
-                    model=model,  # Pass device model for R2 reference resolution
                     verification_index=0,
-                    image_filter=image_filter
+                    image_filter=image_filter,
+                    model=model
                 )
             else:
                 return {
@@ -495,8 +497,7 @@ class ImageVerificationController:
         ]
 
     def _generate_comparison_images(self, source_path: str, reference_path: str, area: dict = None, 
-                                   verification_index: int = 0, model: str = None, 
-                                   image_filter: str = 'none') -> dict:
+                                   verification_index: int = 0, image_filter: str = 'none') -> dict:
         """
         Generate comparison images and return local file paths.
         Route will handle URL building.
@@ -635,10 +636,9 @@ class ImageVerificationController:
             print(f"[@controller:ImageVerification] Error creating pixel difference overlay: {e}")
             return None
 
-    def _resolve_reference_image(self, image_path: str, model: str = None) -> Optional[str]:
+    def _resolve_reference_image(self, image_path: str, model: str = 'default') -> Optional[str]:
         """
         Resolve reference image path by downloading from R2 if needed.
-        Uses the predefined references directory.
         """
         try:
             # Extract reference name from path
@@ -652,9 +652,8 @@ class ImageVerificationController:
             
             print(f"[@controller:ImageVerification] Resolving reference: {reference_name} for model: {model}")
             
-            # Use predefined references directory with device model subdirectory
-            device_model = model or 'default'
-            local_dir = os.path.join(self.references_dir, device_model)
+            # Use provided device model
+            local_dir = os.path.join(self.references_dir, model)
             os.makedirs(local_dir, exist_ok=True)
             
             # Use the reference name with proper extension
@@ -674,8 +673,8 @@ class ImageVerificationController:
             try:
                 from src.utils.cloudflare_utils import get_cloudflare_utils
                 
-                # Construct R2 object key
-                r2_object_key = f"reference-images/{device_model}/{reference_name}"
+                # Construct R2 object key using provided device model
+                r2_object_key = f"reference-images/{model}/{reference_name}"
                 
                 print(f"[@controller:ImageVerification] R2 object key: {r2_object_key}")
                 

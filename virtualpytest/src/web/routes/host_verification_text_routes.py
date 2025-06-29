@@ -7,6 +7,7 @@ Host-side text verification endpoints that execute using instantiated text verif
 from flask import Blueprint, request, jsonify
 from src.utils.host_utils import get_controller, get_device_by_id, get_host
 from src.utils.build_url_utils import buildHostImageUrl
+import os
 
 # Create blueprint
 verification_text_host_bp = Blueprint('verification_text_host', __name__, url_prefix='/host/verification/text')
@@ -149,7 +150,6 @@ def execute_text_verification():
             'extractedText': result.get('extractedText', ''),      # Frontend-expected property name
             'searchedText': result.get('searchedText', ''),        # Frontend-expected property name
             'sourceUrl': result.get('sourceUrl')                   # Frontend-expected property name
-            # Removed details object
         }
         
         return jsonify(response)

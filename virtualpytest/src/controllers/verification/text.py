@@ -46,11 +46,12 @@ class TextVerificationController:
             "connected": self.is_connected,
             "av_controller": self.av_controller.device_name if self.av_controller else None,
             "controller_type": "text",
+
             "captures_path": self.captures_path
         }
 
     def waitForTextToAppear(self, text: str, timeout: float = 10.0, area: dict = None, 
-                           image_list: List[str] = None, model: str = None,
+                           image_list: List[str] = None, 
                            verification_index: int = 0, image_filter: str = 'none') -> Tuple[bool, str, dict]:
         """
         Wait for specific text to appear either in provided image list or by capturing new frames.
@@ -60,7 +61,6 @@ class TextVerificationController:
             timeout: Maximum time to wait in seconds  
             area: Optional area to search (x, y, width, height)
             image_list: Optional list of source image paths to search
-            model: Model name for organizing output images
             verification_index: Index of verification for naming
             image_filter: Optional image filter to apply
             
@@ -108,9 +108,9 @@ class TextVerificationController:
                     print(f"[@controller:TextVerification] Text found in {source_path}: '{extracted_text.strip()}'")
                     text_found = True
                     
-                    # Save cropped source image for UI comparison
-                    if area and model is not None:
-                        cropped_source_path = self._save_cropped_source_image(source_path, area, model, verification_index)
+                    # Save cropped source image for UI comparison using stored device model
+                    if area:
+                        cropped_source_path = self._save_cropped_source_image(source_path, area, verification_index)
                         if cropped_source_path:
                             additional_data["source_image_path"] = cropped_source_path
                     
@@ -121,8 +121,8 @@ class TextVerificationController:
                     return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
             
             # If no match found, still save the best source for comparison
-            if best_source_path and area and model is not None:
-                cropped_source_path = self._save_cropped_source_image(best_source_path, area, model, verification_index)
+            if best_source_path and area:
+                cropped_source_path = self._save_cropped_source_image(best_source_path, area, verification_index)
                 if cropped_source_path:
                     additional_data["source_image_path"] = cropped_source_path
             
@@ -146,9 +146,9 @@ class TextVerificationController:
             if self._text_matches(extracted_text, text):
                 print(f"[@controller:TextVerification] Text found in captured frame: '{extracted_text.strip()}'")
                 
-                # Save cropped source image for UI comparison
-                if area and model is not None:
-                    cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
+                # Save cropped source image for UI comparison using stored device model
+                if area:
+                    cropped_source_path = self._save_cropped_source_image(capture_path, area, verification_index)
                     if cropped_source_path:
                         additional_data["source_image_path"] = cropped_source_path
                 
@@ -159,8 +159,8 @@ class TextVerificationController:
                 return True, f"Text pattern '{text}' found: '{extracted_text.strip()}'", additional_data
             else:
                 # Save cropped source for comparison even on failure
-                if area and model is not None:
-                    cropped_source_path = self._save_cropped_source_image(capture_path, area, model, verification_index)
+                if area:
+                    cropped_source_path = self._save_cropped_source_image(capture_path, area, verification_index)
                     if cropped_source_path:
                         additional_data["source_image_path"] = cropped_source_path
                 
@@ -171,7 +171,7 @@ class TextVerificationController:
                 return False, f"Text pattern '{text}' not found", additional_data
 
     def waitForTextToDisappear(self, text: str, timeout: float = 10.0, area: dict = None, 
-                              image_list: List[str] = None, model: str = None,
+                              image_list: List[str] = None,
                               verification_index: int = 0, image_filter: str = 'none') -> Tuple[bool, str, dict]:
         """
         Wait for text to disappear by calling waitForTextToAppear and inverting the result.
@@ -185,7 +185,7 @@ class TextVerificationController:
         print(f"[@controller:TextVerification] Looking for text pattern to disappear: '{text}'")
         
         # Smart reuse: call waitForTextToAppear and invert result
-        found, message, additional_data = self.waitForTextToAppear(text, timeout, area, image_list, model, verification_index, image_filter)
+        found, message, additional_data = self.waitForTextToAppear(text, timeout, area, image_list, verification_index, image_filter)
         
         # Invert the boolean result and adjust the message
         success = not found
@@ -300,7 +300,7 @@ class TextVerificationController:
                     'screenshot_path': None
                 }
             
-            # Extract parameters from nested structure (matching previous working commit)
+            # Extract parameters from nested structure
             params = verification_config.get('params', {})
             command = verification_config.get('command', 'waitForTextToAppear')
             
@@ -317,7 +317,6 @@ class TextVerificationController:
             timeout = params.get('timeout', 0.0)
             area = params.get('area')
             image_filter = params.get('image_filter', 'none')
-            model = params.get('model', 'default')
             
             print(f"[@controller:TextVerification] Executing {command} with text: '{text}'")
             print(f"[@controller:TextVerification] Parameters: timeout={timeout}, area={area}, filter={image_filter}")
@@ -329,7 +328,6 @@ class TextVerificationController:
                     timeout=timeout,
                     area=area,
                     image_list=[source_path],  # Use source_path as image list
-                    model=model,  # Pass device model for image saving
                     verification_index=0,
                     image_filter=image_filter
                 )
@@ -339,7 +337,6 @@ class TextVerificationController:
                     timeout=timeout,
                     area=area,
                     image_list=[source_path],  # Use source_path as image list
-                    model=model,  # Pass device model for image saving
                     verification_index=0,
                     image_filter=image_filter
                 )
@@ -432,14 +429,13 @@ class TextVerificationController:
             print(f"[@controller:TextVerification] Error in text matching: {e}")
             return False
 
-    def _save_cropped_source_image(self, source_path: str, area: dict, model: str, verification_index: int) -> Optional[str]:
+    def _save_cropped_source_image(self, source_path: str, area: dict, verification_index: int) -> Optional[str]:
         """
         Save cropped source image for UI comparison using ImageHelpers.
         
         Args:
             source_path: Path to source image
             area: Area to crop
-            model: Device model for organization
             verification_index: Index for naming
             
         Returns:
@@ -472,5 +468,3 @@ class TextVerificationController:
         except Exception as e:
             print(f"[@controller:TextVerification] Error cropping source image: {e}")
             return None
-
- 

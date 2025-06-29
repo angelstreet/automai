@@ -177,7 +177,7 @@ def _create_controller_instance(controller_type: str, implementation: str, param
         elif implementation == 'appium':
             return AppiumRemoteController(**params)
     
-    # Verification Controllers
+    # Verification Controllers - now require device_model
     elif controller_type == 'verification':
         if implementation == 'image':
             return ImageVerificationController(**params)
@@ -259,7 +259,7 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
         if controller:
             device.add_controller(controller_type, controller)
     
-    # Step 3: Create verification controllers (depend on AV controller)
+    # Step 3: Create verification controllers (depend on AV controller and device model)
     for controller_config in verification_controllers:
         controller_type = controller_config['type']
         implementation = controller_config['implementation']
@@ -274,6 +274,7 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
                 controller_params['av_controller'] = av_controller
             else:
                 print(f"[@controller_manager:_create_device_with_controllers] WARNING: {implementation} verification needs AV controller but none available")
+                continue  # Skip creating this controller
         
         # Create the verification controller instance
         controller = _create_controller_instance(
