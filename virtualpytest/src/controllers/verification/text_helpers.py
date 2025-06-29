@@ -52,12 +52,15 @@ class TextHelpers:
             from src.lib.supabase.verifications_references_db import save_reference
             from src.utils.app_utils import DEFAULT_TEAM_ID
             
-            # Create text data structure
+            # Create text data structure and merge with area
             text_data = {
                 'text': text,
                 'font_size': 12.0,  # Default font size
                 'confidence': 0.8   # Default confidence
             }
+            
+            # Merge text data with existing area data
+            extended_area = {**(area or {}), **text_data}
             
             db_result = save_reference(
                 name=reference_name,
@@ -66,8 +69,7 @@ class TextHelpers:
                 team_id=DEFAULT_TEAM_ID,
                 r2_path=None,  # Text doesn't need R2 storage
                 r2_url=None,   # Text doesn't need R2 storage
-                area=area,
-                text_data=text_data
+                area=extended_area  # Store text data in area field
             )
             
             if not db_result.get('success'):
