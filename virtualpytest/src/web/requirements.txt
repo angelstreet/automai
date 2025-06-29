@@ -13,3 +13,6 @@ pytesseract
 pytz
 Appium-Python-Client
 boto3
+numpy==1.24.3
+Pillow==10.0.1
+coral-ai-tpu==2.0.0

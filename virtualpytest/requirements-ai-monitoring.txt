@@ -1,0 +1,20 @@
+# AI Monitoring Dependencies for VirtualPyTest
+# These packages are required for real-time frame analysis and monitoring
+
+# Computer Vision and Image Processing
+opencv-python==4.8.1.78
+numpy==1.24.3
+
+# OCR (Optical Character Recognition) for subtitle and error text detection
+pytesseract==0.3.10
+
+# Image processing utilities
+Pillow==10.0.1
+
+# Note: Tesseract OCR binary must be installed separately on the system:
+# - Ubuntu/Debian: sudo apt-get install tesseract-ocr
+# - macOS: brew install tesseract
+# - Windows: Download from https://github.com/UB-Mannheim/tesseract/wiki
+
+# Optional: For enhanced performance on Raspberry Pi
+# coral-ai-tpu==2.0.0  # Uncomment if using Coral TPU for hardware acceleration 

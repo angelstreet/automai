@@ -1,4 +1,4 @@
-import { Close as CloseIcon, Tv as TvIcon } from '@mui/icons-material';
+import { Close as CloseIcon, Tv as TvIcon, Analytics as AnalyticsIcon } from '@mui/icons-material';
 import { Box, IconButton, Typography, Button, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
@@ -8,6 +8,7 @@ import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
 import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
 import { RemotePanel } from '../controller/remote/RemotePanel';
+import { MonitoringPlayer } from '../monitoring/MonitoringPlayer';
 
 interface RecHostStreamModalProps {
   host: Host;
@@ -46,6 +47,7 @@ const RecHostStreamModalContent: React.FC<{
 }> = ({ host, device, onClose, showRemoteByDefault }) => {
   // Local state
   const [showRemote, setShowRemote] = useState<boolean>(showRemoteByDefault);
+  const [monitoringMode, setMonitoringMode] = useState<boolean>(false);
 
   // Hooks - now only run when modal is actually open
   const { showError, showWarning } = useToast();
@@ -111,12 +113,33 @@ const RecHostStreamModalContent: React.FC<{
     console.log(`[@component:RecHostStreamModal] Remote panel toggled: ${!showRemote}`);
   }, [isControlActive, showRemote, showWarning]);
 
+  // Handle monitoring mode toggle
+  const handleToggleMonitoring = useCallback(() => {
+    if (!isControlActive) {
+      showWarning('Please take control of the device first to enable monitoring');
+      return;
+    }
+
+    setMonitoringMode((prev) => {
+      const newMode = !prev;
+      console.log(`[@component:RecHostStreamModal] Monitoring mode toggled: ${newMode}`);
+
+      // Auto-show remote when enabling monitoring for full control
+      if (newMode && !showRemote) {
+        setShowRemote(true);
+      }
+
+      return newMode;
+    });
+  }, [isControlActive, showRemote, showWarning]);
+
   // Handle modal close
   const handleClose = useCallback(async () => {
     console.log('[@component:RecHostStreamModal] Closing modal');
 
     // Reset state (useDeviceControl handles cleanup automatically)
     setShowRemote(false);
+    setMonitoringMode(false);
     onClose();
   }, [onClose]);
 
@@ -189,7 +212,8 @@ const RecHostStreamModalContent: React.FC<{
           }}
         >
           <Typography variant="h6" component="h2">
-            {device?.device_name || host.host_name} - Live Stream
+            {device?.device_name || host.host_name} -{' '}
+            {monitoringMode ? 'AI Monitoring' : 'Live Stream'}
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -219,6 +243,30 @@ const RecHostStreamModalContent: React.FC<{
                 : isControlActive
                   ? 'Release Control'
                   : 'Take Control'}
+            </Button>
+
+            {/* AI Monitoring Toggle Button */}
+            <Button
+              variant={monitoringMode ? 'contained' : 'outlined'}
+              size="small"
+              onClick={handleToggleMonitoring}
+              disabled={!isControlActive}
+              startIcon={<AnalyticsIcon />}
+              color={monitoringMode ? 'warning' : 'primary'}
+              sx={{
+                fontSize: '0.75rem',
+                minWidth: 120,
+                color: monitoringMode ? 'white' : 'inherit',
+              }}
+              title={
+                !isControlActive
+                  ? 'Take control first to enable monitoring'
+                  : monitoringMode
+                    ? 'Disable AI Monitoring'
+                    : 'Enable AI Monitoring'
+              }
+            >
+              {monitoringMode ? 'Stop Monitoring' : 'AI Monitoring'}
             </Button>
 
             {/* Remote Toggle Button */}
@@ -263,7 +311,7 @@ const RecHostStreamModalContent: React.FC<{
             backgroundColor: 'black',
           }}
         >
-          {/* Stream Viewer */}
+          {/* Stream Viewer / Monitoring Player */}
           <Box
             sx={{
               width: showRemote && isControlActive ? '75%' : '100%',
@@ -275,7 +323,18 @@ const RecHostStreamModalContent: React.FC<{
               backgroundColor: 'black',
             }}
           >
-            {streamUrl ? (
+            {monitoringMode ? (
+              <MonitoringPlayer
+                host={host}
+                device={device}
+                isControlActive={isControlActive}
+                model={device?.device_model || 'unknown'}
+                sx={{
+                  width: '100%',
+                  height: '100%',
+                }}
+              />
+            ) : streamUrl ? (
               <HLSVideoPlayer
                 streamUrl={streamUrl}
                 isStreamActive={true}
