@@ -12,14 +12,9 @@ import {
   getVerificationLayout,
   createDeviceResolution,
   createStreamViewerSx,
-  calculateExpectedFrames,
 } from '../../utils/userinterface/screenEditorUtils';
 
-export const useScreenEditor = (
-  selectedHost: any,
-  selectedDeviceId: string | null,
-  onDisconnectComplete?: () => void,
-) => {
+export const useScreenEditor = (selectedHost: any, selectedDeviceId: string | null) => {
   // Get the specific device from the host
   const device = selectedHost?.devices?.find((d: any) => d.device_id === selectedDeviceId);
 
@@ -39,9 +34,7 @@ export const useScreenEditor = (
 
   // Additional state for capture management
   const [lastScreenshotPath, setLastScreenshotPath] = useState<string | undefined>(undefined);
-  const [videoFramesPath, setVideoFramesPath] = useState<string | undefined>(undefined);
   const [currentFrame, setCurrentFrame] = useState(0);
-  const [totalFrames, setTotalFrames] = useState(0);
   const [viewMode, setViewMode] = useState<ScreenViewMode>('stream');
 
   // Memoize sx props to prevent new object references
@@ -62,8 +55,6 @@ export const useScreenEditor = (
   const [isCapturing, setIsCapturing] = useState(false);
   const [isStoppingCapture, setIsStoppingCapture] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [savedFrameCount, setSavedFrameCount] = useState(0);
   const [selectedArea, setSelectedArea] = useState<SelectedArea | null>(null);
 
   // Derived resolution info
@@ -175,7 +166,6 @@ export const useScreenEditor = (
     }
 
     setIsCapturing(true);
-    setStreamStatus('capturing');
     setCaptureStartTime(new Date());
 
     console.log(
@@ -192,7 +182,6 @@ export const useScreenEditor = (
 
     setIsStoppingCapture(true);
     setIsCapturing(false);
-    setStreamStatus('processing');
     setCaptureEndTime(new Date());
 
     console.log(
@@ -202,7 +191,6 @@ export const useScreenEditor = (
     // Simulate processing delay
     setTimeout(() => {
       setIsStoppingCapture(false);
-      setStreamStatus('running');
     }, 2000);
   }, [device]);
 
@@ -227,7 +215,7 @@ export const useScreenEditor = (
     }, 1500);
   }, [device]);
 
-  // Restart stream
+  // Restart stream - just close capture/video and return to stream view
   const restartStream = useCallback(async () => {
     if (!device) {
       console.log('[@hook:useScreenEditor] Cannot restart stream: no device selected');
@@ -235,15 +223,14 @@ export const useScreenEditor = (
     }
 
     console.log(
-      `[@hook:useScreenEditor] Restarting stream for device: ${device.name} (${device.model})`,
+      `[@hook:useScreenEditor] Closing capture/video and returning to stream view for device: ${device.name} (${device.model})`,
     );
-    setStreamStatus('connecting');
 
-    // Refetch stream URL
-    const url = await getStreamUrl();
-    setStreamUrl(url);
+    // Close capture/video screen and return to stream view
+    setViewMode('stream');
+    setSelectedArea(null);
     setStreamStatus('running');
-  }, [device, getStreamUrl]);
+  }, [device]);
 
   // Handle toggle expanded
   const handleToggleExpanded = useCallback(() => {
@@ -261,12 +248,6 @@ export const useScreenEditor = (
     setSelectedArea(null);
   }, []);
 
-  // Handle image load
-  const handleImageLoad = useCallback(() => {
-    // Image loaded successfully
-    console.log('[@hook:useScreenEditor] Screenshot image loaded');
-  }, []);
-
   // Handle area selected
   const handleAreaSelected = useCallback((area: SelectedArea) => {
     setSelectedArea(area);
@@ -281,9 +262,7 @@ export const useScreenEditor = (
       streamStatus,
       streamUrl,
       lastScreenshotPath,
-      videoFramesPath,
       currentFrame,
-      totalFrames,
       viewMode,
       isCapturing,
       isStoppingCapture,
@@ -291,10 +270,12 @@ export const useScreenEditor = (
       captureEndTime,
       isExpanded,
       isScreenshotLoading,
-      isSaving,
-      savedFrameCount,
       selectedArea,
-      resolutionInfo,
+      resolutionInfo: {
+        device: resolutionInfo || null,
+        capture: null,
+        stream: null,
+      },
     }),
     [
       isConnected,
@@ -302,9 +283,7 @@ export const useScreenEditor = (
       streamStatus,
       streamUrl,
       lastScreenshotPath,
-      videoFramesPath,
       currentFrame,
-      totalFrames,
       viewMode,
       isCapturing,
       isStoppingCapture,
@@ -312,8 +291,6 @@ export const useScreenEditor = (
       captureEndTime,
       isExpanded,
       isScreenshotLoading,
-      isSaving,
-      savedFrameCount,
       selectedArea,
       resolutionInfo,
     ],
@@ -329,9 +306,12 @@ export const useScreenEditor = (
       handleToggleExpanded,
       handleFrameChange,
       handleBackToStream,
-      handleImageLoad,
       handleAreaSelected,
+      handleClearSelection: () => {
+        setSelectedArea(null);
+      },
       handleTap,
+      getStreamUrl,
     }),
     [
       handleStartCapture,
@@ -341,9 +321,9 @@ export const useScreenEditor = (
       handleToggleExpanded,
       handleFrameChange,
       handleBackToStream,
-      handleImageLoad,
       handleAreaSelected,
       handleTap,
+      getStreamUrl,
     ],
   );
 

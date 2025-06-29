@@ -54,9 +54,7 @@ export interface ScreenEditorState {
 
   // Capture state
   lastScreenshotPath: string | undefined;
-  videoFramesPath: string | undefined;
   currentFrame: number;
-  totalFrames: number;
   viewMode: ScreenViewMode;
   isCapturing: boolean;
   isStoppingCapture: boolean;
@@ -66,14 +64,9 @@ export interface ScreenEditorState {
   // UI state
   isExpanded: boolean;
   isScreenshotLoading: boolean;
-  isSaving: boolean;
-  savedFrameCount: number;
 
   // Selection state
   selectedArea: SelectedArea | null;
-  captureImageRef: React.RefObject<HTMLImageElement> | undefined;
-  captureImageDimensions: { width: number; height: number } | undefined;
-  captureSourcePath: string | undefined; // TODO: Rename to image_source_url for consistency
 
   // Resolution state
   resolutionInfo: ResolutionInfo;
@@ -84,16 +77,9 @@ export interface ScreenEditorActions {
   handleStopCapture: () => Promise<void>;
   handleTakeScreenshot: () => Promise<void>;
   restartStream: () => Promise<void>;
-  handleDisconnect: () => Promise<void>;
-  handleToggleExpanded: () => Promise<void>;
+  handleToggleExpanded: () => void;
   handleFrameChange: (frame: number) => void;
   handleBackToStream: () => void;
-  handleScreenshotTaken: (path: string) => void;
-  handleImageLoad: (
-    ref: React.RefObject<HTMLImageElement>,
-    dimensions: { width: number; height: number },
-    sourcePath: string,
-  ) => void;
   handleAreaSelected: (area: SelectedArea) => void;
   handleClearSelection: () => void;
   handleTap: (x: number, y: number) => Promise<void>;
