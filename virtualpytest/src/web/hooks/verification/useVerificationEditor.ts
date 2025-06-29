@@ -467,6 +467,7 @@ export const useVerificationEditor = ({
         },
         body: JSON.stringify({
           host: selectedHost, // Send full host object
+          device_id: selectedDeviceId, // Add missing device_id parameter
           device_model: deviceModel,
           area: selectedArea,
           image_source_url: sourceFilename,
@@ -512,7 +513,14 @@ export const useVerificationEditor = ({
     } catch (error) {
       console.error('[@hook:useVerificationEditor] Error during text auto-detection:', error);
     }
-  }, [selectedArea, selectedHost, captureSourcePath, textImageFilter, deviceModel]);
+  }, [
+    selectedArea,
+    selectedHost,
+    captureSourcePath,
+    textImageFilter,
+    deviceModel,
+    selectedDeviceId,
+  ]);
 
   // Validate regex
   const validateRegex = useCallback((text: string): boolean => {

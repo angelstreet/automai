@@ -3,15 +3,7 @@ import {
   KeyboardArrowUp as KeyboardArrowUpIcon,
   KeyboardArrowDown as KeyboardArrowDownIcon,
 } from '@mui/icons-material';
-import {
-  Box,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Typography,
-  IconButton,
-} from '@mui/material';
+import { Box, FormControl, InputLabel, Select, MenuItem, IconButton } from '@mui/material';
 import React from 'react';
 
 import {
@@ -47,7 +39,15 @@ interface VerificationItemProps {
     resultType?: 'PASS' | 'FAIL' | 'ERROR',
     imageFilter?: 'none' | 'greyscale' | 'binary',
   ) => void;
-  onSourceImageClick: (sourceUrl: string, resultType: 'PASS' | 'FAIL' | 'ERROR') => void;
+  onSourceImageClick: (
+    searchedText: string,
+    extractedText: string,
+    sourceUrl?: string,
+    resultType?: 'PASS' | 'FAIL' | 'ERROR',
+    detectedLanguage?: string,
+    languageConfidence?: number,
+    imageFilter?: 'none' | 'greyscale' | 'binary',
+  ) => void;
   processImageUrl: (url: string) => string;
   getCacheBustedUrl: (url: string) => string;
   canMoveUp: boolean;
@@ -103,7 +103,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                 <MenuItem key={verif.command} value={verif.command} sx={{ fontSize: '0.75rem' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>[{category}]</span>
-                    <span>{verif.label}</span>
+                    <span>{verif.command}</span>
                   </Box>
                 </MenuItem>
               )),
