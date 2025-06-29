@@ -62,11 +62,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   // Initialize actions from edgeForm when dialog opens
   useEffect(() => {
     if (isOpen && edgeForm) {
-      console.log(`[@component:EdgeEditDialog] Initializing actions from edgeForm:`, {
-        actionsCount: edgeForm.actions?.length || 0,
-        retryActionsCount: edgeForm.retryActions?.length || 0,
-        edgeForm: edgeForm,
-      });
       edgeHook.initializeActions(edgeForm);
     }
   }, [isOpen, edgeForm.actions, edgeForm.retryActions, edgeHook]);
@@ -94,13 +89,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      console.log('[@component:EdgeEditDialog] Dialog opened with available actions:', {
-        hostName: selectedHost?.host_name,
-        deviceId: selectedDeviceId,
-        availableActionsCount: Object.keys(controllerActions).length,
-        actionCategories: Object.keys(controllerActions),
-      });
-
       if (Object.keys(controllerActions).length === 0) {
         console.log('[@component:EdgeEditDialog] No actions available - control may not be active');
       }

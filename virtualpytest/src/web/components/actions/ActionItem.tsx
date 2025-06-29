@@ -46,7 +46,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200 }}>
           <Select
-            value={action.id || action.command || ''}
+            value={action.command || ''}
             onChange={(e) => onActionSelect(index, e.target.value)}
             displayEmpty
             size="small"
@@ -76,32 +76,74 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                 return <em style={{ fontSize: '0.8rem' }}>Select action...</em>;
               }
 
-              // Find the selected action to display its label
-              let selectedLabel = '';
-
-              // Search through all action categories to find the action (same logic as ActionsList)
-              for (const [category, categoryData] of Object.entries(availableActionTypes)) {
-                let actions: any[] = [];
-
-                if (Array.isArray(categoryData)) {
-                  // Direct array (flat structure)
-                  actions = categoryData;
-                } else if (categoryData && typeof categoryData === 'object') {
-                  // Nested structure - get the array from the nested object
-                  const nestedActions = categoryData[category];
-                  if (Array.isArray(nestedActions)) {
-                    actions = nestedActions;
-                  }
-                }
-
-                const actionItem = actions.find((a) => a.id === selected);
-                if (actionItem) {
-                  selectedLabel = actionItem.label;
-                  break;
-                }
+              // For resolved actions, show the action label or generate a descriptive label
+              if (action.label && action.label !== action.command) {
+                return action.label;
               }
 
-              return selectedLabel || selected;
+              // Generate descriptive label from command and parameters
+              switch (action.command) {
+                case 'click_element':
+                  if (action.params?.element_name) {
+                    return `Click on "${action.params.element_name}"`;
+                  } else if (action.params?.selector) {
+                    return `Click element "${action.params.selector}"`;
+                  }
+                  return 'Click Element';
+
+                case 'press_key':
+                  if (action.params?.key) {
+                    return `Press "${action.params.key}" key`;
+                  }
+                  return 'Press Key';
+
+                case 'type_text':
+                  if (action.params?.text) {
+                    const text =
+                      action.params.text.length > 20
+                        ? `${action.params.text.substring(0, 20)}...`
+                        : action.params.text;
+                    return `Type "${text}"`;
+                  }
+                  return 'Type Text';
+
+                case 'swipe':
+                  if (action.params?.direction) {
+                    return `Swipe ${action.params.direction}`;
+                  }
+                  return 'Swipe';
+
+                case 'wait':
+                  if (action.params?.duration) {
+                    return `Wait ${action.params.duration}ms`;
+                  }
+                  return 'Wait';
+
+                default:
+                  // Find the action in available types to get its label
+                  for (const [category, categoryData] of Object.entries(availableActionTypes)) {
+                    let actions: any[] = [];
+
+                    if (Array.isArray(categoryData)) {
+                      actions = categoryData;
+                    } else if (categoryData && typeof categoryData === 'object') {
+                      const nestedActions = categoryData[category];
+                      if (Array.isArray(nestedActions)) {
+                        actions = nestedActions;
+                      }
+                    }
+
+                    const actionItem = actions.find((a) => a.command === selected);
+                    if (actionItem) {
+                      return actionItem.label;
+                    }
+                  }
+
+                  // Fallback: format command name
+                  return selected
+                    .replace(/_/g, ' ')
+                    .replace(/\b\w/g, (l: string) => l.toUpperCase());
+              }
             }}
           >
             {Object.entries(availableActionTypes).map(([category, categoryData]) => {
@@ -116,17 +158,11 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                 if (Array.isArray(nestedActions)) {
                   actions = nestedActions;
                 } else {
-                  console.warn(
-                    `[@component:ActionItem] Invalid nested actions for category ${category}:`,
-                    categoryData,
-                  );
+                  // Skip invalid nested structures
                   return null;
                 }
               } else {
-                console.warn(
-                  `[@component:ActionItem] Invalid actions for category ${category}:`,
-                  categoryData,
-                );
+                // Skip invalid category data
                 return null;
               }
 
@@ -141,7 +177,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                 ...actions.map((actionItem, actionIndex) => (
                   <MenuItem
                     key={`${category}-${actionIndex}-${actionItem.command}`}
-                    value={actionItem.id}
+                    value={actionItem.command}
                     sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
                   >
                     {actionItem.label}

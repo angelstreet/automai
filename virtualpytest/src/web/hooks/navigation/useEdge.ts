@@ -64,32 +64,14 @@ export const useEdge = (props?: UseEdgeProps) => {
    */
   const getActionsFromEdge = useCallback(
     (edge: UINavigationEdge): EdgeAction[] => {
-      console.log(`[@hook:useEdge] Getting actions from edge:`, {
-        edgeId: edge.id,
-        edgeData: edge.data,
-        hasActions: !!edge.data?.actions,
-        actionsLength: edge.data?.actions?.length || 0,
-        hasActionIds: !!edge.data?.action_ids,
-        actionIdsLength: edge.data?.action_ids?.length || 0,
-        hasLegacyAction: !!edge.data?.action,
-        legacyActionType: typeof edge.data?.action,
-      });
-
       // Handle new format (multiple actions)
       if (edge.data?.actions && edge.data.actions.length > 0) {
-        console.log(`[@hook:useEdge] Found ${edge.data.actions.length} actions in new format`);
         return edge.data.actions;
       }
 
       // Handle action_ids format (similar to verification_ids in nodes)
       if (edge.data?.action_ids && edge.data.action_ids.length > 0) {
-        console.log(
-          `[@hook:useEdge] Found ${edge.data.action_ids.length} action IDs, resolving to action objects`,
-        );
-        console.log(`[@hook:useEdge] Action IDs:`, edge.data.action_ids);
-
         const allActions = getActions();
-        console.log(`[@hook:useEdge] Available saved actions:`, allActions.length);
 
         // Match action_ids with actual action objects
         const edgeActions: EdgeAction[] = [];
@@ -108,9 +90,7 @@ export const useEdge = (props?: UseEdgeProps) => {
                 waitTime: action.waitTime || 2000,
               };
               edgeActions.push(edgeAction);
-              console.log(`[@hook:useEdge] Resolved action ID ${actionId} to:`, edgeAction);
             } else {
-              console.warn(`[@hook:useEdge] Could not find action with ID: ${actionId}`);
               // Create a placeholder action for missing actions
               const placeholderAction: EdgeAction = {
                 id: actionId,
@@ -126,13 +106,11 @@ export const useEdge = (props?: UseEdgeProps) => {
           }
         }
 
-        console.log(`[@hook:useEdge] Resolved ${edgeActions.length} actions from action IDs`);
         return edgeActions;
       }
 
       // Handle legacy format (single action) - convert to array
       if (edge.data?.action && typeof edge.data.action === 'object') {
-        console.log(`[@hook:useEdge] Found legacy action, converting to array format`);
         const legacyAction = edge.data.action as any;
         return [
           {
@@ -147,7 +125,6 @@ export const useEdge = (props?: UseEdgeProps) => {
         ];
       }
 
-      console.log(`[@hook:useEdge] No actions found in edge data`);
       return [];
     },
     [getActions],
@@ -318,33 +295,15 @@ export const useEdge = (props?: UseEdgeProps) => {
    * Initialize actions from edge form when dialog opens
    */
   const initializeActions = useCallback((edgeForm: EdgeForm) => {
-    console.log(`[@hook:useEdge] initializeActions called with:`, {
-      edgeForm,
-      hasActions: !!edgeForm?.actions,
-      actionsLength: edgeForm?.actions?.length || 0,
-      hasRetryActions: !!edgeForm?.retryActions,
-      retryActionsLength: edgeForm?.retryActions?.length || 0,
-    });
-
     if (edgeForm?.actions) {
-      console.log(
-        `[@hook:useEdge] Initializing ${edgeForm.actions.length} actions from edgeForm:`,
-        edgeForm.actions,
-      );
       setLocalActions(edgeForm.actions);
     } else {
-      console.log(`[@hook:useEdge] No actions in edgeForm, setting empty array`);
       setLocalActions([]);
     }
 
     if (edgeForm?.retryActions) {
-      console.log(
-        `[@hook:useEdge] Initializing ${edgeForm.retryActions.length} retry actions from edgeForm:`,
-        edgeForm.retryActions,
-      );
       setLocalRetryActions(edgeForm.retryActions);
     } else {
-      console.log(`[@hook:useEdge] No retry actions in edgeForm, setting empty array`);
       setLocalRetryActions([]);
     }
   }, []);
@@ -354,8 +313,6 @@ export const useEdge = (props?: UseEdgeProps) => {
    */
   const handleActionsChange = useCallback(
     (newActions: EdgeAction[], edgeForm: EdgeForm, setEdgeForm: (form: EdgeForm) => void) => {
-      console.log(`[@hook:useEdge] Updating edgeForm with new actions:`, newActions);
-
       // Update both local state and edgeForm
       setLocalActions(newActions);
       setEdgeForm({
@@ -371,8 +328,6 @@ export const useEdge = (props?: UseEdgeProps) => {
    */
   const handleRetryActionsChange = useCallback(
     (newRetryActions: EdgeAction[], edgeForm: EdgeForm, setEdgeForm: (form: EdgeForm) => void) => {
-      console.log(`[@hook:useEdge] Updating edgeForm with new retry actions:`, newRetryActions);
-
       // Update both local state and edgeForm
       setLocalRetryActions(newRetryActions);
       setEdgeForm({
@@ -407,15 +362,6 @@ export const useEdge = (props?: UseEdgeProps) => {
         retryActions: retryActions,
         finalWaitTime: edge.data?.finalWaitTime ?? 2000,
       };
-
-      console.log(`[@hook:useEdge] createEdgeForm created:`, {
-        edgeId: edge.id,
-        description: edgeForm.description,
-        actionsCount: edgeForm.actions.length,
-        retryActionsCount: edgeForm.retryActions.length,
-        finalWaitTime: edgeForm.finalWaitTime,
-        edgeForm,
-      });
 
       return edgeForm;
     },
