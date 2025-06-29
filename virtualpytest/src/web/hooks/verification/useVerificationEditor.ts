@@ -84,7 +84,10 @@ export const useVerificationEditor = ({
 
   // Get model references using the device model
   const modelReferences = useMemo(() => {
-    return getModelReferences(deviceModel || '');
+    if (!deviceModel) {
+      return {}; // Return empty object without calling getModelReferences when deviceModel is undefined
+    }
+    return getModelReferences(deviceModel);
   }, [getModelReferences, deviceModel]);
 
   // State for reference type and details
