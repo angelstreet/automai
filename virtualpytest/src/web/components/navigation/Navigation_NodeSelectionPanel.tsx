@@ -309,10 +309,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             {/* Parent and Depth Info */}
             <Box sx={{ mb: 1.5, fontSize: '0.75rem', color: 'text.secondary' }}>
               <Typography variant="caption" display="block">
+                <strong>Parent:</strong> {getParentNames(selectedNode.data.parent || [])} -{' '}
                 <strong>Depth:</strong> {selectedNode.data.depth || 0}
-              </Typography>
-              <Typography variant="caption" display="block">
-                <strong>Parent:</strong> {getParentNames(selectedNode.data.parent || [])}
               </Typography>
             </Box>
 
