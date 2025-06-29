@@ -69,9 +69,13 @@ const RecHostStreamModalContent: React.FC<{
 
   // Calculate stream container dimensions for overlay alignment
   const streamContainerDimensions = useMemo(() => {
+    // Use stable window dimensions to prevent infinite re-renders
+    const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
+
     // Modal dimensions (95vw x 90vh)
-    const modalWidth = window.innerWidth * 0.95;
-    const modalHeight = window.innerHeight * 0.9;
+    const modalWidth = windowWidth * 0.95;
+    const modalHeight = windowHeight * 0.9;
 
     // Header height (matches the minHeight + padding)
     const headerHeight = 48; // minHeight from header styling
@@ -81,18 +85,18 @@ const RecHostStreamModalContent: React.FC<{
     const streamAreaHeight = modalHeight - headerHeight;
 
     // Modal position (centered)
-    const modalX = (window.innerWidth - modalWidth) / 2;
-    const modalY = (window.innerHeight - modalHeight) / 2;
+    const modalX = (windowWidth - modalWidth) / 2;
+    const modalY = (windowHeight - modalHeight) / 2;
 
     // Stream container position
     const streamX = modalX;
     const streamY = modalY + headerHeight;
 
     const dimensions = {
-      width: streamAreaWidth,
-      height: streamAreaHeight,
-      x: streamX,
-      y: streamY,
+      width: Math.round(streamAreaWidth),
+      height: Math.round(streamAreaHeight),
+      x: Math.round(streamX),
+      y: Math.round(streamY),
     };
 
     console.log(
@@ -132,6 +136,15 @@ const RecHostStreamModalContent: React.FC<{
       return newMode;
     });
   }, [isControlActive, showRemote, showWarning]);
+
+  // Stable device resolution to prevent re-renders
+  const stableDeviceResolution = useMemo(() => ({ width: 1920, height: 1080 }), []);
+
+  // Stable onReleaseControl callback to prevent re-renders
+  const handleReleaseControl = useCallback(() => {
+    setShowRemote(false);
+    // Control release handled by useDeviceControl
+  }, []);
 
   // Handle modal close
   const handleClose = useCallback(async () => {
@@ -386,12 +399,9 @@ const RecHostStreamModalContent: React.FC<{
                 deviceId={device?.device_id || 'device1'}
                 deviceModel={device?.device_model || 'unknown'}
                 isConnected={isControlActive}
-                onReleaseControl={() => {
-                  setShowRemote(false);
-                  // Control release handled by useDeviceControl
-                }}
+                onReleaseControl={handleReleaseControl}
                 initialCollapsed={false}
-                deviceResolution={{ width: 1920, height: 1080 }}
+                deviceResolution={stableDeviceResolution}
                 streamCollapsed={false}
                 streamMinimized={false}
                 streamContainerDimensions={streamContainerDimensions}

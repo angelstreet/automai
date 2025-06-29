@@ -99,7 +99,7 @@ export function useAndroidMobile(
         setAndroidScreenshot(null);
       }
     }
-  }, [isConnected, selectedHost?.host_name, deviceId]);
+  }, [isConnected]); // Removed selectedHost?.host_name and deviceId to prevent infinite re-renders
 
   // Debug logging for state changes
   useEffect(() => {
@@ -127,7 +127,7 @@ export function useAndroidMobile(
     return () => {
       console.log('[@hook:useAndroidMobile] Hook unmounting for device:', deviceId);
     };
-  }, [deviceId, selectedHost?.host_name]);
+  }, []); // Empty dependency array to only run on mount/unmount
 
   // Action handlers
   const handleTap = useCallback(

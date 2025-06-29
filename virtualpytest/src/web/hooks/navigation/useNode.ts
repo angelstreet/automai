@@ -39,7 +39,7 @@ export const useNode = (props?: UseNodeProps) => {
       return {}; // Return empty object without calling getModelReferences when deviceModel is undefined
     }
     const references = getModelReferences(deviceModel);
-   
+
     return references;
   }, [getModelReferences, deviceModel]);
 
