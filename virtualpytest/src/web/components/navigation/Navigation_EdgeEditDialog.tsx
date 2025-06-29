@@ -62,10 +62,14 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   // Initialize actions from edgeForm when dialog opens
   useEffect(() => {
     if (isOpen && edgeForm) {
-      console.log(`[@component:EdgeEditDialog] Initializing actions from edgeForm`);
+      console.log(`[@component:EdgeEditDialog] Initializing actions from edgeForm:`, {
+        actionsCount: edgeForm.actions?.length || 0,
+        retryActionsCount: edgeForm.retryActions?.length || 0,
+        edgeForm: edgeForm,
+      });
       edgeHook.initializeActions(edgeForm);
     }
-  }, [isOpen, edgeForm, edgeHook]);
+  }, [isOpen, edgeForm.actions, edgeForm.retryActions, edgeHook]);
 
   useEffect(() => {
     if (!isOpen) {

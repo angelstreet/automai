@@ -59,13 +59,24 @@ export const useEdge = (props?: UseEdgeProps) => {
    * Get actions from edge data in consistent format
    */
   const getActionsFromEdge = useCallback((edge: UINavigationEdge): EdgeAction[] => {
+    console.log(`[@hook:useEdge] Getting actions from edge:`, {
+      edgeId: edge.id,
+      edgeData: edge.data,
+      hasActions: !!edge.data?.actions,
+      actionsLength: edge.data?.actions?.length || 0,
+      hasLegacyAction: !!edge.data?.action,
+      legacyActionType: typeof edge.data?.action,
+    });
+
     // Handle new format (multiple actions)
     if (edge.data?.actions && edge.data.actions.length > 0) {
+      console.log(`[@hook:useEdge] Found ${edge.data.actions.length} actions in new format`);
       return edge.data.actions;
     }
 
     // Handle legacy format (single action) - convert to array
     if (edge.data?.action && typeof edge.data.action === 'object') {
+      console.log(`[@hook:useEdge] Found legacy action, converting to array format`);
       const legacyAction = edge.data.action as any;
       return [
         {
@@ -80,6 +91,7 @@ export const useEdge = (props?: UseEdgeProps) => {
       ];
     }
 
+    console.log(`[@hook:useEdge] No actions found in edge data`);
     return [];
   }, []);
 
@@ -248,16 +260,34 @@ export const useEdge = (props?: UseEdgeProps) => {
    * Initialize actions from edge form when dialog opens
    */
   const initializeActions = useCallback((edgeForm: EdgeForm) => {
+    console.log(`[@hook:useEdge] initializeActions called with:`, {
+      edgeForm,
+      hasActions: !!edgeForm?.actions,
+      actionsLength: edgeForm?.actions?.length || 0,
+      hasRetryActions: !!edgeForm?.retryActions,
+      retryActionsLength: edgeForm?.retryActions?.length || 0,
+    });
+
     if (edgeForm?.actions) {
-      console.log(`[@hook:useEdge] Initializing actions from edgeForm:`, edgeForm.actions);
+      console.log(
+        `[@hook:useEdge] Initializing ${edgeForm.actions.length} actions from edgeForm:`,
+        edgeForm.actions,
+      );
       setLocalActions(edgeForm.actions);
+    } else {
+      console.log(`[@hook:useEdge] No actions in edgeForm, setting empty array`);
+      setLocalActions([]);
     }
+
     if (edgeForm?.retryActions) {
       console.log(
-        `[@hook:useEdge] Initializing retry actions from edgeForm:`,
+        `[@hook:useEdge] Initializing ${edgeForm.retryActions.length} retry actions from edgeForm:`,
         edgeForm.retryActions,
       );
       setLocalRetryActions(edgeForm.retryActions);
+    } else {
+      console.log(`[@hook:useEdge] No retry actions in edgeForm, setting empty array`);
+      setLocalRetryActions([]);
     }
   }, []);
 
@@ -310,12 +340,26 @@ export const useEdge = (props?: UseEdgeProps) => {
    */
   const createEdgeForm = useCallback(
     (edge: UINavigationEdge): EdgeForm => {
-      return {
+      const actions = getActionsFromEdge(edge);
+      const retryActions = getRetryActionsFromEdge(edge);
+
+      const edgeForm = {
         description: edge.data?.description || '',
-        actions: getActionsFromEdge(edge),
-        retryActions: getRetryActionsFromEdge(edge),
+        actions: actions,
+        retryActions: retryActions,
         finalWaitTime: edge.data?.finalWaitTime ?? 2000,
       };
+
+      console.log(`[@hook:useEdge] createEdgeForm created:`, {
+        edgeId: edge.id,
+        description: edgeForm.description,
+        actionsCount: edgeForm.actions.length,
+        retryActionsCount: edgeForm.retryActions.length,
+        finalWaitTime: edgeForm.finalWaitTime,
+        edgeForm,
+      });
+
+      return edgeForm;
     },
     [getActionsFromEdge, getRetryActionsFromEdge],
   );

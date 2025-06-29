@@ -293,9 +293,7 @@ export interface NodeEditDialogProps {
   selectedDeviceId?: string; // Device ID for getting model references
   isControlActive?: boolean;
   model?: string;
-  // Centralized verification references props - required
-  modelReferences: import('../verification/Verification_Types').ModelReferences;
-  referencesLoading: boolean;
+  // modelReferences and referencesLoading are now obtained from useNode hook
 }
 
 export interface EdgeEditDialogProps {

@@ -656,8 +656,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
             isControlActive={isControlActive}
             selectedHost={selectedHost}
             selectedDeviceId={selectedDeviceId || undefined}
-            modelReferences={currentModelReferences}
-            referencesLoading={referencesLoading}
           />
         )}
 

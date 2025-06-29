@@ -82,6 +82,10 @@ export const useNavigationEditor = () => {
 
   const onNodeDoubleClick = useCallback(
     (_event: React.MouseEvent, node: any) => {
+      // Prevent opening edit dialog for entry nodes
+      if (node.data?.type === 'entry') {
+        return;
+      }
       navigation.openNodeDialog(node);
     },
     [navigation],

@@ -449,6 +449,13 @@ export const useNode = (props?: UseNodeProps) => {
   }, []);
 
   /**
+   * Check if node is an entry node
+   */
+  const isEntryNode = useCallback((node: UINavigationNode): boolean => {
+    return node.data.type === 'entry';
+  }, []);
+
+  /**
    * Check if node is protected from deletion
    */
   const isProtectedNode = useCallback((node: UINavigationNode): boolean => {
@@ -517,5 +524,8 @@ export const useNode = (props?: UseNodeProps) => {
     executeNavigation,
     clearNavigationState,
     getFullPath,
+
+    // Additional helper functions
+    isEntryNode,
   };
 };

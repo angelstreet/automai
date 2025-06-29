@@ -34,11 +34,14 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   selectedDeviceId,
   isControlActive = false,
   model,
-  modelReferences,
-  referencesLoading,
 }) => {
   // Early return if nodeForm is null or undefined - MUST be before any hooks
   if (!nodeForm) {
+    return null;
+  }
+
+  // Early return if this is an entry node - entry nodes should not be editable
+  if ((nodeForm.type as string) === 'entry') {
     return null;
   }
 
@@ -72,7 +75,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
     console.log(`[@component:NodeEditDialog] Dialog opened, initializing verifications`);
     nodeHook.initializeVerifications(nodeForm);
-  }, [isOpen, nodeForm]); // Remove nodeHook from dependencies to prevent infinite loop
+  }, [isOpen, nodeForm, nodeHook]);
 
   // Handle verification changes by creating a custom handler that updates nodeForm
   const handleVerificationsChange = useCallback(
@@ -84,21 +87,15 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
       nodeHook.handleVerificationsChange(newVerifications, nodeForm, setNodeForm);
     },
-    [nodeForm, setNodeForm], // Remove nodeHook from dependencies to prevent infinite loop
+    [nodeForm, setNodeForm, nodeHook],
   );
-
-  // Handle reference selection
-  const handleReferenceSelected = (referenceName: string, referenceData: any) => {
-    console.log('[@component:NodeEditDialog] Reference selected:', referenceName, referenceData);
-    // Reference selection is handled internally by VerificationsList
-  };
 
   useEffect(() => {
     if (!isOpen) {
       // Reset state when dialog closes
       nodeHook.resetDialogState();
     }
-  }, [isOpen]); // Remove nodeHook from dependencies to prevent infinite loop
+  }, [isOpen, nodeHook]);
 
   const handleSave = () => {
     nodeHook.handleSave(onSubmit);
@@ -176,7 +173,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           />
 
           {/* Screenshot URL Field - only show for non-entry nodes */}
-          {nodeForm?.type !== 'entry' && (
+          {(nodeForm?.type as string) !== 'entry' && (
             <TextField
               label="Screenshot URL"
               value={nodeForm?.screenshot || ''}
@@ -196,7 +193,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             selectedHost={selectedHost}
             onTest={nodeHook.verification.handleTest}
             testResults={nodeHook.verification.testResults}
-            onReferenceSelected={handleReferenceSelected}
+            onReferenceSelected={() => {}}
             modelReferences={nodeHook.modelReferences}
             referencesLoading={nodeHook.referencesLoading}
             showCollapsible={false}
@@ -224,7 +221,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           )}
 
           {/* Entry node note */}
-          {nodeForm?.type === 'entry' && (
+          {(nodeForm?.type as string) === 'entry' && (
             <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
               Entry points are automatically positioned. Edit the connecting edge to change entry
               method and details.
