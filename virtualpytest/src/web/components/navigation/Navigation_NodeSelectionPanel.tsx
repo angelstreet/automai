@@ -2,7 +2,6 @@ import {
   Close as CloseIcon,
   Camera as CameraIcon,
   Route as RouteIcon,
-  Verified as VerifiedIcon,
   CheckCircle as CheckCircleIcon,
 } from '@mui/icons-material';
 import {
@@ -15,13 +14,11 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  LinearProgress,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
-import { useNavigationEditor } from '../../hooks/navigation/useNavigationEditor';
 
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
 
@@ -69,31 +66,55 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     // Add state to control showing/hiding the NodeGotoPanel
     const [showGotoPanel, setShowGotoPanel] = useState(false);
 
-    // Simple node operations replacement
-    const nodeOperations = {
-      takeAndSaveScreenshot: async (label: string, nodeId: string, onUpdateNode?: any) => {
-        try {
-          // Mock implementation - replace with actual screenshot logic
-          console.log('Taking screenshot for node:', label, nodeId);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          if (onUpdateNode) {
-            onUpdateNode(nodeId, { screenshot: 'mock-screenshot-url.png' });
+    // Real screenshot implementation using existing working routes
+    const takeAndSaveScreenshot = async (label: string, nodeId: string, onUpdateNode?: any) => {
+      try {
+        if (!selectedHost || !selectedDeviceId) {
+          return { success: false, message: '❌ No host or device selected' };
+        }
+
+        // Generate filename based on node label and timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const sanitizedLabel = label.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase();
+        const filename = `${sanitizedLabel}_${timestamp}`;
+
+        // Get device model for R2 path organization
+        const selectedDevice = selectedHost.devices?.find((d) => d.device_id === selectedDeviceId);
+        const deviceModel = selectedDevice?.device_model || 'android_mobile';
+
+        // Call the existing working navigation screenshot API
+        const response = await fetch('/server/navigation/saveNavigationScreenshot', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: selectedHost,
+            device_id: selectedDeviceId,
+            filename: filename,
+            device_model: deviceModel,
+          }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Update the node with the new screenshot URL
+          if (onUpdateNode && result.screenshot_url) {
+            const screenshotData = {
+              screenshot: result.screenshot_url,
+              screenshot_timestamp: Date.now(),
+            };
+            onUpdateNode(nodeId, screenshotData);
           }
+
           return { success: true, message: '✅ Screenshot saved successfully' };
-        } catch (error) {
-          return { success: false, message: `❌ Screenshot failed: ${error}` };
+        } else {
+          return { success: false, message: `❌ Screenshot failed: ${result.error}` };
         }
-      },
-      runVerifications: async (verifications: any[], nodeId: string) => {
-        try {
-          // Mock implementation - replace with actual verification logic
-          console.log('Running verifications for node:', nodeId, verifications);
-          await new Promise((resolve) => setTimeout(resolve, 1500));
-          return { success: true, message: `✅ All ${verifications.length} verifications passed` };
-        } catch (error) {
-          return { success: false, message: `❌ Verifications failed: ${error}` };
-        }
-      },
+      } catch (error) {
+        return { success: false, message: `❌ Screenshot failed: ${error}` };
+      }
     };
 
     // Clear the goto panel when the component unmounts or when a new node is selected
@@ -106,20 +127,15 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [showScreenshotConfirm, setShowScreenshotConfirm] = useState(false);
 
-    // Add states for verification execution
-    const [isRunningVerifications, setIsRunningVerifications] = useState(false);
-    const [verificationResult, setVerificationResult] = useState<string | null>(null);
-
     // Add state for screenshot save status
     const [screenshotSaveStatus, setScreenshotSaveStatus] = useState<'idle' | 'success' | 'error'>(
       'idle',
     );
 
-    // Clear verification results when node selection changes
+    // Clear screenshot status when node selection changes
     useEffect(() => {
-      setVerificationResult(null);
-      setScreenshotSaveStatus('idle'); // Reset screenshot status when node changes
-    }, [selectedNode.id, selectedNode.data.verifications]);
+      setScreenshotSaveStatus('idle');
+    }, [selectedNode.id]);
 
     const handleEdit = () => {
       setNodeForm({
@@ -173,8 +189,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         return;
       }
 
-      // Use the hook's takeAndSaveScreenshot method
-      const result = await nodeOperations.takeAndSaveScreenshot(
+      // Use the real takeAndSaveScreenshot function
+      const result = await takeAndSaveScreenshot(
         selectedNode.data.label,
         selectedNode.id,
         onUpdateNode,
@@ -193,29 +209,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       setShowScreenshotConfirm(false);
     };
 
-    // Execute all node verifications with direct API call
-    const handleRunVerifications = async () => {
-      if (!selectedNode.data.verifications || selectedNode.data.verifications.length === 0) {
-        return;
-      }
-
-      if (!selectedHost) {
-        setVerificationResult('❌ No host device selected');
-        return;
-      }
-
-      setIsRunningVerifications(true);
-      setVerificationResult(null);
-
-      // Use the hook's runVerifications method
-      const result = await nodeOperations.runVerifications(
-        selectedNode.data.verifications,
-        selectedNode.id,
-      );
-
-      setVerificationResult(result.message);
-      setIsRunningVerifications(false);
-    };
+    // Verification functionality removed - use VerificationEditor component instead
 
     const getParentNames = (parentIds: string[]): string => {
       if (!parentIds || parentIds.length === 0) return 'None';
@@ -243,14 +237,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     // Check if Go To button should be displayed
     // Show for all nodes when device is under control
     const showGoToButton = isControlActive && selectedHost && treeId;
-
-    // Check if verification button should be displayed
-    const hasNodeVerifications =
-      selectedNode.data.verifications && selectedNode.data.verifications.length > 0;
-
-    // Can run verifications if we have control and device (same logic as NodeEditDialog)
-    const canRunVerifications =
-      isControlActive && selectedHost && hasNodeVerifications && !isRunningVerifications;
 
     // Check if node can be deleted (protect entry points and home nodes)
     const isProtectedNode =
@@ -412,62 +398,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                 >
                   Go To
                 </Button>
-              )}
-
-              {/* Direct Run Verifications button - show when verifications exist */}
-              {hasNodeVerifications && (
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color="primary"
-                  sx={{ fontSize: '0.75rem', px: 1 }}
-                  onClick={handleRunVerifications}
-                  disabled={!canRunVerifications}
-                  startIcon={<VerifiedIcon fontSize="small" />}
-                  title={
-                    !isControlActive || !selectedHost
-                      ? 'Device control required to run verifications'
-                      : ''
-                  }
-                >
-                  {isRunningVerifications ? 'Running...' : 'Run Verifications'}
-                </Button>
-              )}
-
-              {/* Debug: Show when node has no verifications */}
-              {!hasNodeVerifications && (
-                <Typography
-                  variant="caption"
-                  sx={{ fontSize: '0.7rem', color: 'text.secondary', fontStyle: 'italic' }}
-                >
-                  No verifications configured
-                </Typography>
-              )}
-
-              {/* Linear Progress - shown when running verifications */}
-              {isRunningVerifications && <LinearProgress sx={{ mt: 0.5, borderRadius: 1 }} />}
-
-              {/* Verification result display */}
-              {verificationResult && (
-                <Box
-                  sx={{
-                    mt: 0.5,
-                    p: 0.5,
-                    bgcolor: verificationResult.includes('❌')
-                      ? 'error.light'
-                      : verificationResult.includes('⚠️')
-                        ? 'warning.light'
-                        : 'success.light',
-                    borderRadius: 0.5,
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}
-                  >
-                    {verificationResult}
-                  </Typography>
-                </Box>
               )}
             </Box>
           </Box>
