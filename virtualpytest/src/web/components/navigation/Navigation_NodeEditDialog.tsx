@@ -18,7 +18,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 // Import proper types from navigationTypes
 import { useVerification } from '../../hooks/verification/useVerification';
-import { useNavigationEditor } from '../../hooks/navigation/useNavigationEditor';
 import { NodeEditDialogProps } from '../../types/pages/Navigation_Types';
 import { Verification } from '../../types/verification/Verification_Types';
 import { VerificationsList } from '../verification/VerificationsList';
@@ -91,16 +90,68 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
 
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Initialize verifications from nodeForm when dialog opens - ONLY ONCE
+  // Initialize verifications from nodeForm when dialog opens
   useEffect(() => {
-    if (isOpen && nodeForm?.verifications) {
+    if (!isOpen) return;
+
+    const initializeVerifications = async () => {
+      console.log(`[@component:NodeEditDialog] Dialog opened, initializing verifications`);
+
+      // If nodeForm has verifications array, use it directly
+      if (nodeForm?.verifications && nodeForm.verifications.length > 0) {
+        console.log(
+          `[@component:NodeEditDialog] Using existing verifications from nodeForm:`,
+          nodeForm.verifications,
+        );
+        verification.handleVerificationsChange(nodeForm.verifications);
+        return;
+      }
+
+      // If nodeForm has verification_ids, load them from database
+      if (nodeForm?.verification_ids && nodeForm.verification_ids.length > 0) {
+        console.log(
+          `[@component:NodeEditDialog] Loading verifications from IDs:`,
+          nodeForm.verification_ids,
+        );
+
+        try {
+          const loadedVerifications: Verification[] = [];
+
+          for (const verificationId of nodeForm.verification_ids) {
+            const response = await fetch(`/server/verification/getVerification/${verificationId}`);
+            if (response.ok) {
+              const result = await response.json();
+              if (result.success && result.verification) {
+                loadedVerifications.push(result.verification);
+              }
+            }
+          }
+
+          console.log(
+            `[@component:NodeEditDialog] Loaded ${loadedVerifications.length} verifications from database`,
+          );
+          verification.handleVerificationsChange(loadedVerifications);
+
+          // Also update the nodeForm to include the loaded verifications
+          setNodeForm({
+            ...nodeForm,
+            verifications: loadedVerifications,
+          });
+        } catch (error) {
+          console.error(`[@component:NodeEditDialog] Error loading verifications:`, error);
+        }
+        return;
+      }
+
+      // No verifications to load, start with empty array
       console.log(
-        `[@component:NodeEditDialog] Initializing verifications from nodeForm:`,
-        nodeForm.verifications,
+        `[@component:NodeEditDialog] No verifications to load, starting with empty array`,
       );
-      verification.handleVerificationsChange(nodeForm.verifications);
-    }
-  }, [isOpen, verification.handleVerificationsChange]); // Add verification handler to prevent stale closures
+      verification.handleVerificationsChange([]);
+    };
+
+    initializeVerifications();
+  }, [isOpen, nodeForm?.verification_ids]); // Only depend on isOpen and verification_ids
 
   // Handle verification changes by creating a custom handler that updates nodeForm
   const handleVerificationsChange = useCallback(
@@ -143,8 +194,10 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     if (!isOpen) {
       // Reset state when dialog closes
       setSaveSuccess(false);
+      // Also clear verifications to prevent stale data
+      verification.handleVerificationsChange([]);
     }
-  }, [isOpen]);
+  }, [isOpen, verification.handleVerificationsChange]);
 
   const handleSave = () => {
     onSubmit();
@@ -257,6 +310,24 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             />
           )}
 
+          {/* Debug info - remove in production */}
+          {process.env.NODE_ENV === 'development' && (
+            <Box sx={{ p: 1, bgcolor: 'grey.100', borderRadius: 1, fontSize: '0.75rem' }}>
+              <Typography variant="caption" component="div">
+                Debug - NodeForm verifications: {nodeForm?.verifications?.length || 0}
+              </Typography>
+              <Typography variant="caption" component="div">
+                Debug - NodeForm verification_ids: {nodeForm?.verification_ids?.length || 0}
+              </Typography>
+              <Typography variant="caption" component="div">
+                Debug - Hook verifications: {verification.verifications?.length || 0}
+              </Typography>
+              <Typography variant="caption" component="div">
+                Debug - Verification loading: {verification.loading ? 'Yes' : 'No'}
+              </Typography>
+            </Box>
+          )}
+
           {/* Verification Section - using same hooks as VerificationEditor */}
           <VerificationsList
             verifications={verification.verifications}
@@ -264,8 +335,8 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             onVerificationsChange={handleVerificationsChange}
             loading={verification.loading}
             error={verification.error}
-            model={verification.selectedHost?.device_model || model}
-            selectedHost={verification.selectedHost}
+            model={model || 'android_mobile'}
+            selectedHost={selectedHost}
             onTest={verification.handleTest}
             testResults={verification.testResults}
             reloadTrigger={0}
