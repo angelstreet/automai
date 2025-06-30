@@ -64,7 +64,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
 
     const interval = setInterval(detectImageUrl, 1000);
     return () => clearInterval(interval);
-  }, [currentImageUrl, frames.length, isPlaying]);
+  }, [currentImageUrl, frames.length, isPlaying, userSelectedFrame]);
 
   // Auto-play functionality
   useEffect(() => {
@@ -173,16 +173,16 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         <Box
           sx={{
             position: 'absolute',
-            top: 0,
+            bottom: 0,
             left: 0,
             right: 0,
-            background: 'linear-gradient(rgba(0,0,0,0.8), transparent)',
+            background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
             p: 1,
             zIndex: 1000, // High z-index to appear above remote panel
           }}
         >
           {/* Play/Pause button */}
-          <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
+          <Box sx={{ position: 'absolute', bottom: 8, left: 8 }}>
             <IconButton
               size="medium"
               onClick={handlePlayPause}
@@ -199,7 +199,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
           </Box>
 
           {/* Frame counter */}
-          <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
+          <Box sx={{ position: 'absolute', bottom: 16, right: 16 }}>
             <Typography
               variant="caption"
               sx={{
@@ -216,7 +216,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
           <Box
             sx={{
               position: 'absolute',
-              top: 12,
+              bottom: 12,
               left: '80px',
               right: '80px',
             }}
