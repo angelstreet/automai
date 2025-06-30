@@ -347,10 +347,16 @@ const RecHostStreamModalContent: React.FC<{
                 sx={{
                   position: 'relative',
                   width: '100%',
-                  height: '600px',
+                  height: '100%', // Fill full modal height
                   '& .MuiCard-root': {
                     height: '100%', // Make RecHostPreview fill the full height
-                    borderRadius: 2, // Slightly more rounded for modal
+                    borderRadius: 0, // No border radius for fullscreen
+                    border: 'none', // Remove border for fullscreen
+                  },
+                  '& img': {
+                    objectFit: 'contain', // Ensure proper scaling while maintaining aspect ratio
+                    width: '100%',
+                    height: '100%',
                   },
                 }}
               >

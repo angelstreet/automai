@@ -82,98 +82,111 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({ sx }) => {
   }
 
   return (
-    <Box
-      sx={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 20,
-        p: 1,
-        background: 'linear-gradient(rgba(0,0,0,0.8), transparent)',
-        pointerEvents: 'none', // Don't interfere with clicks
-        ...sx,
-      }}
-    >
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-        {analysis.blackscreen && (
+    <>
+      {/* Main analysis overlay - left aligned */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 16,
+          left: 16,
+          zIndex: 20,
+          p: 2,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          borderRadius: 1,
+          pointerEvents: 'none', // Don't interfere with clicks
+          minWidth: 200,
+          ...sx,
+        }}
+      >
+        <Typography variant="subtitle2" sx={{ color: '#ffffff', mb: 1, fontWeight: 'bold' }}>
+          AI Analysis
+        </Typography>
+
+        {/* Blackscreen */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+          <Typography variant="body2" sx={{ color: '#ffffff', mr: 1 }}>
+            Blackscreen:
+          </Typography>
           <Typography
-            variant="caption"
+            variant="body2"
             sx={{
-              color: '#ff4444',
-              backgroundColor: 'rgba(255,68,68,0.2)',
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              border: '1px solid #ff4444',
+              color: analysis.blackscreen ? '#ff4444' : '#ffffff',
+              fontWeight: analysis.blackscreen ? 'bold' : 'normal',
             }}
           >
-            BLACKSCREEN
+            {analysis.blackscreen ? 'Yes' : 'No'}
           </Typography>
-        )}
+          {analysis.confidence > 0 && (
+            <Typography variant="caption" sx={{ color: '#cccccc', ml: 1 }}>
+              ({Math.round(analysis.confidence * 100)}%)
+            </Typography>
+          )}
+        </Box>
 
-        {analysis.freeze && (
+        {/* Freeze */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+          <Typography variant="body2" sx={{ color: '#ffffff', mr: 1 }}>
+            Freeze:
+          </Typography>
           <Typography
-            variant="caption"
+            variant="body2"
             sx={{
-              color: '#ffaa00',
-              backgroundColor: 'rgba(255,170,0,0.2)',
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              border: '1px solid #ffaa00',
+              color: analysis.freeze ? '#ff4444' : '#ffffff',
+              fontWeight: analysis.freeze ? 'bold' : 'normal',
             }}
           >
-            FREEZE
+            {analysis.freeze ? 'Yes' : 'No'}
           </Typography>
-        )}
+          {analysis.confidence > 0 && (
+            <Typography variant="caption" sx={{ color: '#cccccc', ml: 1 }}>
+              ({Math.round(analysis.confidence * 100)}%)
+            </Typography>
+          )}
+        </Box>
 
-        {analysis.errors && (
-          <Typography
-            variant="caption"
-            sx={{
-              color: '#ff0000',
-              backgroundColor: 'rgba(255,0,0,0.2)',
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              border: '1px solid #ff0000',
-            }}
-          >
-            ERROR DETECTED
+        {/* Subtitles */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+          <Typography variant="body2" sx={{ color: '#ffffff', mr: 1 }}>
+            Subtitles:
           </Typography>
-        )}
+          {analysis.subtitles ? (
+            <>
+              <Typography variant="body2" sx={{ color: '#00ff00', fontWeight: 'bold' }}>
+                {analysis.language.charAt(0).toUpperCase() + analysis.language.slice(1)}
+              </Typography>
+              {analysis.confidence > 0 && (
+                <Typography variant="caption" sx={{ color: '#cccccc', ml: 1 }}>
+                  ({Math.round(analysis.confidence * 100)}%)
+                </Typography>
+              )}
+            </>
+          ) : (
+            <Typography variant="body2" sx={{ color: '#ffffff' }}>
+              No
+            </Typography>
+          )}
+        </Box>
+      </Box>
 
-        {analysis.subtitles && (
-          <Typography
-            variant="caption"
-            sx={{
-              color: '#00ff00',
-              backgroundColor: 'rgba(0,255,0,0.2)',
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              border: '1px solid #00ff00',
-            }}
-          >
-            SUBTITLES: {analysis.language.toUpperCase()}
-          </Typography>
-        )}
-
-        <Typography
-          variant="caption"
+      {/* Error indicator - top right */}
+      {(analysis.blackscreen || analysis.freeze || analysis.errors) && (
+        <Box
           sx={{
-            color: '#ffffff',
-            backgroundColor: 'rgba(255,255,255,0.1)',
-            px: 1,
-            py: 0.5,
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            zIndex: 20,
+            p: 1,
+            backgroundColor: 'rgba(255, 68, 68, 0.8)',
             borderRadius: 1,
-            border: '1px solid #ffffff',
+            pointerEvents: 'none',
           }}
         >
-          CONFIDENCE: {Math.round(analysis.confidence * 100)}%
-        </Typography>
-      </Box>
-    </Box>
+          <Typography variant="caption" sx={{ color: '#ffffff', fontWeight: 'bold' }}>
+            ERROR DETECTED
+          </Typography>
+        </Box>
+      )}
+    </>
   );
 };
