@@ -1,6 +1,6 @@
 import { PlayArrow, Pause } from '@mui/icons-material';
 import { Box, Slider, IconButton, Typography } from '@mui/material';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { Host, Device } from '../../types/common/Host_Types';
 import { RecHostPreview } from '../rec/RecHostPreview';
@@ -21,6 +21,13 @@ interface MonitoringPlayerProps {
   generateThumbnailUrl?: (host: Host, device: Device) => string | null;
 }
 
+// Simple mobile detection function to match HLSVideoPlayer logic
+const isMobileModel = (model?: string): boolean => {
+  if (!model) return false;
+  const modelLower = model.toLowerCase();
+  return modelLower.includes('mobile');
+};
+
 export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   host,
   device,
@@ -34,6 +41,11 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   const [userSelectedFrame, setUserSelectedFrame] = useState(false);
   const [selectedFrameAnalysis, setSelectedFrameAnalysis] = useState<any>(null);
   const [isHistoricalFrameLoaded, setIsHistoricalFrameLoaded] = useState(false);
+
+  // Detect if this is a mobile device model for proper sizing
+  const isMobile = useMemo(() => {
+    return isMobileModel(device?.device_model);
+  }, [device?.device_model]);
 
   // Monitor RecHostPreview for new images
   useEffect(() => {
@@ -195,8 +207,8 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         },
         '& img': {
           objectFit: 'contain',
-          width: '100%',
-          height: '100%',
+          width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
+          height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
         },
       }}
     >
@@ -232,8 +244,8 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
               position: 'absolute',
               top: 0,
               left: 0,
-              width: '100%',
-              height: '100%',
+              width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
+              height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
               objectFit: 'contain',
               objectPosition: 'top center', // Center horizontally, anchor to top - matches RecHostPreview
               opacity: 1,
