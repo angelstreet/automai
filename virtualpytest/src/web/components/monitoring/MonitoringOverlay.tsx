@@ -40,7 +40,15 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({ sx }) => {
   // Load analysis data when imageUrl changes
   useEffect(() => {
     if (!currentImageUrl) {
-      setAnalysis(null);
+      // Always show overlay with empty values when no image
+      setAnalysis({
+        blackscreen: false,
+        freeze: false,
+        subtitles: false,
+        errors: false,
+        language: 'unknown',
+        confidence: 0,
+      });
       return;
     }
 
@@ -63,22 +71,46 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({ sx }) => {
               confidence: jsonData.analysis.confidence || 0,
             });
           } else {
-            setAnalysis(null);
+            // JSON exists but no analysis data - show empty values
+            setAnalysis({
+              blackscreen: false,
+              freeze: false,
+              subtitles: false,
+              errors: false,
+              language: 'unknown',
+              confidence: 0,
+            });
           }
         } else {
-          setAnalysis(null);
+          // No JSON file - show empty values
+          setAnalysis({
+            blackscreen: false,
+            freeze: false,
+            subtitles: false,
+            errors: false,
+            language: 'unknown',
+            confidence: 0,
+          });
         }
-      } catch (error) {
-        setAnalysis(null);
+      } catch {
+        // Error loading JSON - show empty values
+        setAnalysis({
+          blackscreen: false,
+          freeze: false,
+          subtitles: false,
+          errors: false,
+          language: 'unknown',
+          confidence: 0,
+        });
       }
     };
 
     loadAnalysis();
   }, [currentImageUrl]);
 
-  // Don't render if no analysis data
+  // Always render overlay (don't check if analysis exists)
   if (!analysis) {
-    return null;
+    return null; // Only null if analysis state is not initialized
   }
 
   return (
@@ -98,10 +130,6 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({ sx }) => {
           ...sx,
         }}
       >
-        <Typography variant="subtitle2" sx={{ color: '#ffffff', mb: 1, fontWeight: 'bold' }}>
-          AI Analysis
-        </Typography>
-
         {/* Blackscreen */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
           <Typography variant="body2" sx={{ color: '#ffffff', mr: 1 }}>
@@ -152,7 +180,9 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({ sx }) => {
           {analysis.subtitles ? (
             <>
               <Typography variant="body2" sx={{ color: '#00ff00', fontWeight: 'bold' }}>
-                {analysis.language.charAt(0).toUpperCase() + analysis.language.slice(1)}
+                {analysis.language !== 'unknown' && analysis.language !== 'detected'
+                  ? analysis.language.charAt(0).toUpperCase() + analysis.language.slice(1)
+                  : 'Detected'}
               </Typography>
               {analysis.confidence > 0 && (
                 <Typography variant="caption" sx={{ color: '#cccccc', ml: 1 }}>
@@ -168,13 +198,13 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({ sx }) => {
         </Box>
       </Box>
 
-      {/* Error indicator - top right */}
-      {(analysis.blackscreen || analysis.freeze || analysis.errors) && (
+      {/* Error indicator - top right, but away from online status */}
+      {(analysis.blackscreen || analysis.freeze) && (
         <Box
           sx={{
             position: 'absolute',
             top: 16,
-            right: 16,
+            right: 66, // 50px more from right edge to avoid online status
             zIndex: 20,
             p: 1,
             backgroundColor: 'rgba(255, 68, 68, 0.8)',

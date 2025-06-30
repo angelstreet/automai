@@ -366,6 +366,7 @@ const RecHostStreamModalContent: React.FC<{
                   device={device}
                   initializeBaseUrl={initializeBaseUrl}
                   generateThumbnailUrl={generateThumbnailUrl}
+                  hideHeader={true}
                 />
 
                 {/* Add monitoring overlay on top - it will load JSON based on current image */}

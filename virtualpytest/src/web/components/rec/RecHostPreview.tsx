@@ -12,6 +12,7 @@ interface RecHostPreviewProps {
   device?: Device;
   initializeBaseUrl?: (host: Host, device: Device) => Promise<boolean>;
   generateThumbnailUrl?: (host: Host, device: Device) => string | null;
+  hideHeader?: boolean;
 }
 
 export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
@@ -19,6 +20,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   device,
   initializeBaseUrl,
   generateThumbnailUrl,
+  hideHeader = false,
 }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [previousThumbnailUrl, setPreviousThumbnailUrl] = useState<string | null>(null);
@@ -214,25 +216,27 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       }}
     >
       {/* Header */}
-      <Box
-        sx={{
-          px: 1,
-          py: 0.5,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
-      >
-        <Typography variant="subtitle2" noWrap sx={{ flex: 1, mr: 1 }}>
-          {displayName}
-        </Typography>
-        <Chip
-          label={host.status}
-          size="small"
-          color={getStatusColor(host.status) as any}
-          sx={{ fontSize: '0.7rem', height: 20 }}
-        />
-      </Box>
+      {!hideHeader && (
+        <Box
+          sx={{
+            px: 1,
+            py: 0.5,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Typography variant="subtitle2" noWrap sx={{ flex: 1, mr: 1 }}>
+            {displayName}
+          </Typography>
+          <Chip
+            label={host.status}
+            size="small"
+            color={getStatusColor(host.status) as any}
+            sx={{ fontSize: '0.7rem', height: 20 }}
+          />
+        </Box>
+      )}
 
       {/* Screenshot area */}
       <Box sx={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
