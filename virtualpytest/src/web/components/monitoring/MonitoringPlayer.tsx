@@ -47,7 +47,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         const timestampMatch = newImageUrl.match(/capture_(\d{14})/);
         if (timestampMatch) {
           const timestamp = timestampMatch[1];
-          const jsonUrl = newImageUrl.replace('.jpg', '.json');
+          const jsonUrl = newImageUrl.replace('.jpg', '_thumbnail.json');
 
           setFrames((prev) => {
             const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
