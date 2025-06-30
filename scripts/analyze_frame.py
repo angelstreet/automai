@@ -14,6 +14,8 @@ import re
 from datetime import datetime
 import time
 import hashlib
+import pickle
+import fcntl
 
 # Optional imports for language detection
 try:
@@ -31,6 +33,48 @@ SAMPLING_PATTERNS = {
     "error_grid_rate": 15,        # Every 15th pixel in grid for errors
     "subtitle_edge_threshold": 200  # Edge detection threshold
 }
+
+def get_cache_file_path(image_path):
+    """Generate cache file path in the same directory as the image"""
+    image_dir = os.path.dirname(image_path)
+    return os.path.join(image_dir, 'frame_cache.pkl')
+
+def load_frame_cache(cache_file_path):
+    """Load frame cache from file with file locking"""
+    if not os.path.exists(cache_file_path):
+        return {}
+    
+    try:
+        with open(cache_file_path, 'rb') as f:
+            # Acquire shared lock for reading
+            fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+            cache = pickle.load(f)
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+            return cache
+    except (EOFError, pickle.PickleError, OSError) as e:
+        print(f"Warning: Could not load frame cache: {e}")
+        return {}
+
+def save_frame_cache(cache_file_path, cache_data):
+    """Save frame cache to file with file locking"""
+    try:
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(cache_file_path), exist_ok=True)
+        
+        with open(cache_file_path, 'wb') as f:
+            # Acquire exclusive lock for writing
+            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+            pickle.dump(cache_data, f)
+            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    except (OSError, pickle.PickleError) as e:
+        print(f"Warning: Could not save frame cache: {e}")
+
+def get_cached_frame_data(cache, filename):
+    """Get frame data from cache if available"""
+    for key in ['frame1', 'frame2']:
+        if key in cache and cache[key]['filename'] == filename:
+            return cache[key]['data']
+    return None
 
 def analyze_blackscreen(image_path, threshold=10):
     """Detect if image is mostly black (blackscreen) - Simple and reliable"""
@@ -59,11 +103,16 @@ def analyze_blackscreen(image_path, threshold=10):
         print(f"Error analyzing blackscreen: {e}", file=sys.stderr)
         return False
 
-
-
 def analyze_freeze(image_path, previous_frames_cache=None):
-    """Detect if image is frozen (identical to previous frame) - Simplified approach"""
+    """Detect if image is frozen (identical to previous frames) - Check last 3 frames with caching"""
     try:
+        # Get cache file path
+        cache_file_path = get_cache_file_path(image_path)
+        
+        # Load existing cache
+        cache = load_frame_cache(cache_file_path)
+        
+        # Load current image
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             print(f"Error: Could not load image for freeze analysis: {image_path}", file=sys.stderr)
@@ -78,7 +127,7 @@ def analyze_freeze(image_path, previous_frames_cache=None):
         current_timestamp = current_match.group(1)
         current_filename = os.path.basename(image_path)
         
-        # Look for previous capture file in the same directory
+        # Look for previous capture files in the same directory
         directory = os.path.dirname(image_path)
         
         # Determine if we're analyzing thumbnails or full images
@@ -99,54 +148,95 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             
             current_index = all_files.index(current_filename)
             
-            # Need at least one previous file to compare
-            if current_index == 0:
-                print(f"No previous frame to compare with for: {current_filename}")
+            # Need at least 2 previous files to compare (total of 3 frames)
+            if current_index < 2:
+                print(f"Not enough previous frames to compare (need 3 total, have {current_index + 1})")
+                # Save current frame to cache for future use
+                new_cache = {
+                    'frame2': {'filename': current_filename, 'data': img, 'timestamp': current_timestamp},
+                    'last_updated': current_timestamp
+                }
+                save_frame_cache(cache_file_path, new_cache)
                 return False
             
-            # Get the previous frame
-            prev_filename = all_files[current_index - 1]
-            prev_path = os.path.join(directory, prev_filename)
+            # Get the 2 previous frames
+            prev1_filename = all_files[current_index - 1]  # Most recent previous
+            prev2_filename = all_files[current_index - 2]  # Second most recent previous
             
-            if not os.path.exists(prev_path):
-                print(f"Previous frame not found: {prev_path}")
+            # Try to load from cache first, then from disk
+            prev1_img = get_cached_frame_data(cache, prev1_filename)
+            if prev1_img is None:
+                prev1_path = os.path.join(directory, prev1_filename)
+                prev1_img = cv2.imread(prev1_path, cv2.IMREAD_GRAYSCALE)
+                print(f"Loaded {prev1_filename} from disk")
+            else:
+                print(f"Used {prev1_filename} from cache")
+            
+            prev2_img = get_cached_frame_data(cache, prev2_filename)
+            if prev2_img is None:
+                prev2_path = os.path.join(directory, prev2_filename)
+                prev2_img = cv2.imread(prev2_path, cv2.IMREAD_GRAYSCALE)
+                print(f"Loaded {prev2_filename} from disk")
+            else:
+                print(f"Used {prev2_filename} from cache")
+            
+            if prev1_img is None or prev2_img is None:
+                print(f"Could not load previous images: {prev1_filename}, {prev2_filename}")
                 return False
             
-            # Load previous image
-            prev_img = cv2.imread(prev_path, cv2.IMREAD_GRAYSCALE)
-            if prev_img is None:
-                print(f"Could not load previous image: {prev_path}")
-                return False
-            
-            # Check if images have same dimensions
-            if img.shape != prev_img.shape:
-                print(f"Image dimensions don't match: {img.shape} vs {prev_img.shape}")
+            # Check if all images have same dimensions
+            if img.shape != prev1_img.shape or img.shape != prev2_img.shape:
+                print(f"Image dimensions don't match: {img.shape} vs {prev1_img.shape} vs {prev2_img.shape}")
                 return False
             
             # Optimized sampling for pixel difference (every 10th pixel for performance)
             sample_rate = SAMPLING_PATTERNS["freeze_sample_rate"]
             img_sampled = img[::sample_rate, ::sample_rate]
-            prev_sampled = prev_img[::sample_rate, ::sample_rate]
+            prev1_sampled = prev1_img[::sample_rate, ::sample_rate]
+            prev2_sampled = prev2_img[::sample_rate, ::sample_rate]
             
-            diff = cv2.absdiff(img_sampled, prev_sampled)
-            mean_diff = np.mean(diff)
+            # Calculate differences between all 3 frames
+            diff_current_prev1 = cv2.absdiff(img_sampled, prev1_sampled)
+            diff_current_prev2 = cv2.absdiff(img_sampled, prev2_sampled)
+            diff_prev1_prev2 = cv2.absdiff(prev1_sampled, prev2_sampled)
             
-            print(f"Comparing {current_filename} with {prev_filename}")
-            print(f"Sampled pixel difference: {mean_diff:.2f}")
+            mean_diff_1 = np.mean(diff_current_prev1)
+            mean_diff_2 = np.mean(diff_current_prev2)
+            mean_diff_3 = np.mean(diff_prev1_prev2)
             
-            # Frames are considered identical if mean difference is very small
+            print(f"Comparing {current_filename} with last 2 frames:")
+            print(f"  vs {prev1_filename}: diff={mean_diff_1:.2f}")
+            print(f"  vs {prev2_filename}: diff={mean_diff_2:.2f}")
+            print(f"  {prev1_filename} vs {prev2_filename}: diff={mean_diff_3:.2f}")
+            
+            # Frames are considered frozen if ALL 3 comparisons show very small differences
             freeze_threshold = 1.0
-            is_frozen = mean_diff < freeze_threshold
+            is_frozen = (mean_diff_1 < freeze_threshold and 
+                        mean_diff_2 < freeze_threshold and 
+                        mean_diff_3 < freeze_threshold)
             
             if is_frozen:
-                print(f"FREEZE DETECTED: Images are nearly identical (diff={mean_diff:.2f} < {freeze_threshold})")
+                print(f"FREEZE DETECTED: All 3 frames are nearly identical (threshold={freeze_threshold})")
             else:
-                print(f"No freeze: Images are different (diff={mean_diff:.2f} >= {freeze_threshold})")
+                print(f"No freeze: At least one frame pair shows significant difference (threshold={freeze_threshold})")
+            
+            # Update cache with the 2 most recent frames for next execution
+            # Extract timestamps for proper ordering
+            prev1_match = re.search(r'capture_(\d{14})(?:_thumbnail)?\.jpg', prev1_filename)
+            prev1_timestamp = prev1_match.group(1) if prev1_match else 'unknown'
+            
+            new_cache = {
+                'frame1': {'filename': prev1_filename, 'data': prev1_img, 'timestamp': prev1_timestamp},
+                'frame2': {'filename': current_filename, 'data': img, 'timestamp': current_timestamp},
+                'last_updated': current_timestamp
+            }
+            save_frame_cache(cache_file_path, new_cache)
+            print(f"Updated cache with {prev1_filename} and {current_filename}")
             
             return is_frozen
             
         except Exception as e:
-            print(f"Could not compare with previous frame: {e}")
+            print(f"Could not compare with previous frames: {e}")
             return False
         
     except Exception as e:
@@ -272,8 +362,6 @@ def detect_language(has_subtitles, image_path=None):
         print(f"Language detection failed: {e}", file=sys.stderr)
         return 'text_detected'
 
-
-
 def main():
     if len(sys.argv) != 2:
         print("Usage: analyze_frame.py /path/to/capture_file.jpg", file=sys.stderr)
@@ -350,12 +438,15 @@ def main():
             }
         }
         
-        # Save JSON metadata
-        json_path = image_path.replace('.jpg', '.json')
+        # Save JSON metadata to /tmp to avoid permission issues
+        base_filename = os.path.basename(image_path)
+        json_filename = base_filename.replace('.jpg', '.json')
+        json_path = os.path.join('/tmp', json_filename)
+        
         with open(json_path, 'w') as f:
             json.dump(analysis_result, f, indent=2)
         
-        print(f"Analysis complete: {os.path.basename(json_path)}")
+        print(f"Analysis complete: {json_filename} (saved to /tmp)")
         print(f"Results: blackscreen={blackscreen}, freeze={freeze}, subtitles={subtitles}, errors={errors}, language={language}")
         
     except Exception as e:
