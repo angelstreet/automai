@@ -1,20 +1,17 @@
-#!/bin/bash
+#!/usr/bin/env python3
+"""
+AI Frame Analysis Script for HDMI Capture Monitoring
+Analyzes captured frames and generates JSON metadata
+Usage: analyze_frame.py /path/to/capture_YYYYMMDDHHMMSS.jpg
+"""
 
-# AI Frame Analysis Script for HDMI Capture Monitoring
-# This script analyzes captured frames and generates JSON metadata
-# Usage: /usr/local/bin/analyze_frame.py /path/to/capture_YYYYMMDDHHMMSS.jpg
-
-# Activate virtual environment (dynamic user detection)
-source /home/$USER/myvenv/bin/activate
-
-# Run Python analysis
-python3 << 'EOF'
 import sys
 import os
 import json
 import cv2
 import numpy as np
 from datetime import datetime
+import time
 
 def analyze_blackscreen(image_path, threshold=15):
     """Detect if image is mostly black (blackscreen)"""
@@ -110,20 +107,32 @@ def main():
     print(f"Analyzing frame: {os.path.basename(image_path)}")
     
     try:
-        # Create thumbnail for faster analysis
+        # Use existing thumbnail created by rename_captures.sh
+        thumbnail_path = image_path.replace('.jpg', '_thumbnail.jpg')
+        
+        # Wait for thumbnail to be created (up to 2 seconds)
+        wait_count = 0
+        while not os.path.exists(thumbnail_path) and wait_count < 20:
+            time.sleep(0.1)  # Wait 100ms
+            wait_count += 1
+        
+        # Use thumbnail if available, otherwise use original image
+        analysis_image = thumbnail_path if os.path.exists(thumbnail_path) else image_path
+        
+        if analysis_image == thumbnail_path:
+            print(f"Using existing thumbnail: {os.path.basename(thumbnail_path)}")
+        else:
+            print(f"Thumbnail not found, using original image: {os.path.basename(image_path)}")
+        
+        # Load original image for size info
         img = cv2.imread(image_path)
         if img is None:
-            raise Exception("Could not load image")
+            raise Exception("Could not load original image")
         
-        # Resize to thumbnail size (498x280) for faster processing
-        thumbnail = cv2.resize(img, (498, 280))
-        thumbnail_path = image_path.replace('.jpg', '_thumbnail.jpg')
-        cv2.imwrite(thumbnail_path, thumbnail)
-        
-        # Run analysis on thumbnail
-        blackscreen = analyze_blackscreen(thumbnail_path)
-        freeze = analyze_freeze(thumbnail_path)
-        subtitles, errors = analyze_subtitles_and_errors(thumbnail_path)
+        # Run analysis on thumbnail (or original if thumbnail not available)
+        blackscreen = analyze_blackscreen(analysis_image)
+        freeze = analyze_freeze(analysis_image)
+        subtitles, errors = analyze_subtitles_and_errors(analysis_image)
         language = detect_language(subtitles)
         
         # Calculate confidence
@@ -133,7 +142,7 @@ def main():
         analysis_result = {
             'timestamp': datetime.now().isoformat(),
             'filename': os.path.basename(image_path),
-            'thumbnail': os.path.basename(thumbnail_path),
+            'thumbnail': os.path.basename(thumbnail_path) if os.path.exists(thumbnail_path) else None,
             'analysis': {
                 'blackscreen': blackscreen,
                 'freeze': freeze,
@@ -145,7 +154,7 @@ def main():
             'processing_info': {
                 'analyzed_at': datetime.now().isoformat(),
                 'image_size': f"{img.shape[1]}x{img.shape[0]}",
-                'thumbnail_size': "498x280"
+                'analyzed_image': os.path.basename(analysis_image)
             }
         }
         
@@ -163,5 +172,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-EOF
