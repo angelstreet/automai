@@ -39,69 +39,26 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({ sx }) => {
 
   // Load analysis data when imageUrl changes
   useEffect(() => {
-    if (!currentImageUrl) {
-      // Always show overlay with empty values when no image
-      setAnalysis({
-        blackscreen: false,
-        freeze: false,
-        subtitles: false,
-        errors: false,
-        language: 'unknown',
-        confidence: 0,
-      });
-      return;
-    }
-
-    // Simple: replace .jpg with .json in the image URL
-    const jsonUrl = currentImageUrl.replace('.jpg', '.json');
-
     const loadAnalysis = async () => {
+      if (!currentImageUrl) return;
+
+      // Wait 600ms for JSON analysis to be created
+      await new Promise((resolve) => setTimeout(resolve, 600));
+
+      const jsonUrl = currentImageUrl.replace('.jpg', '.json');
+
       try {
         const response = await fetch(jsonUrl);
         if (response.ok) {
-          const jsonData = await response.json();
-
-          if (jsonData.analysis) {
-            setAnalysis({
-              blackscreen: jsonData.analysis.blackscreen || false,
-              freeze: jsonData.analysis.freeze || false,
-              subtitles: jsonData.analysis.subtitles || false,
-              errors: jsonData.analysis.errors || false,
-              language: jsonData.analysis.language || 'unknown',
-              confidence: jsonData.analysis.confidence || 0,
-            });
-          } else {
-            // JSON exists but no analysis data - show empty values
-            setAnalysis({
-              blackscreen: false,
-              freeze: false,
-              subtitles: false,
-              errors: false,
-              language: 'unknown',
-              confidence: 0,
-            });
-          }
+          const data = await response.json();
+          setAnalysis(data.analysis || null);
         } else {
-          // No JSON file - show empty values
-          setAnalysis({
-            blackscreen: false,
-            freeze: false,
-            subtitles: false,
-            errors: false,
-            language: 'unknown',
-            confidence: 0,
-          });
+          // JSON not available yet, keep previous analysis or show empty
+          setAnalysis(null);
         }
       } catch {
-        // Error loading JSON - show empty values
-        setAnalysis({
-          blackscreen: false,
-          freeze: false,
-          subtitles: false,
-          errors: false,
-          language: 'unknown',
-          confidence: 0,
-        });
+        // JSON not available, show empty analysis
+        setAnalysis(null);
       }
     };
 
