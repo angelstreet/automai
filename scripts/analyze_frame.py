@@ -13,6 +13,7 @@ import numpy as np
 import re
 from datetime import datetime
 import time
+import hashlib
 
 # Optional imports for language detection
 try:
@@ -23,38 +24,61 @@ except ImportError:
     OCR_AVAILABLE = False
     print("OCR libraries not available. Install with: pip install pytesseract langdetect", file=sys.stderr)
 
+# Simplified sampling patterns for performance optimization
+SAMPLING_PATTERNS = {
+    "freeze_sample_rate": 10,     # Every 10th pixel for freeze detection
+    "blackscreen_samples": 1000,  # 1000 random pixels for blackscreen
+    "error_grid_rate": 15,        # Every 15th pixel in grid for errors
+    "subtitle_edge_threshold": 200  # Edge detection threshold
+}
+
 def analyze_blackscreen(image_path, threshold=15):
-    """Detect if image is mostly black (blackscreen)"""
+    """Detect if image is mostly black (blackscreen) - Optimized with sampling"""
     try:
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             return False
         
-        mean_intensity = np.mean(img)
+        # Sample random pixels instead of analyzing all pixels
+        height, width = img.shape
+        sample_count = SAMPLING_PATTERNS["blackscreen_samples"]
+        sample_size = min(sample_count, height * width)
+        
+        # Generate random coordinates
+        random_rows = np.random.randint(0, height, sample_size)
+        random_cols = np.random.randint(0, width, sample_size)
+        
+        # Sample pixels and calculate statistics
+        sampled_pixels = img[random_rows, random_cols]
+        mean_intensity = np.mean(sampled_pixels)
+        
+        print(f"Blackscreen check: sampled {sample_size} pixels, mean intensity: {mean_intensity:.2f}")
         return mean_intensity < threshold
     except Exception as e:
         print(f"Error analyzing blackscreen: {e}", file=sys.stderr)
         return False
 
+
+
 def analyze_freeze(image_path, previous_frames_cache=None):
-    """Detect if image is frozen (identical to previous frame)"""
+    """Detect if image is frozen (identical to previous frame) - Simplified approach"""
     try:
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             print(f"Error: Could not load image for freeze analysis: {image_path}", file=sys.stderr)
             return False
         
-        # Extract timestamp from current filename (handle both regular and thumbnail files)
+        # Extract timestamp from current filename
         current_match = re.search(r'capture_(\d{14})(?:_thumbnail)?\.jpg', image_path)
         if not current_match:
             print(f"Could not extract timestamp from filename: {image_path}", file=sys.stderr)
             return False
         
-        timestamp = current_match.group(1)
+        current_timestamp = current_match.group(1)
+        current_filename = os.path.basename(image_path)
         
         # Look for previous capture file in the same directory
         directory = os.path.dirname(image_path)
-        current_filename = os.path.basename(image_path)
         
         # Determine if we're analyzing thumbnails or full images
         is_thumbnail = '_thumbnail' in current_filename
@@ -63,15 +87,13 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             # Get all files of the same type (thumbnail or full) and sort them
             if is_thumbnail:
                 file_pattern = lambda f: f.startswith('capture_') and f.endswith('_thumbnail.jpg')
-                print(f"Analyzing thumbnail: {current_filename}")
             else:
                 file_pattern = lambda f: f.startswith('capture_') and f.endswith('.jpg') and '_thumbnail' not in f
-                print(f"Analyzing full image: {current_filename}")
             
             all_files = sorted([f for f in os.listdir(directory) if file_pattern(f)])
             
             if current_filename not in all_files:
-                print(f"Current file not found in directory listing: {current_filename}", file=sys.stderr)
+                print(f"Current file not found in directory listing: {current_filename}")
                 return False
             
             current_index = all_files.index(current_filename)
@@ -86,13 +108,13 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             prev_path = os.path.join(directory, prev_filename)
             
             if not os.path.exists(prev_path):
-                print(f"Previous frame not found: {prev_path}", file=sys.stderr)
+                print(f"Previous frame not found: {prev_path}")
                 return False
             
             # Load previous image
             prev_img = cv2.imread(prev_path, cv2.IMREAD_GRAYSCALE)
             if prev_img is None:
-                print(f"Could not load previous image: {prev_path}", file=sys.stderr)
+                print(f"Could not load previous image: {prev_path}")
                 return False
             
             # Check if images have same dimensions
@@ -100,15 +122,19 @@ def analyze_freeze(image_path, previous_frames_cache=None):
                 print(f"Image dimensions don't match: {img.shape} vs {prev_img.shape}")
                 return False
             
-            # Calculate absolute difference between frames
-            diff = cv2.absdiff(img, prev_img)
+            # Optimized sampling for pixel difference (every 10th pixel for performance)
+            sample_rate = SAMPLING_PATTERNS["freeze_sample_rate"]
+            img_sampled = img[::sample_rate, ::sample_rate]
+            prev_sampled = prev_img[::sample_rate, ::sample_rate]
+            
+            diff = cv2.absdiff(img_sampled, prev_sampled)
             mean_diff = np.mean(diff)
             
             print(f"Comparing {current_filename} with {prev_filename}")
-            print(f"Mean pixel difference: {mean_diff:.2f}")
+            print(f"Sampled pixel difference: {mean_diff:.2f}")
             
             # Frames are considered identical if mean difference is very small
-            freeze_threshold = 1.0  # Very strict threshold for identical frames
+            freeze_threshold = 1.0
             is_frozen = mean_diff < freeze_threshold
             
             if is_frozen:
@@ -119,7 +145,7 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             return is_frozen
             
         except Exception as e:
-            print(f"Could not compare with previous frame: {e}", file=sys.stderr)
+            print(f"Could not compare with previous frame: {e}")
             return False
         
     except Exception as e:
@@ -127,7 +153,7 @@ def analyze_freeze(image_path, previous_frames_cache=None):
         return False
 
 def analyze_subtitles_and_errors(image_path):
-    """Detect subtitles and error messages using edge detection and color analysis"""
+    """Detect subtitles and error messages - Optimized with region processing and sampling"""
     try:
         img = cv2.imread(image_path)
         if img is None:
@@ -135,29 +161,50 @@ def analyze_subtitles_and_errors(image_path):
         
         height, width = img.shape[:2]
         
-        # Check bottom 20% for subtitles (edge detection)
-        subtitle_region = img[int(height * 0.8):, :]
-        gray_subtitle = cv2.cvtColor(subtitle_region, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(gray_subtitle, 50, 150)
-        subtitle_edges = np.sum(edges > 0)
-        has_subtitles = subtitle_edges > 500  # Threshold for text detection
+        # Phase 4: Enhanced subtitle detection with adaptive region processing
+        subtitle_height_start = int(height * 0.8)
+        subtitle_width_start = int(width * 0.2)  # Skip left 20%
+        subtitle_width_end = int(width * 0.8)    # Skip right 20%
         
-        # Check for red error regions (color analysis)
+        subtitle_region = img[subtitle_height_start:, subtitle_width_start:subtitle_width_end]
+        gray_subtitle = cv2.cvtColor(subtitle_region, cv2.COLOR_BGR2GRAY)
+        
+        # Apply adaptive thresholding before edge detection for better text extraction
+        adaptive_thresh = cv2.adaptiveThreshold(gray_subtitle, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                              cv2.THRESH_BINARY, 11, 2)
+        edges = cv2.Canny(adaptive_thresh, 50, 150)
+        subtitle_edges = np.sum(edges > 0)
+        
+        # Dynamic threshold based on region size
+        region_pixels = subtitle_region.shape[0] * subtitle_region.shape[1]
+        adaptive_threshold = max(SAMPLING_PATTERNS["subtitle_edge_threshold"], region_pixels * 0.002)
+        has_subtitles = subtitle_edges > adaptive_threshold
+        
+        print(f"Subtitle detection: {subtitle_edges} edge pixels in region {subtitle_region.shape} (threshold: {adaptive_threshold:.0f})")
+        
+        # Phase 4: Enhanced error detection with smart grid sampling
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        
+        # Use configurable grid sampling rate
+        grid_rate = SAMPLING_PATTERNS["error_grid_rate"]
+        sampled_hsv = hsv[::grid_rate, ::grid_rate]
+        
         # Red color range in HSV
         lower_red1 = np.array([0, 50, 50])
         upper_red1 = np.array([10, 255, 255])
         lower_red2 = np.array([170, 50, 50])
         upper_red2 = np.array([180, 255, 255])
         
-        mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-        mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+        mask1 = cv2.inRange(sampled_hsv, lower_red1, upper_red1)
+        mask2 = cv2.inRange(sampled_hsv, lower_red2, upper_red2)
         red_mask = mask1 + mask2
         
         red_pixels = np.sum(red_mask > 0)
-        total_pixels = width * height
-        red_percentage = (red_pixels / total_pixels) * 100
-        has_errors = red_percentage > 2.0  # More than 2% red pixels
+        total_sampled_pixels = sampled_hsv.shape[0] * sampled_hsv.shape[1]
+        red_percentage = (red_pixels / total_sampled_pixels) * 100
+        has_errors = red_percentage > 2.0  # More than 2% red pixels in sample
+        
+        print(f"Error detection: {red_percentage:.1f}% red pixels in {total_sampled_pixels} sampled pixels")
         
         return has_subtitles, has_errors
     except Exception as e:
@@ -223,6 +270,8 @@ def detect_language(has_subtitles, image_path=None):
     except (LangDetectError, Exception) as e:
         print(f"Language detection failed: {e}", file=sys.stderr)
         return 'text_detected'
+
+
 
 def main():
     if len(sys.argv) != 2:
