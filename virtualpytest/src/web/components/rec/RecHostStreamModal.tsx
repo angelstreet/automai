@@ -356,8 +356,12 @@ const RecHostStreamModalContent: React.FC<{
               <MonitoringPlayer
                 host={host}
                 device={device}
-                initializeBaseUrl={initializeBaseUrl}
-                generateThumbnailUrl={generateThumbnailUrl}
+                initializeBaseUrl={
+                  monitoringMode && isControlActive ? initializeBaseUrl : undefined
+                }
+                generateThumbnailUrl={
+                  monitoringMode && isControlActive ? generateThumbnailUrl : undefined
+                }
               />
             ) : streamUrl ? (
               <HLSVideoPlayer
