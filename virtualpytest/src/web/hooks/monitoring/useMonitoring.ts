@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 
-import { Host, Device } from '../../types/common/Host_Types';
-
 interface FrameRef {
   timestamp: string;
   imageUrl: string;
   jsonUrl: string;
-  analysis?: MonitoringAnalysis;
+  analysis?: MonitoringAnalysis | null;
 }
 
 interface MonitoringAnalysis {
@@ -22,11 +20,6 @@ interface MonitoringAnalysis {
   errors: boolean;
   language: string;
   confidence: number;
-}
-
-interface UseMonitoringProps {
-  host: Host;
-  device?: Device;
 }
 
 interface UseMonitoringReturn {
@@ -55,7 +48,7 @@ interface UseMonitoringReturn {
   } | null;
 }
 
-export const useMonitoring = ({ host, device }: UseMonitoringProps): UseMonitoringReturn => {
+export const useMonitoring = (): UseMonitoringReturn => {
   const [frames, setFrames] = useState<FrameRef[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
