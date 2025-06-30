@@ -144,12 +144,12 @@ def main():
             'filename': os.path.basename(image_path),
             'thumbnail': os.path.basename(thumbnail_path) if os.path.exists(thumbnail_path) else None,
             'analysis': {
-                'blackscreen': blackscreen,
-                'freeze': freeze,
-                'subtitles': subtitles,
-                'errors': errors,
-                'language': language,
-                'confidence': confidence
+                'blackscreen': bool(blackscreen),
+                'freeze': bool(freeze),
+                'subtitles': bool(subtitles),
+                'errors': bool(errors),
+                'language': str(language),
+                'confidence': float(confidence)
             },
             'processing_info': {
                 'analyzed_at': datetime.now().isoformat(),

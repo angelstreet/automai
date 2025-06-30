@@ -34,7 +34,7 @@ process_file() {
         echo "Started thumbnail creation for $(basename "$thumbnail")" >> /tmp/rename.log
         
         # Run AI monitoring analysis in background
-        (source /home/$USER/myvenv/bin/activate && python /usr/local/bin/analyze_frame.py "$newname") 2>>/tmp/monitoring.log &
+        (source /home/sunri-pi1/myvenv/bin/activate && python /usr/local/bin/analyze_frame.py "$newname") 2>>/tmp/monitoring.log &
         echo "Started AI monitoring analysis for $(basename "$newname")" >> /tmp/rename.log
        
       else
