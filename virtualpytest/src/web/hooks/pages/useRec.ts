@@ -132,7 +132,16 @@ export const useRec = (): UseRecReturn => {
         now.getMinutes().toString().padStart(2, '0') +
         now.getSeconds().toString().padStart(2, '0');
 
-      const thumbnailUrl = basePattern.replace('{timestamp}', timestamp);
+      // Convert basePattern from original image to thumbnail
+      // basePattern is like: "http://host/path/capture_{timestamp}.jpg"
+      // We need: "http://host/path/capture_{timestamp}_thumbnail.jpg"
+      const thumbnailPattern = basePattern.replace(
+        'capture_{timestamp}.jpg',
+        'capture_{timestamp}_thumbnail.jpg',
+      );
+      const thumbnailUrl = thumbnailPattern.replace('{timestamp}', timestamp);
+
+      console.log(`[@hook:useRec] generateThumbnailUrl for ${deviceKey}: ${thumbnailUrl}`);
       return thumbnailUrl;
     },
     [baseUrlPatterns],
