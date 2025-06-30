@@ -3,6 +3,7 @@ import { Box, IconButton, Typography, Button, CircularProgress } from '@mui/mate
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
 import { useStream } from '../../hooks/controller';
+import { useRec } from '../../hooks/pages/useRec';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
@@ -53,6 +54,9 @@ const RecHostStreamModalContent: React.FC<{
 
   // Hooks - now only run when modal is actually open
   const { showError, showWarning } = useToast();
+
+  // Get the useRec functions needed for RecHostPreview
+  const { initializeBaseUrl, generateThumbnailUrl } = useRec();
 
   // NEW: Use device control hook (replaces all duplicate control logic)
   const { isControlActive, isControlLoading, controlError, handleToggleControl, clearError } =
@@ -339,9 +343,24 @@ const RecHostStreamModalContent: React.FC<{
             }}
           >
             {monitoringMode ? (
-              <Box sx={{ position: 'relative', width: '100%', height: '600px' }}>
+              <Box
+                sx={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '600px',
+                  '& .MuiCard-root': {
+                    height: '100%', // Make RecHostPreview fill the full height
+                    borderRadius: 2, // Slightly more rounded for modal
+                  },
+                }}
+              >
                 {/* Reuse RecHostPreview for image display - it handles its own URLs */}
-                <RecHostPreview host={host} device={device} />
+                <RecHostPreview
+                  host={host}
+                  device={device}
+                  initializeBaseUrl={initializeBaseUrl}
+                  generateThumbnailUrl={generateThumbnailUrl}
+                />
 
                 {/* Add monitoring overlay on top - it will load JSON based on current image */}
                 <MonitoringOverlay />
