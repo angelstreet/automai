@@ -1,6 +1,6 @@
 import { Error as ErrorIcon } from '@mui/icons-material';
 import { Card, Typography, Box, Chip, CircularProgress } from '@mui/material';
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
 import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
@@ -15,6 +15,13 @@ interface RecHostPreviewProps {
   hideHeader?: boolean;
 }
 
+// Simple mobile detection function to match MonitoringPlayer logic
+const isMobileModel = (model?: string): boolean => {
+  if (!model) return false;
+  const modelLower = model.toLowerCase();
+  return modelLower.includes('mobile');
+};
+
 export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   host,
   device,
@@ -28,6 +35,11 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Detect if this is a mobile device model for proper sizing
+  const isMobile = useMemo(() => {
+    return isMobileModel(device?.device_model);
+  }, [device?.device_model]);
 
   // Hook for notifications only
   const { showError } = useToast();
@@ -284,9 +296,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
+                    width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
+                    height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
+                    objectFit: 'cover', // Fill entire container
                     objectPosition: 'top center', // Center horizontally, anchor to top
                     opacity: isTransitioning ? 0 : 1,
                     transition: 'opacity 300ms ease-in-out',
@@ -305,9 +317,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                   position: 'absolute',
                   top: 0,
                   left: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
+                  width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
+                  height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
+                  objectFit: 'cover', // Fill entire container
                   objectPosition: 'top center', // Center horizontally, anchor to top
                   opacity: 1,
                   transition: 'opacity 300ms ease-in-out',
