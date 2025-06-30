@@ -203,7 +203,17 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
       )}
 
       {/* Monitoring overlay */}
-      <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 2 }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: 1000000, // Same as AndroidMobileOverlay click animation, but appears after in DOM
+          pointerEvents: 'none', // Don't block clicks to underlying remote controls
+        }}
+      >
         <MonitoringOverlay
           overrideImageUrl={
             frames.length > 0 && currentIndex < frames.length - 1 ? currentFrameUrl : undefined
