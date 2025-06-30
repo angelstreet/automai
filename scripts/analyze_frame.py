@@ -17,14 +17,13 @@ import hashlib
 import pickle
 import fcntl
 
-# Optional imports for language detection
+# Optional import for text extraction
 try:
     import pytesseract
-    from langdetect import detect, LangDetectException
     OCR_AVAILABLE = True
 except ImportError:
     OCR_AVAILABLE = False
-    print("OCR libraries not available. Install with: pip install pytesseract langdetect", file=sys.stderr)
+    print("OCR library not available. Install with: pip install pytesseract", file=sys.stderr)
 
 # Simplified sampling patterns for performance optimization
 SAMPLING_PATTERNS = {
@@ -338,21 +337,21 @@ def analyze_subtitles_and_errors(image_path):
         print(f"Error analyzing subtitles/errors: {e}", file=sys.stderr)
         return False, False
 
-def detect_language(has_subtitles, image_path=None):
-    """Detect language from subtitle text using OCR"""
+def extract_text(has_subtitles, image_path=None):
+    """Extract text from subtitle region using OCR"""
     if not has_subtitles:
-        return 'none'
+        return ''
     
     if not OCR_AVAILABLE or not image_path:
-        print("Language detection: OCR not available or no image path")
-        return 'unknown'
+        print("Text extraction: OCR not available or no image path")
+        return ''
     
     try:
         # Load image for OCR
         img = cv2.imread(image_path)
         if img is None:
-            print("Language detection: Could not load image")
-            return 'unknown'
+            print("Text extraction: Could not load image")
+            return ''
         
         height, width = img.shape[:2]
         
@@ -372,48 +371,25 @@ def detect_language(has_subtitles, image_path=None):
         text = pytesseract.image_to_string(thresh, config='--psm 6')
         text = text.strip()
         
-        print(f"Language detection: OCR extracted text: '{text[:50]}...' (length: {len(text)})")
+        print(f"Text extraction: OCR extracted text: '{text[:50]}...' (length: {len(text)})")
         
-        # Strict requirements for reliable language detection
-        if len(text) < 10:  # Need at least 15 characters
-            print("Language detection: Text too short for reliable detection (< 15 chars)")
-            return 'unknown'
+        # Basic text validation
+        if len(text) < 3:
+            print("Text extraction: Text too short (< 3 chars)")
+            return ''
         
-        # Check word count - need at least 7 words for reliable language detection
-        words = text.split()
-        if len(words) < 3:
-            print(f"Language detection: Too few words for reliable detection ({len(words)} < 7)")
-            return 'unknown'
+        # Check for garbled text - if less than 70% of characters are printable, likely OCR noise
+        valid_chars = sum(1 for c in text if c.isprintable() and not c.iscntrl())
+        if len(text) > 0 and valid_chars / len(text) < 0.7:
+            print(f"Text extraction: Text appears garbled ({valid_chars}/{len(text)} valid chars)")
+            return ''
         
-        # Check for garbled text - if less than 80% of characters are alphabetic/space, likely OCR noise
-        valid_chars = sum(1 for c in text if c.isalpha() or c.isspace())
-        if valid_chars / len(text) < 0.8:
-            print(f"Language detection: Text appears garbled ({valid_chars}/{len(text)} valid chars)")
-            return 'unknown'
+        print(f"Text extraction: Extracted '{text}'")
+        return text
         
-        # Detect language
-        detected_lang = detect(text)
-        print(f"Language detection: Detected language code: {detected_lang}")
-        
-        # Only allow specific languages - map to full names
-        allowed_languages = {
-            'en': 'English',
-            'fr': 'French', 
-            'de': 'German',
-            'it': 'Italian'
-        }
-        
-        if detected_lang in allowed_languages:
-            result = allowed_languages[detected_lang]
-            print(f"Language detection: Final result: {result}")
-            return result
-        else:
-            print(f"Language detection: Detected '{detected_lang}' not in allowed list (English/French/German/Italian)")
-            return 'unknown'
-        
-    except (LangDetectException, Exception) as e:
-        print(f"Language detection failed: {e}", file=sys.stderr)
-        return 'unknown'
+    except Exception as e:
+        print(f"Text extraction failed: {e}", file=sys.stderr)
+        return ''
 
 def main():
     if len(sys.argv) != 2:
@@ -476,7 +452,7 @@ def main():
         elif errors:
             print(f"Error detection: Red content detected WITH freeze - flagging as error")
         
-        language = detect_language(subtitles, analysis_image)
+        extracted_text = extract_text(subtitles, analysis_image)
         
         # If we don't have subtitle history (not enough frames), use current frame analysis
         if subtitle_history is None:
@@ -506,7 +482,7 @@ def main():
                     'no_subtitles_for_3_frames': bool(subtitle_history['no_subtitles_for_3_frames'])
                 },
                 'errors': bool(errors),
-                'language': str(language),
+                'text': str(extracted_text),
                 'confidence': float(confidence)
             },
             'processing_info': {
@@ -526,7 +502,7 @@ def main():
             json.dump(analysis_result, f, indent=2)
         
         print(f"Analysis complete: {json_filename}")
-        print(f"Results: blackscreen={blackscreen}, freeze={frozen}, subtitles={subtitles}, errors={errors}, language={language}")
+        print(f"Results: blackscreen={blackscreen}, freeze={frozen}, subtitles={subtitles}, errors={errors}, text='{extracted_text}'")
         
     except Exception as e:
         print(f"Analysis failed: {e}", file=sys.stderr)
