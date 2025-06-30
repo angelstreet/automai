@@ -29,8 +29,9 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
 }) => {
   const [frames, setFrames] = useState<FrameRef[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(true);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
+  const [userSelectedFrame, setUserSelectedFrame] = useState(false);
 
   // Monitor RecHostPreview for new images
   useEffect(() => {
@@ -39,22 +40,24 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
       if (imgElement && imgElement.src && imgElement.src !== currentImageUrl) {
         const newImageUrl = imgElement.src;
         setCurrentImageUrl(newImageUrl);
-        
+
         // Extract timestamp and create frame reference
         const timestampMatch = newImageUrl.match(/capture_(\d{14})/);
         if (timestampMatch) {
           const timestamp = timestampMatch[1];
           const jsonUrl = newImageUrl.replace('.jpg', '.json');
-          
-          setFrames(prev => {
+
+          setFrames((prev) => {
             const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
-            return newFrames.slice(-100); // Keep last 100 frames
+            const updatedFrames = newFrames.slice(-100); // Keep last 100 frames
+
+            // Auto-follow new images unless user manually selected a previous frame
+            if (!userSelectedFrame || isPlaying) {
+              setCurrentIndex(updatedFrames.length - 1);
+            }
+
+            return updatedFrames;
           });
-          
-          // Move to latest frame if playing
-          if (isPlaying) {
-            setCurrentIndex(frames.length);
-          }
         }
       }
     };
@@ -66,29 +69,37 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   // Auto-play functionality
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isPlaying && frames.length > 0) {
+    if (isPlaying && frames.length > 1 && !userSelectedFrame) {
       interval = setInterval(() => {
-        setCurrentIndex(prev => {
+        setCurrentIndex((prev) => {
           const next = prev + 1;
           if (next >= frames.length) {
-            setIsPlaying(false);
-            return frames.length - 1;
+            return frames.length - 1; // Stay on latest frame
           }
           return next;
         });
       }, 2000); // 2 seconds per frame
     }
     return () => clearInterval(interval);
-  }, [isPlaying, frames.length]);
+  }, [isPlaying, frames.length, userSelectedFrame]);
 
   const handlePlayPause = useCallback(() => {
+    if (!isPlaying) {
+      // When starting play, reset to follow new images automatically
+      setUserSelectedFrame(false);
+      setCurrentIndex(frames.length - 1);
+    } else {
+      // When pausing, mark as user-selected to stop auto-following
+      setUserSelectedFrame(true);
+    }
     setIsPlaying(!isPlaying);
-  }, [isPlaying]);
+  }, [isPlaying, frames.length]);
 
   const handleSliderChange = useCallback((_event: Event, newValue: number | number[]) => {
     const index = newValue as number;
     setCurrentIndex(index);
     setIsPlaying(false);
+    setUserSelectedFrame(true); // Mark as manually selected
   }, []);
 
   // Get current frame URL for display
@@ -156,16 +167,16 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         <Box
           sx={{
             position: 'absolute',
-            bottom: 0,
+            top: 0,
             left: 0,
             right: 0,
-            background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+            background: 'linear-gradient(rgba(0,0,0,0.8), transparent)',
             p: 1,
-            zIndex: 3,
+            zIndex: 1000, // High z-index to appear above remote panel
           }}
         >
           {/* Play/Pause button */}
-          <Box sx={{ position: 'absolute', bottom: 8, left: 8 }}>
+          <Box sx={{ position: 'absolute', top: 8, left: 8 }}>
             <IconButton
               size="medium"
               onClick={handlePlayPause}
@@ -182,7 +193,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
           </Box>
 
           {/* Frame counter */}
-          <Box sx={{ position: 'absolute', bottom: 16, right: 16 }}>
+          <Box sx={{ position: 'absolute', top: 16, right: 16 }}>
             <Typography
               variant="caption"
               sx={{
@@ -199,7 +210,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
           <Box
             sx={{
               position: 'absolute',
-              bottom: 12,
+              top: 12,
               left: '80px',
               right: '80px',
             }}
@@ -229,4 +240,4 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
       )}
     </Box>
   );
-}; 
+};
