@@ -10,6 +10,7 @@ import os
 import json
 import cv2
 import numpy as np
+import re
 from datetime import datetime
 import time
 
@@ -27,18 +28,80 @@ def analyze_blackscreen(image_path, threshold=15):
         return False
 
 def analyze_freeze(image_path, previous_frames_cache=None):
-    """Detect if image is frozen (similar to previous frame)"""
+    """Detect if image is frozen (identical to previous frame)"""
     try:
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
+            print(f"Error: Could not load image for freeze analysis: {image_path}", file=sys.stderr)
             return False
         
-        # Calculate histogram for comparison
-        hist = cv2.calcHist([img], [0], None, [256], [0, 256])
+        # Extract timestamp from current filename to find previous frame
+        current_match = re.search(r'capture_(\d{14})\.jpg', image_path)
+        if not current_match:
+            print(f"Could not extract timestamp from filename: {image_path}", file=sys.stderr)
+            return False
         
-        # For simplicity, check if image has very low variance (static content)
-        variance = np.var(img)
-        return variance < 100  # Threshold for "frozen" content
+        # Look for previous capture file in the same directory
+        directory = os.path.dirname(image_path)
+        current_filename = os.path.basename(image_path)
+        
+        try:
+            # Get all capture files and sort them
+            all_files = sorted([f for f in os.listdir(directory) 
+                              if f.startswith('capture_') and f.endswith('.jpg') and '_thumbnail' not in f])
+            
+            if current_filename not in all_files:
+                print(f"Current file not found in directory listing: {current_filename}", file=sys.stderr)
+                return False
+            
+            current_index = all_files.index(current_filename)
+            
+            # Need at least one previous file to compare
+            if current_index == 0:
+                print(f"No previous frame to compare with for: {current_filename}")
+                return False
+            
+            # Get the previous frame
+            prev_filename = all_files[current_index - 1]
+            prev_path = os.path.join(directory, prev_filename)
+            
+            if not os.path.exists(prev_path):
+                print(f"Previous frame not found: {prev_path}", file=sys.stderr)
+                return False
+            
+            # Load previous image
+            prev_img = cv2.imread(prev_path, cv2.IMREAD_GRAYSCALE)
+            if prev_img is None:
+                print(f"Could not load previous image: {prev_path}", file=sys.stderr)
+                return False
+            
+            # Check if images have same dimensions
+            if img.shape != prev_img.shape:
+                print(f"Image dimensions don't match: {img.shape} vs {prev_img.shape}")
+                return False
+            
+            # Calculate absolute difference between frames
+            diff = cv2.absdiff(img, prev_img)
+            mean_diff = np.mean(diff)
+            
+            print(f"Comparing {current_filename} with {prev_filename}")
+            print(f"Mean pixel difference: {mean_diff:.2f}")
+            
+            # Frames are considered identical if mean difference is very small
+            freeze_threshold = 1.0  # Very strict threshold for identical frames
+            is_frozen = mean_diff < freeze_threshold
+            
+            if is_frozen:
+                print(f"FREEZE DETECTED: Images are nearly identical (diff={mean_diff:.2f} < {freeze_threshold})")
+            else:
+                print(f"No freeze: Images are different (diff={mean_diff:.2f} >= {freeze_threshold})")
+            
+            return is_frozen
+            
+        except Exception as e:
+            print(f"Could not compare with previous frame: {e}", file=sys.stderr)
+            return False
+        
     except Exception as e:
         print(f"Error analyzing freeze: {e}", file=sys.stderr)
         return False
