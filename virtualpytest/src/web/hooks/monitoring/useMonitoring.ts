@@ -1,314 +1,147 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { Host, Device } from '../../types/common/Host_Types';
-import { MonitoringState, MonitoringFrame, FrameAnalysis } from '../../components/monitoring/types/MonitoringTypes';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  MonitoringFrame,
+  MonitoringAnalysis,
+} from '../../components/monitoring/types/MonitoringTypes';
 
-interface UseMonitoringProps {
-  host: Host;
-  deviceId: string;
-  isControlActive: boolean;
+interface UseMonitoringResult {
+  frames: MonitoringFrame[];
+  isLoading: boolean;
+  error: string | null;
+  refreshFrames: () => Promise<void>;
+  analyzeFrame: (filename: string) => Promise<MonitoringAnalysis | null>;
 }
 
-interface UseMonitoringReturn {
-  // State
-  monitoringState: MonitoringState;
-  
-  // Controls
-  startMonitoring: () => Promise<void>;
-  stopMonitoring: () => void;
-  toggleMonitoring: () => Promise<void>;
-  
-  // Navigation
-  goToFrame: (frameIndex: number) => void;
-  nextFrame: () => void;
-  previousFrame: () => void;
-  goToFirstFrame: () => void;
-  goToLastFrame: () => void;
-  
-  // Playback
-  isPlaying: boolean;
-  togglePlayback: () => void;
-  
-  // Current frame data
-  currentFrame: MonitoringFrame | null;
-  canGoNext: boolean;
-  canGoPrevious: boolean;
-}
+export function useMonitoring(
+  hostIp?: string,
+  hostPort?: string,
+  deviceId?: string,
+): UseMonitoringResult {
+  const [frames, setFrames] = useState<MonitoringFrame[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-const initialState: MonitoringState = {
-  isActive: false,
-  isProcessing: false,
-  frames: [],
-  currentFrameIndex: 0,
-  totalFrames: 0,
-  maxFrames: 180, // 3 minutes at 1 fps
-  error: null,
-  lastProcessedFrame: 0,
-};
-
-export const useMonitoring = ({ 
-  host, 
-  deviceId, 
-  isControlActive 
-}: UseMonitoringProps): UseMonitoringReturn => {
-  const [monitoringState, setMonitoringState] = useState<MonitoringState>(initialState);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const processingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const playbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Start monitoring - begins processing captured frames
-  const startMonitoring = useCallback(async () => {
-    if (!isControlActive) {
-      setMonitoringState(prev => ({ 
-        ...prev, 
-        error: 'Device control required to start monitoring' 
-      }));
+  const refreshFrames = useCallback(async () => {
+    if (!hostIp || !deviceId) {
+      console.log('[@hook:useMonitoring] Missing hostIp or deviceId, skipping refresh');
       return;
     }
 
+    setIsLoading(true);
+    setError(null);
+
     try {
-      console.log('[@hook:useMonitoring] Starting monitoring session');
-      
-      setMonitoringState(prev => ({ 
-        ...prev, 
-        isActive: true, 
-        error: null,
-        isProcessing: true 
-      }));
-
-      // Start processing loop - check for new captured frames every second
-      processingIntervalRef.current = setInterval(async () => {
-        await processNewFrames();
-      }, 1000); // 1 second interval = 1 fps processing
-
-    } catch (error: any) {
-      console.error('[@hook:useMonitoring] Failed to start monitoring:', error);
-      setMonitoringState(prev => ({ 
-        ...prev, 
-        error: error.message,
-        isProcessing: false 
-      }));
-    }
-  }, [host, deviceId, isControlActive]);
-
-  // Stop monitoring
-  const stopMonitoring = useCallback(() => {
-    console.log('[@hook:useMonitoring] Stopping monitoring session');
-    
-    if (processingIntervalRef.current) {
-      clearInterval(processingIntervalRef.current);
-      processingIntervalRef.current = null;
-    }
-
-    if (playbackIntervalRef.current) {
-      clearInterval(playbackIntervalRef.current);
-      playbackIntervalRef.current = null;
-    }
-
-    setIsPlaying(false);
-    setMonitoringState(prev => ({ 
-      ...prev, 
-      isActive: false,
-      isProcessing: false 
-    }));
-  }, []);
-
-  // Toggle monitoring
-  const toggleMonitoring = useCallback(async () => {
-    if (monitoringState.isActive) {
-      stopMonitoring();
-    } else {
-      await startMonitoring();
-    }
-  }, [monitoringState.isActive, startMonitoring, stopMonitoring]);
-
-  // Process new captured frames
-  const processNewFrames = useCallback(async () => {
-    try {
-      // Get latest captured frames from the HDMI controller
-      const response = await fetch('/server/ai-monitoring/get-latest-frames', {
+      // Use existing image controller to get latest frames from HDMI capture folder
+      const response = await fetch('/server/verification/image/getLatestFrames', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          host,
+          host_ip: hostIp,
+          host_port: hostPort || '5000',
           device_id: deviceId,
-          last_processed_frame: monitoringState.lastProcessedFrame
-        })
+          count: 180, // 3 minutes at 1fps
+        }),
       });
 
-      const result = await response.json();
-      
-      if (result.success && result.frames && result.frames.length > 0) {
-        console.log(`[@hook:useMonitoring] Processing ${result.frames.length} new frames`);
-        
-        // Process each new frame with AI analysis
-        const processedFrames: MonitoringFrame[] = [];
-        
-        for (const frameInfo of result.frames) {
-          try {
-            // Analyze frame with AI
-            const analysisResponse = await fetch('/server/ai-monitoring/analyze-frame', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                frame_path: frameInfo.path,
-                frame_number: frameInfo.frame_number,
-                host,
-                device_id: deviceId
-              })
-            });
-
-            const analysisResult = await analysisResponse.json();
-            
-            if (analysisResult.success) {
-              const monitoringFrame: MonitoringFrame = {
-                frameNumber: frameInfo.frame_number,
-                timestamp: frameInfo.timestamp,
-                imagePath: frameInfo.path,
-                analysis: analysisResult.analysis,
-                processed: true
-              };
-              
-              processedFrames.push(monitoringFrame);
-            } else {
-              console.error('[@hook:useMonitoring] Frame analysis failed:', analysisResult.error);
-            }
-          } catch (error) {
-            console.error('[@hook:useMonitoring] Error processing frame:', error);
-          }
-        }
-
-        if (processedFrames.length > 0) {
-          setMonitoringState(prev => {
-            const newFrames = [...prev.frames, ...processedFrames];
-            
-            // Keep only last maxFrames (180 frames = 3 minutes at 1 fps)
-            const limitedFrames = newFrames.slice(-prev.maxFrames);
-            
-            // Auto-advance to latest frame if we were at the end
-            const wasAtEnd = prev.currentFrameIndex >= prev.totalFrames - 1;
-            const newCurrentIndex = wasAtEnd ? limitedFrames.length - 1 : prev.currentFrameIndex;
-            
-            return {
-              ...prev,
-              frames: limitedFrames,
-              totalFrames: limitedFrames.length,
-              currentFrameIndex: Math.max(0, newCurrentIndex),
-              lastProcessedFrame: Math.max(...processedFrames.map(f => f.frameNumber))
-            };
-          });
-        }
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-    } catch (error: any) {
-      console.error('[@hook:useMonitoring] Error processing new frames:', error);
-      setMonitoringState(prev => ({ 
-        ...prev, 
-        error: error.message 
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to get frames');
+      }
+
+      // Convert to MonitoringFrame format with proper image URLs
+      const monitoringFrames: MonitoringFrame[] = data.frames.map((frame: any) => ({
+        filename: frame.filename,
+        timestamp:
+          typeof frame.timestamp === 'string' ? parseInt(frame.timestamp) : frame.timestamp,
+        // Use existing image proxy system - build URL on backend
+        imageUrl: `/server/av/proxyMonitoringImage/${frame.filename}?host_ip=${hostIp}&host_port=${hostPort || '5000'}&device_id=${deviceId}`,
+        analysis: null, // Will be populated when analyzed
       }));
+
+      setFrames(monitoringFrames);
+      console.log(`[@hook:useMonitoring] Loaded ${monitoringFrames.length} monitoring frames`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      console.error('[@hook:useMonitoring] Error loading frames:', errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-  }, [host, deviceId, monitoringState.lastProcessedFrame]);
+  }, [hostIp, hostPort, deviceId]);
 
-  // Navigation functions
-  const goToFrame = useCallback((frameIndex: number) => {
-    setMonitoringState(prev => ({
-      ...prev,
-      currentFrameIndex: Math.max(0, Math.min(frameIndex, prev.totalFrames - 1))
-    }));
-  }, []);
+  const analyzeFrame = useCallback(
+    async (filename: string): Promise<MonitoringAnalysis | null> => {
+      if (!hostIp || !deviceId) {
+        console.log('[@hook:useMonitoring] Missing hostIp or deviceId for analysis');
+        return null;
+      }
 
-  const nextFrame = useCallback(() => {
-    setMonitoringState(prev => ({
-      ...prev,
-      currentFrameIndex: Math.min(prev.currentFrameIndex + 1, prev.totalFrames - 1)
-    }));
-  }, []);
-
-  const previousFrame = useCallback(() => {
-    setMonitoringState(prev => ({
-      ...prev,
-      currentFrameIndex: Math.max(prev.currentFrameIndex - 1, 0)
-    }));
-  }, []);
-
-  const goToFirstFrame = useCallback(() => {
-    goToFrame(0);
-  }, [goToFrame]);
-
-  const goToLastFrame = useCallback(() => {
-    setMonitoringState(prev => ({
-      ...prev,
-      currentFrameIndex: prev.totalFrames - 1
-    }));
-  }, []);
-
-  // Playback controls
-  const togglePlayback = useCallback(() => {
-    setIsPlaying(prev => !prev);
-  }, []);
-
-  // Handle playback interval
-  useEffect(() => {
-    if (isPlaying && monitoringState.totalFrames > 0) {
-      playbackIntervalRef.current = setInterval(() => {
-        setMonitoringState(prev => {
-          const nextIndex = prev.currentFrameIndex + 1;
-          if (nextIndex >= prev.totalFrames) {
-            setIsPlaying(false); // Stop at end
-            return prev;
-          }
-          return {
-            ...prev,
-            currentFrameIndex: nextIndex
-          };
+      try {
+        // Use existing image controller for AI analysis
+        const analysisResponse = await fetch('/server/verification/image/analyzeFrame', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            host_ip: hostIp,
+            host_port: hostPort || '5000',
+            device_id: deviceId,
+            filename: filename,
+          }),
         });
-      }, 1000); // 1 second per frame
-    } else {
-      if (playbackIntervalRef.current) {
-        clearInterval(playbackIntervalRef.current);
-        playbackIntervalRef.current = null;
+
+        if (!analysisResponse.ok) {
+          throw new Error(
+            `Analysis HTTP ${analysisResponse.status}: ${analysisResponse.statusText}`,
+          );
+        }
+
+        const analysisData = await analysisResponse.json();
+
+        if (!analysisData.success) {
+          throw new Error(analysisData.error || 'Analysis failed');
+        }
+
+        const analysis: MonitoringAnalysis = {
+          blackscreen: analysisData.analysis.blackscreen || false,
+          freeze: analysisData.analysis.freeze || false,
+          subtitles: analysisData.analysis.subtitles || false,
+          errors: analysisData.analysis.errors || false,
+          language: analysisData.analysis.language || 'unknown',
+          confidence: analysisData.analysis.confidence || 0,
+        };
+
+        // Update the frame with analysis results
+        setFrames((prevFrames) =>
+          prevFrames.map((frame) => (frame.filename === filename ? { ...frame, analysis } : frame)),
+        );
+
+        return analysis;
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Analysis error';
+        console.error('[@hook:useMonitoring] Error analyzing frame:', errorMessage);
+        return null;
       }
-    }
+    },
+    [hostIp, hostPort, deviceId],
+  );
 
-    return () => {
-      if (playbackIntervalRef.current) {
-        clearInterval(playbackIntervalRef.current);
-      }
-    };
-  }, [isPlaying, monitoringState.totalFrames]);
-
-  // Cleanup on unmount
+  // Auto-refresh frames when host/device changes
   useEffect(() => {
-    return () => {
-      stopMonitoring();
-    };
-  }, [stopMonitoring]);
-
-  // Auto-stop monitoring when control is lost
-  useEffect(() => {
-    if (!isControlActive && monitoringState.isActive) {
-      console.log('[@hook:useMonitoring] Control lost, stopping monitoring');
-      stopMonitoring();
+    if (hostIp && deviceId) {
+      refreshFrames();
     }
-  }, [isControlActive, monitoringState.isActive, stopMonitoring]);
-
-  // Computed values
-  const currentFrame = monitoringState.frames[monitoringState.currentFrameIndex] || null;
-  const canGoNext = monitoringState.currentFrameIndex < monitoringState.totalFrames - 1;
-  const canGoPrevious = monitoringState.currentFrameIndex > 0;
+  }, [hostIp, deviceId, refreshFrames]);
 
   return {
-    monitoringState,
-    startMonitoring,
-    stopMonitoring,
-    toggleMonitoring,
-    goToFrame,
-    nextFrame,
-    previousFrame,
-    goToFirstFrame,
-    goToLastFrame,
-    isPlaying,
-    togglePlayback,
-    currentFrame,
-    canGoNext,
-    canGoPrevious,
+    frames,
+    isLoading,
+    error,
+    refreshFrames,
+    analyzeFrame,
   };
-}; 
+}

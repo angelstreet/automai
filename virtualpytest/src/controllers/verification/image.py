@@ -9,6 +9,7 @@ import time
 import os
 from typing import Dict, Any, Optional, Tuple, List
 from .image_helpers import ImageHelpers
+from .image_monitoring import ImageMonitoringHelper
 import cv2
 import numpy as np
 
@@ -38,6 +39,9 @@ class ImageVerificationController:
         # Initialize helpers with explicit references directory
         self.helpers = ImageHelpers(self.captures_path, av_controller)
         
+        # Initialize monitoring helper
+        self.monitoring = ImageMonitoringHelper(self.captures_path, av_controller)
+        
         print(f"[@controller:ImageVerification] Initialized")
         print(f"[@controller:ImageVerification] Initialized with paths:")
         print(f"  Captures: {self.captures_path}")
@@ -65,9 +69,35 @@ class ImageVerificationController:
             "connected": self.is_connected,
             "av_controller": self.av_controller.device_name if self.av_controller else None,
             "controller_type": "image",
-
-            "captures_path": self.captures_path
+            "captures_path": self.captures_path,
+            "has_monitoring": self.monitoring is not None
         }
+    
+    # === AI MONITORING METHODS ===
+    
+    def get_latest_frames_for_monitoring(self, limit: int = 180) -> Dict[str, Any]:
+        """
+        Get latest captured frames for AI monitoring.
+        
+        Args:
+            limit: Maximum number of frames to return
+            
+        Returns:
+            Dict with success status and frame list
+        """
+        return self.monitoring.get_latest_frames(limit)
+    
+    def analyze_frame_for_monitoring(self, image_path: str) -> Dict[str, Any]:
+        """
+        Analyze a frame for AI monitoring.
+        
+        Args:
+            image_path: Path to the frame image
+            
+        Returns:
+            Dict with analysis results
+        """
+        return self.monitoring.analyze_frame(image_path)
 
     def waitForImageToAppear(self, image_path: str, timeout: float = 1.0, threshold: float = 0.8, 
                             area: tuple = None, image_list: List[str] = None, 

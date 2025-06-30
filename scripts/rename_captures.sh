@@ -28,9 +28,15 @@ process_file() {
       thumbnail="${CAPTURE_DIR}/capture_${timestamp}_thumbnail.jpg"
       if mv -f "$filepath" "$newname" 2>>/tmp/rename.log; then
         echo "Renamed $(basename "$filepath") to $(basename "$newname") at $(date)" >> /tmp/rename.log
-        # Create thumbnail in background
+        
+        # Create thumbnail and run AI monitoring analysis in parallel
         convert "$newname" -thumbnail 498x280 -strip -quality 85 "$thumbnail" 2>>/tmp/rename.log &
         echo "Started thumbnail creation for $(basename "$thumbnail")" >> /tmp/rename.log
+        
+        # Run AI monitoring analysis in background
+        /usr/local/bin/analyze_frame.py "$newname" 2>>/tmp/monitoring.log &
+        echo "Started AI monitoring analysis for $(basename "$newname")" >> /tmp/rename.log
+       
       else
         echo "Failed to rename $filepath to $newname" >> /tmp/rename.log
       fi
@@ -46,6 +52,13 @@ process_file() {
 if ! command -v convert >/dev/null 2>&1; then
   echo "ImageMagick is not installed. Please install it to create thumbnails." >> /tmp/rename.log
   exit 1
+fi
+
+# Check if Python3 is available for AI monitoring
+if command -v python3 >/dev/null 2>&1; then
+  echo "Python3 found, AI monitoring analysis will be enabled." >> /tmp/rename.log
+else
+  echo "Python3 not found, AI monitoring analysis will be skipped." >> /tmp/rename.log
 fi
 
 # Filter existing directories

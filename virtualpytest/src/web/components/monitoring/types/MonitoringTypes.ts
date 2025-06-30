@@ -1,36 +1,19 @@
+// Types for AI monitoring system that integrates with existing VideoCapture component
+
 export interface MonitoringFrame {
-  frameNumber: number;
+  filename: string;
   timestamp: number;
-  imagePath: string; // Path to captured frame image
-  analysis: FrameAnalysis;
-  processed: boolean;
+  imageUrl: string; // Built by backend using existing proxy system
+  analysis: MonitoringAnalysis | null;
 }
 
-export interface FrameAnalysis {
-  status: 'ok' | 'issue' | 'processing' | 'error';
-  blackscreen: {
-    detected: boolean;
-    consecutiveFrames: number;
-    confidence: number;
-  };
-  freeze: {
-    detected: boolean;
-    consecutiveFrames: number;
-  };
-  subtitles: {
-    detected: boolean;
-    text: string;
-    truncatedText: string; // Max 10 chars + "..."
-  };
-  errors: {
-    detected: boolean;
-    errorType: string;
-    errorText: string;
-  };
-  language: {
-    language: string; // 'en', 'fr', 'unknown'
-    confidence: number;
-  };
+export interface MonitoringAnalysis {
+  blackscreen: boolean;
+  freeze: boolean;
+  subtitles: boolean;
+  errors: boolean;
+  language: string;
+  confidence: number;
 }
 
 export interface MonitoringState {
@@ -42,4 +25,4 @@ export interface MonitoringState {
   maxFrames: number; // 180 frames (3 minutes at 1 fps)
   error: string | null;
   lastProcessedFrame: number;
-} 
+}

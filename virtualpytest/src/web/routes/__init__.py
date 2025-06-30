@@ -75,7 +75,7 @@ def _register_server_routes(app):
         ('server_verifications_routes', 'server_verifications_bp'),  # ✅ Unified verifications API
         ('server_navigation_trees_routes', 'server_navigation_trees_bp'),  # ✅ Navigation trees with history
         ('server_execution_results_routes', 'execution_results_bp'),  # ✅ Execution results tracking
-        ('ai_monitoring_routes', 'ai_monitoring_bp'),  # ✅ AI monitoring for frame analysis
+
     ]
     
     # Import and register each module (FAIL FAST)
@@ -91,8 +91,7 @@ def _register_server_routes(app):
                 app.register_blueprint(blueprint, url_prefix='/server')
             elif module_name == 'server_execution_results_routes':
                 app.register_blueprint(blueprint, url_prefix='/server')
-            elif module_name == 'ai_monitoring_routes':
-                app.register_blueprint(blueprint, url_prefix='/server/ai-monitoring')
+
             else:
                 app.register_blueprint(blueprint)
             print(f"   ✅ {module_name} -> {blueprint_name}")

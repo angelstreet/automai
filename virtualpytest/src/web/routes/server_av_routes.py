@@ -190,6 +190,71 @@ def proxy_image_options():
         }
     )
 
+@av_bp.route('/proxyMonitoringImage/<filename>', methods=['GET'])
+def proxy_monitoring_image(filename):
+    """
+    Proxy monitoring image requests to the selected host.
+    Used for AI monitoring frame display.
+    """
+    try:
+        # Get host and device_id from query parameters
+        host_ip = request.args.get('host_ip')
+        host_port = request.args.get('host_port', '5000')
+        device_id = request.args.get('device_id', 'device1')
+        
+        if not host_ip:
+            return jsonify({
+                'success': False,
+                'error': 'host_ip parameter required'
+            }), 400
+        
+        print(f"[@route:server_av:proxy_monitoring_image] Proxying monitoring image: {filename} from {host_ip}:{host_port}")
+        
+        # Build URL to host monitoring image endpoint
+        image_url = f"http://{host_ip}:{host_port}/host/monitoring/images/{filename}?device_id={device_id}"
+        
+        try:
+            # Fetch image from host
+            response = requests.get(image_url, stream=True, timeout=30, verify=False)
+            response.raise_for_status()
+            
+            print(f"[@route:server_av:proxy_monitoring_image] Successfully fetched monitoring image: {filename}")
+            
+            # Determine content type
+            content_type = response.headers.get('Content-Type', 'image/jpeg')
+            
+            # Stream the image content
+            def generate():
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        yield chunk
+            
+            return Response(
+                generate(),
+                content_type=content_type,
+                headers={
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Methods': 'GET',
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                    'Content-Length': response.headers.get('Content-Length'),
+                    'Cache-Control': 'no-cache, no-store, must-revalidate'
+                }
+            )
+            
+        except requests.exceptions.RequestException as e:
+            print(f"[@route:server_av:proxy_monitoring_image] Request failed: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to fetch monitoring image: {str(e)}'
+            }), 502
+            
+    except Exception as e:
+        print(f"[@route:server_av:proxy_monitoring_image] Proxy error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Monitoring image proxy error: {str(e)}'
+        }), 500
+
 @av_bp.route('/proxyStream', methods=['GET'])
 def proxy_stream():
     """
