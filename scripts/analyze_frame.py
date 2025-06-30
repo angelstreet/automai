@@ -485,15 +485,16 @@ def main():
             }
         }
         
-        # Save JSON metadata to /tmp to avoid permission issues
+        # Save JSON metadata in same folder as image
         base_filename = os.path.basename(image_path)
         json_filename = base_filename.replace('.jpg', '.json')
-        json_path = os.path.join('/tmp', json_filename)
+        image_dir = os.path.dirname(image_path)
+        json_path = os.path.join(image_dir, json_filename)
         
         with open(json_path, 'w') as f:
             json.dump(analysis_result, f, indent=2)
         
-        print(f"Analysis complete: {json_filename} (saved to /tmp)")
+        print(f"Analysis complete: {json_filename}")
         print(f"Results: blackscreen={blackscreen}, freeze={frozen}, subtitles={subtitles}, errors={errors}, language={language}")
         
     except Exception as e:

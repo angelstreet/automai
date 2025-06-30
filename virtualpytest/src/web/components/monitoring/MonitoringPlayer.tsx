@@ -47,6 +47,11 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         position: 'relative',
         width: '100%',
         height: '100%',
+        backgroundColor: '#000000',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
         '& .MuiCard-root': {
           height: '100%',
           borderRadius: 0,
