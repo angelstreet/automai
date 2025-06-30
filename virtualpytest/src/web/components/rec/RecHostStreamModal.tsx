@@ -9,9 +9,7 @@ import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
 import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
 import { RemotePanel } from '../controller/remote/RemotePanel';
-import { MonitoringOverlay } from '../monitoring/MonitoringOverlay';
-
-import { RecHostPreview } from './RecHostPreview';
+import { MonitoringPlayer } from '../monitoring/MonitoringPlayer';
 
 interface RecHostStreamModalProps {
   host: Host;
@@ -343,35 +341,12 @@ const RecHostStreamModalContent: React.FC<{
             }}
           >
             {monitoringMode ? (
-              <Box
-                sx={{
-                  position: 'relative',
-                  width: '100%',
-                  height: '100%', // Fill full modal height
-                  '& .MuiCard-root': {
-                    height: '100%', // Make RecHostPreview fill the full height
-                    borderRadius: 0, // No border radius for fullscreen
-                    border: 'none', // Remove border for fullscreen
-                  },
-                  '& img': {
-                    objectFit: 'contain', // Ensure proper scaling while maintaining aspect ratio
-                    width: '100%',
-                    height: '100%',
-                  },
-                }}
-              >
-                {/* Reuse RecHostPreview for image display - it handles its own URLs */}
-                <RecHostPreview
-                  host={host}
-                  device={device}
-                  initializeBaseUrl={initializeBaseUrl}
-                  generateThumbnailUrl={generateThumbnailUrl}
-                  hideHeader={true}
-                />
-
-                {/* Add monitoring overlay on top - it will load JSON based on current image */}
-                <MonitoringOverlay />
-              </Box>
+              <MonitoringPlayer
+                host={host}
+                device={device}
+                initializeBaseUrl={initializeBaseUrl}
+                generateThumbnailUrl={generateThumbnailUrl}
+              />
             ) : streamUrl ? (
               <HLSVideoPlayer
                 streamUrl={streamUrl}
