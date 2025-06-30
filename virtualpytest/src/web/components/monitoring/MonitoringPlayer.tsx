@@ -34,7 +34,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     handleSliderChange,
     handleHistoricalFrameLoad,
     subtitleTrendData,
-  } = useMonitoring({ host, device });
+  } = useMonitoring();
 
   // Use the same layout configuration as HLSVideoPlayer for perfect alignment
   const layoutConfig = useMemo(() => {

@@ -71,9 +71,33 @@ export const useMonitoring = (): UseMonitoringReturn => {
         const timestampMatch = newImageUrl.match(/capture_(\d{14})/);
         if (timestampMatch) {
           const timestamp = timestampMatch[1];
-          // Use original image for display, but load JSON from thumbnail version
-          const originalImageUrl = newImageUrl.replace('_thumbnail.jpg', '.jpg');
-          const jsonUrl = newImageUrl.replace('_thumbnail.jpg', '_thumbnail.json');
+
+          // Add 3-second delay to ensure image and JSON are fully generated before we try to display
+          const timestampDate = new Date(
+            parseInt(timestamp.substring(0, 4)), // year
+            parseInt(timestamp.substring(4, 6)) - 1, // month (0-based)
+            parseInt(timestamp.substring(6, 8)), // day
+            parseInt(timestamp.substring(8, 10)), // hour
+            parseInt(timestamp.substring(10, 12)), // minute
+            parseInt(timestamp.substring(12, 14)), // second
+          );
+
+          const delayedTimestamp = new Date(timestampDate.getTime() - 2000); // 2 seconds earlier
+          const delayedTimestampString =
+            delayedTimestamp.getFullYear().toString() +
+            (delayedTimestamp.getMonth() + 1).toString().padStart(2, '0') +
+            delayedTimestamp.getDate().toString().padStart(2, '0') +
+            delayedTimestamp.getHours().toString().padStart(2, '0') +
+            delayedTimestamp.getMinutes().toString().padStart(2, '0') +
+            delayedTimestamp.getSeconds().toString().padStart(2, '0');
+
+          // Use delayed timestamp for image URLs to ensure they exist
+          const originalImageUrl = newImageUrl
+            .replace(`capture_${timestamp}`, `capture_${delayedTimestampString}`)
+            .replace('_thumbnail.jpg', '.jpg');
+          const jsonUrl = newImageUrl
+            .replace(`capture_${timestamp}`, `capture_${delayedTimestampString}`)
+            .replace('_thumbnail.jpg', '_thumbnail.json');
 
           setFrames((prev) => {
             const newFrames = [...prev, { timestamp, imageUrl: originalImageUrl, jsonUrl }];
