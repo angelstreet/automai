@@ -15,7 +15,6 @@ from typing import Dict, Any, Optional, Tuple, List
 from .image_helpers import ImageHelpers
 import logging
 
-from .base_verification_controller import BaseVerificationController
 from ..base_controller import ControllerConfig
 from src.models.device import Device
 
