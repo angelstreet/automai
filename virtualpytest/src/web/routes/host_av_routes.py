@@ -649,10 +649,12 @@ def list_captures():
                 'error': f'Capture folder not found: {capture_folder}'
             }), 404
         
-        # List all capture files (not test_capture files)
+        # List all capture files (not test_capture files or thumbnails)
         capture_files = []
         for filename in os.listdir(capture_folder):
-            if filename.startswith('capture_') and filename.endswith('.jpg'):
+            if (filename.startswith('capture_') and 
+                filename.endswith('.jpg') and 
+                '_thumbnail' not in filename):  # Exclude thumbnail files
                 filepath = os.path.join(capture_folder, filename)
                 if os.path.isfile(filepath):
                     # Get file modification time as timestamp
