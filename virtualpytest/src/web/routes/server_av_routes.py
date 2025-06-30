@@ -193,8 +193,8 @@ def proxy_image_options():
 @av_bp.route('/proxyMonitoringImage/<filename>', methods=['GET'])
 def proxy_monitoring_image(filename):
     """
-    Proxy monitoring image requests to the selected host.
-    Used for AI monitoring frame display.
+    Proxy monitoring image and JSON requests to the selected host.
+    Used for AI monitoring frame display and metadata.
     """
     try:
         # Get host and device_id from query parameters
@@ -208,22 +208,33 @@ def proxy_monitoring_image(filename):
                 'error': 'host_ip parameter required'
             }), 400
         
-        print(f"[@route:server_av:proxy_monitoring_image] Proxying monitoring image: {filename} from {host_ip}:{host_port}")
+        print(f"[@route:server_av:proxy_monitoring_image] Proxying monitoring file: {filename} from {host_ip}:{host_port}")
         
-        # Build URL to host monitoring image endpoint
-        image_url = f"http://{host_ip}:{host_port}/host/monitoring/images/{filename}?device_id={device_id}"
+        # Determine if this is a JSON file or image file
+        is_json = filename.endswith('.json')
+        
+        if is_json:
+            # For JSON files, serve directly from the capture folder using existing image serving endpoint
+            file_url = f"http://{host_ip}:{host_port}/host/av/images/screenshot/{filename}?device_id={device_id}"
+        else:
+            # For images, use the existing image serving endpoint
+            file_url = f"http://{host_ip}:{host_port}/host/av/images/screenshot/{filename}?device_id={device_id}"
         
         try:
-            # Fetch image from host
-            response = requests.get(image_url, stream=True, timeout=30, verify=False)
+            # Fetch file from host
+            import requests
+            response = requests.get(file_url, stream=True, timeout=30, verify=False)
             response.raise_for_status()
             
-            print(f"[@route:server_av:proxy_monitoring_image] Successfully fetched monitoring image: {filename}")
+            print(f"[@route:server_av:proxy_monitoring_image] Successfully fetched file: {filename}")
             
             # Determine content type
-            content_type = response.headers.get('Content-Type', 'image/jpeg')
+            if is_json:
+                content_type = 'application/json'
+            else:
+                content_type = response.headers.get('Content-Type', 'image/jpeg')
             
-            # Stream the image content
+            # Stream the file content
             def generate():
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
@@ -245,14 +256,14 @@ def proxy_monitoring_image(filename):
             print(f"[@route:server_av:proxy_monitoring_image] Request failed: {e}")
             return jsonify({
                 'success': False,
-                'error': f'Failed to fetch monitoring image: {str(e)}'
+                'error': f'Failed to fetch monitoring file: {str(e)}'
             }), 502
             
     except Exception as e:
         print(f"[@route:server_av:proxy_monitoring_image] Proxy error: {e}")
         return jsonify({
             'success': False,
-            'error': f'Monitoring image proxy error: {str(e)}'
+            'error': f'Monitoring file proxy error: {str(e)}'
         }), 500
 
 @av_bp.route('/proxyStream', methods=['GET'])
@@ -699,4 +710,68 @@ def disconnect():
         return jsonify({
             'success': False,
             'error': str(e)
+        }), 500
+
+@av_bp.route('/listCaptures', methods=['POST'])
+def list_captures():
+    """List captured frames for monitoring"""
+    try:
+        print("[@route:server_av:list_captures] Listing captured frames for monitoring")
+        
+        # Get request data
+        request_data = request.get_json() or {}
+        host_ip = request_data.get('host_ip')
+        host_port = request_data.get('host_port', '5000')
+        device_id = request_data.get('device_id', 'device1')
+        limit = request_data.get('limit', 180)
+        
+        if not host_ip:
+            return jsonify({
+                'success': False,
+                'error': 'host_ip parameter required'
+            }), 400
+        
+        print(f"[@route:server_av:list_captures] Proxying to {host_ip}:{host_port} for device {device_id}")
+        
+        # Build URL to host capture list endpoint
+        list_url = f"http://{host_ip}:{host_port}/host/av/listCaptures"
+        
+        try:
+            # Make request to host
+            import requests
+            response = requests.post(list_url, json={
+                'device_id': device_id,
+                'limit': limit
+            }, timeout=30, verify=False)
+            response.raise_for_status()
+            
+            host_data = response.json()
+            
+            if host_data.get('success') and host_data.get('captures'):
+                # Build image URLs using the existing proxy system
+                for capture in host_data['captures']:
+                    filename = capture['filename']
+                    # Use existing proxyMonitoringImage endpoint
+                    capture['url'] = f"/server/av/proxyMonitoringImage/{filename}?host_ip={host_ip}&host_port={host_port}&device_id={device_id}"
+                
+                print(f"[@route:server_av:list_captures] Successfully listed {len(host_data['captures'])} captures")
+                return jsonify(host_data)
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': host_data.get('error', 'Failed to list captures')
+                }), 500
+            
+        except requests.exceptions.RequestException as e:
+            print(f"[@route:server_av:list_captures] Request failed: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Failed to contact host: {str(e)}'
+            }), 502
+            
+    except Exception as e:
+        print(f"[@route:server_av:list_captures] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'List captures error: {str(e)}'
         }), 500 

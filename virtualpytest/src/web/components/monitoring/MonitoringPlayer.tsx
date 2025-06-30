@@ -22,24 +22,12 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [selectedArea, setSelectedArea] = useState<any>(null);
 
-  const { frames, isLoading, error, refreshFrames, analyzeFrame } = useMonitoring(
-    hostIp,
-    hostPort,
-    deviceId,
-  );
+  const { frames, isLoading, error, refreshFrames } = useMonitoring(hostIp, hostPort, deviceId);
 
   // Handle frame navigation
-  const handleFrameChange = useCallback(
-    (frameIndex: number) => {
-      setCurrentFrameIndex(frameIndex);
-
-      // Auto-analyze frame when navigated to
-      if (frames[frameIndex] && !frames[frameIndex].analysis) {
-        analyzeFrame(frames[frameIndex].filename);
-      }
-    },
-    [frames, analyzeFrame],
-  );
+  const handleFrameChange = useCallback((frameIndex: number) => {
+    setCurrentFrameIndex(frameIndex);
+  }, []);
 
   // Handle image load for VideoCapture
   const handleImageLoad = useCallback(
@@ -66,20 +54,14 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   const currentFrame = frames[currentFrameIndex];
   const currentImageUrl = currentFrame?.imageUrl || '';
 
-  // Auto-refresh frames periodically
-  useEffect(() => {
-    if (hostIp && deviceId) {
-      const interval = setInterval(() => {
-        refreshFrames();
-      }, 5000); // Refresh every 5 seconds
-
-      return () => clearInterval(interval);
-    }
-  }, [hostIp, deviceId, refreshFrames]);
+  // Count frames with analysis data
+  const framesWithAnalysis = frames.filter((frame) => frame.analysis !== null).length;
+  const analysisPercentage =
+    frames.length > 0 ? Math.round((framesWithAnalysis / frames.length) * 100) : 0;
 
   return (
     <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Header with refresh button */}
+      {/* Header with refresh button and stats */}
       <Box
         sx={{
           display: 'flex',
@@ -89,9 +71,17 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
           borderBottom: '1px solid #333',
         }}
       >
-        <Typography variant="h6" sx={{ color: '#ffffff' }}>
-          AI Monitoring
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Typography variant="h6" sx={{ color: '#ffffff' }}>
+            AI Monitoring
+          </Typography>
+
+          {frames.length > 0 && (
+            <Typography variant="caption" sx={{ color: '#cccccc' }}>
+              {framesWithAnalysis}/{frames.length} analyzed ({analysisPercentage}%)
+            </Typography>
+          )}
+        </Box>
 
         <Button
           startIcon={<RefreshIcon />}
@@ -116,7 +106,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         <Box
           sx={{
             position: 'absolute',
-            top: 0,
+            top: 50, // Below header
             left: 0,
             right: 0,
             zIndex: 20,
@@ -188,7 +178,51 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
                 SUBTITLES: {currentFrame.analysis.language.toUpperCase()}
               </Typography>
             )}
+
+            {/* Confidence indicator */}
+            <Typography
+              variant="caption"
+              sx={{
+                color: '#ffffff',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                px: 1,
+                py: 0.5,
+                borderRadius: 1,
+                border: '1px solid #ffffff',
+              }}
+            >
+              CONFIDENCE: {Math.round((currentFrame.analysis.confidence || 0) * 100)}%
+            </Typography>
           </Box>
+        </Box>
+      )}
+
+      {/* No analysis indicator */}
+      {currentFrame && !currentFrame.analysis && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 50,
+            left: 0,
+            right: 0,
+            zIndex: 20,
+            p: 1,
+            background: 'linear-gradient(rgba(0,0,0,0.8), transparent)',
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{
+              color: '#888888',
+              backgroundColor: 'rgba(136,136,136,0.1)',
+              px: 1,
+              py: 0.5,
+              borderRadius: 1,
+              border: '1px solid #888888',
+            }}
+          >
+            ANALYSIS PENDING...
+          </Typography>
         </Box>
       )}
 

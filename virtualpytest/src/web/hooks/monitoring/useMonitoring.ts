@@ -9,7 +9,6 @@ interface UseMonitoringResult {
   isLoading: boolean;
   error: string | null;
   refreshFrames: () => Promise<void>;
-  analyzeFrame: (filename: string) => Promise<MonitoringAnalysis | null>;
 }
 
 export function useMonitoring(
@@ -31,15 +30,15 @@ export function useMonitoring(
     setError(null);
 
     try {
-      // Use existing image controller to get latest frames from HDMI capture folder
-      const response = await fetch('/server/verification/image/getLatestFrames', {
+      // Get list of captured images using new listCaptures endpoint
+      const response = await fetch('/server/av/listCaptures', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           host_ip: hostIp,
           host_port: hostPort || '5000',
           device_id: deviceId,
-          count: 180, // 3 minutes at 1fps
+          limit: 180, // Last 180 frames (3 minutes at 1fps)
         }),
       });
 
@@ -50,18 +49,54 @@ export function useMonitoring(
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to get frames');
+        throw new Error(data.error || 'Failed to get capture list');
       }
 
-      // Convert to MonitoringFrame format with proper image URLs
-      const monitoringFrames: MonitoringFrame[] = data.frames.map((frame: any) => ({
-        filename: frame.filename,
-        timestamp:
-          typeof frame.timestamp === 'string' ? parseInt(frame.timestamp) : frame.timestamp,
-        // Use existing image proxy system - build URL on backend
-        imageUrl: `/server/av/proxyMonitoringImage/${frame.filename}?host_ip=${hostIp}&host_port=${hostPort || '5000'}&device_id=${deviceId}`,
-        analysis: null, // Will be populated when analyzed
-      }));
+      // Process each capture file and try to load its JSON metadata
+      const monitoringFrames: MonitoringFrame[] = [];
+
+      for (const capture of data.captures || []) {
+        const filename = capture.filename;
+        const imageUrl = capture.url; // Already built by backend
+
+        // Try to load JSON metadata for this capture
+        let analysis: MonitoringAnalysis | null = null;
+
+        try {
+          // Build JSON URL by replacing .jpg with .json in the image URL
+          const jsonUrl = imageUrl.replace('.jpg', '.json');
+
+          const jsonResponse = await fetch(jsonUrl);
+          if (jsonResponse.ok) {
+            const jsonData = await jsonResponse.json();
+
+            // Extract analysis from JSON file
+            if (jsonData.analysis) {
+              analysis = {
+                blackscreen: jsonData.analysis.blackscreen || false,
+                freeze: jsonData.analysis.freeze || false,
+                subtitles: jsonData.analysis.subtitles || false,
+                errors: jsonData.analysis.errors || false,
+                language: jsonData.analysis.language || 'unknown',
+                confidence: jsonData.analysis.confidence || 0,
+              };
+            }
+          }
+        } catch (jsonError) {
+          // JSON file doesn't exist or couldn't be loaded - that's okay
+          console.log(`[@hook:useMonitoring] No JSON metadata for ${filename}`);
+        }
+
+        monitoringFrames.push({
+          filename: filename,
+          timestamp: capture.timestamp || Date.now(),
+          imageUrl: imageUrl,
+          analysis: analysis,
+        });
+      }
+
+      // Sort by timestamp (newest first)
+      monitoringFrames.sort((a, b) => b.timestamp - a.timestamp);
 
       setFrames(monitoringFrames);
       console.log(`[@hook:useMonitoring] Loaded ${monitoringFrames.length} monitoring frames`);
@@ -74,66 +109,18 @@ export function useMonitoring(
     }
   }, [hostIp, hostPort, deviceId]);
 
-  const analyzeFrame = useCallback(
-    async (filename: string): Promise<MonitoringAnalysis | null> => {
-      if (!hostIp || !deviceId) {
-        console.log('[@hook:useMonitoring] Missing hostIp or deviceId for analysis');
-        return null;
-      }
-
-      try {
-        // Use existing image controller for AI analysis
-        const analysisResponse = await fetch('/server/verification/image/analyzeFrame', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            host_ip: hostIp,
-            host_port: hostPort || '5000',
-            device_id: deviceId,
-            filename: filename,
-          }),
-        });
-
-        if (!analysisResponse.ok) {
-          throw new Error(
-            `Analysis HTTP ${analysisResponse.status}: ${analysisResponse.statusText}`,
-          );
-        }
-
-        const analysisData = await analysisResponse.json();
-
-        if (!analysisData.success) {
-          throw new Error(analysisData.error || 'Analysis failed');
-        }
-
-        const analysis: MonitoringAnalysis = {
-          blackscreen: analysisData.analysis.blackscreen || false,
-          freeze: analysisData.analysis.freeze || false,
-          subtitles: analysisData.analysis.subtitles || false,
-          errors: analysisData.analysis.errors || false,
-          language: analysisData.analysis.language || 'unknown',
-          confidence: analysisData.analysis.confidence || 0,
-        };
-
-        // Update the frame with analysis results
-        setFrames((prevFrames) =>
-          prevFrames.map((frame) => (frame.filename === filename ? { ...frame, analysis } : frame)),
-        );
-
-        return analysis;
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Analysis error';
-        console.error('[@hook:useMonitoring] Error analyzing frame:', errorMessage);
-        return null;
-      }
-    },
-    [hostIp, hostPort, deviceId],
-  );
-
   // Auto-refresh frames when host/device changes
   useEffect(() => {
     if (hostIp && deviceId) {
       refreshFrames();
+    }
+  }, [hostIp, deviceId, refreshFrames]);
+
+  // Auto-refresh every 5 seconds to pick up new frames
+  useEffect(() => {
+    if (hostIp && deviceId) {
+      const interval = setInterval(refreshFrames, 5000);
+      return () => clearInterval(interval);
     }
   }, [hostIp, deviceId, refreshFrames]);
 
@@ -142,6 +129,5 @@ export function useMonitoring(
     isLoading,
     error,
     refreshFrames,
-    analyzeFrame,
   };
 }

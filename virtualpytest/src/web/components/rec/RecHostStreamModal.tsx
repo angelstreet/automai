@@ -2,8 +2,8 @@ import { Close as CloseIcon, Tv as TvIcon, Analytics as AnalyticsIcon } from '@m
 import { Box, IconButton, Typography, Button, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
-import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useStream } from '../../hooks/controller';
+import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
 import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
@@ -226,7 +226,7 @@ const RecHostStreamModalContent: React.FC<{
         >
           <Typography variant="h6" component="h2">
             {device?.device_name || host.host_name} -{' '}
-            {monitoringMode ? 'AI Monitoring' : 'Live Stream'}
+            {monitoringMode ? 'Monitoring' : 'Live Stream'}
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -258,7 +258,7 @@ const RecHostStreamModalContent: React.FC<{
                   : 'Take Control'}
             </Button>
 
-            {/* AI Monitoring Toggle Button */}
+            {/*M onitoring Toggle Button */}
             <Button
               variant={monitoringMode ? 'contained' : 'outlined'}
               size="small"
@@ -275,11 +275,11 @@ const RecHostStreamModalContent: React.FC<{
                 !isControlActive
                   ? 'Take control first to enable monitoring'
                   : monitoringMode
-                    ? 'Disable AI Monitoring'
-                    : 'Enable AI Monitoring'
+                    ? 'Disable Monitoring'
+                    : 'Enable Monitoring'
               }
             >
-              {monitoringMode ? 'Stop Monitoring' : 'AI Monitoring'}
+              {monitoringMode ? 'Stop Monitoring' : 'Monitoring'}
             </Button>
 
             {/* Remote Toggle Button */}
@@ -338,14 +338,10 @@ const RecHostStreamModalContent: React.FC<{
           >
             {monitoringMode ? (
               <MonitoringPlayer
-                host={host}
-                device={device}
-                isControlActive={isControlActive}
+                hostIp={host.host_ip}
+                hostPort={host.host_port?.toString() || '5000'}
+                deviceId={device?.device_id || 'device1'}
                 model={device?.device_model || 'unknown'}
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                }}
               />
             ) : streamUrl ? (
               <HLSVideoPlayer

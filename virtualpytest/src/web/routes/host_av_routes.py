@@ -599,4 +599,83 @@ def serve_image_by_path():
         
     except Exception as e:
         print(f"[@route:host_av:serve_image_by_path] Error serving image: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)}), 500 
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@av_bp.route('/listCaptures', methods=['POST'])
+def list_captures():
+    """List captured frames for monitoring"""
+    try:
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
+        limit = data.get('limit', 180)
+        
+        print(f"[@route:host_av:list_captures] Listing captures for device: {device_id}, limit: {limit}")
+        
+        # Get AV controller for the specified device
+        av_controller = get_controller(device_id, 'av')
+        
+        if not av_controller:
+            device = get_device_by_id(device_id)
+            if not device:
+                return jsonify({
+                    'success': False,
+                    'error': f'Device {device_id} not found'
+                }), 404
+            
+            return jsonify({
+                'success': False,
+                'error': f'No AV controller found for device {device_id}',
+                'available_capabilities': device.get_capabilities()
+            }), 404
+        
+        # Get capture folder from controller
+        capture_folder = getattr(av_controller, 'capture_folder', '/var/www/html/stream/capture1/captures')
+        
+        if not os.path.exists(capture_folder):
+            return jsonify({
+                'success': False,
+                'error': f'Capture folder not found: {capture_folder}'
+            }), 404
+        
+        # List all capture files (not test_capture files)
+        capture_files = []
+        for filename in os.listdir(capture_folder):
+            if filename.startswith('capture_') and filename.endswith('.jpg'):
+                filepath = os.path.join(capture_folder, filename)
+                if os.path.isfile(filepath):
+                    # Get file modification time as timestamp
+                    timestamp = int(os.path.getmtime(filepath) * 1000)
+                    capture_files.append({
+                        'filename': filename,
+                        'timestamp': timestamp,
+                        'filepath': filepath
+                    })
+        
+        # Sort by timestamp (newest first) and limit
+        capture_files.sort(key=lambda x: x['timestamp'], reverse=True)
+        capture_files = capture_files[:limit]
+        
+        # Build response
+        captures = []
+        for capture in capture_files:
+            captures.append({
+                'filename': capture['filename'],
+                'timestamp': capture['timestamp']
+                # URL will be built by server proxy
+            })
+        
+        print(f"[@route:host_av:list_captures] Found {len(captures)} capture files")
+        
+        return jsonify({
+            'success': True,
+            'captures': captures,
+            'total': len(captures),
+            'device_id': device_id
+        })
+        
+    except Exception as e:
+        print(f"[@route:host_av:list_captures] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'List captures error: {str(e)}'
+        }), 500 
