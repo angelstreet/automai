@@ -603,7 +603,7 @@ def serve_image_by_path():
 
 @av_bp.route('/listCaptures', methods=['POST'])
 def list_captures():
-    """List captured frames for monitoring"""
+    """List captured frames for monitoring with URLs built like screenshots"""
     try:
         data = request.get_json() or {}
         device_id = data.get('device_id', 'device1')
@@ -655,16 +655,40 @@ def list_captures():
         capture_files.sort(key=lambda x: x['timestamp'], reverse=True)
         capture_files = capture_files[:limit]
         
-        # Build response
+        # Build URLs using the same mechanism as takeScreenshot
+        from src.utils.build_url_utils import buildCaptureUrlFromPath, buildClientImageUrl
+        from src.controllers.controller_manager import get_host
+        
+        try:
+            host = get_host()
+            host_dict = host.to_dict()
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'Failed to get host info: {str(e)}'
+            }), 500
+        
+        # Build response with URLs for each capture
         captures = []
         for capture in capture_files:
-            captures.append({
-                'filename': capture['filename'],
-                'timestamp': capture['timestamp']
-                # URL will be built by server proxy
-            })
+            try:
+                # Build URL from file path using same mechanism as screenshots
+                capture_url = buildCaptureUrlFromPath(host_dict, capture['filepath'], device_id)
+                
+                # Process URL for client consumption
+                client_capture_url = buildClientImageUrl(capture_url)
+                
+                captures.append({
+                    'filename': capture['filename'],
+                    'timestamp': capture['timestamp'],
+                    'url': client_capture_url
+                })
+            except Exception as url_error:
+                print(f"[@route:host_av:list_captures] Failed to build URL for {capture['filename']}: {url_error}")
+                # Skip captures that can't have URLs built
+                continue
         
-        print(f"[@route:host_av:list_captures] Found {len(captures)} capture files")
+        print(f"[@route:host_av:list_captures] Found {len(captures)} capture files with URLs")
         
         return jsonify({
             'success': True,

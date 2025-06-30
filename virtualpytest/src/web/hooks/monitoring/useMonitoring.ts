@@ -11,18 +11,14 @@ interface UseMonitoringResult {
   refreshFrames: () => Promise<void>;
 }
 
-export function useMonitoring(
-  hostIp?: string,
-  hostPort?: string,
-  deviceId?: string,
-): UseMonitoringResult {
+export function useMonitoring(host?: any, deviceId?: string): UseMonitoringResult {
   const [frames, setFrames] = useState<MonitoringFrame[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refreshFrames = useCallback(async () => {
-    if (!hostIp || !deviceId) {
-      console.log('[@hook:useMonitoring] Missing hostIp or deviceId, skipping refresh');
+    if (!host || !deviceId) {
+      console.log('[@hook:useMonitoring] Missing host or deviceId, skipping refresh');
       return;
     }
 
@@ -30,13 +26,12 @@ export function useMonitoring(
     setError(null);
 
     try {
-      // Get list of captured images using new listCaptures endpoint
+      // Get list of captured images using the same pattern as takeScreenshot
       const response = await fetch('/server/av/listCaptures', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          host_ip: hostIp,
-          host_port: hostPort || '5000',
+          host: host,
           device_id: deviceId,
           limit: 180, // Last 180 frames (3 minutes at 1fps)
         }),
@@ -114,22 +109,22 @@ export function useMonitoring(
     } finally {
       setIsLoading(false);
     }
-  }, [hostIp, hostPort, deviceId]);
+  }, [host, deviceId]);
 
   // Auto-refresh frames when host/device changes
   useEffect(() => {
-    if (hostIp && deviceId) {
+    if (host && deviceId) {
       refreshFrames();
     }
-  }, [hostIp, deviceId, refreshFrames]);
+  }, [host, deviceId, refreshFrames]);
 
   // Auto-refresh every 5 seconds to pick up new frames
   useEffect(() => {
-    if (hostIp && deviceId) {
+    if (host && deviceId) {
       const interval = setInterval(refreshFrames, 5000);
       return () => clearInterval(interval);
     }
-  }, [hostIp, deviceId, refreshFrames]);
+  }, [host, deviceId, refreshFrames]);
 
   return {
     frames,

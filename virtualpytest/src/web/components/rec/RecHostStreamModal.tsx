@@ -338,8 +338,7 @@ const RecHostStreamModalContent: React.FC<{
           >
             {monitoringMode ? (
               <MonitoringPlayer
-                hostIp={host.host_ip}
-                hostPort={host.host_port?.toString() || '5000'}
+                host={host}
                 deviceId={device?.device_id || 'device1'}
                 model={device?.device_model || 'unknown'}
               />

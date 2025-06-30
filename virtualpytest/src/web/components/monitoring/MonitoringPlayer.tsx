@@ -6,22 +6,16 @@ import { useMonitoring } from '../../hooks/monitoring/useMonitoring';
 import VideoCapture from '../controller/av/VideoCapture';
 
 interface MonitoringPlayerProps {
-  hostIp?: string;
-  hostPort?: string;
+  host?: any;
   deviceId?: string;
   model?: string;
 }
 
-export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
-  hostIp,
-  hostPort,
-  deviceId,
-  model,
-}) => {
+export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({ host, deviceId, model }) => {
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [selectedArea, setSelectedArea] = useState<any>(null);
 
-  const { frames, isLoading, error, refreshFrames } = useMonitoring(hostIp, hostPort, deviceId);
+  const { frames, isLoading, error, refreshFrames } = useMonitoring(host, deviceId);
 
   // Handle frame navigation
   const handleFrameChange = useCallback((frameIndex: number) => {
@@ -31,7 +25,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   // Handle image load for VideoCapture
   const handleImageLoad = useCallback(
     (
-      ref: React.RefObject<HTMLImageElement>,
+      _ref: React.RefObject<HTMLImageElement>,
       dimensions: { width: number; height: number },
       sourcePath: string,
     ) => {

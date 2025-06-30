@@ -714,64 +714,36 @@ def disconnect():
 
 @av_bp.route('/listCaptures', methods=['POST'])
 def list_captures():
-    """List captured frames for monitoring"""
+    """Proxy list captures request to selected host with device_id"""
     try:
-        print("[@route:server_av:list_captures] Listing captured frames for monitoring")
+        print("[@route:server_av:list_captures] Proxying list captures request")
         
-        # Get request data
+        # Extract request data
         request_data = request.get_json() or {}
-        host_ip = request_data.get('host_ip')
-        host_port = request_data.get('host_port', '5000')
+        host = request_data.get('host')
         device_id = request_data.get('device_id', 'device1')
-        limit = request_data.get('limit', 180)
+
+        # Validate host
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+
+        print(f"[@route:server_av:list_captures] Host: {host.get('host_name')}, Device: {device_id}")
+
+        # Add device_id to query params for host route
+        query_params = {'device_id': device_id}
+
+        # Proxy to host with device_id
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/av/listCaptures',
+            'POST',
+            request_data,
+            query_params
+        )
         
-        if not host_ip:
-            return jsonify({
-                'success': False,
-                'error': 'host_ip parameter required'
-            }), 400
+        return jsonify(response_data), status_code
         
-        print(f"[@route:server_av:list_captures] Proxying to {host_ip}:{host_port} for device {device_id}")
-        
-        # Build URL to host capture list endpoint
-        list_url = f"http://{host_ip}:{host_port}/host/av/listCaptures"
-        
-        try:
-            # Make request to host
-            import requests
-            response = requests.post(list_url, json={
-                'device_id': device_id,
-                'limit': limit
-            }, timeout=30, verify=False)
-            response.raise_for_status()
-            
-            host_data = response.json()
-            
-            if host_data.get('success') and host_data.get('captures'):
-                # Build image URLs using the existing proxy system
-                for capture in host_data['captures']:
-                    filename = capture['filename']
-                    # Use existing proxyMonitoringImage endpoint
-                    capture['url'] = f"/server/av/proxyMonitoringImage/{filename}?host_ip={host_ip}&host_port={host_port}&device_id={device_id}"
-                
-                print(f"[@route:server_av:list_captures] Successfully listed {len(host_data['captures'])} captures")
-                return jsonify(host_data)
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': host_data.get('error', 'Failed to list captures')
-                }), 500
-            
-        except requests.exceptions.RequestException as e:
-            print(f"[@route:server_av:list_captures] Request failed: {e}")
-            return jsonify({
-                'success': False,
-                'error': f'Failed to contact host: {str(e)}'
-            }), 502
-            
     except Exception as e:
-        print(f"[@route:server_av:list_captures] Error: {e}")
         return jsonify({
             'success': False,
-            'error': f'List captures error: {str(e)}'
+            'error': str(e)
         }), 500 
