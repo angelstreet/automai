@@ -20,7 +20,7 @@ import fcntl
 # Optional imports for language detection
 try:
     import pytesseract
-    from langdetect import detect, LangDetectError
+    from langdetect import detect, LangDetectException
     OCR_AVAILABLE = True
 except ImportError:
     OCR_AVAILABLE = False
@@ -358,7 +358,7 @@ def detect_language(has_subtitles, image_path=None):
         
         return lang_map.get(detected_lang, detected_lang)
         
-    except (LangDetectError, Exception) as e:
+    except (LangDetectException, Exception) as e:
         print(f"Language detection failed: {e}", file=sys.stderr)
         return 'text_detected'
 
