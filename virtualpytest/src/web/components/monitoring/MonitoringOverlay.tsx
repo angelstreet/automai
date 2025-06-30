@@ -168,49 +168,36 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
         </Box>
 
         {/* Subtitles */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-          <Typography variant="body2" sx={{ color: '#ffffff', mr: 1 }}>
-            Subtitles:
-          </Typography>
-          {analysis.subtitles ? (
-            <>
-              <Typography variant="body2" sx={{ color: '#00ff00', fontWeight: 'bold' }}>
-                {analysis.language !== 'unknown' && analysis.language !== 'detected'
-                  ? analysis.language.charAt(0).toUpperCase() + analysis.language.slice(1)
-                  : 'Detected'}
-              </Typography>
-              {analysis.confidence > 0 && (
-                <Typography variant="caption" sx={{ color: '#cccccc', ml: 1 }}>
-                  ({Math.round(analysis.confidence * 100)}%)
-                </Typography>
-              )}
-            </>
-          ) : (
-            <Typography variant="body2" sx={{ color: '#ffffff' }}>
-              No
-            </Typography>
-          )}
-        </Box>
-
-        {/* Subtitle Trend Analysis */}
-        {subtitleTrendData && (
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+        <Box sx={{ mb: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography variant="body2" sx={{ color: '#ffffff', mr: 1 }}>
-              Trend ({subtitleTrendData.framesAnalyzed} frames):
+              Subtitles:
             </Typography>
             <Typography
               variant="body2"
               sx={{
-                color: subtitleTrendData.showRedIndicator ? '#ff4444' : '#ffffff',
-                fontWeight: subtitleTrendData.showRedIndicator ? 'bold' : 'normal',
+                color: analysis.subtitles ? '#00ff00' : '#ffffff',
+                fontWeight: analysis.subtitles ? 'bold' : 'normal',
+                mr: 1,
               }}
             >
-              {subtitleTrendData.showRedIndicator
-                ? `No subtitles (${subtitleTrendData.noSubtitlesStreak}/${subtitleTrendData.framesAnalyzed})`
-                : `${subtitleTrendData.framesAnalyzed - subtitleTrendData.noSubtitlesStreak}/${subtitleTrendData.framesAnalyzed} with subtitles`}
+              {analysis.subtitles ? 'Yes' : 'No'}
             </Typography>
+            {subtitleTrendData && (
+              <Typography variant="body2" sx={{ color: '#cccccc' }}>
+                ({subtitleTrendData.framesAnalyzed - subtitleTrendData.noSubtitlesStreak}/
+                {subtitleTrendData.framesAnalyzed} frames)
+              </Typography>
+            )}
           </Box>
-        )}
+          {analysis.subtitles && (
+            <Typography variant="caption" sx={{ color: '#cccccc', ml: 2 }}>
+              {analysis.language !== 'unknown' && analysis.language !== 'detected'
+                ? analysis.language.charAt(0).toUpperCase() + analysis.language.slice(1)
+                : 'Unknown'}
+            </Typography>
+          )}
+        </Box>
       </Box>
 
       {/* Subtitle Trend Warning - center of screen */}

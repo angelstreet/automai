@@ -28,11 +28,11 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     currentIndex,
     currentFrameUrl,
     selectedFrameAnalysis,
-    isHistoricalFrameLoaded,
+
     isPlaying,
     handlePlayPause,
     handleSliderChange,
-    handleHistoricalFrameLoad,
+
     subtitleTrendData,
   } = useMonitoring();
 
@@ -84,8 +84,6 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             height: '100%',
             backgroundColor: 'black',
             zIndex: 1,
-            opacity: isHistoricalFrameLoaded ? 1 : 0, // Only show when loaded
-            transition: 'opacity 150ms ease-in-out', // Smooth transition
           }}
         >
           <Box
@@ -100,11 +98,8 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
               height: layoutConfig.isMobileModel ? '100%' : 'auto',
               objectFit: layoutConfig.objectFit || 'contain',
               objectPosition: 'top center', // Center horizontally, anchor to top - matches RecHostPreview
-              opacity: 1,
-              transition: 'opacity 300ms ease-in-out',
               cursor: 'pointer',
             }}
-            onLoad={handleHistoricalFrameLoad}
             draggable={false}
           />
         </Box>
@@ -124,12 +119,10 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
       >
         <MonitoringOverlay
           overrideImageUrl={
-            frames.length > 0 && currentIndex < frames.length - 1 && isHistoricalFrameLoaded
-              ? currentFrameUrl
-              : undefined
+            frames.length > 0 && currentIndex < frames.length - 1 ? currentFrameUrl : undefined
           }
           overrideAnalysis={
-            frames.length > 0 && currentIndex < frames.length - 1 && isHistoricalFrameLoaded
+            frames.length > 0 && currentIndex < frames.length - 1
               ? selectedFrameAnalysis || undefined
               : undefined
           }

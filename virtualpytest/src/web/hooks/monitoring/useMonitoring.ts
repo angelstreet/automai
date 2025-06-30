@@ -92,6 +92,7 @@ export const useMonitoring = (): UseMonitoringReturn => {
             delayedTimestamp.getSeconds().toString().padStart(2, '0');
 
           // Use delayed timestamp for image URLs to ensure they exist
+          // For monitoring, always use full-size images, not thumbnails
           const originalImageUrl = newImageUrl
             .replace(`capture_${timestamp}`, `capture_${delayedTimestampString}`)
             .replace('_thumbnail.jpg', '.jpg');
