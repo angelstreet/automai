@@ -611,10 +611,10 @@ def list_captures():
         
         print(f"[@route:host_av:list_captures] Listing captures for device: {device_id}, limit: {limit}")
         
-        # Get AV controller for the specified device
-        av_controller = get_controller(device_id, 'av')
+        # Get image controller for the specified device (it handles captures)
+        image_controller = get_controller(device_id, 'verification_image')
         
-        if not av_controller:
+        if not image_controller:
             device = get_device_by_id(device_id)
             if not device:
                 return jsonify({
@@ -624,12 +624,12 @@ def list_captures():
             
             return jsonify({
                 'success': False,
-                'error': f'No AV controller found for device {device_id}',
+                'error': f'No image controller found for device {device_id}',
                 'available_capabilities': device.get_capabilities()
             }), 404
         
-        # Get capture folder from controller
-        capture_folder = getattr(av_controller, 'capture_folder', '/var/www/html/stream/capture1/captures')
+        # Get capture folder from image controller (it already has captures_path)
+        capture_folder = image_controller.captures_path
         
         if not os.path.exists(capture_folder):
             return jsonify({
