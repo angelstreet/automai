@@ -197,7 +197,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   return (
     <Card
       sx={{
-        height: '100%',
+        height: 200, // Revert back to fixed height
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
