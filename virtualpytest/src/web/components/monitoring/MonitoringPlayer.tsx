@@ -150,9 +150,13 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   // Update image when frame changes
   useEffect(() => {
     if (frames.length > 0 && currentIndex < frames.length - 1 && currentFrameUrl) {
+      // Show historical frame
+      loadNewImage(currentFrameUrl);
+    } else if (frames.length > 0 && currentIndex === frames.length - 1 && currentFrameUrl) {
+      // Show latest frame (but still from frames array to ensure it's the most recent capture)
       loadNewImage(currentFrameUrl);
     } else {
-      // Reset to live feed when at latest frame
+      // Reset to live feed when no frames or other edge cases
       setCurrentImageUrl(null);
       setPreviousImageUrl(null);
       setIsTransitioning(false);
@@ -193,10 +197,11 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         initializeBaseUrl={initializeBaseUrl}
         generateThumbnailUrl={generateThumbnailUrl}
         hideHeader={true}
+        pausePolling={frames.length > 0 && currentIndex < frames.length - 1}
       />
 
-      {/* Override with historical frame using smooth transitions */}
-      {frames.length > 0 && currentIndex < frames.length - 1 && currentImageUrl && (
+      {/* Override with historical frame using smooth transitions - show for any frame in the timeline */}
+      {frames.length > 0 && currentIndex <= frames.length - 1 && currentImageUrl && (
         <Box
           sx={{
             position: 'absolute',
@@ -276,12 +281,12 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
       >
         <MonitoringOverlay
           overrideImageUrl={
-            frames.length > 0 && currentIndex < frames.length - 1
+            frames.length > 0 && currentIndex <= frames.length - 1
               ? currentImageUrl || undefined
               : undefined
           }
           overrideAnalysis={
-            frames.length > 0 && currentIndex < frames.length - 1
+            frames.length > 0 && currentIndex <= frames.length - 1
               ? selectedFrameAnalysis || undefined
               : undefined
           }

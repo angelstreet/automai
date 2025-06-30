@@ -102,7 +102,7 @@ export const useMonitoring = (): UseMonitoringReturn => {
 
           setFrames((prev) => {
             const newFrames = [...prev, { timestamp, imageUrl: originalImageUrl, jsonUrl }];
-            const updatedFrames = newFrames.slice(-100); // Keep last 100 frames
+            const updatedFrames = newFrames.slice(-30); // Keep last 30 frames (changed from 100)
 
             // Auto-follow new images unless user manually selected a previous frame
             if (!userSelectedFrame || isPlaying) {

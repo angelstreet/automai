@@ -13,6 +13,7 @@ interface RecHostPreviewProps {
   initializeBaseUrl?: (host: Host, device: Device) => Promise<boolean>;
   generateThumbnailUrl?: (host: Host, device: Device) => string | null;
   hideHeader?: boolean;
+  pausePolling?: boolean;
 }
 
 // Simple mobile detection function to match MonitoringPlayer logic
@@ -28,6 +29,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   initializeBaseUrl,
   generateThumbnailUrl,
   hideHeader = false,
+  pausePolling = false,
 }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [previousThumbnailUrl, setPreviousThumbnailUrl] = useState<string | null>(null);
@@ -141,12 +143,23 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               if (!isMounted) return; // Check mount status before starting interval
 
               screenshotInterval = setInterval(() => {
-                // Stop polling when modal is open to avoid conflicts and unnecessary requests
-                if (isMounted && host && device && host.status === 'online' && !isStreamModalOpen) {
+                // Stop polling when modal is open, timeline is active, or requested to pause
+                if (
+                  isMounted &&
+                  host &&
+                  device &&
+                  host.status === 'online' &&
+                  !isStreamModalOpen &&
+                  !pausePolling
+                ) {
                   handleTakeScreenshot();
                 } else if (isStreamModalOpen) {
                   console.log(
                     `[RecHostPreview] ${host.host_name}-${device?.device_id}: Polling paused (modal open)`,
+                  );
+                } else if (pausePolling) {
+                  console.log(
+                    `[RecHostPreview] ${host.host_name}-${device?.device_id}: Polling paused (timeline active)`,
                   );
                 }
               }, 5000); // 5 seconds for debugging
@@ -185,6 +198,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     generateThumbnailUrl,
     handleTakeScreenshot,
     isStreamModalOpen,
+    pausePolling,
   ]);
 
   // Log modal state changes for debugging
@@ -350,8 +364,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                   console.error(
                     `[RecHostPreview] ${host.host_name}-${device?.device_id}: Failed to load image: ${thumbnailUrl}`,
                   );
-                  // Retry with timestamp minus 1 second to handle timing issues
-                  if (generateThumbnailUrl && device) {
+                  // Only retry if polling is active (not paused by modal or timeline)
+                  if (generateThumbnailUrl && device && !isStreamModalOpen && !pausePolling) {
                     // Generate a URL with timestamp 1 second earlier
                     const now = new Date(Date.now() - 1000); // 1 second ago
                     const timestamp =
@@ -376,6 +390,15 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                         setPreviousThumbnailUrl(null);
                         setIsTransitioning(false);
                       }
+                    }
+                  } else {
+                    console.log(
+                      `[RecHostPreview] ${host.host_name}-${device?.device_id}: Image retry skipped (polling paused)`,
+                    );
+                    // Just reset transition state without generating new URLs
+                    if (isTransitioning) {
+                      setPreviousThumbnailUrl(null);
+                      setIsTransitioning(false);
                     }
                   }
                 }}
