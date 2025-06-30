@@ -33,6 +33,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   const [userSelectedFrame, setUserSelectedFrame] = useState(false);
   const [selectedFrameAnalysis, setSelectedFrameAnalysis] = useState<any>(null);
+  const [isHistoricalFrameLoaded, setIsHistoricalFrameLoaded] = useState(false);
 
   // Monitor RecHostPreview for new images
   useEffect(() => {
@@ -107,7 +108,13 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     setCurrentIndex(index);
     setIsPlaying(false);
     setUserSelectedFrame(true); // Mark as manually selected
+    setIsHistoricalFrameLoaded(false); // Reset loading state when changing frames
   }, []);
+
+  // Reset loading state when current frame changes
+  useEffect(() => {
+    setIsHistoricalFrameLoaded(false);
+  }, [currentIndex]);
 
   // Get current frame URL for display
   const currentFrameUrl = frames[currentIndex]?.imageUrl || '';
@@ -150,6 +157,11 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     loadSelectedFrameAnalysis();
   }, [currentIndex, frames]);
 
+  // Handle historical frame image load
+  const handleHistoricalFrameLoad = useCallback(() => {
+    setIsHistoricalFrameLoaded(true);
+  }, []);
+
   return (
     <Box
       sx={{
@@ -188,6 +200,8 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             height: '100%',
             backgroundColor: 'black',
             zIndex: 1,
+            opacity: isHistoricalFrameLoaded ? 1 : 0, // Only show when loaded
+            transition: 'opacity 150ms ease-in-out', // Smooth transition
           }}
         >
           <img
@@ -197,7 +211,9 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
               width: '100%',
               height: '100%',
               objectFit: 'contain',
+              objectPosition: 'top center', // Center horizontally, anchor to top - matches RecHostPreview
             }}
+            onLoad={handleHistoricalFrameLoad}
           />
         </Box>
       )}
@@ -216,10 +232,12 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
       >
         <MonitoringOverlay
           overrideImageUrl={
-            frames.length > 0 && currentIndex < frames.length - 1 ? currentFrameUrl : undefined
+            frames.length > 0 && currentIndex < frames.length - 1 && isHistoricalFrameLoaded
+              ? currentFrameUrl
+              : undefined
           }
           overrideAnalysis={
-            frames.length > 0 && currentIndex < frames.length - 1
+            frames.length > 0 && currentIndex < frames.length - 1 && isHistoricalFrameLoaded
               ? selectedFrameAnalysis
               : undefined
           }

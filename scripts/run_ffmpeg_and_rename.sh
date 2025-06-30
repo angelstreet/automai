@@ -45,12 +45,12 @@ start_grabber() {
     -avioflags direct \
     -probesize 32 \
     -analyzeduration 0 \
-    -filter_complex split=2[stream][capture]\;[stream]scale=640:360,format=yuv420p[streamout]\;[capture]fps=5[captureout] \
+    -filter_complex split=2[stream][capture]\;[stream]scale=640:360,format=yuv420p[streamout]\;[capture]fps=2[captureout] \
     -map [streamout] -c:v libx264 -preset ultrafast -tune zerolatency -b:v 500k -maxrate 600k -bufsize 100k -g 5 -keyint_min 5 -sc_threshold 0 -flags low_delay+global_header -threads 2 -an -x264opts rc-lookahead=0:sync-lookahead=0:ref=1:bframes=0 \
       -f hls -hls_time 0.5 -hls_list_size 2 -hls_flags delete_segments+discont_start+split_by_time+independent_segments -hls_segment_type mpegts -hls_init_time 0.5 \
       -hls_allow_cache 0 -hls_segment_filename $capture_dir/segment_%03d.ts \
       $capture_dir/output.m3u8 \
-    -map [captureout] -c:v mjpeg -q:v 4 -r 4 -f image2 \
+    -map [captureout] -c:v mjpeg -q:v 4 -r 2 -f image2 \
       $capture_dir/captures/test_capture_%06d.jpg"
 
   # Start ffmpeg (same as older script)
