@@ -374,33 +374,42 @@ def detect_language(has_subtitles, image_path=None):
         
         print(f"Language detection: OCR extracted text: '{text[:50]}...' (length: {len(text)})")
         
-        if len(text) < 3:  # Need at least 3 characters for language detection
-            print("Language detection: Text too short for language detection")
+        # Strict requirements for reliable language detection
+        if len(text) < 10:  # Need at least 15 characters
+            print("Language detection: Text too short for reliable detection (< 15 chars)")
+            return 'unknown'
+        
+        # Check word count - need at least 7 words for reliable language detection
+        words = text.split()
+        if len(words) < 3:
+            print(f"Language detection: Too few words for reliable detection ({len(words)} < 7)")
+            return 'unknown'
+        
+        # Check for garbled text - if less than 80% of characters are alphabetic/space, likely OCR noise
+        valid_chars = sum(1 for c in text if c.isalpha() or c.isspace())
+        if valid_chars / len(text) < 0.8:
+            print(f"Language detection: Text appears garbled ({valid_chars}/{len(text)} valid chars)")
             return 'unknown'
         
         # Detect language
         detected_lang = detect(text)
         print(f"Language detection: Detected language code: {detected_lang}")
         
-        # Map language codes to readable names
-        lang_map = {
-            'en': 'english',
-            'fr': 'french',
-            'de': 'german',
-            'es': 'spanish',
-            'it': 'italian',
-            'pt': 'portuguese',
-            'nl': 'dutch',
-            'ru': 'russian',
-            'ja': 'japanese',
-            'ko': 'korean',
-            'zh': 'chinese',
-            'ar': 'arabic'
+        # Only allow specific languages - map to full names
+        allowed_languages = {
+            'en': 'English',
+            'fr': 'French', 
+            'de': 'German',
+            'it': 'Italian'
         }
         
-        result = lang_map.get(detected_lang, detected_lang)
-        print(f"Language detection: Final result: {result}")
-        return result
+        if detected_lang in allowed_languages:
+            result = allowed_languages[detected_lang]
+            print(f"Language detection: Final result: {result}")
+            return result
+        else:
+            print(f"Language detection: Detected '{detected_lang}' not in allowed list (English/French/German/Italian)")
+            return 'unknown'
         
     except (LangDetectException, Exception) as e:
         print(f"Language detection failed: {e}", file=sys.stderr)
@@ -434,9 +443,9 @@ def main():
             # We're analyzing original image, look for thumbnail
             thumbnail_path = image_path.replace('.jpg', '_thumbnail.jpg')
             
-            # Wait for thumbnail to be created (up to 2 seconds)
+            # Wait for thumbnail to be created (up to 1 seconds)
             wait_count = 0
-            while not os.path.exists(thumbnail_path) and wait_count < 20:
+            while not os.path.exists(thumbnail_path) and wait_count < 10:
                 time.sleep(0.1)  # Wait 100ms
                 wait_count += 1
             

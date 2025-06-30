@@ -141,8 +141,13 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               if (!isMounted) return; // Check mount status before starting interval
 
               screenshotInterval = setInterval(() => {
-                if (isMounted && host && device && host.status === 'online') {
+                // Stop polling when modal is open to avoid conflicts and unnecessary requests
+                if (isMounted && host && device && host.status === 'online' && !isStreamModalOpen) {
                   handleTakeScreenshot();
+                } else if (isStreamModalOpen) {
+                  console.log(
+                    `[RecHostPreview] ${host.host_name}-${device?.device_id}: Polling paused (modal open)`,
+                  );
                 }
               }, 5000); // 5 seconds for debugging
             }, 1500); // Wait 1.5 seconds after first screenshot before starting interval
@@ -173,7 +178,21 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         screenshotInterval = null;
       }
     };
-  }, [host, device, initializeBaseUrl, generateThumbnailUrl, handleTakeScreenshot]);
+  }, [
+    host,
+    device,
+    initializeBaseUrl,
+    generateThumbnailUrl,
+    handleTakeScreenshot,
+    isStreamModalOpen,
+  ]);
+
+  // Log modal state changes for debugging
+  useEffect(() => {
+    console.log(
+      `[RecHostPreview] ${host.host_name}-${device?.device_id}: Modal ${isStreamModalOpen ? 'opened' : 'closed'} - polling ${isStreamModalOpen ? 'paused' : 'resumed'}`,
+    );
+  }, [isStreamModalOpen, host.host_name, device?.device_id]);
 
   // Handle opening stream modal - control will be handled by the modal itself
   const handleOpenStreamModal = useCallback(() => {
