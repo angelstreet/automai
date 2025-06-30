@@ -2,6 +2,7 @@ import { PlayArrow, Pause } from '@mui/icons-material';
 import { Box, Slider, IconButton, Typography } from '@mui/material';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 
+import { getStreamViewerLayout } from '../../config/layoutConfig';
 import { Host, Device } from '../../types/common/Host_Types';
 import { RecHostPreview } from '../rec/RecHostPreview';
 
@@ -21,13 +22,6 @@ interface MonitoringPlayerProps {
   generateThumbnailUrl?: (host: Host, device: Device) => string | null;
 }
 
-// Simple mobile detection function to match HLSVideoPlayer logic
-const isMobileModel = (model?: string): boolean => {
-  if (!model) return false;
-  const modelLower = model.toLowerCase();
-  return modelLower.includes('mobile');
-};
-
 export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   host,
   device,
@@ -42,9 +36,9 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   const [selectedFrameAnalysis, setSelectedFrameAnalysis] = useState<any>(null);
   const [isHistoricalFrameLoaded, setIsHistoricalFrameLoaded] = useState(false);
 
-  // Detect if this is a mobile device model for proper sizing
-  const isMobile = useMemo(() => {
-    return isMobileModel(device?.device_model);
+  // Use the same layout configuration as HLSVideoPlayer for perfect alignment
+  const layoutConfig = useMemo(() => {
+    return getStreamViewerLayout(device?.device_model);
   }, [device?.device_model]);
 
   // Monitor RecHostPreview for new images
@@ -206,9 +200,9 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
           border: 'none',
         },
         '& img': {
-          objectFit: 'contain',
-          width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
-          height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
+          width: layoutConfig.isMobileModel ? 'auto' : '100%',
+          height: layoutConfig.isMobileModel ? '100%' : 'auto',
+          objectFit: layoutConfig.objectFit || 'contain',
         },
       }}
     >
@@ -244,9 +238,9 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
               position: 'absolute',
               top: 0,
               left: 0,
-              width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
-              height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
-              objectFit: 'contain',
+              width: layoutConfig.isMobileModel ? 'auto' : '100%',
+              height: layoutConfig.isMobileModel ? '100%' : 'auto',
+              objectFit: layoutConfig.objectFit || 'contain',
               objectPosition: 'top center', // Center horizontally, anchor to top - matches RecHostPreview
               opacity: 1,
               transition: 'opacity 300ms ease-in-out',
