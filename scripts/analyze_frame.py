@@ -305,17 +305,18 @@ def analyze_subtitles_and_errors(image_path):
         
         print(f"Subtitle detection: {subtitle_edges} edge pixels in region {subtitle_region.shape} (threshold: {adaptive_threshold:.0f})")
         
-        # Phase 4: Enhanced error detection with smart grid sampling
+        # More restrictive error detection - only look for real error messages
+        # Errors should be prominent red text/backgrounds, not just any red content
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
         # Use configurable grid sampling rate
         grid_rate = SAMPLING_PATTERNS["error_grid_rate"]
         sampled_hsv = hsv[::grid_rate, ::grid_rate]
         
-        # Red color range in HSV
-        lower_red1 = np.array([0, 50, 50])
+        # Red color range in HSV - more restrictive for actual error messages
+        lower_red1 = np.array([0, 100, 100])  # Higher saturation and value for prominent reds
         upper_red1 = np.array([10, 255, 255])
-        lower_red2 = np.array([170, 50, 50])
+        lower_red2 = np.array([170, 100, 100])  # Higher saturation and value for prominent reds
         upper_red2 = np.array([180, 255, 255])
         
         mask1 = cv2.inRange(sampled_hsv, lower_red1, upper_red1)
@@ -325,9 +326,12 @@ def analyze_subtitles_and_errors(image_path):
         red_pixels = np.sum(red_mask > 0)
         total_sampled_pixels = sampled_hsv.shape[0] * sampled_hsv.shape[1]
         red_percentage = (red_pixels / total_sampled_pixels) * 100
-        has_errors = red_percentage > 2.0  # More than 2% red pixels in sample
         
-        print(f"Error detection: {red_percentage:.1f}% red pixels in {total_sampled_pixels} sampled pixels")
+        # Much higher threshold - only flag as error if there's significant prominent red content
+        # This should catch error pages (404, connection errors) but not normal red UI elements
+        has_errors = red_percentage > 8.0  # Increased from 2% to 8% for more prominent red content
+        
+        print(f"Error detection: {red_percentage:.1f}% red pixels in {total_sampled_pixels} sampled pixels (threshold: 8.0%)")
         
         return has_subtitles, has_errors
     except Exception as e:
@@ -340,13 +344,15 @@ def detect_language(has_subtitles, image_path=None):
         return 'none'
     
     if not OCR_AVAILABLE or not image_path:
-        return 'text_detected'
+        print("Language detection: OCR not available or no image path")
+        return 'unknown'
     
     try:
         # Load image for OCR
         img = cv2.imread(image_path)
         if img is None:
-            return 'text_detected'
+            print("Language detection: Could not load image")
+            return 'unknown'
         
         height, width = img.shape[:2]
         
@@ -366,11 +372,15 @@ def detect_language(has_subtitles, image_path=None):
         text = pytesseract.image_to_string(thresh, config='--psm 6')
         text = text.strip()
         
+        print(f"Language detection: OCR extracted text: '{text[:50]}...' (length: {len(text)})")
+        
         if len(text) < 3:  # Need at least 3 characters for language detection
-            return 'text_detected'
+            print("Language detection: Text too short for language detection")
+            return 'unknown'
         
         # Detect language
         detected_lang = detect(text)
+        print(f"Language detection: Detected language code: {detected_lang}")
         
         # Map language codes to readable names
         lang_map = {
@@ -388,11 +398,13 @@ def detect_language(has_subtitles, image_path=None):
             'ar': 'arabic'
         }
         
-        return lang_map.get(detected_lang, detected_lang)
+        result = lang_map.get(detected_lang, detected_lang)
+        print(f"Language detection: Final result: {result}")
+        return result
         
     except (LangDetectException, Exception) as e:
         print(f"Language detection failed: {e}", file=sys.stderr)
-        return 'text_detected'
+        return 'unknown'
 
 def main():
     if len(sys.argv) != 2:
@@ -444,7 +456,17 @@ def main():
         # Run analysis on thumbnail (or original if thumbnail not available)
         blackscreen = analyze_blackscreen(analysis_image)
         frozen, subtitle_history = analyze_freeze(analysis_image)
-        subtitles, errors = analyze_subtitles_and_errors(analysis_image)
+        subtitles, potential_errors = analyze_subtitles_and_errors(analysis_image)
+        
+        # Only flag errors if there's also a freeze - this makes error detection much more restrictive
+        # Real errors (404, no internet, etc.) usually cause the screen to freeze on an error page
+        errors = potential_errors and frozen
+        
+        if potential_errors and not frozen:
+            print(f"Error detection: Red content detected but no freeze - ignoring (likely normal UI elements)")
+        elif errors:
+            print(f"Error detection: Red content detected WITH freeze - flagging as error")
+        
         language = detect_language(subtitles, analysis_image)
         
         # If we don't have subtitle history (not enough frames), use current frame analysis
@@ -471,8 +493,8 @@ def main():
                 'subtitles_trend': {
                     'current': bool(subtitle_history['current_frame']),
                     'last_3_frames': [bool(x) for x in subtitle_history['last_3_frames']],
-                    'count_in_last_3': subtitle_history['subtitle_count_in_3'],
-                    'no_subtitles_for_3_frames': subtitle_history['no_subtitles_for_3_frames']
+                    'count_in_last_3': int(subtitle_history['subtitle_count_in_3']),
+                    'no_subtitles_for_3_frames': bool(subtitle_history['no_subtitles_for_3_frames'])
                 },
                 'errors': bool(errors),
                 'language': str(language),
