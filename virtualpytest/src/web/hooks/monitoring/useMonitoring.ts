@@ -48,7 +48,7 @@ interface UseMonitoringReturn {
   } | null;
 }
 
-export const useMonitoring = (): UseMonitoringReturn => {
+export const useMonitoring = (shouldDetectImages: boolean): UseMonitoringReturn => {
   const [frames, setFrames] = useState<FrameRef[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -59,8 +59,12 @@ export const useMonitoring = (): UseMonitoringReturn => {
   );
   const [isHistoricalFrameLoaded, setIsHistoricalFrameLoaded] = useState(false);
 
-  // Monitor RecHostPreview for new images
+  // Monitor RecHostPreview for new images - only when enabled
   useEffect(() => {
+    if (!shouldDetectImages) {
+      return; // Skip image detection when disabled
+    }
+
     const detectImageUrl = () => {
       const imgElement = document.querySelector('[alt="Current screenshot"]') as HTMLImageElement;
       if (imgElement && imgElement.src && imgElement.src !== currentImageUrl) {
@@ -72,7 +76,7 @@ export const useMonitoring = (): UseMonitoringReturn => {
         if (timestampMatch) {
           const timestamp = timestampMatch[1];
 
-          // Add 3-second delay to ensure image and JSON are fully generated before we try to display
+          // Add 2-second delay to ensure image and JSON are fully generated
           const timestampDate = new Date(
             parseInt(timestamp.substring(0, 4)), // year
             parseInt(timestamp.substring(4, 6)) - 1, // month (0-based)
@@ -91,8 +95,7 @@ export const useMonitoring = (): UseMonitoringReturn => {
             delayedTimestamp.getMinutes().toString().padStart(2, '0') +
             delayedTimestamp.getSeconds().toString().padStart(2, '0');
 
-          // Use delayed timestamp for image URLs to ensure they exist
-          // For monitoring, always use full-size images, not thumbnails
+          // Convert thumbnail URL to full-size image URL
           const originalImageUrl = newImageUrl
             .replace(`capture_${timestamp}`, `capture_${delayedTimestampString}`)
             .replace('_thumbnail.jpg', '.jpg');
@@ -102,7 +105,7 @@ export const useMonitoring = (): UseMonitoringReturn => {
 
           setFrames((prev) => {
             const newFrames = [...prev, { timestamp, imageUrl: originalImageUrl, jsonUrl }];
-            const updatedFrames = newFrames.slice(-30); // Keep last 30 frames (changed from 100)
+            const updatedFrames = newFrames.slice(-30); // Keep last 30 frames
 
             // Auto-follow new images unless user manually selected a previous frame
             if (!userSelectedFrame || isPlaying) {
@@ -117,7 +120,7 @@ export const useMonitoring = (): UseMonitoringReturn => {
 
     const interval = setInterval(detectImageUrl, 1000);
     return () => clearInterval(interval);
-  }, [currentImageUrl, frames.length, isPlaying, userSelectedFrame]);
+  }, [currentImageUrl, frames.length, isPlaying, userSelectedFrame, shouldDetectImages]);
 
   // Auto-play functionality
   useEffect(() => {

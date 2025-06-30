@@ -33,35 +33,36 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   initializeBaseUrl,
   generateThumbnailUrl,
 }) => {
-  // Image transition states (similar to RecHostPreview)
+  // Control is active only when we have both required functions
+  const hasControl = !!(initializeBaseUrl && generateThumbnailUrl);
+
+  // Image transition states for smooth fade effects
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [previousImageUrl, setPreviousImageUrl] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  // Track last image change time for 2-second delay
+  // Track timing for 2-second delays between image changes
   const lastImageChangeTime = useRef<number>(0);
   const imageChangeTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Use the monitoring hook for all state management
+  // Monitoring hook - only detects images when control is active
   const {
     frames,
     currentIndex,
     currentFrameUrl,
     selectedFrameAnalysis,
-
     isPlaying,
     handlePlayPause,
     handleSliderChange,
-
     subtitleTrendData,
-  } = useMonitoring();
+  } = useMonitoring(hasControl);
 
-  // Detect if this is a mobile device model for proper sizing (matching RecHostPreview)
+  // Device model detection for proper image sizing
   const isMobile = useMemo(() => {
     return isMobileModel(device?.device_model);
   }, [device?.device_model]);
 
-  // Use the same layout configuration as HLSVideoPlayer for perfect alignment
+  // Layout configuration matching HLSVideoPlayer
   const layoutConfig = useMemo(() => {
     return getStreamViewerLayout(device?.device_model);
   }, [device?.device_model]);
@@ -190,18 +191,20 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         },
       }}
     >
-      {/* RecHostPreview for live feed */}
-      <RecHostPreview
-        host={host}
-        device={device}
-        initializeBaseUrl={initializeBaseUrl}
-        generateThumbnailUrl={generateThumbnailUrl}
-        hideHeader={true}
-        pausePolling={frames.length > 0 && currentIndex < frames.length - 1}
-      />
+      {/* Live feed - only when no control or when viewing latest frame */}
+      {(!hasControl || (frames.length > 0 && currentIndex === frames.length - 1)) && (
+        <RecHostPreview
+          host={host}
+          device={device}
+          initializeBaseUrl={hasControl ? initializeBaseUrl : undefined}
+          generateThumbnailUrl={hasControl ? generateThumbnailUrl : undefined}
+          hideHeader={true}
+          pausePolling={frames.length > 0 && currentIndex < frames.length - 1}
+        />
+      )}
 
-      {/* Override with historical frame using smooth transitions - show for any frame in the timeline */}
-      {frames.length > 0 && currentIndex <= frames.length - 1 && currentImageUrl && (
+      {/* Historical frame overlay - only when control is active and viewing historical frames */}
+      {hasControl && frames.length > 0 && currentImageUrl && (
         <Box
           sx={{
             position: 'absolute',
@@ -281,21 +284,17 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
       >
         <MonitoringOverlay
           overrideImageUrl={
-            frames.length > 0 && currentIndex <= frames.length - 1
-              ? currentImageUrl || undefined
-              : undefined
+            hasControl && frames.length > 0 ? currentImageUrl || undefined : undefined
           }
           overrideAnalysis={
-            frames.length > 0 && currentIndex <= frames.length - 1
-              ? selectedFrameAnalysis || undefined
-              : undefined
+            hasControl && frames.length > 0 ? selectedFrameAnalysis || undefined : undefined
           }
-          subtitleTrendData={subtitleTrendData}
+          subtitleTrendData={hasControl ? subtitleTrendData : null}
         />
       </Box>
 
-      {/* Timeline controls */}
-      {frames.length > 0 && (
+      {/* Timeline controls - only when we have control and frames */}
+      {hasControl && frames.length > 0 && (
         <Box
           sx={{
             position: 'absolute',
