@@ -5,21 +5,36 @@ interface MonitoringAnalysis {
   blackscreen: boolean;
   freeze: boolean;
   subtitles: boolean;
+  subtitles_trend?: {
+    current: boolean;
+    last_3_frames: boolean[];
+    count_in_last_3: number;
+    no_subtitles_for_3_frames: boolean;
+  };
   errors: boolean;
   language: string;
   confidence: number;
+}
+
+interface SubtitleTrendData {
+  showRedIndicator: boolean;
+  currentHasSubtitles: boolean;
+  framesAnalyzed: number;
+  noSubtitlesStreak: number;
 }
 
 interface MonitoringOverlayProps {
   sx?: any;
   overrideImageUrl?: string; // Override the auto-detected image URL
   overrideAnalysis?: MonitoringAnalysis; // Override with pre-loaded analysis
+  subtitleTrendData?: SubtitleTrendData | null; // Subtitle trend analysis from hook
 }
 
 export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
   sx,
   overrideImageUrl,
   overrideAnalysis,
+  subtitleTrendData,
 }) => {
   const [analysis, setAnalysis] = useState<MonitoringAnalysis | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
@@ -176,7 +191,57 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
             </Typography>
           )}
         </Box>
+
+        {/* Subtitle Trend Analysis */}
+        {subtitleTrendData && (
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+            <Typography variant="body2" sx={{ color: '#ffffff', mr: 1 }}>
+              Trend ({subtitleTrendData.framesAnalyzed} frames):
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: subtitleTrendData.showRedIndicator ? '#ff4444' : '#ffffff',
+                fontWeight: subtitleTrendData.showRedIndicator ? 'bold' : 'normal',
+              }}
+            >
+              {subtitleTrendData.showRedIndicator
+                ? `No subtitles (${subtitleTrendData.noSubtitlesStreak}/${subtitleTrendData.framesAnalyzed})`
+                : `${subtitleTrendData.framesAnalyzed - subtitleTrendData.noSubtitlesStreak}/${subtitleTrendData.framesAnalyzed} with subtitles`}
+            </Typography>
+          </Box>
+        )}
       </Box>
+
+      {/* Subtitle Trend Warning - center of screen */}
+      {subtitleTrendData?.showRedIndicator && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 25,
+            p: 2,
+            backgroundColor: 'rgba(255, 68, 68, 0.9)',
+            borderRadius: 2,
+            border: '2px solid #ff4444',
+            pointerEvents: 'none',
+            textAlign: 'center',
+            minWidth: 250,
+          }}
+        >
+          <Typography variant="h6" sx={{ color: '#ffffff', fontWeight: 'bold', mb: 1 }}>
+            ⚠️ NO SUBTITLES DETECTED
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#ffffff' }}>
+            No subtitles found in last {subtitleTrendData.framesAnalyzed} frames
+          </Typography>
+          <Typography variant="caption" sx={{ color: '#ffffff', opacity: 0.8 }}>
+            Check if content has speech/dialogue
+          </Typography>
+        </Box>
+      )}
 
       {/* Error indicator - top right, but away from online status */}
       {(analysis.blackscreen || analysis.freeze) && (

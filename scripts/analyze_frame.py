@@ -116,13 +116,13 @@ def analyze_freeze(image_path, previous_frames_cache=None):
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             print(f"Error: Could not load image for freeze analysis: {image_path}", file=sys.stderr)
-            return False
+            return False, None
         
         # Extract timestamp from current filename
         current_match = re.search(r'capture_(\d{14})(?:_thumbnail)?\.jpg', image_path)
         if not current_match:
             print(f"Could not extract timestamp from filename: {image_path}", file=sys.stderr)
-            return False
+            return False, None
         
         current_timestamp = current_match.group(1)
         current_filename = os.path.basename(image_path)
@@ -144,7 +144,7 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             
             if current_filename not in all_files:
                 print(f"Current file not found in directory listing: {current_filename}")
-                return False
+                return False, None
             
             current_index = all_files.index(current_filename)
             
@@ -157,7 +157,7 @@ def analyze_freeze(image_path, previous_frames_cache=None):
                     'last_updated': current_timestamp
                 }
                 save_frame_cache(cache_file_path, new_cache)
-                return False
+                return False, None
             
             # Get the 2 previous frames
             prev1_filename = all_files[current_index - 1]  # Most recent previous
@@ -182,12 +182,12 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             
             if prev1_img is None or prev2_img is None:
                 print(f"Could not load previous images: {prev1_filename}, {prev2_filename}")
-                return False
+                return False, None
             
             # Check if all images have same dimensions
             if img.shape != prev1_img.shape or img.shape != prev2_img.shape:
                 print(f"Image dimensions don't match: {img.shape} vs {prev1_img.shape} vs {prev2_img.shape}")
-                return False
+                return False, None
             
             # Optimized sampling for pixel difference (every 10th pixel for performance)
             sample_rate = SAMPLING_PATTERNS["freeze_sample_rate"]
@@ -220,6 +220,13 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             else:
                 print(f"No freeze: At least one frame pair shows significant difference (threshold={freeze_threshold})")
             
+            # Analyze subtitles across all 3 frames using cached images
+            subtitle_history = analyze_subtitles_across_frames([
+                (current_filename, image_path),
+                (prev1_filename, os.path.join(directory, prev1_filename) if get_cached_frame_data(cache, prev1_filename) is None else None),
+                (prev2_filename, os.path.join(directory, prev2_filename) if get_cached_frame_data(cache, prev2_filename) is None else None)
+            ])
+            
             # Update cache with the 2 most recent frames for next execution
             # Extract timestamps for proper ordering
             prev1_match = re.search(r'capture_(\d{14})(?:_thumbnail)?\.jpg', prev1_filename)
@@ -233,15 +240,40 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             save_frame_cache(cache_file_path, new_cache)
             print(f"Updated cache with {prev1_filename} and {current_filename}")
             
-            return is_frozen
+            return is_frozen, subtitle_history
             
         except Exception as e:
             print(f"Could not compare with previous frames: {e}")
-            return False
+            return False, None
         
     except Exception as e:
         print(f"Error analyzing freeze: {e}", file=sys.stderr)
-        return False
+        return False, None
+
+def analyze_subtitles_across_frames(frame_list):
+    """Analyze subtitle detection across multiple frames"""
+    subtitle_results = []
+    
+    for filename, image_path in frame_list:
+        if image_path and os.path.exists(image_path):
+            # Analyze this frame for subtitles
+            subtitles, _ = analyze_subtitles_and_errors(image_path)
+            subtitle_results.append(subtitles)
+            print(f"  {filename}: subtitles={'Yes' if subtitles else 'No'}")
+        else:
+            # Use cached analysis if available
+            subtitle_results.append(False)  # Default to no subtitles if we can't analyze
+            print(f"  {filename}: subtitles=Unknown (cached)")
+    
+    # Count subtitle detections in last 3 frames
+    subtitle_count = sum(subtitle_results)
+    
+    return {
+        'current_frame': subtitle_results[0] if subtitle_results else False,
+        'last_3_frames': subtitle_results,
+        'subtitle_count_in_3': subtitle_count,
+        'no_subtitles_for_3_frames': subtitle_count == 0 and len(subtitle_results) == 3
+    }
 
 def analyze_subtitles_and_errors(image_path):
     """Detect subtitles and error messages - Optimized with region processing and sampling"""
@@ -411,12 +443,21 @@ def main():
         
         # Run analysis on thumbnail (or original if thumbnail not available)
         blackscreen = analyze_blackscreen(analysis_image)
-        freeze = analyze_freeze(analysis_image)
+        frozen, subtitle_history = analyze_freeze(analysis_image)
         subtitles, errors = analyze_subtitles_and_errors(analysis_image)
         language = detect_language(subtitles, analysis_image)
         
+        # If we don't have subtitle history (not enough frames), use current frame analysis
+        if subtitle_history is None:
+            subtitle_history = {
+                'current_frame': subtitles,
+                'last_3_frames': [subtitles],
+                'subtitle_count_in_3': 1 if subtitles else 0,
+                'no_subtitles_for_3_frames': not subtitles
+            }
+        
         # Calculate confidence
-        confidence = 0.9 if (blackscreen or freeze or subtitles or errors) else 0.1
+        confidence = 0.9 if (blackscreen or frozen or subtitles or errors) else 0.1
         
         # Create analysis result
         analysis_result = {
@@ -425,8 +466,14 @@ def main():
             'thumbnail': os.path.basename(thumbnail_path) if os.path.exists(thumbnail_path) else None,
             'analysis': {
                 'blackscreen': bool(blackscreen),
-                'freeze': bool(freeze),
+                'freeze': bool(frozen),
                 'subtitles': bool(subtitles),
+                'subtitles_trend': {
+                    'current': bool(subtitle_history['current_frame']),
+                    'last_3_frames': [bool(x) for x in subtitle_history['last_3_frames']],
+                    'count_in_last_3': subtitle_history['subtitle_count_in_3'],
+                    'no_subtitles_for_3_frames': subtitle_history['no_subtitles_for_3_frames']
+                },
                 'errors': bool(errors),
                 'language': str(language),
                 'confidence': float(confidence)
@@ -447,7 +494,7 @@ def main():
             json.dump(analysis_result, f, indent=2)
         
         print(f"Analysis complete: {json_filename} (saved to /tmp)")
-        print(f"Results: blackscreen={blackscreen}, freeze={freeze}, subtitles={subtitles}, errors={errors}, language={language}")
+        print(f"Results: blackscreen={blackscreen}, freeze={frozen}, subtitles={subtitles}, errors={errors}, language={language}")
         
     except Exception as e:
         print(f"Analysis failed: {e}", file=sys.stderr)
