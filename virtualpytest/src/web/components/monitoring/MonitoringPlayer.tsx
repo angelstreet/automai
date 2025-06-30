@@ -47,10 +47,12 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         const timestampMatch = newImageUrl.match(/capture_(\d{14})/);
         if (timestampMatch) {
           const timestamp = timestampMatch[1];
-          const jsonUrl = newImageUrl.replace('.jpg', '_thumbnail.json');
+          // Use original image for display, but load JSON from thumbnail version
+          const originalImageUrl = newImageUrl.replace('_thumbnail.jpg', '.jpg');
+          const jsonUrl = newImageUrl.replace('_thumbnail.jpg', '_thumbnail.json');
 
           setFrames((prev) => {
-            const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
+            const newFrames = [...prev, { timestamp, imageUrl: originalImageUrl, jsonUrl }];
             const updatedFrames = newFrames.slice(-100); // Keep last 100 frames
 
             // Auto-follow new images unless user manually selected a previous frame
