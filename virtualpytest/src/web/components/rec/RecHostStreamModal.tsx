@@ -8,7 +8,9 @@ import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
 import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
 import { RemotePanel } from '../controller/remote/RemotePanel';
-import { MonitoringPlayer } from '../monitoring/MonitoringPlayer';
+import { MonitoringOverlay } from '../monitoring/MonitoringOverlay';
+
+import { RecHostPreview } from './RecHostPreview';
 
 interface RecHostStreamModalProps {
   host: Host;
@@ -337,11 +339,13 @@ const RecHostStreamModalContent: React.FC<{
             }}
           >
             {monitoringMode ? (
-              <MonitoringPlayer
-                host={host}
-                deviceId={device?.device_id || 'device1'}
-                model={device?.device_model || 'unknown'}
-              />
+              <Box sx={{ position: 'relative', width: '100%', height: '600px' }}>
+                {/* Reuse RecHostPreview for image display - it handles its own URLs */}
+                <RecHostPreview host={host} device={device} />
+
+                {/* Add monitoring overlay on top - it will load JSON based on current image */}
+                <MonitoringOverlay />
+              </Box>
             ) : streamUrl ? (
               <HLSVideoPlayer
                 streamUrl={streamUrl}
