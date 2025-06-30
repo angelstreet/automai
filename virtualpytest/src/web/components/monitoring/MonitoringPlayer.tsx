@@ -69,12 +69,18 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   // Auto-play functionality
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isPlaying && frames.length > 1 && !userSelectedFrame) {
+    if (isPlaying && frames.length > 1) {
       interval = setInterval(() => {
         setCurrentIndex((prev) => {
+          // If user manually selected a frame, don't auto-advance
+          if (userSelectedFrame) {
+            return prev;
+          }
+
           const next = prev + 1;
           if (next >= frames.length) {
-            return frames.length - 1; // Stay on latest frame
+            // Stay on latest frame when we reach the end
+            return frames.length - 1;
           }
           return next;
         });
