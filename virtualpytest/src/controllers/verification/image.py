@@ -15,9 +15,6 @@ from typing import Dict, Any, Optional, Tuple, List
 from .image_helpers import ImageHelpers
 import logging
 
-from ..base_controller import ControllerConfig
-from src.models.device import Device
-
 
 class ImageVerificationController:
     """Pure image verification controller that uses template matching to detect images on screen."""
