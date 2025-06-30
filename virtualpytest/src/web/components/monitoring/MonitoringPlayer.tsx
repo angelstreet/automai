@@ -224,16 +224,24 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             transition: 'opacity 150ms ease-in-out', // Smooth transition
           }}
         >
-          <img
+          <Box
+            component="img"
             src={currentFrameUrl}
             alt={`Frame ${currentIndex + 1}`}
-            style={{
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
               width: '100%',
               height: '100%',
               objectFit: 'contain',
               objectPosition: 'top center', // Center horizontally, anchor to top - matches RecHostPreview
+              opacity: 1,
+              transition: 'opacity 300ms ease-in-out',
+              cursor: 'pointer',
             }}
             onLoad={handleHistoricalFrameLoad}
+            draggable={false}
           />
         </Box>
       )}
@@ -274,7 +282,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             right: 0,
             background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
             p: 1,
-            zIndex: 1000001, // Higher than AndroidMobileOverlay (1000000)
+            zIndex: 1000010, // Much higher than AndroidMobileOverlay (1000000)
           }}
         >
           {/* Play/Pause button */}
