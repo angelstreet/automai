@@ -344,7 +344,7 @@ export function RecStreamModal({
         {/* Header */}
         <div className="p-2 bg-gray-800 text-white flex justify-between items-center rounded-t-lg">
           <h2 className="text-lg font-medium">
-            {isDisconnected ? 'Stream Disconnected' : `${remoteTitle} Live Stream`}
+            {isDisconnected ? 'Stream Disconnected' : `${remoteTitle}`}
           </h2>
           <div className="flex items-center space-x-2">
             {canShowRemote && (
