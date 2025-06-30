@@ -14,6 +14,15 @@ import re
 from datetime import datetime
 import time
 
+# Optional imports for language detection
+try:
+    import pytesseract
+    from langdetect import detect, LangDetectError
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
+    print("OCR libraries not available. Install with: pip install pytesseract langdetect", file=sys.stderr)
+
 def analyze_blackscreen(image_path, threshold=15):
     """Detect if image is mostly black (blackscreen)"""
     try:
@@ -155,13 +164,65 @@ def analyze_subtitles_and_errors(image_path):
         print(f"Error analyzing subtitles/errors: {e}", file=sys.stderr)
         return False, False
 
-def detect_language(has_subtitles):
-    """Simple language detection (placeholder)"""
+def detect_language(has_subtitles, image_path=None):
+    """Detect language from subtitle text using OCR"""
     if not has_subtitles:
-        return 'unknown'
+        return 'none'
     
-    # For now, return 'detected' - could be enhanced with OCR
-    return 'detected'
+    if not OCR_AVAILABLE or not image_path:
+        return 'text_detected'
+    
+    try:
+        # Load image for OCR
+        img = cv2.imread(image_path)
+        if img is None:
+            return 'text_detected'
+        
+        height, width = img.shape[:2]
+        
+        # Extract subtitle region (bottom 20% of image)
+        subtitle_region = img[int(height * 0.8):, :]
+        
+        # Convert to grayscale for better OCR
+        gray_subtitle = cv2.cvtColor(subtitle_region, cv2.COLOR_BGR2GRAY)
+        
+        # Enhance contrast for better text recognition
+        enhanced = cv2.convertScaleAbs(gray_subtitle, alpha=2.0, beta=0)
+        
+        # Apply threshold to get better text
+        _, thresh = cv2.threshold(enhanced, 127, 255, cv2.THRESH_BINARY)
+        
+        # Extract text using OCR
+        text = pytesseract.image_to_string(thresh, config='--psm 6')
+        text = text.strip()
+        
+        if len(text) < 3:  # Need at least 3 characters for language detection
+            return 'text_detected'
+        
+        # Detect language
+        detected_lang = detect(text)
+        
+        # Map language codes to readable names
+        lang_map = {
+            'en': 'english',
+            'fr': 'french',
+            'de': 'german',
+            'es': 'spanish',
+            'it': 'italian',
+            'pt': 'portuguese',
+            'nl': 'dutch',
+            'ru': 'russian',
+            'ja': 'japanese',
+            'ko': 'korean',
+            'zh': 'chinese',
+            'ar': 'arabic'
+        }
+        
+        return lang_map.get(detected_lang, detected_lang)
+        
+    except (LangDetectError, Exception) as e:
+        print(f"Language detection failed: {e}", file=sys.stderr)
+        return 'text_detected'
 
 def main():
     if len(sys.argv) != 2:
@@ -214,7 +275,7 @@ def main():
         blackscreen = analyze_blackscreen(analysis_image)
         freeze = analyze_freeze(analysis_image)
         subtitles, errors = analyze_subtitles_and_errors(analysis_image)
-        language = detect_language(subtitles)
+        language = detect_language(subtitles, analysis_image)
         
         # Calculate confidence
         confidence = 0.9 if (blackscreen or freeze or subtitles or errors) else 0.1
@@ -245,7 +306,7 @@ def main():
             json.dump(analysis_result, f, indent=2)
         
         print(f"Analysis complete: {os.path.basename(json_path)}")
-        print(f"Results: blackscreen={blackscreen}, freeze={freeze}, subtitles={subtitles}, errors={errors}")
+        print(f"Results: blackscreen={blackscreen}, freeze={freeze}, subtitles={subtitles}, errors={errors}, language={language}")
         
     except Exception as e:
         print(f"Analysis failed: {e}", file=sys.stderr)
