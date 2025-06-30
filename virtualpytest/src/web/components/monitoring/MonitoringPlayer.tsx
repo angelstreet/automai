@@ -1,6 +1,6 @@
 import { PlayArrow, Pause } from '@mui/icons-material';
 import { Box, Slider, IconButton, Typography } from '@mui/material';
-import React, { useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 
 import { getStreamViewerLayout } from '../../config/layoutConfig';
 import { useMonitoring } from '../../hooks/monitoring/useMonitoring';
@@ -16,12 +16,32 @@ interface MonitoringPlayerProps {
   generateThumbnailUrl?: (host: Host, device: Device) => string | null;
 }
 
+// Image cache to store loaded images and prevent refetching
+const imageCache = new Map<string, HTMLImageElement>();
+const MAX_CACHE_SIZE = 30; // Keep last 30 images
+
+// Simple mobile detection function (matching RecHostPreview logic)
+const isMobileModel = (model?: string): boolean => {
+  if (!model) return false;
+  const modelLower = model.toLowerCase();
+  return modelLower.includes('mobile');
+};
+
 export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   host,
   device,
   initializeBaseUrl,
   generateThumbnailUrl,
 }) => {
+  // Image transition states (similar to RecHostPreview)
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [previousImageUrl, setPreviousImageUrl] = useState<string | null>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // Track last image change time for 2-second delay
+  const lastImageChangeTime = useRef<number>(0);
+  const imageChangeTimeout = useRef<NodeJS.Timeout | null>(null);
+
   // Use the monitoring hook for all state management
   const {
     frames,
@@ -36,10 +56,117 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     subtitleTrendData,
   } = useMonitoring();
 
+  // Detect if this is a mobile device model for proper sizing (matching RecHostPreview)
+  const isMobile = useMemo(() => {
+    return isMobileModel(device?.device_model);
+  }, [device?.device_model]);
+
   // Use the same layout configuration as HLSVideoPlayer for perfect alignment
   const layoutConfig = useMemo(() => {
     return getStreamViewerLayout(device?.device_model);
   }, [device?.device_model]);
+
+  // Preload image and cache it
+  const preloadImage = useCallback((url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      // Check cache first
+      if (imageCache.has(url)) {
+        resolve(imageCache.get(url)!);
+        return;
+      }
+
+      const img = new Image();
+      img.onload = () => {
+        // Add to cache
+        imageCache.set(url, img);
+
+        // Clean cache if it gets too large (keep only last 30 images)
+        if (imageCache.size > MAX_CACHE_SIZE) {
+          const keys = Array.from(imageCache.keys());
+          const keysToDelete = keys.slice(0, imageCache.size - MAX_CACHE_SIZE);
+          keysToDelete.forEach((key) => imageCache.delete(key));
+        }
+
+        resolve(img);
+      };
+      img.onerror = reject;
+      img.src = url;
+    });
+  }, []);
+
+  // Handle smooth transition when new image loads (matching RecHostPreview logic)
+  const handleImageLoad = useCallback(() => {
+    if (isTransitioning) {
+      // Clear the previous image after a brief delay to allow smooth transition
+      setTimeout(() => {
+        setPreviousImageUrl(null);
+        setIsTransitioning(false);
+      }, 300); // Small delay for smooth transition
+    }
+  }, [isTransitioning]);
+
+  // Load new image with 2-second delay and smooth transition
+  const loadNewImage = useCallback(
+    async (newUrl: string) => {
+      if (!newUrl || newUrl === currentImageUrl) return;
+
+      const now = Date.now();
+      const timeSinceLastChange = now - lastImageChangeTime.current;
+
+      // Clear any existing timeout
+      if (imageChangeTimeout.current) {
+        clearTimeout(imageChangeTimeout.current);
+      }
+
+      const performImageChange = async () => {
+        try {
+          // Preload the new image
+          await preloadImage(newUrl);
+
+          // Smooth transition: store previous URL and set new one (matching RecHostPreview)
+          if (currentImageUrl && currentImageUrl !== newUrl) {
+            setPreviousImageUrl(currentImageUrl);
+            setIsTransitioning(true);
+          }
+
+          setCurrentImageUrl(newUrl);
+          lastImageChangeTime.current = Date.now();
+        } catch (error) {
+          console.error(`[MonitoringPlayer] Failed to load image: ${newUrl}`, error);
+        }
+      };
+
+      // Ensure 2-second delay between image changes (matching RecHostPreview principle)
+      if (timeSinceLastChange < 2000) {
+        const delay = 2000 - timeSinceLastChange;
+        imageChangeTimeout.current = setTimeout(performImageChange, delay);
+      } else {
+        performImageChange();
+      }
+    },
+    [currentImageUrl, preloadImage],
+  );
+
+  // Update image when frame changes
+  useEffect(() => {
+    if (frames.length > 0 && currentIndex < frames.length - 1 && currentFrameUrl) {
+      loadNewImage(currentFrameUrl);
+    } else {
+      // Reset to live feed when at latest frame
+      setCurrentImageUrl(null);
+      setPreviousImageUrl(null);
+      setIsTransitioning(false);
+    }
+  }, [currentFrameUrl, currentIndex, frames.length, loadNewImage]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (imageChangeTimeout.current) {
+        clearTimeout(imageChangeTimeout.current);
+      }
+    };
+  }, []);
 
   return (
     <Box
@@ -57,11 +184,6 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
           borderRadius: 0,
           border: 'none',
         },
-        '& img': {
-          width: layoutConfig.isMobileModel ? 'auto' : '100%',
-          height: layoutConfig.isMobileModel ? '100%' : 'auto',
-          objectFit: layoutConfig.objectFit || 'contain',
-        },
       }}
     >
       {/* RecHostPreview for live feed */}
@@ -73,8 +195,8 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         hideHeader={true}
       />
 
-      {/* Override image if viewing historical frame */}
-      {frames.length > 0 && currentIndex < frames.length - 1 && (
+      {/* Override with historical frame using smooth transitions */}
+      {frames.length > 0 && currentIndex < frames.length - 1 && currentImageUrl && (
         <Box
           sx={{
             position: 'absolute',
@@ -82,25 +204,60 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundColor: 'black',
+            backgroundColor: 'transparent', // Remove black background to prevent flash
             zIndex: 1,
+            overflow: 'hidden',
           }}
         >
+          {/* Previous image - fading out (matching RecHostPreview pattern) */}
+          {previousImageUrl && isTransitioning && (
+            <Box
+              component="img"
+              src={previousImageUrl}
+              alt="Previous frame"
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
+                height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
+                objectFit: layoutConfig.objectFit || 'contain',
+                objectPosition: 'top center', // Center horizontally, anchor to top
+                opacity: isTransitioning ? 0 : 1,
+                transition: 'opacity 300ms ease-in-out',
+                cursor: 'pointer',
+              }}
+              draggable={false}
+            />
+          )}
+
+          {/* Current image - fading in (matching RecHostPreview pattern) */}
           <Box
             component="img"
-            src={currentFrameUrl}
+            src={currentImageUrl}
             alt={`Frame ${currentIndex + 1}`}
             sx={{
               position: 'absolute',
               top: 0,
               left: 0,
-              width: layoutConfig.isMobileModel ? 'auto' : '100%',
-              height: layoutConfig.isMobileModel ? '100%' : 'auto',
+              width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
+              height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
               objectFit: layoutConfig.objectFit || 'contain',
-              objectPosition: 'top center', // Center horizontally, anchor to top - matches RecHostPreview
+              objectPosition: 'top center', // Center horizontally, anchor to top
+              opacity: 1,
+              transition: 'opacity 300ms ease-in-out',
               cursor: 'pointer',
             }}
             draggable={false}
+            onLoad={handleImageLoad}
+            onError={(_e) => {
+              console.error(`[MonitoringPlayer] Failed to load frame image: ${currentImageUrl}`);
+              // Reset transition state on error
+              if (isTransitioning) {
+                setPreviousImageUrl(null);
+                setIsTransitioning(false);
+              }
+            }}
           />
         </Box>
       )}
@@ -119,7 +276,9 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
       >
         <MonitoringOverlay
           overrideImageUrl={
-            frames.length > 0 && currentIndex < frames.length - 1 ? currentFrameUrl : undefined
+            frames.length > 0 && currentIndex < frames.length - 1
+              ? currentImageUrl || undefined
+              : undefined
           }
           overrideAnalysis={
             frames.length > 0 && currentIndex < frames.length - 1
