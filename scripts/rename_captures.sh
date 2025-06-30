@@ -36,7 +36,7 @@ process_file() {
         # Run AI monitoring analysis on thumbnail (now that it's guaranteed to exist)
         (
           source /home/sunri-pi1/myvenv/bin/activate && python /usr/local/bin/analyze_frame.py "$thumbnail"
-        ) 2>>/tmp/monitoring.log &
+        ) 2>>/tmp/monitoring.log
         echo "Started AI monitoring analysis for $(basename "$thumbnail")" >> /tmp/rename.log
        
       else
