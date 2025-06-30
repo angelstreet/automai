@@ -16,10 +16,11 @@ import React, { useEffect, useState, useMemo } from 'react';
 
 import { RecHostPreview } from '../components/rec/RecHostPreview';
 import { useRec } from '../hooks/pages/useRec';
+import { ModalProvider } from '../contexts/ModalContext';
 
 // REC page - directly uses the global HostManagerProvider from App.tsx
 // No local HostManagerProvider needed since we only need AV capability filtering
-const Rec: React.FC = () => {
+const RecContent: React.FC = () => {
   const { avDevices, isLoading, error, initializeBaseUrl, generateThumbnailUrl } = useRec();
 
   // Filter states
@@ -186,6 +187,14 @@ const Rec: React.FC = () => {
         </Grid>
       )}
     </Box>
+  );
+};
+
+const Rec: React.FC = () => {
+  return (
+    <ModalProvider>
+      <RecContent />
+    </ModalProvider>
   );
 };
 

@@ -2,6 +2,7 @@ import { Close as CloseIcon, Tv as TvIcon, Analytics as AnalyticsIcon } from '@m
 import { Box, IconButton, Typography, Button, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
+import { useModal } from '../../contexts/ModalContext';
 import { useStream } from '../../hooks/controller';
 import { useRec } from '../../hooks/pages/useRec';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
@@ -46,9 +47,20 @@ const RecHostStreamModalContent: React.FC<{
   onClose: () => void;
   showRemoteByDefault: boolean;
 }> = ({ host, device, onClose, showRemoteByDefault }) => {
+  // Global modal state
+  const { setAnyModalOpen } = useModal();
+
   // Local state
   const [showRemote, setShowRemote] = useState<boolean>(showRemoteByDefault);
   const [monitoringMode, setMonitoringMode] = useState<boolean>(false);
+
+  // Set global modal state when component mounts/unmounts
+  useEffect(() => {
+    setAnyModalOpen(true);
+    return () => {
+      setAnyModalOpen(false);
+    };
+  }, [setAnyModalOpen]);
 
   // Hooks - now only run when modal is actually open
   const { showError, showWarning } = useToast();

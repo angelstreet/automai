@@ -2,6 +2,7 @@ import { Error as ErrorIcon } from '@mui/icons-material';
 import { Card, Typography, Box, Chip, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
+import { useModal } from '../../contexts/ModalContext';
 import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
 
@@ -31,6 +32,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   hideHeader = false,
   pausePolling = false,
 }) => {
+  // Global modal state
+  const { isAnyModalOpen } = useModal();
+
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [previousThumbnailUrl, setPreviousThumbnailUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -143,17 +147,18 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               if (!isMounted) return; // Check mount status before starting interval
 
               screenshotInterval = setInterval(() => {
-                // Stop polling when modal is open, timeline is active, or requested to pause
+                // Stop polling when any modal is open, timeline is active, or requested to pause
                 if (
                   isMounted &&
                   host &&
                   device &&
                   host.status === 'online' &&
                   !isStreamModalOpen &&
+                  !isAnyModalOpen &&
                   !pausePolling
                 ) {
                   handleTakeScreenshot();
-                } else if (isStreamModalOpen) {
+                } else if (isStreamModalOpen || isAnyModalOpen) {
                   console.log(
                     `[RecHostPreview] ${host.host_name}-${device?.device_id}: Polling paused (modal open)`,
                   );
@@ -198,6 +203,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     generateThumbnailUrl,
     handleTakeScreenshot,
     isStreamModalOpen,
+    isAnyModalOpen,
     pausePolling,
   ]);
 
