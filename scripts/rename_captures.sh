@@ -29,13 +29,15 @@ process_file() {
       if mv -f "$filepath" "$newname" 2>>/tmp/rename.log; then
         echo "Renamed $(basename "$filepath") to $(basename "$newname") at $(date)" >> /tmp/rename.log
         
-        # Create thumbnail and run AI monitoring analysis in parallel
-        convert "$newname" -thumbnail 498x280 -strip -quality 85 "$thumbnail" 2>>/tmp/rename.log &
-        echo "Started thumbnail creation for $(basename "$thumbnail")" >> /tmp/rename.log
+        # Create thumbnail synchronously first
+        convert "$newname" -thumbnail 498x280 -strip -quality 85 "$thumbnail" 2>>/tmp/rename.log
+        echo "Created thumbnail $(basename "$thumbnail")" >> /tmp/rename.log
         
-        # Run AI monitoring analysis in background
-        (source /home/sunri-pi1/myvenv/bin/activate && python /usr/local/bin/analyze_frame.py "$newname") 2>>/tmp/monitoring.log &
-        echo "Started AI monitoring analysis for $(basename "$newname")" >> /tmp/rename.log
+        # Run AI monitoring analysis on thumbnail (now that it's guaranteed to exist)
+        (
+          source /home/sunri-pi1/myvenv/bin/activate && python /usr/local/bin/analyze_frame.py "$thumbnail"
+        ) 2>>/tmp/monitoring.log &
+        echo "Started AI monitoring analysis for $(basename "$thumbnail")" >> /tmp/rename.log
        
       else
         echo "Failed to rename $filepath to $newname" >> /tmp/rename.log

@@ -35,20 +35,31 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             print(f"Error: Could not load image for freeze analysis: {image_path}", file=sys.stderr)
             return False
         
-        # Extract timestamp from current filename to find previous frame
-        current_match = re.search(r'capture_(\d{14})\.jpg', image_path)
+        # Extract timestamp from current filename (handle both regular and thumbnail files)
+        current_match = re.search(r'capture_(\d{14})(?:_thumbnail)?\.jpg', image_path)
         if not current_match:
             print(f"Could not extract timestamp from filename: {image_path}", file=sys.stderr)
             return False
+        
+        timestamp = current_match.group(1)
         
         # Look for previous capture file in the same directory
         directory = os.path.dirname(image_path)
         current_filename = os.path.basename(image_path)
         
+        # Determine if we're analyzing thumbnails or full images
+        is_thumbnail = '_thumbnail' in current_filename
+        
         try:
-            # Get all capture files and sort them
-            all_files = sorted([f for f in os.listdir(directory) 
-                              if f.startswith('capture_') and f.endswith('.jpg') and '_thumbnail' not in f])
+            # Get all files of the same type (thumbnail or full) and sort them
+            if is_thumbnail:
+                file_pattern = lambda f: f.startswith('capture_') and f.endswith('_thumbnail.jpg')
+                print(f"Analyzing thumbnail: {current_filename}")
+            else:
+                file_pattern = lambda f: f.startswith('capture_') and f.endswith('.jpg') and '_thumbnail' not in f
+                print(f"Analyzing full image: {current_filename}")
+            
+            all_files = sorted([f for f in os.listdir(directory) if file_pattern(f)])
             
             if current_filename not in all_files:
                 print(f"Current file not found in directory listing: {current_filename}", file=sys.stderr)
@@ -171,21 +182,28 @@ def main():
     
     try:
         # Use existing thumbnail created by rename_captures.sh
-        thumbnail_path = image_path.replace('.jpg', '_thumbnail.jpg')
-        
-        # Wait for thumbnail to be created (up to 2 seconds)
-        wait_count = 0
-        while not os.path.exists(thumbnail_path) and wait_count < 20:
-            time.sleep(0.1)  # Wait 100ms
-            wait_count += 1
-        
-        # Use thumbnail if available, otherwise use original image
-        analysis_image = thumbnail_path if os.path.exists(thumbnail_path) else image_path
-        
-        if analysis_image == thumbnail_path:
-            print(f"Using existing thumbnail: {os.path.basename(thumbnail_path)}")
+        if '_thumbnail' in image_path:
+            # We're already analyzing a thumbnail, use it directly
+            analysis_image = image_path
+            thumbnail_path = image_path  # Set thumbnail path to current file
+            print(f"Already analyzing thumbnail: {os.path.basename(image_path)}")
         else:
-            print(f"Thumbnail not found, using original image: {os.path.basename(image_path)}")
+            # We're analyzing original image, look for thumbnail
+            thumbnail_path = image_path.replace('.jpg', '_thumbnail.jpg')
+            
+            # Wait for thumbnail to be created (up to 2 seconds)
+            wait_count = 0
+            while not os.path.exists(thumbnail_path) and wait_count < 20:
+                time.sleep(0.1)  # Wait 100ms
+                wait_count += 1
+            
+            # Use thumbnail if available, otherwise use original image
+            analysis_image = thumbnail_path if os.path.exists(thumbnail_path) else image_path
+            
+            if analysis_image == thumbnail_path:
+                print(f"Using existing thumbnail: {os.path.basename(thumbnail_path)}")
+            else:
+                print(f"Thumbnail not found, using original image: {os.path.basename(image_path)}")
         
         # Load original image for size info
         img = cv2.imread(image_path)
