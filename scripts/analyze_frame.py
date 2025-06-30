@@ -32,28 +32,29 @@ SAMPLING_PATTERNS = {
     "subtitle_edge_threshold": 200  # Edge detection threshold
 }
 
-def analyze_blackscreen(image_path, threshold=15):
-    """Detect if image is mostly black (blackscreen) - Optimized with sampling"""
+def analyze_blackscreen(image_path, threshold=10):
+    """Detect if image is mostly black (blackscreen) - Simple and reliable"""
     try:
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             return False
         
-        # Sample random pixels instead of analyzing all pixels
-        height, width = img.shape
-        sample_count = SAMPLING_PATTERNS["blackscreen_samples"]
-        sample_size = min(sample_count, height * width)
+        # Simple approach: count how many pixels are very dark (0-10)
+        very_dark_pixels = np.sum(img <= threshold)
+        total_pixels = img.shape[0] * img.shape[1]
+        dark_percentage = (very_dark_pixels / total_pixels) * 100
         
-        # Generate random coordinates
-        random_rows = np.random.randint(0, height, sample_size)
-        random_cols = np.random.randint(0, width, sample_size)
+        # If more than 95% of pixels are very dark (0-10), it's a blackscreen
+        is_blackscreen = dark_percentage > 95
         
-        # Sample pixels and calculate statistics
-        sampled_pixels = img[random_rows, random_cols]
-        mean_intensity = np.mean(sampled_pixels)
+        print(f"Blackscreen check: {dark_percentage:.1f}% pixels <= {threshold} (threshold: 95%)")
+        if is_blackscreen:
+            print(f"  -> BLACKSCREEN detected")
+        else:
+            print(f"  -> Normal content")
         
-        print(f"Blackscreen check: sampled {sample_size} pixels, mean intensity: {mean_intensity:.2f}")
-        return mean_intensity < threshold
+        return is_blackscreen
+        
     except Exception as e:
         print(f"Error analyzing blackscreen: {e}", file=sys.stderr)
         return False
