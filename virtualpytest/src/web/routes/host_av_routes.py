@@ -551,7 +551,7 @@ def serve_screenshot(filename):
 
 @av_bp.route('/images', methods=['GET', 'OPTIONS'])
 def serve_image_by_path():
-    """Serve an image from a specified path on host"""
+    """Serve an image or JSON file from a specified path on host"""
     # Handle OPTIONS request for CORS
     if request.method == 'OPTIONS':
         response = current_app.response_class()
@@ -561,33 +561,45 @@ def serve_image_by_path():
         return response
         
     try:
-        image_path = request.args.get('path')
+        file_path = request.args.get('path')
         
-        # Use URL building utilities to resolve and validate image path
+        # Check if this is a JSON file
+        is_json = file_path and file_path.lower().endswith('.json')
+        
+        # Use URL building utilities to resolve and validate file path
         from src.utils.build_url_utils import resolveImageFilePath
         
         try:
-            validated_path = resolveImageFilePath(image_path)
+            if is_json:
+                # For JSON files, temporarily replace .json with .jpg to validate path
+                temp_image_path = file_path.replace('.json', '.jpg')
+                validated_image_path = resolveImageFilePath(temp_image_path)
+                validated_path = validated_image_path.replace('.jpg', '.json')
+            else:
+                validated_path = resolveImageFilePath(file_path)
         except ValueError as e:
-            print(f"[@route:host_av:serve_image_by_path] Invalid image path: {str(e)}")
+            print(f"[@route:host_av:serve_image_by_path] Invalid file path: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 400
         
         if not os.path.exists(validated_path):
-            print(f"[@route:host_av:serve_image_by_path] Image not found: {validated_path}")
-            return jsonify({'success': False, 'error': 'Image not found'}), 404
+            print(f"[@route:host_av:serve_image_by_path] File not found: {validated_path}")
+            return jsonify({'success': False, 'error': 'File not found'}), 404
         
         # Check file size
         file_size = os.path.getsize(validated_path)
         if file_size == 0:
-            print(f"[@route:host_av:serve_image_by_path] Image file is empty: {validated_path}")
-            return jsonify({'success': False, 'error': 'Image file is empty'}), 500
+            print(f"[@route:host_av:serve_image_by_path] File is empty: {validated_path}")
+            return jsonify({'success': False, 'error': 'File is empty'}), 500
         
-        print(f"[@route:host_av:serve_image_by_path] Serving image: {validated_path} ({file_size} bytes)")
+        print(f"[@route:host_av:serve_image_by_path] Serving file: {validated_path} ({file_size} bytes)")
         
-        # Determine mimetype based on extension
-        mimetype = 'image/jpeg'  # Default
-        if validated_path.lower().endswith('.png'):
+        # Set mimetype based on extension
+        if is_json:
+            mimetype = 'application/json'
+        elif validated_path.lower().endswith('.png'):
             mimetype = 'image/png'
+        else:
+            mimetype = 'image/jpeg'  # Default
         
         # Serve the file with CORS headers
         response = send_file(validated_path, mimetype=mimetype)
@@ -598,7 +610,7 @@ def serve_image_by_path():
         return response
         
     except Exception as e:
-        print(f"[@route:host_av:serve_image_by_path] Error serving image: {str(e)}")
+        print(f"[@route:host_av:serve_image_by_path] Error serving file: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @av_bp.route('/listCaptures', methods=['POST'])

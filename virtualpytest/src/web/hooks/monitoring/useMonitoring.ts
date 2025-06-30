@@ -61,11 +61,11 @@ export function useMonitoring(host?: any, deviceId?: string): UseMonitoringResul
 
         console.log(`[@hook:useMonitoring] Processing capture: ${filename}, URL: ${imageUrl}`);
 
-        // Try to load JSON metadata for this capture
+        // Try to load JSON metadata for this capture - SIMPLE 2-LINE APPROACH
         let analysis: MonitoringAnalysis | null = null;
 
         try {
-          // Build JSON URL by replacing .jpg with .json in the image URL
+          // Simple: replace .jpg with .json in the image URL
           const jsonUrl = imageUrl.replace('.jpg', '.json');
 
           const jsonResponse = await fetch(jsonUrl);
@@ -82,6 +82,7 @@ export function useMonitoring(host?: any, deviceId?: string): UseMonitoringResul
                 language: jsonData.analysis.language || 'unknown',
                 confidence: jsonData.analysis.confidence || 0,
               };
+              console.log(`[@hook:useMonitoring] Loaded analysis for ${filename}:`, analysis);
             }
           }
         } catch (jsonError) {
