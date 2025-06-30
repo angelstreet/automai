@@ -52,12 +52,19 @@ export function useMonitoring(
         throw new Error(data.error || 'Failed to get capture list');
       }
 
+      console.log(
+        `[@hook:useMonitoring] Received ${(data.captures || []).length} captures from server`,
+      );
+      console.log('[@hook:useMonitoring] First few captures:', (data.captures || []).slice(0, 3));
+
       // Process each capture file and try to load its JSON metadata
       const monitoringFrames: MonitoringFrame[] = [];
 
       for (const capture of data.captures || []) {
         const filename = capture.filename;
         const imageUrl = capture.url; // Already built by backend
+
+        console.log(`[@hook:useMonitoring] Processing capture: ${filename}, URL: ${imageUrl}`);
 
         // Try to load JSON metadata for this capture
         let analysis: MonitoringAnalysis | null = null;

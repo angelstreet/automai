@@ -93,12 +93,21 @@ export function VideoCapture({
         width: img.naturalWidth,
         height: img.naturalHeight,
       };
+      console.log(
+        '[@component:VideoCapture] Image loaded successfully:',
+        videoFramePath,
+        dimensions,
+      );
       onImageLoad(imageRef, dimensions, videoFramePath);
     }
   };
 
   // Use processed URL directly from backend
   const imageUrl = videoFramePath || '';
+
+  console.log(
+    `[@component:VideoCapture] Rendering with imageUrl: ${imageUrl}, totalFrames: ${totalFrames}, isCapturing: ${isCapturing}`,
+  );
 
   // Determine if drag selection should be enabled
   const allowDragSelection = totalFrames > 0 && onAreaSelected && imageRef.current;

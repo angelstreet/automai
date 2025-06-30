@@ -1,10 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { Box, Typography, Button, Alert } from '@mui/material';
 import { Refresh as RefreshIcon } from '@mui/icons-material';
+import { Box, Typography, Button, Alert } from '@mui/material';
+import React, { useState, useCallback } from 'react';
 
-import VideoCapture from '../controller/av/VideoCapture';
 import { useMonitoring } from '../../hooks/monitoring/useMonitoring';
-import { MonitoringFrame } from './types/MonitoringTypes';
+import VideoCapture from '../controller/av/VideoCapture';
 
 interface MonitoringPlayerProps {
   hostIp?: string;
@@ -53,6 +52,10 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   // Get current frame data
   const currentFrame = frames[currentFrameIndex];
   const currentImageUrl = currentFrame?.imageUrl || '';
+
+  console.log(`[@component:MonitoringPlayer] Current frame ${currentFrameIndex}:`, currentFrame);
+  console.log(`[@component:MonitoringPlayer] Current image URL:`, currentImageUrl);
+  console.log(`[@component:MonitoringPlayer] Total frames:`, frames.length);
 
   // Count frames with analysis data
   const framesWithAnalysis = frames.filter((frame) => frame.analysis !== null).length;
