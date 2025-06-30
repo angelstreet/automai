@@ -12,14 +12,28 @@ interface MonitoringAnalysis {
 
 interface MonitoringOverlayProps {
   sx?: any;
+  overrideImageUrl?: string; // Override the auto-detected image URL
+  overrideAnalysis?: MonitoringAnalysis; // Override with pre-loaded analysis
 }
 
-export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({ sx }) => {
+export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
+  sx,
+  overrideImageUrl,
+  overrideAnalysis,
+}) => {
   const [analysis, setAnalysis] = useState<MonitoringAnalysis | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
 
   // Monitor for image URL changes in the RecHostPreview component
   useEffect(() => {
+    // Use override URL if provided, otherwise auto-detect
+    if (overrideImageUrl) {
+      if (overrideImageUrl !== currentImageUrl) {
+        setCurrentImageUrl(overrideImageUrl);
+      }
+      return; // Don't set up auto-detection when overriding
+    }
+
     const detectImageUrl = () => {
       // Find the current screenshot image in RecHostPreview
       const imgElement = document.querySelector('[alt="Current screenshot"]') as HTMLImageElement;
@@ -35,14 +49,20 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({ sx }) => {
     const interval = setInterval(detectImageUrl, 1000);
 
     return () => clearInterval(interval);
-  }, [currentImageUrl]);
+  }, [currentImageUrl, overrideImageUrl]);
 
   // Load analysis data when imageUrl changes
   useEffect(() => {
+    // Use override analysis if provided
+    if (overrideAnalysis) {
+      setAnalysis(overrideAnalysis);
+      return;
+    }
+
     const loadAnalysis = async () => {
       if (!currentImageUrl) return;
 
-      // Wait 600ms for JSON analysis to be created
+      // Wait 300ms for JSON analysis to be created
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       // If we're loading a thumbnail image, look for the corresponding thumbnail JSON
@@ -66,7 +86,7 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({ sx }) => {
     };
 
     loadAnalysis();
-  }, [currentImageUrl]);
+  }, [currentImageUrl, overrideAnalysis]);
 
   // Always render overlay (don't check if analysis exists)
   if (!analysis) {

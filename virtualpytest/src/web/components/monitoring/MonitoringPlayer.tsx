@@ -32,6 +32,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   const [userSelectedFrame, setUserSelectedFrame] = useState(false);
+  const [selectedFrameAnalysis, setSelectedFrameAnalysis] = useState<any>(null);
 
   // Monitor RecHostPreview for new images
   useEffect(() => {
@@ -111,6 +112,44 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   // Get current frame URL for display
   const currentFrameUrl = frames[currentIndex]?.imageUrl || '';
 
+  // Load analysis for selected frame
+  useEffect(() => {
+    const loadSelectedFrameAnalysis = async () => {
+      if (frames.length === 0 || currentIndex >= frames.length) {
+        setSelectedFrameAnalysis(null);
+        return;
+      }
+
+      const selectedFrame = frames[currentIndex];
+      if (!selectedFrame || selectedFrame.analysis) {
+        setSelectedFrameAnalysis(selectedFrame?.analysis || null);
+        return;
+      }
+
+      // Load analysis for this frame
+      try {
+        const response = await fetch(selectedFrame.jsonUrl);
+        if (response.ok) {
+          const data = await response.json();
+          const analysis = data.analysis || null;
+
+          // Cache the analysis in the frame reference
+          setFrames((prev) =>
+            prev.map((frame, index) => (index === currentIndex ? { ...frame, analysis } : frame)),
+          );
+
+          setSelectedFrameAnalysis(analysis);
+        } else {
+          setSelectedFrameAnalysis(null);
+        }
+      } catch {
+        setSelectedFrameAnalysis(null);
+      }
+    };
+
+    loadSelectedFrameAnalysis();
+  }, [currentIndex, frames]);
+
   return (
     <Box
       sx={{
@@ -165,7 +204,16 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
 
       {/* Monitoring overlay */}
       <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 2 }}>
-        <MonitoringOverlay />
+        <MonitoringOverlay
+          overrideImageUrl={
+            frames.length > 0 && currentIndex < frames.length - 1 ? currentFrameUrl : undefined
+          }
+          overrideAnalysis={
+            frames.length > 0 && currentIndex < frames.length - 1
+              ? selectedFrameAnalysis
+              : undefined
+          }
+        />
       </Box>
 
       {/* Timeline controls */}
@@ -178,7 +226,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             right: 0,
             background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
             p: 1,
-            zIndex: 1000, // High z-index to appear above remote panel
+            zIndex: 1000001, // Higher than AndroidMobileOverlay (1000000)
           }}
         >
           {/* Play/Pause button */}
