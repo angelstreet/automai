@@ -12,7 +12,7 @@ interface MonitoringAnalysis {
     no_subtitles_for_3_frames: boolean;
   };
   errors: boolean;
-  language: string;
+  text: string;
   confidence: number;
 }
 
@@ -190,11 +190,9 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
               </Typography>
             )}
           </Box>
-          {analysis.subtitles && (
+          {analysis.subtitles && analysis.text && (
             <Typography variant="caption" sx={{ color: '#cccccc', ml: 2 }}>
-              {analysis.language !== 'unknown' && analysis.language !== 'detected'
-                ? analysis.language.charAt(0).toUpperCase() + analysis.language.slice(1)
-                : 'Unknown'}
+              Text detected ({analysis.text.length} chars)
             </Typography>
           )}
         </Box>

@@ -18,7 +18,7 @@ interface MonitoringAnalysis {
     no_subtitles_for_3_frames: boolean;
   };
   errors: boolean;
-  language: string;
+  text: string;
   confidence: number;
 }
 
