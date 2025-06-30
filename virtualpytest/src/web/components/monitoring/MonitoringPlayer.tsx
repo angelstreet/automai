@@ -128,8 +128,14 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
       }
 
       const selectedFrame = frames[currentIndex];
-      if (!selectedFrame || selectedFrame.analysis) {
-        setSelectedFrameAnalysis(selectedFrame?.analysis || null);
+      if (!selectedFrame) {
+        setSelectedFrameAnalysis(null);
+        return;
+      }
+
+      // If we already have analysis data (including null from failed load), use it
+      if (selectedFrame.hasOwnProperty('analysis')) {
+        setSelectedFrameAnalysis(selectedFrame.analysis || null);
         return;
       }
 
@@ -147,9 +153,21 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
 
           setSelectedFrameAnalysis(analysis);
         } else {
+          // Cache the failed load as null to avoid repeated attempts
+          setFrames((prev) =>
+            prev.map((frame, index) =>
+              index === currentIndex ? { ...frame, analysis: null } : frame,
+            ),
+          );
           setSelectedFrameAnalysis(null);
         }
       } catch {
+        // Cache the failed load as null to avoid repeated attempts
+        setFrames((prev) =>
+          prev.map((frame, index) =>
+            index === currentIndex ? { ...frame, analysis: null } : frame,
+          ),
+        );
         setSelectedFrameAnalysis(null);
       }
     };
