@@ -5,7 +5,6 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { getStreamViewerLayout } from '../../config/layoutConfig';
 import { useMonitoring } from '../../hooks/monitoring/useMonitoring';
 import { Host, Device } from '../../types/common/Host_Types';
-import { RecHostPreview } from '../rec/RecHostPreview';
 
 import { MonitoringOverlay } from './MonitoringOverlay';
 
@@ -28,7 +27,7 @@ const isMobileModel = (model?: string): boolean => {
 };
 
 export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
-  host,
+  host: _host,
   device,
   initializeBaseUrl,
   generateThumbnailUrl,
@@ -191,19 +190,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         },
       }}
     >
-      {/* Live feed - only when no control or when viewing latest frame */}
-      {(!hasControl || (frames.length > 0 && currentIndex === frames.length - 1)) && (
-        <RecHostPreview
-          host={host}
-          device={device}
-          initializeBaseUrl={hasControl ? initializeBaseUrl : undefined}
-          generateThumbnailUrl={hasControl ? generateThumbnailUrl : undefined}
-          hideHeader={true}
-          pausePolling={frames.length > 0 && currentIndex < frames.length - 1}
-        />
-      )}
-
-      {/* Historical frame overlay - only when control is active and viewing historical frames */}
+      {/* Historical frame display - only when we have control and frames */}
       {hasControl && frames.length > 0 && currentImageUrl && (
         <Box
           sx={{
@@ -212,12 +199,12 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             left: 0,
             width: '100%',
             height: '100%',
-            backgroundColor: 'transparent', // Remove black background to prevent flash
+            backgroundColor: 'transparent',
             zIndex: 1,
             overflow: 'hidden',
           }}
         >
-          {/* Previous image - fading out (matching RecHostPreview pattern) */}
+          {/* Previous image - fading out */}
           {previousImageUrl && isTransitioning && (
             <Box
               component="img"
@@ -227,19 +214,18 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
-                height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
+                width: isMobile ? 'auto' : '100%',
+                height: isMobile ? '100%' : 'auto',
                 objectFit: layoutConfig.objectFit || 'contain',
-                objectPosition: 'top center', // Center horizontally, anchor to top
-                opacity: isTransitioning ? 0 : 1,
+                objectPosition: 'top center',
+                opacity: 0,
                 transition: 'opacity 300ms ease-in-out',
-                cursor: 'pointer',
               }}
               draggable={false}
             />
           )}
 
-          {/* Current image - fading in (matching RecHostPreview pattern) */}
+          {/* Current image - fading in */}
           <Box
             component="img"
             src={currentImageUrl}
@@ -248,25 +234,53 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
               position: 'absolute',
               top: 0,
               left: 0,
-              width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
-              height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
+              width: isMobile ? 'auto' : '100%',
+              height: isMobile ? '100%' : 'auto',
               objectFit: layoutConfig.objectFit || 'contain',
-              objectPosition: 'top center', // Center horizontally, anchor to top
+              objectPosition: 'top center',
               opacity: 1,
               transition: 'opacity 300ms ease-in-out',
-              cursor: 'pointer',
             }}
             draggable={false}
             onLoad={handleImageLoad}
-            onError={(_e) => {
-              console.error(`[MonitoringPlayer] Failed to load frame image: ${currentImageUrl}`);
-              // Reset transition state on error
+            onError={() => {
+              console.error(`[MonitoringPlayer] Failed to load frame: ${currentImageUrl}`);
               if (isTransitioning) {
                 setPreviousImageUrl(null);
                 setIsTransitioning(false);
               }
             }}
           />
+        </Box>
+      )}
+
+      {/* No frames state */}
+      {hasControl && frames.length === 0 && (
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            color: 'white',
+          }}
+        >
+          <Typography>Waiting for monitoring data...</Typography>
+        </Box>
+      )}
+
+      {/* No control state */}
+      {!hasControl && (
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            color: 'white',
+          }}
+        >
+          <Typography>Take control to enable monitoring</Typography>
         </Box>
       )}
 
@@ -278,8 +292,8 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
           left: 0,
           width: '100%',
           height: '100%',
-          zIndex: 1000000, // Same as AndroidMobileOverlay click animation, but appears after in DOM
-          pointerEvents: 'none', // Don't block clicks to underlying remote controls
+          zIndex: 1000000,
+          pointerEvents: 'none',
         }}
       >
         <MonitoringOverlay
