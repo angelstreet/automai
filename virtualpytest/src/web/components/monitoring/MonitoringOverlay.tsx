@@ -43,7 +43,7 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({ sx }) => {
       if (!currentImageUrl) return;
 
       // Wait 600ms for JSON analysis to be created
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
       // If we're loading a thumbnail image, look for the corresponding thumbnail JSON
       const jsonUrl = currentImageUrl.includes('_thumbnail')
