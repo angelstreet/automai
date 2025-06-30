@@ -4,8 +4,8 @@
 # This script analyzes captured frames and generates JSON metadata
 # Usage: /usr/local/bin/analyze_frame.py /path/to/capture_YYYYMMDDHHMMSS.jpg
 
-# Activate virtual environment
-source /home/sunri-pi1/myvenv/bin/activate
+# Activate virtual environment (dynamic user detection)
+source /home/$USER/myvenv/bin/activate
 
 # Run Python analysis
 python3 << 'EOF'
