@@ -10,9 +10,8 @@ import { MonitoringOverlay } from './MonitoringOverlay';
 
 interface MonitoringPlayerProps {
   host: Host;
-  device?: Device;
-  initializeBaseUrl?: (host: Host, device: Device) => Promise<boolean>;
-  generateThumbnailUrl?: (host: Host, device: Device) => string | null;
+  device: Device;
+  baseUrlPattern?: string; // Base URL pattern from useRec
 }
 
 // Image cache to store loaded images and prevent refetching
@@ -29,16 +28,9 @@ const isMobileModel = (model?: string): boolean => {
 export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   host,
   device,
-  initializeBaseUrl,
-  generateThumbnailUrl,
+  baseUrlPattern,
 }) => {
-  // Control is active only when we have both required functions
-  const hasControl = !!(initializeBaseUrl && generateThumbnailUrl);
-
   console.log('[MonitoringPlayer] Debug:', {
-    initializeBaseUrl: !!initializeBaseUrl,
-    generateThumbnailUrl: !!generateThumbnailUrl,
-    hasControl,
     hostName: host?.host_name,
     deviceId: device?.device_id,
   });
@@ -65,9 +57,9 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     detectSubtitles,
     isDetectingSubtitles,
   } = useMonitoring({
-    shouldDetectImages: hasControl,
     host: host,
     device: device,
+    baseUrlPattern: baseUrlPattern,
   });
 
   // Device model detection for proper image sizing
@@ -204,8 +196,8 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         },
       }}
     >
-      {/* Historical frame display - only when we have control and frames */}
-      {hasControl && frames.length > 0 && currentImageUrl && (
+      {/* Historical frame display - only when we have frames */}
+      {frames.length > 0 && currentImageUrl && (
         <Box
           sx={{
             position: 'absolute',
@@ -269,7 +261,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
       )}
 
       {/* No frames state */}
-      {hasControl && frames.length === 0 && (
+      {frames.length === 0 && (
         <Box
           sx={{
             display: 'flex',
@@ -280,21 +272,6 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
           }}
         >
           <Typography>Waiting for monitoring data...</Typography>
-        </Box>
-      )}
-
-      {/* No control state */}
-      {!hasControl && (
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: '100%',
-            color: 'white',
-          }}
-        >
-          <Typography>Take control to enable monitoring</Typography>
         </Box>
       )}
 
@@ -311,13 +288,9 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         }}
       >
         <MonitoringOverlay
-          overrideImageUrl={
-            hasControl && frames.length > 0 ? currentImageUrl || undefined : undefined
-          }
-          overrideAnalysis={
-            hasControl && frames.length > 0 ? selectedFrameAnalysis || undefined : undefined
-          }
-          subtitleTrendData={hasControl ? subtitleTrendData : null}
+          overrideImageUrl={frames.length > 0 ? currentImageUrl || undefined : undefined}
+          overrideAnalysis={frames.length > 0 ? selectedFrameAnalysis || undefined : undefined}
+          subtitleTrendData={subtitleTrendData}
         />
       </Box>
 

@@ -65,8 +65,8 @@ const RecHostStreamModalContent: React.FC<{
   // Hooks - now only run when modal is actually open
   const { showError, showWarning } = useToast();
 
-  // Get the useRec functions needed for RecHostPreview
-  const { initializeBaseUrl, generateThumbnailUrl } = useRec();
+  // Get baseUrlPatterns for monitoring
+  const { baseUrlPatterns } = useRec();
 
   // NEW: Use device control hook (replaces all duplicate control logic)
   const { isControlActive, isControlLoading, controlError, handleToggleControl, clearError } =
@@ -355,13 +355,8 @@ const RecHostStreamModalContent: React.FC<{
             {monitoringMode && isControlActive ? (
               <MonitoringPlayer
                 host={host}
-                device={device}
-                initializeBaseUrl={
-                  monitoringMode && isControlActive ? initializeBaseUrl : undefined
-                }
-                generateThumbnailUrl={
-                  monitoringMode && isControlActive ? generateThumbnailUrl : undefined
-                }
+                device={device!}
+                baseUrlPattern={baseUrlPatterns.get(`${host.host_name}-${device?.device_id}`)}
               />
             ) : streamUrl ? (
               <HLSVideoPlayer

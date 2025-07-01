@@ -53,15 +53,15 @@ interface UseMonitoringReturn {
 }
 
 interface UseMonitoringProps {
-  shouldDetectImages: boolean;
-  host?: any; // Host object for API requests
-  device?: any; // Device object for API requests
+  host: any; // Host object for API requests
+  device: any; // Device object for API requests
+  baseUrlPattern: string; // Base URL pattern from useRec
 }
 
 export const useMonitoring = ({
-  shouldDetectImages,
   host,
   device,
+  baseUrlPattern,
 }: UseMonitoringProps): UseMonitoringReturn => {
   const [frames, setFrames] = useState<FrameRef[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -74,52 +74,41 @@ export const useMonitoring = ({
   const [isHistoricalFrameLoaded, setIsHistoricalFrameLoaded] = useState(false);
   const [isDetectingSubtitles, setIsDetectingSubtitles] = useState(false);
 
-  // Monitor RecHostPreview for new images - only when enabled
-  useEffect(() => {
-    if (!shouldDetectImages) {
-      return; // Skip image detection when disabled
-    }
+  // Generate monitoring URL (same as useRec pattern)
+  const generateMonitoringUrl = useCallback((): string => {
+    // Generate current timestamp in YYYYMMDDHHMMSS format (same as useRec)
+    const now = new Date();
+    const timestamp =
+      now.getFullYear().toString() +
+      (now.getMonth() + 1).toString().padStart(2, '0') +
+      now.getDate().toString().padStart(2, '0') +
+      now.getHours().toString().padStart(2, '0') +
+      now.getMinutes().toString().padStart(2, '0') +
+      now.getSeconds().toString().padStart(2, '0');
 
-    const detectImageUrl = () => {
-      const imgElement = document.querySelector('[alt="Current screenshot"]') as HTMLImageElement;
-      if (imgElement && imgElement.src && imgElement.src !== currentImageUrl) {
-        const newImageUrl = imgElement.src;
+    // Replace timestamp in pattern (same as useRec)
+    const imageUrl = baseUrlPattern.replace('{timestamp}', timestamp);
+    return imageUrl;
+  }, [baseUrlPattern]);
+
+  // Generate monitoring frames
+  useEffect(() => {
+    const generateFrame = () => {
+      const newImageUrl = generateMonitoringUrl();
+
+      if (newImageUrl && newImageUrl !== currentImageUrl) {
         setCurrentImageUrl(newImageUrl);
 
-        // Extract timestamp and create frame reference
+        // Extract timestamp from the generated URL
         const timestampMatch = newImageUrl.match(/capture_(\d{14})/);
         if (timestampMatch) {
           const timestamp = timestampMatch[1];
 
-          // Add 2-second delay to ensure image and JSON are fully generated
-          const timestampDate = new Date(
-            parseInt(timestamp.substring(0, 4)), // year
-            parseInt(timestamp.substring(4, 6)) - 1, // month (0-based)
-            parseInt(timestamp.substring(6, 8)), // day
-            parseInt(timestamp.substring(8, 10)), // hour
-            parseInt(timestamp.substring(10, 12)), // minute
-            parseInt(timestamp.substring(12, 14)), // second
-          );
-
-          const delayedTimestamp = new Date(timestampDate.getTime() - 2000); // 2 seconds earlier
-          const delayedTimestampString =
-            delayedTimestamp.getFullYear().toString() +
-            (delayedTimestamp.getMonth() + 1).toString().padStart(2, '0') +
-            delayedTimestamp.getDate().toString().padStart(2, '0') +
-            delayedTimestamp.getHours().toString().padStart(2, '0') +
-            delayedTimestamp.getMinutes().toString().padStart(2, '0') +
-            delayedTimestamp.getSeconds().toString().padStart(2, '0');
-
-          // Convert thumbnail URL to full-size image URL
-          const originalImageUrl = newImageUrl
-            .replace(`capture_${timestamp}`, `capture_${delayedTimestampString}`)
-            .replace('_thumbnail.jpg', '.jpg');
-          const jsonUrl = newImageUrl
-            .replace(`capture_${timestamp}`, `capture_${delayedTimestampString}`)
-            .replace('_thumbnail.jpg', '_thumbnail.json');
+          // Generate JSON URL - monitoring needs original filename + _thumbnail.json
+          const jsonUrl = newImageUrl.replace('.jpg', '_thumbnail.json');
 
           setFrames((prev) => {
-            const newFrames = [...prev, { timestamp, imageUrl: originalImageUrl, jsonUrl }];
+            const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
             const updatedFrames = newFrames.slice(-30); // Keep last 30 frames
 
             // Auto-follow new images unless user manually selected a previous frame
@@ -133,9 +122,13 @@ export const useMonitoring = ({
       }
     };
 
-    const interval = setInterval(detectImageUrl, 1000);
+    // Generate initial frame immediately
+    generateFrame();
+
+    // Set up interval for continuous monitoring
+    const interval = setInterval(generateFrame, 3000); // Generate every 3 seconds
     return () => clearInterval(interval);
-  }, [currentImageUrl, frames.length, isPlaying, userSelectedFrame, shouldDetectImages]);
+  }, [currentImageUrl, generateMonitoringUrl, isPlaying, userSelectedFrame]);
 
   // Auto-play functionality
   useEffect(() => {

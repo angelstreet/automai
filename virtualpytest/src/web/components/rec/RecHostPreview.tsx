@@ -14,7 +14,6 @@ interface RecHostPreviewProps {
   initializeBaseUrl?: (host: Host, device: Device) => Promise<boolean>;
   generateThumbnailUrl?: (host: Host, device: Device) => string | null;
   hideHeader?: boolean;
-  pausePolling?: boolean;
 }
 
 // Simple mobile detection function to match MonitoringPlayer logic
@@ -30,7 +29,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   initializeBaseUrl,
   generateThumbnailUrl,
   hideHeader = false,
-  pausePolling = false,
 }) => {
   // Global modal state
   const { isAnyModalOpen } = useModal();
@@ -67,6 +65,14 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
   // Optimized approach - just generate URL with current timestamp (no server calls after init)
   const handleTakeScreenshot = useCallback(async () => {
+    // Don't take screenshots when modal is open
+    if (isAnyModalOpen) {
+      console.log(
+        `[RecHostPreview] ${host.host_name}-${device?.device_id}: Screenshot skipped (modal open)`,
+      );
+      return;
+    }
+
     if (!generateThumbnailUrl || !device) {
       return;
     }
@@ -111,7 +117,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [host, device, thumbnailUrl, generateThumbnailUrl, initializeBaseUrl]);
+  }, [host, device, thumbnailUrl, generateThumbnailUrl, initializeBaseUrl, isAnyModalOpen]);
 
   // Initialize base URL once, then auto-generate URLs
   useEffect(() => {
@@ -364,8 +370,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                   console.error(
                     `[RecHostPreview] ${host.host_name}-${device?.device_id}: Failed to load image: ${thumbnailUrl}`,
                   );
-                  // Only retry if polling is active (not paused by modal or timeline)
-                  if (generateThumbnailUrl && device && !isStreamModalOpen && !pausePolling) {
+                  // Only retry if polling is active and modal is not open
+                  if (generateThumbnailUrl && device && !isStreamModalOpen && !isAnyModalOpen) {
                     // Generate a URL with timestamp 1 second earlier
                     const now = new Date(Date.now() - 1000); // 1 second ago
                     const timestamp =
@@ -393,7 +399,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                     }
                   } else {
                     console.log(
-                      `[RecHostPreview] ${host.host_name}-${device?.device_id}: Image retry skipped (polling paused)`,
+                      `[RecHostPreview] ${host.host_name}-${device?.device_id}: Image retry skipped (modal open)`,
                     );
                     // Just reset transition state without generating new URLs
                     if (isTransitioning) {

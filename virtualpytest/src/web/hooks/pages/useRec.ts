@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-import { Host, Device } from '../../types/common/Host_Types';
 import { useModal } from '../../contexts/ModalContext';
+import { Host, Device } from '../../types/common/Host_Types';
 import { useHostManager } from '../useHostManager';
 
 // Global state to persist across React remounts in development mode
@@ -14,7 +14,7 @@ interface UseRecReturn {
   refreshHosts: () => Promise<void>;
   baseUrlPatterns: Map<string, string>; // host_name-device_id -> base URL pattern
   initializeBaseUrl: (host: Host, device: Device) => Promise<boolean>; // One-time base URL setup
-  generateThumbnailUrl: (host: Host, device: Device) => string | null; // Generate URL with current timestamp
+  generateThumbnailUrl: (host: Host, device: Device) => string | null; // Generate URL with current timestamp (blocked when modal open)
 }
 
 /**
@@ -110,7 +110,7 @@ export const useRec = (): UseRecReturn => {
     [baseUrlPatterns],
   );
 
-  // Generate thumbnail URL with current timestamp (no server calls)
+  // Generate thumbnail URL with current timestamp (no server calls) - blocked when modal open
   const generateThumbnailUrl = useCallback(
     (host: Host, device: Device): string | null => {
       const deviceKey = `${host.host_name}-${device.device_id}`;
