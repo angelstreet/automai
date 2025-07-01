@@ -15,8 +15,8 @@ import {
 import React, { useEffect, useState, useMemo } from 'react';
 
 import { RecHostPreview } from '../components/rec/RecHostPreview';
-import { useRec } from '../hooks/pages/useRec';
 import { ModalProvider } from '../contexts/ModalContext';
+import { useRec } from '../hooks/pages/useRec';
 
 // REC page - directly uses the global HostManagerProvider from App.tsx
 // No local HostManagerProvider needed since we only need AV capability filtering
