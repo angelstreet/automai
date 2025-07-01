@@ -356,7 +356,16 @@ const RecHostStreamModalContent: React.FC<{
               <MonitoringPlayer
                 host={host}
                 device={device!}
-                baseUrlPattern={baseUrlPatterns.get(`${host.host_name}-${device?.device_id}`)}
+                baseUrlPattern={(() => {
+                  const key = `${host.host_name}-${device?.device_id}`;
+                  const pattern = baseUrlPatterns.get(key);
+                  console.log('[RecHostStreamModal] Debug - baseUrlPattern lookup:', {
+                    key,
+                    pattern,
+                    allPatterns: Array.from(baseUrlPatterns.entries()),
+                  });
+                  return pattern;
+                })()}
               />
             ) : streamUrl ? (
               <HLSVideoPlayer

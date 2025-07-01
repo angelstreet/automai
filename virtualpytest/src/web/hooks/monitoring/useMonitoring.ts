@@ -63,6 +63,15 @@ export const useMonitoring = ({
   device,
   baseUrlPattern,
 }: UseMonitoringProps): UseMonitoringReturn => {
+  // Debug logging to check received props
+  useEffect(() => {
+    console.log('[useMonitoring] Debug - Received props:', {
+      host: host?.host_name,
+      device: device?.device_id,
+      baseUrlPattern,
+    });
+  }, [host?.host_name, device?.device_id, baseUrlPattern]);
+
   const [frames, setFrames] = useState<FrameRef[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -100,6 +109,12 @@ export const useMonitoring = ({
     const generateFrame = () => {
       const newImageUrl = generateMonitoringUrl();
 
+      console.log('[useMonitoring] Debug - generateFrame called:', {
+        newImageUrl,
+        currentImageUrl,
+        baseUrlPattern,
+      });
+
       if (newImageUrl && newImageUrl !== currentImageUrl) {
         setCurrentImageUrl(newImageUrl);
 
@@ -111,11 +126,22 @@ export const useMonitoring = ({
           // Generate JSON URL - monitoring needs original filename + _thumbnail.json
           const jsonUrl = newImageUrl.replace('.jpg', '_thumbnail.json');
 
+          console.log('[useMonitoring] Debug - Adding new frame:', {
+            timestamp,
+            imageUrl: newImageUrl,
+            jsonUrl,
+          });
+
           // Add 500ms delay to allow JSON file to be written
           setTimeout(() => {
             setFrames((prev) => {
               const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
               const updatedFrames = newFrames.slice(-30); // Keep last 30 frames
+
+              console.log('[useMonitoring] Debug - Updated frames:', {
+                frameCount: updatedFrames.length,
+                latestFrame: updatedFrames[updatedFrames.length - 1],
+              });
 
               // Auto-follow new images unless user manually selected a previous frame
               if (!userSelectedFrame || isPlaying) {
@@ -125,7 +151,15 @@ export const useMonitoring = ({
               return updatedFrames;
             });
           }, 500);
+        } else {
+          console.warn('[useMonitoring] Debug - No timestamp match in URL:', newImageUrl);
         }
+      } else {
+        console.log('[useMonitoring] Debug - No new frame generated:', {
+          newImageUrl,
+          currentImageUrl,
+          urlsEqual: newImageUrl === currentImageUrl,
+        });
       }
     };
 
@@ -135,7 +169,7 @@ export const useMonitoring = ({
     // Set up interval for continuous monitoring
     const interval = setInterval(generateFrame, 3000); // Generate every 3 seconds
     return () => clearInterval(interval);
-  }, [currentImageUrl, generateMonitoringUrl, isPlaying, userSelectedFrame]);
+  }, [currentImageUrl, generateMonitoringUrl, isPlaying, userSelectedFrame, baseUrlPattern]);
 
   // Auto-play functionality
   useEffect(() => {
