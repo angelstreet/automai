@@ -388,10 +388,9 @@ export const AndroidMobileRemote = React.memo(
               >
                 <InputLabel>Select element...</InputLabel>
                 <Select
-                  value={selectedElement || ''}
+                  value={selectedElement}
                   label="Select element..."
                   disabled={!session.connected || androidElements.length === 0}
-                  key={`select-${androidElements.length}`}
                   sx={{
                     '& .MuiSelect-select': {
                       py: 0.75,
