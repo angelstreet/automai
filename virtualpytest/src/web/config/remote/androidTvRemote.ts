@@ -195,7 +195,7 @@ export const androidTvRemoteConfig = {
     power: {
       key: 'POWER',
       label: 'PWR',
-      position: { x: 110, y: 70 },
+      position: { x: 130, y: 90 },
       size: { width: 14, height: 14 },
       shape: 'circle' as const,
       comment: 'Power button',
@@ -203,7 +203,7 @@ export const androidTvRemoteConfig = {
     nav_up: {
       key: 'UP',
       label: '▲',
-      position: { x: 210, y: 256 },
+      position: { x: 230, y: 276 },
       size: { width: 18, height: 14 },
       shape: 'rectangle' as const,
       comment: 'Navigation up',
@@ -211,7 +211,7 @@ export const androidTvRemoteConfig = {
     nav_left: {
       key: 'LEFT',
       label: '◄',
-      position: { x: 100, y: 360 },
+      position: { x: 120, y: 380 },
       size: { width: 14, height: 18 },
       shape: 'rectangle' as const,
       comment: 'Navigation left',
@@ -219,7 +219,7 @@ export const androidTvRemoteConfig = {
     nav_center: {
       key: 'SELECT',
       label: 'OK',
-      position: { x: 160, y: 310 },
+      position: { x: 180, y: 330 },
       size: { width: 45, height: 45 },
       shape: 'circle' as const,
       comment: 'Navigation center/select',
@@ -227,7 +227,7 @@ export const androidTvRemoteConfig = {
     nav_right: {
       key: 'RIGHT',
       label: '►',
-      position: { x: 340, y: 360 },
+      position: { x: 360, y: 380 },
       size: { width: 14, height: 18 },
       shape: 'rectangle' as const,
       comment: 'Navigation right',
@@ -235,7 +235,7 @@ export const androidTvRemoteConfig = {
     nav_down: {
       key: 'DOWN',
       label: '▼',
-      position: { x: 210, y: 490 },
+      position: { x: 230, y: 510 },
       size: { width: 18, height: 14 },
       shape: 'rectangle' as const,
       comment: 'Navigation down',
