@@ -117,11 +117,11 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       console.log(
         '[@context:HostManagerProvider:getHostsByModel] Available hosts:',
         availableHosts.map((h) => ({
-          name: h.host_name,
+          host_name: h.host_name,
           devices: h.devices?.map((d) => ({
-            id: d.device_id,
-            model: d.model,
-            name: d.device_name,
+            device_id: d.device_id,
+            device_model: d.device_model,
+            device_name: d.device_name,
           })),
         })),
       );
@@ -129,18 +129,18 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       const filtered = availableHosts
         .map((host) => ({
           ...host,
-          devices: (host.devices || []).filter((device) => models.includes(device.model)),
+          devices: (host.devices || []).filter((device) => models.includes(device.device_model)),
         }))
         .filter((host) => host.devices.length > 0); // Only include hosts that have compatible devices
 
       console.log(
         '[@context:HostManagerProvider:getHostsByModel] Filtered hosts with compatible devices only:',
         filtered.map((h) => ({
-          name: h.host_name,
+          host_name: h.host_name,
           devices: h.devices?.map((d) => ({
-            id: d.device_id,
-            model: d.model,
-            name: d.device_name,
+            device_id: d.device_id,
+            device_model: d.device_model,
+            device_name: d.device_name,
           })),
         })),
       );
