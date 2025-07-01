@@ -113,9 +113,35 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // Get hosts filtered by device models
   const getHostsByModel = useCallback(
     (models: string[]): Host[] => {
+      console.log('[@context:HostManagerProvider:getHostsByModel] Input models:', models);
+      console.log(
+        '[@context:HostManagerProvider:getHostsByModel] Available hosts:',
+        availableHosts.map((h) => ({
+          name: h.host_name,
+          devices: h.devices?.map((d) => ({
+            id: d.device_id,
+            model: d.model,
+            name: d.device_name,
+          })),
+        })),
+      );
+
       const filtered = availableHosts.filter((host) =>
         host.devices?.some((device) => models.includes(device.model)),
       );
+
+      console.log(
+        '[@context:HostManagerProvider:getHostsByModel] Filtered hosts:',
+        filtered.map((h) => ({
+          name: h.host_name,
+          devices: h.devices?.map((d) => ({
+            id: d.device_id,
+            model: d.model,
+            name: d.device_name,
+          })),
+        })),
+      );
+
       return filtered;
     },
     [availableHosts],
