@@ -156,6 +156,12 @@ const RecHostStreamModalContent: React.FC<{
   // Stable device resolution to prevent re-renders
   const stableDeviceResolution = useMemo(() => ({ width: 1920, height: 1080 }), []);
 
+  // Check if device is mobile model
+  const isMobileModel = useMemo(() => {
+    const model = device?.device_model;
+    return model === 'android_mobile' || model === 'ios_mobile';
+  }, [device?.device_model]);
+
   // Stable onReleaseControl callback to prevent re-renders
   const handleReleaseControl = useCallback(() => {
     setShowRemote(false);
@@ -366,8 +372,8 @@ const RecHostStreamModalContent: React.FC<{
                 model={device?.device_model || 'unknown'}
                 isExpanded={false}
                 sx={{
-                  width: '100%',
-                  height: '100%',
+                  width: isMobileModel ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
+                  height: isMobileModel ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
                 }}
               />
             ) : (
