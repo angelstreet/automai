@@ -118,7 +118,7 @@ const RecContent: React.FC = () => {
             disabled={isRestarting || avDevices.length === 0}
             sx={{ height: 32, minWidth: 120 }}
           >
-            {isRestarting ? 'Restarting...' : 'Restart Streams'}
+            {isRestarting ? 'Restarting...' : 'Restart'}
           </Button>
 
           {/* Host Filter */}
