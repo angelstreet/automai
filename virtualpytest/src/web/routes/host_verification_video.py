@@ -233,6 +233,11 @@ def host_video_detect_subtitles():
         print(f"[@route:host_verification_video:detectSubtitles] Image paths: {final_image_paths}")
         print(f"[@route:host_verification_video:detectSubtitles] Extract text: {extract_text}")
         
+        # Convert URLs to local paths if needed
+        if final_image_paths and any(path.startswith(('http://', 'https://')) for path in final_image_paths):
+            from src.utils.build_url_utils import convertHostUrlToLocalPath
+            final_image_paths = [convertHostUrlToLocalPath(path) if path.startswith(('http://', 'https://')) else path for path in final_image_paths]
+        
         # Get video verification controller
         video_controller, device, error_response = get_verification_controller(device_id, 'verification_video')
         if error_response:
