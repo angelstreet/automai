@@ -48,6 +48,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   // Hook for notifications only
   const { showError } = useToast();
 
+  // State to track if polling paused message has been logged
+  const [hasLoggedPaused, setHasLoggedPaused] = useState(false);
+
   // Stabilize host and device objects to prevent infinite re-renders
   // Only recreate when the actual data changes, not the object reference
   const stableHost = useMemo(
@@ -140,6 +143,11 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
   // Initialize base URL once, then auto-generate URLs
   useEffect(() => {
+    // Immediately return if any modal is open - no polling activity should occur
+    if (isStreamModalOpen || isAnyModalOpen) {
+      return;
+    }
+
     if (!stableHost || !stableDevice || !initializeBaseUrl || !generateThumbnailUrl) return;
 
     let screenshotInterval: NodeJS.Timeout | null = null;
@@ -167,28 +175,13 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
             handleTakeScreenshot();
 
-            // Set up interval AFTER first screenshot is taken and base URL is confirmed to work
-            setTimeout(() => {
-              if (!isMounted) return; // Check mount status before starting interval
-
-              screenshotInterval = setInterval(() => {
-                // Stop polling when any modal is open or timeline is active
-                if (
-                  isMounted &&
-                  stableHost &&
-                  stableDevice &&
-                  stableHost.status === 'online' &&
-                  !isStreamModalOpen &&
-                  !isAnyModalOpen
-                ) {
-                  handleTakeScreenshot();
-                } else if (isStreamModalOpen || isAnyModalOpen) {
-                  console.log(
-                    `[RecHostPreview] ${stableHost.host_name}-${stableDevice?.device_id}: Polling paused (modal open)`,
-                  );
-                }
-              }, 5000); // 5 seconds for debugging
-            }, 1500); // Wait 1.5 seconds after first screenshot before starting interval
+            // Set up interval for periodic screenshot URL updates (every 30 seconds)
+            screenshotInterval = setInterval(() => {
+              // Double-check modal state before taking screenshot
+              if (isMounted && !isStreamModalOpen && !isAnyModalOpen) {
+                handleTakeScreenshot();
+              }
+            }, 30000);
           }, 500);
         } else {
           if (isMounted) {
@@ -226,12 +219,31 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     isAnyModalOpen,
   ]);
 
-  // Log modal state changes for debugging
+  // Log modal state changes for debugging (only once per state change)
   useEffect(() => {
-    console.log(
-      `[RecHostPreview] ${stableHost.host_name}-${stableDevice?.device_id}: Modal ${isStreamModalOpen ? 'opened' : 'closed'} - polling ${isStreamModalOpen ? 'paused' : 'resumed'}`,
-    );
-  }, [isStreamModalOpen, stableHost.host_name, stableDevice?.device_id]);
+    if (isStreamModalOpen || isAnyModalOpen) {
+      if (!hasLoggedPaused) {
+        console.log(
+          `[RecHostPreview] ${stableHost.host_name}-${stableDevice?.device_id}: Polling paused (modal open)`,
+        );
+        setHasLoggedPaused(true);
+      }
+    } else {
+      setHasLoggedPaused(false); // Reset for next time modal opens
+      if (hasLoggedPaused) {
+        // Only log resume if we previously logged pause
+        console.log(
+          `[RecHostPreview] ${stableHost.host_name}-${stableDevice?.device_id}: Polling resumed`,
+        );
+      }
+    }
+  }, [
+    isStreamModalOpen,
+    isAnyModalOpen,
+    stableHost.host_name,
+    stableDevice?.device_id,
+    hasLoggedPaused,
+  ]);
 
   // Handle opening stream modal - control will be handled by the modal itself
   const handleOpenStreamModal = useCallback(() => {
