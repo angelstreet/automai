@@ -30,7 +30,6 @@ def register_host():
         print(f"   Host info keys: {list(host_info.keys()) if host_info else 'None'}")
         print(f"   Host name: {host_info.get('host_name', 'Not provided')}")
         print(f"   Host URL: {host_info.get('host_url', 'Not provided')}")
-        print(f"   Device model: {host_info.get('device_model', 'Not provided')}")
         print(f"   Devices: {len(host_info.get('devices', []))} device(s)")
         
         # Check for required fields
