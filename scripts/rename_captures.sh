@@ -3,6 +3,30 @@
 # Set timezone to Zurich
 export TZ="Europe/Zurich"
 
+# Simple log reset function - truncates log if over 30MB
+reset_log_if_large() {
+  local logfile="$1"
+  local max_size_mb=30
+  
+  # Check if log file exists and its size
+  if [ -f "$logfile" ]; then
+    local size_mb=$(du -m "$logfile" | cut -f1)
+    if [ "$size_mb" -ge "$max_size_mb" ]; then
+      echo "$(date): Log $logfile exceeded ${max_size_mb}MB, resetting..." >> "${logfile}"
+      > "$logfile"  # Truncate the file
+      echo "$(date): Log reset" >> "${logfile}"
+    fi
+  fi
+}
+
+# Log files
+RENAME_LOG="/tmp/rename.log"
+MONITORING_LOG="/tmp/monitoring.log"
+
+# Check logs on startup
+reset_log_if_large "$RENAME_LOG"
+reset_log_if_large "$MONITORING_LOG"
+
 # Array of possible capture directories
 CAPTURE_DIRS=(
   "/var/www/html/stream/capture1/captures"
@@ -20,39 +44,43 @@ process_file() {
       # Use current system time for timestamp
       timestamp=$(TZ="Europe/Zurich" date +%Y%m%d%H%M%S)
       if [ -z "$timestamp" ]; then
-        echo "Failed to generate timestamp for $filepath" >> /tmp/rename.log
+        echo "Failed to generate timestamp for $filepath" >> "$RENAME_LOG"
         return
       fi
       CAPTURE_DIR=$(dirname "$filepath")
       newname="${CAPTURE_DIR}/capture_${timestamp}.jpg"
       thumbnail="${CAPTURE_DIR}/capture_${timestamp}_thumbnail.jpg"
-      if mv -f "$filepath" "$newname" 2>>/tmp/rename.log; then
-        echo "Renamed $(basename "$filepath") to $(basename "$newname") at $(date)" >> /tmp/rename.log
+      if mv -f "$filepath" "$newname" 2>>"$RENAME_LOG"; then
+        echo "Renamed $(basename "$filepath") to $(basename "$newname") at $(date)" >> "$RENAME_LOG"
         
         # Create thumbnail synchronously first
-        convert "$newname" -thumbnail 498x280 -strip -quality 85 "$thumbnail" 2>>/tmp/rename.log
-        echo "Created thumbnail $(basename "$thumbnail")" >> /tmp/rename.log
+        convert "$newname" -thumbnail 498x280 -strip -quality 85 "$thumbnail" 2>>"$RENAME_LOG"
+        echo "Created thumbnail $(basename "$thumbnail")" >> "$RENAME_LOG"
         
         # Run AI monitoring analysis on thumbnail (now that it's guaranteed to exist)
         (
           source /home/sunri-pi1/myvenv/bin/activate && python /usr/local/bin/analyze_frame.py "$thumbnail"
-        ) 2>>/tmp/monitoring.log
-        echo "Started AI monitoring analysis for $(basename "$thumbnail")" >> /tmp/rename.log
+        ) 2>>"$MONITORING_LOG"
+        echo "Started AI monitoring analysis for $(basename "$thumbnail")" >> "$RENAME_LOG"
        
       else
-        echo "Failed to rename $filepath to $newname" >> /tmp/rename.log
+        echo "Failed to rename $filepath to $newname" >> "$RENAME_LOG"
       fi
       end_time=$(date +%s.%N)
-      echo "Processed $filepath in $(echo "$end_time - $start_time" | bc) seconds" >> /tmp/rename.log
+      echo "Processed $filepath in $(echo "$end_time - $start_time" | bc) seconds" >> "$RENAME_LOG"
+      
+      # Check log sizes after processing
+      reset_log_if_large "$RENAME_LOG"
+      reset_log_if_large "$MONITORING_LOG"
     else
-      echo "File $filepath does not exist or is not accessible" >> /tmp/rename.log
+      echo "File $filepath does not exist or is not accessible" >> "$RENAME_LOG"
     fi
   fi
 }
 
 # Check if ImageMagick is installed
 if ! command -v convert >/dev/null 2>&1; then
-  echo "ImageMagick is not installed. Please install it to create thumbnails." >> /tmp/rename.log
+  echo "ImageMagick is not installed. Please install it to create thumbnails." >> "$RENAME_LOG"
   exit 1
 fi
 
@@ -61,15 +89,15 @@ EXISTING_DIRS=()
 for CAPTURE_DIR in "${CAPTURE_DIRS[@]}"; do
   if [ -d "$CAPTURE_DIR" ]; then
     EXISTING_DIRS+=("$CAPTURE_DIR")
-    echo "Will watch $CAPTURE_DIR for new files..." >> /tmp/rename.log
+    echo "Will watch $CAPTURE_DIR for new files..." >> "$RENAME_LOG"
   else
-    echo "Directory $CAPTURE_DIR does not exist, skipping..." >> /tmp/rename.log
+    echo "Directory $CAPTURE_DIR does not exist, skipping..." >> "$RENAME_LOG"
   fi
 done
 
 # Exit if no directories exist
 if [ ${#EXISTING_DIRS[@]} -eq 0 ]; then
-  echo "No valid directories to watch, exiting." >> /tmp/rename.log
+  echo "No valid directories to watch, exiting." >> "$RENAME_LOG"
   exit 1
 fi
 

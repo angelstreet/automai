@@ -24,6 +24,13 @@ interface MonitoringAnalysis {
   confidence: number;
 }
 
+interface ErrorTrendData {
+  blackscreenConsecutive: number;
+  freezeConsecutive: number;
+  hasWarning: boolean;
+  hasError: boolean;
+}
+
 interface UseMonitoringReturn {
   // Frame management
   frames: FrameRef[];
@@ -53,6 +60,9 @@ interface UseMonitoringReturn {
     framesAnalyzed: number;
     noSubtitlesStreak: number;
   } | null;
+
+  // Error trend analysis
+  errorTrendData: ErrorTrendData | null;
 }
 
 interface UseMonitoringProps {
@@ -125,9 +135,7 @@ export const useMonitoring = ({
                 setCurrentIndex(updatedFrames.length - 1);
               } else if (userSelectedFrame) {
                 // When paused, check if current frame was deleted from buffer
-                const currentFrameStillExists = updatedFrames.some(
-                  (frame, index) => index === currentIndex,
-                );
+                const currentFrameStillExists = currentIndex < updatedFrames.length;
                 if (!currentFrameStillExists) {
                   // Current frame was deleted, move to latest available frame
                   setCurrentIndex(updatedFrames.length - 1);
@@ -147,7 +155,14 @@ export const useMonitoring = ({
     // Set up interval for continuous monitoring
     const interval = setInterval(generateFrame, 3000); // Generate every 3 seconds
     return () => clearInterval(interval);
-  }, [currentImageUrl, generateMonitoringUrl, isPlaying, userSelectedFrame, baseUrlPattern]);
+  }, [
+    currentImageUrl,
+    generateMonitoringUrl,
+    isPlaying,
+    userSelectedFrame,
+    baseUrlPattern,
+    currentIndex,
+  ]);
 
   // Auto-play functionality
   useEffect(() => {
@@ -227,6 +242,70 @@ export const useMonitoring = ({
 
     loadSelectedFrameAnalysis();
   }, [currentIndex, frames]);
+
+  // Error trend analysis - track consecutive blackscreen and freeze errors
+  const errorTrendData = useMemo((): ErrorTrendData | null => {
+    if (frames.length === 0) return null;
+
+    // Get frames with analysis data loaded (recent frames for trend analysis)
+    const framesWithAnalysis = frames.filter((frame) => frame.analysis !== undefined);
+
+    if (framesWithAnalysis.length === 0) return null;
+
+    // Analyze up to the last 10 frames for error trends
+    const recentFrames = framesWithAnalysis.slice(-10);
+
+    let blackscreenConsecutive = 0;
+    let freezeConsecutive = 0;
+
+    // Count consecutive errors from the end (most recent frames)
+    for (let i = recentFrames.length - 1; i >= 0; i--) {
+      const analysis = recentFrames[i].analysis;
+      if (!analysis) break;
+
+      // Count consecutive blackscreen errors
+      if (analysis.blackscreen) {
+        blackscreenConsecutive++;
+      } else if (blackscreenConsecutive > 0) {
+        // Stop counting if we hit a non-error frame
+        break;
+      }
+
+      // Count consecutive freeze errors
+      if (analysis.freeze) {
+        freezeConsecutive++;
+      } else if (freezeConsecutive > 0) {
+        // Stop counting if we hit a non-error frame
+        break;
+      }
+
+      // If neither error is present, stop the consecutive count
+      if (!analysis.blackscreen && !analysis.freeze) {
+        break;
+      }
+    }
+
+    // Determine warning/error states
+    const maxConsecutive = Math.max(blackscreenConsecutive, freezeConsecutive);
+    const hasWarning = maxConsecutive >= 1 && maxConsecutive < 3;
+    const hasError = maxConsecutive >= 3;
+
+    console.log('[useMonitoring] Error trend analysis:', {
+      blackscreenConsecutive,
+      freezeConsecutive,
+      maxConsecutive,
+      hasWarning,
+      hasError,
+      framesAnalyzed: recentFrames.length,
+    });
+
+    return {
+      blackscreenConsecutive,
+      freezeConsecutive,
+      hasWarning,
+      hasError,
+    };
+  }, [frames]);
 
   // Subtitle trend analysis - using adaptive frame count
   const subtitleTrendData = useMemo(() => {
@@ -451,5 +530,8 @@ export const useMonitoring = ({
 
     // Subtitle trend analysis
     subtitleTrendData,
+
+    // Error trend analysis
+    errorTrendData,
   };
 };

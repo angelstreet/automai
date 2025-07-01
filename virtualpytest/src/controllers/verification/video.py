@@ -67,9 +67,8 @@ class VideoVerificationController(VerificationControllerInterface):
         self.motion_threshold = 5.0  # Default motion threshold percentage
         self.frame_comparison_threshold = 10.0  # Default frame change threshold
         
-        # Temporary files for analysis
-        self.temp_video_path = Path("/tmp/video_verification")
-        self.temp_video_path.mkdir(exist_ok=True)
+        # Temporary files for analysis - will be set based on image location
+        self.temp_video_path = None
         
         print(f"[@controller:VideoVerification] Initialized with AV controller")
         
@@ -96,8 +95,7 @@ class VideoVerificationController(VerificationControllerInterface):
             else:
                 print(f"VideoVerify[{self.device_name}]: Video device: {self.av_controller.video_device}")
             
-            # Create temp directories for analysis
-            self.temp_video_path.mkdir(parents=True, exist_ok=True)
+            # Temp directory will be set based on image location
             
             # Always connected like ImageVerificationController
             self.is_connected = True
@@ -117,13 +115,7 @@ class VideoVerificationController(VerificationControllerInterface):
         self.is_connected = False
         self.verification_session_id = None
         
-        # Clean up temporary files
-        try:
-            for temp_file in self.temp_video_path.glob("*"):
-                if temp_file.is_file():
-                    temp_file.unlink()
-        except Exception as e:
-            print(f"VideoVerify[{self.device_name}]: Warning - cleanup failed: {e}")
+        # Temp files are cleaned up with their source directories
             
         print(f"VideoVerify[{self.device_name}]: Disconnected")
         return True
@@ -145,8 +137,8 @@ class VideoVerificationController(VerificationControllerInterface):
             return None
             
         timestamp = int(time.time())
-        screenshot_name = filename or f"screenshot_{timestamp}.png"
-        screenshot_path = self.temp_video_path / screenshot_name
+        screenshot_name = filename 
+        screenshot_path = Path.cwd() / screenshot_name
         
         try:
             if source == "av_controller":

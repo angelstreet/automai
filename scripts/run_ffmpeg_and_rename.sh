@@ -5,6 +5,22 @@ declare -A GRABBERS=(
   ["0"]="/dev/video0:/var/www/html/stream/capture1"
 )
 
+# Simple log reset function - truncates log if over 30MB
+reset_log_if_large() {
+  local logfile="$1"
+  local max_size_mb=30
+  
+  # Check if log file exists and its size
+  if [ -f "$logfile" ]; then
+    local size_mb=$(du -m "$logfile" | cut -f1)
+    if [ "$size_mb" -ge "$max_size_mb" ]; then
+      echo "$(date): Log $logfile exceeded ${max_size_mb}MB, resetting..." >> "${logfile}"
+      > "$logfile"  # Truncate the file
+      echo "$(date): Log reset" >> "${logfile}"
+    fi
+  fi
+}
+
 # Function to kill existing processes for a specific grabber (simplified like older script)
 kill_existing_processes() {
   local output_dir=$1
@@ -55,7 +71,9 @@ start_grabber() {
 
   # Start ffmpeg (same as older script)
   echo "Starting ffmpeg for $video_device..."
-  eval $FFMPEG_CMD > "/tmp/ffmpeg_output_${index}.log" 2>&1 &
+  local FFMPEG_LOG="/tmp/ffmpeg_output_${index}.log"
+  reset_log_if_large "$FFMPEG_LOG"
+  eval $FFMPEG_CMD > "$FFMPEG_LOG" 2>&1 &
   local FFMPEG_PID=$!
   echo "Started ffmpeg for $video_device with PID: $FFMPEG_PID"
 

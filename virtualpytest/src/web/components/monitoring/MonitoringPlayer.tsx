@@ -48,7 +48,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     isPlaying,
     handlePlayPause,
     handleSliderChange,
-    subtitleTrendData,
+    errorTrendData,
     detectSubtitles,
     isDetectingSubtitles,
     hasSubtitleDetectionResults,
@@ -284,9 +284,8 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         }}
       >
         <MonitoringOverlay
-          overrideImageUrl={frames.length > 0 ? currentImageUrl || undefined : undefined}
           overrideAnalysis={frames.length > 0 ? selectedFrameAnalysis || undefined : undefined}
-          subtitleTrendData={subtitleTrendData}
+          errorTrendData={errorTrendData}
           showSubtitles={isDetectingSubtitles || hasSubtitleDetectionResults}
         />
       </Box>

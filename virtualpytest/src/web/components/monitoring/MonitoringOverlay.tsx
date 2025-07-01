@@ -1,5 +1,5 @@
 import { Box, Typography } from '@mui/material';
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 
 interface MonitoringAnalysis {
   blackscreen: boolean;
@@ -16,26 +16,24 @@ interface MonitoringAnalysis {
   language?: string;
 }
 
-interface SubtitleTrendData {
-  showRedIndicator: boolean;
-  currentHasSubtitles: boolean;
-  framesAnalyzed: number;
-  noSubtitlesStreak: number;
+interface ErrorTrendData {
+  blackscreenConsecutive: number;
+  freezeConsecutive: number;
+  hasWarning: boolean;
+  hasError: boolean;
 }
 
 interface MonitoringOverlayProps {
   sx?: any;
-  overrideImageUrl?: string; // Override the auto-detected image URL
   overrideAnalysis?: MonitoringAnalysis; // Override with pre-loaded analysis
-  subtitleTrendData?: SubtitleTrendData | null; // Subtitle trend analysis from hook
+  errorTrendData?: ErrorTrendData | null; // Error trend analysis from hook
   showSubtitles?: boolean; // Whether to show subtitle information in overlay
 }
 
 export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
   sx,
-  overrideImageUrl,
   overrideAnalysis,
-  subtitleTrendData,
+  errorTrendData,
   showSubtitles = false,
 }) => {
   // Pure display component - only use props, no fetching
@@ -73,6 +71,11 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
             }}
           >
             {analysis?.blackscreen ? 'Yes' : 'No'}
+            {analysis?.blackscreen && errorTrendData && (
+              <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
+                ({errorTrendData.blackscreenConsecutive})
+              </Typography>
+            )}
           </Typography>
         </Box>
 
@@ -89,6 +92,11 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
             }}
           >
             {analysis?.freeze ? 'Yes' : 'No'}
+            {analysis?.freeze && errorTrendData && (
+              <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
+                ({errorTrendData.freezeConsecutive})
+              </Typography>
+            )}
           </Typography>
         </Box>
 
@@ -126,8 +134,8 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
         )}
       </Box>
 
-      {/* Error indicator - top right, but away from online status */}
-      {(analysis?.blackscreen || analysis?.freeze) && (
+      {/* Warning indicator - top right for 1-2 consecutive errors */}
+      {errorTrendData?.hasWarning && !errorTrendData?.hasError && (
         <Box
           sx={{
             position: 'absolute',
@@ -135,13 +143,33 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
             right: 66, // 50px more from right edge to avoid online status
             zIndex: 20,
             p: 1,
-            backgroundColor: 'rgba(255, 68, 68, 0.8)',
+            backgroundColor: 'rgba(255, 165, 0, 0.8)', // Orange
             borderRadius: 1,
             pointerEvents: 'none',
           }}
         >
           <Typography variant="caption" sx={{ color: '#ffffff', fontWeight: 'bold' }}>
-            ERROR DETECTED
+            WARNING
+          </Typography>
+        </Box>
+      )}
+
+      {/* Error indicator - top right for 3+ consecutive errors */}
+      {errorTrendData?.hasError && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 66, // 50px more from right edge to avoid online status
+            zIndex: 20,
+            p: 1,
+            backgroundColor: 'rgba(255, 68, 68, 0.8)', // Red
+            borderRadius: 1,
+            pointerEvents: 'none',
+          }}
+        >
+          <Typography variant="caption" sx={{ color: '#ffffff', fontWeight: 'bold' }}>
+            ERROR
           </Typography>
         </Box>
       )}
