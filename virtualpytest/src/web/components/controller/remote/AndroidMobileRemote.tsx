@@ -388,7 +388,7 @@ export const AndroidMobileRemote = React.memo(
               >
                 <InputLabel>Select element...</InputLabel>
                 <Select
-                  value={selectedElement}
+                  value={androidElements.length > 0 && selectedElement ? selectedElement : ''}
                   label="Select element..."
                   disabled={!session.connected || androidElements.length === 0}
                   sx={{
