@@ -27,7 +27,7 @@ const isMobileModel = (model?: string): boolean => {
 };
 
 export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
-  host: _host,
+  host,
   device,
   initializeBaseUrl,
   generateThumbnailUrl,
@@ -39,7 +39,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     initializeBaseUrl: !!initializeBaseUrl,
     generateThumbnailUrl: !!generateThumbnailUrl,
     hasControl,
-    hostName: _host?.host_name,
+    hostName: host?.host_name,
     deviceId: device?.device_id,
   });
 
@@ -64,7 +64,11 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     subtitleTrendData,
     detectSubtitles,
     isDetectingSubtitles,
-  } = useMonitoring(hasControl);
+  } = useMonitoring({
+    shouldDetectImages: hasControl,
+    host: host,
+    device: device,
+  });
 
   // Device model detection for proper image sizing
   const isMobile = useMemo(() => {

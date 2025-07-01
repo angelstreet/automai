@@ -330,6 +330,8 @@ export const useMonitoring = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          host: host,
+          device_id: device?.device_id,
           image_source_url: currentFrame.imageUrl,
           extract_text: true,
         }),
@@ -380,7 +382,7 @@ export const useMonitoring = ({
     } finally {
       setIsDetectingSubtitles(false);
     }
-  }, [frames, currentIndex, selectedFrameAnalysis, isDetectingSubtitles]);
+  }, [frames, currentIndex, selectedFrameAnalysis, isDetectingSubtitles, host, device?.device_id]);
 
   return {
     // Frame management
