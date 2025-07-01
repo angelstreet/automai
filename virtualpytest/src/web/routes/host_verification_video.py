@@ -8,31 +8,45 @@ This module contains host-side video verification endpoints that:
 """
 
 from flask import Blueprint, request, jsonify
+from src.utils.host_utils import get_controller, get_device_by_id, get_host
 import time
 import traceback
 
 # Create blueprint
 host_verification_video_bp = Blueprint('host_verification_video', __name__, url_prefix='/host/verification/video')
 
-def get_video_verification_controller():
-    """Get the video verification controller instance"""
-    try:
-        from src.controllers.controller_config_factory import ControllerConfigFactory
+def get_verification_controller(device_id: str, controller_type: str, check_device: bool = False):
+    """
+    Helper function to get verification controller and handle common validation.
+    
+    Args:
+        device_id: ID of the device
+        controller_type: Type of controller ('verification_video', 'verification_image', 'verification_text')
+        check_device: Whether to also validate device existence
         
-        # Get the controller factory instance
-        factory = ControllerConfigFactory.get_instance()
-        if not factory:
-            return None, "Controller factory not initialized"
-        
-        # Get video verification controller
-        video_controller = factory.get_verification_controller('video')
-        if not video_controller:
-            return None, "Video verification controller not available"
-        
-        return video_controller, None
-        
-    except Exception as e:
-        return None, f"Failed to get video verification controller: {str(e)}"
+    Returns:
+        Tuple of (controller, device, error_response) where error_response is None if successful
+    """
+    controller = get_controller(device_id, controller_type)
+    device = None
+    
+    if not controller:
+        error_response = jsonify({
+            'success': False,
+            'error': f'No {controller_type} controller found for device {device_id}'
+        }), 404
+        return None, None, error_response
+    
+    if check_device:
+        device = get_device_by_id(device_id)
+        if not device:
+            error_response = jsonify({
+                'success': False,
+                'error': f'Device {device_id} not found'
+            }), 404
+            return None, None, error_response
+    
+    return controller, device, None
 
 # =====================================================
 # VIDEO VERIFICATION EXECUTION ENDPOINT
@@ -46,6 +60,7 @@ def host_video_verification_execute():
         
         # Get request data
         data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         verification = data.get('verification', {})
         image_source_url = data.get('image_source_url')
         
@@ -53,12 +68,9 @@ def host_video_verification_execute():
         print(f"[@route:host_verification_video:execute] Image source: {image_source_url}")
         
         # Get video verification controller
-        video_controller, error = get_video_verification_controller()
-        if not video_controller:
-            return jsonify({
-                'success': False,
-                'error': error or 'Video verification controller not available'
-            }), 500
+        video_controller, device, error_response = get_verification_controller(device_id, 'verification_video')
+        if error_response:
+            return error_response
         
         # Execute verification
         start_time = time.time()
@@ -92,6 +104,7 @@ def host_video_detect_blackscreen():
         
         # Get request data
         data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         image_paths = data.get('image_paths')  # Array of image paths
         image_source_url = data.get('image_source_url')  # Single image or comma-separated
         threshold = data.get('threshold', 10)
@@ -113,12 +126,9 @@ def host_video_detect_blackscreen():
         print(f"[@route:host_verification_video:detectBlackscreen] Threshold: {threshold}")
         
         # Get video verification controller
-        video_controller, error = get_video_verification_controller()
-        if not video_controller:
-            return jsonify({
-                'success': False,
-                'error': error or 'Video verification controller not available'
-            }), 500
+        video_controller, device, error_response = get_verification_controller(device_id, 'verification_video')
+        if error_response:
+            return error_response
         
         # Execute blackscreen detection
         start_time = time.time()
@@ -148,6 +158,7 @@ def host_video_detect_freeze():
         
         # Get request data
         data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         image_paths = data.get('image_paths')  # Array of image paths
         image_source_url = data.get('image_source_url')  # Single image or comma-separated
         freeze_threshold = data.get('freeze_threshold', 1.0)
@@ -169,12 +180,9 @@ def host_video_detect_freeze():
         print(f"[@route:host_verification_video:detectFreeze] Freeze threshold: {freeze_threshold}")
         
         # Get video verification controller
-        video_controller, error = get_video_verification_controller()
-        if not video_controller:
-            return jsonify({
-                'success': False,
-                'error': error or 'Video verification controller not available'
-            }), 500
+        video_controller, device, error_response = get_verification_controller(device_id, 'verification_video')
+        if error_response:
+            return error_response
         
         # Execute freeze detection
         start_time = time.time()
@@ -204,6 +212,7 @@ def host_video_detect_subtitles():
         
         # Get request data
         data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         image_paths = data.get('image_paths')  # Array of image paths
         image_source_url = data.get('image_source_url')  # Single image or comma-separated
         extract_text = data.get('extract_text', True)
@@ -225,12 +234,9 @@ def host_video_detect_subtitles():
         print(f"[@route:host_verification_video:detectSubtitles] Extract text: {extract_text}")
         
         # Get video verification controller
-        video_controller, error = get_video_verification_controller()
-        if not video_controller:
-            return jsonify({
-                'success': False,
-                'error': error or 'Video verification controller not available'
-            }), 500
+        video_controller, device, error_response = get_verification_controller(device_id, 'verification_video')
+        if error_response:
+            return error_response
         
         # Execute subtitle detection
         start_time = time.time()
@@ -260,15 +266,15 @@ def host_video_detect_subtitles():
 def host_video_verification_status():
     """Get video verification controller status"""
     try:
+        # Get device_id from query params (defaults to device1)
+        device_id = request.args.get('device_id', 'device1')
+        
         print("[@route:host_verification_video:status] Getting video verification status")
         
         # Get video verification controller
-        video_controller, error = get_video_verification_controller()
-        if not video_controller:
-            return jsonify({
-                'success': False,
-                'error': error or 'Video verification controller not available'
-            }), 500
+        video_controller, device, error_response = get_verification_controller(device_id, 'verification_video')
+        if error_response:
+            return error_response
         
         # Get status
         status = video_controller.get_status()
@@ -289,15 +295,15 @@ def host_video_verification_status():
 def host_video_verification_available():
     """Get available video verifications"""
     try:
+        # Get device_id from query params (defaults to device1)
+        device_id = request.args.get('device_id', 'device1')
+        
         print("[@route:host_verification_video:availableVerifications] Getting available video verifications")
         
         # Get video verification controller
-        video_controller, error = get_video_verification_controller()
-        if not video_controller:
-            return jsonify({
-                'success': False,
-                'error': error or 'Video verification controller not available'
-            }), 500
+        video_controller, device, error_response = get_verification_controller(device_id, 'verification_video')
+        if error_response:
+            return error_response
         
         # Get available verifications
         verifications = video_controller.get_available_verifications()

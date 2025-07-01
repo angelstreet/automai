@@ -35,7 +35,7 @@ DEVICE_CONTROLLER_MAP = {
 
 # Controller → Verification Capabilities
 CONTROLLER_VERIFICATION_MAP = {
-    'hdmi_stream': ['image', 'text'],
+    'hdmi_stream': ['image', 'text', 'video'],
     'android_mobile': ['adb'],
     'android_tv': [],  # No verification for android_tv remote
     'appium': ['appium']
@@ -159,8 +159,8 @@ def _get_remote_params(implementation: str, device_config: dict) -> dict:
 
 def _get_verification_params(implementation: str, device_config: dict) -> dict:
     """Get parameters for Verification controllers."""
-    if implementation in ['image', 'text']:
-        # Image and text verification controllers need av_controller dependency
+    if implementation in ['image', 'text', 'video']:
+        # Image, text, and video verification controllers need av_controller dependency
         # This will be injected by the controller manager
         return {}
     elif implementation == 'adb':

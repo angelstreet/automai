@@ -55,7 +55,7 @@ interface UseMonitoringReturn {
 interface UseMonitoringProps {
   host: any; // Host object for API requests
   device: any; // Device object for API requests
-  baseUrlPattern: string; // Base URL pattern from useRec
+  baseUrlPattern?: string; // Base URL pattern from useRec - optional
 }
 
 export const useMonitoring = ({
@@ -76,6 +76,11 @@ export const useMonitoring = ({
 
   // Generate monitoring URL (same as useRec pattern)
   const generateMonitoringUrl = useCallback((): string => {
+    if (!baseUrlPattern) {
+      console.warn('[useMonitoring] No baseUrlPattern provided, monitoring disabled');
+      return '';
+    }
+
     // Generate current timestamp in YYYYMMDDHHMMSS format (same as useRec)
     const now = new Date();
     const timestamp =
@@ -87,8 +92,7 @@ export const useMonitoring = ({
       now.getSeconds().toString().padStart(2, '0');
 
     // Replace timestamp in pattern (same as useRec)
-    const imageUrl = baseUrlPattern.replace('{timestamp}', timestamp);
-    return imageUrl;
+    return baseUrlPattern.replace(/\d{14}/, timestamp);
   }, [baseUrlPattern]);
 
   // Generate monitoring frames

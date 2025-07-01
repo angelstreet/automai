@@ -19,6 +19,7 @@ from ..controllers.verification.image import ImageVerificationController
 from ..controllers.verification.text import TextVerificationController
 from ..controllers.verification.adb import ADBVerificationController
 from ..controllers.verification.appium import AppiumVerificationController
+from ..controllers.verification.video import VideoVerificationController
 
 
 def create_host_from_environment() -> Host:
@@ -183,6 +184,8 @@ def _create_controller_instance(controller_type: str, implementation: str, param
             return ImageVerificationController(**params)
         elif implementation == 'text':
             return TextVerificationController(**params)
+        elif implementation == 'video':
+            return VideoVerificationController(**params)
         elif implementation == 'adb':
             return ADBVerificationController(**params)
         elif implementation == 'appium':
@@ -269,7 +272,7 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
         
         # Add av_controller dependency for verification controllers that need it
         # ADB verification controller doesn't need av_controller (uses direct ADB communication)
-        if implementation in ['image', 'text']:
+        if implementation in ['image', 'text', 'video', 'audio']:
             if av_controller:
                 controller_params['av_controller'] = av_controller
             else:
