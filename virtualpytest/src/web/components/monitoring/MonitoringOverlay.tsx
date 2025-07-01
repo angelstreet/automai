@@ -103,17 +103,10 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
                 sx={{
                   color: analysis?.subtitles ? '#00ff00' : '#ffffff',
                   fontWeight: analysis?.subtitles ? 'bold' : 'normal',
-                  mr: 1,
                 }}
               >
                 {analysis?.subtitles ? 'Yes' : 'No'}
               </Typography>
-              {subtitleTrendData && (
-                <Typography variant="body2" sx={{ color: '#cccccc' }}>
-                  ({subtitleTrendData.framesAnalyzed - subtitleTrendData.noSubtitlesStreak}/
-                  {subtitleTrendData.framesAnalyzed} frames)
-                </Typography>
-              )}
             </Box>
             {analysis?.subtitles && analysis?.text && (
               <Typography variant="caption" sx={{ color: '#cccccc', ml: 2 }}>
