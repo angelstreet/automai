@@ -156,10 +156,12 @@ const RecHostStreamModalContent: React.FC<{
   // Stable device resolution to prevent re-renders
   const stableDeviceResolution = useMemo(() => ({ width: 1920, height: 1080 }), []);
 
-  // Check if device is mobile model
+  // Check if device is mobile model (consistent with RecHostPreview)
   const isMobileModel = useMemo(() => {
     const model = device?.device_model;
-    return model === 'android_mobile' || model === 'ios_mobile';
+    if (!model) return false;
+    const modelLower = model.toLowerCase();
+    return modelLower.includes('mobile');
   }, [device?.device_model]);
 
   // Stable onReleaseControl callback to prevent re-renders
@@ -370,10 +372,16 @@ const RecHostStreamModalContent: React.FC<{
                 isStreamActive={true}
                 isCapturing={false}
                 model={device?.device_model || 'unknown'}
-                isExpanded={true}
+                layoutConfig={{
+                  minHeight: '300px',
+                  aspectRatio: isMobileModel ? '9/16' : '16/9',
+                  objectFit: 'contain', // Prevent cropping/truncation like in preview grid
+                  isMobileModel, // Use our mobile detection result
+                }}
+                isExpanded={false}
                 sx={{
-                  width: isMobileModel ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
-                  height: isMobileModel ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
+                  width: '100%',
+                  height: '100%',
                 }}
               />
             ) : (
