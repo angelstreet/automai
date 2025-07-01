@@ -66,29 +66,33 @@ class VideoVerificationController(VerificationControllerInterface):
         
         print(f"[@controller:VideoVerification] Initialized with AV controller")
         
+        # Controller is always ready - matches ImageVerificationController pattern
+        self.is_connected = True
+        self.verification_session_id = f"video_verify_{int(time.time())}"
+        
     def connect(self) -> bool:
         """Connect to the video verification system."""
         try:
             print(f"VideoVerify[{self.device_name}]: Connecting to video verification system")
             
-            # Check if AV controller is connected
+            # Check if AV controller is connected - but don't fail if not
             if not hasattr(self.av_controller, 'is_connected') or not self.av_controller.is_connected:
-                print(f"VideoVerify[{self.device_name}]: ERROR - AV controller not connected")
-                print(f"VideoVerify[{self.device_name}]: Please connect {self.av_controller.device_name} first")
-                return False
+                print(f"VideoVerify[{self.device_name}]: WARNING - AV controller not connected")
+                print(f"VideoVerify[{self.device_name}]: Video analysis will work with provided images only")
             else:
                 print(f"VideoVerify[{self.device_name}]: Using AV controller: {self.av_controller.device_name}")
             
-            # Require AV controller to have video device for verification
+            # Check AV controller video device - but don't fail if missing
             if not hasattr(self.av_controller, 'video_device') or not self.av_controller.video_device:
-                print(f"VideoVerify[{self.device_name}]: ERROR - AV controller missing video device configuration")
-                return False
-            
-            print(f"VideoVerify[{self.device_name}]: Video device: {self.av_controller.video_device}")
+                print(f"VideoVerify[{self.device_name}]: WARNING - AV controller missing video device configuration")
+                print(f"VideoVerify[{self.device_name}]: Screenshot capture will not be available")
+            else:
+                print(f"VideoVerify[{self.device_name}]: Video device: {self.av_controller.video_device}")
             
             # Create temp directories for analysis
             self.temp_video_path.mkdir(parents=True, exist_ok=True)
             
+            # Always connected like ImageVerificationController
             self.is_connected = True
             self.verification_session_id = f"video_verify_{int(time.time())}"
             print(f"VideoVerify[{self.device_name}]: Connected - Session: {self.verification_session_id}")
@@ -96,8 +100,9 @@ class VideoVerificationController(VerificationControllerInterface):
             
         except Exception as e:
             print(f"VideoVerify[{self.device_name}]: Connection error: {e}")
-            self.is_connected = False
-            return False
+            # Still connected for image analysis even if AV controller has issues
+            self.is_connected = True
+            return True
 
     def disconnect(self) -> bool:
         """Disconnect from the video verification system."""
@@ -127,8 +132,9 @@ class VideoVerificationController(VerificationControllerInterface):
         Returns:
             Path to the captured screenshot file
         """
-        if not self.is_connected:
-            print(f"VideoVerify[{self.device_name}]: ERROR - Not connected")
+        # Only check connection when actually using AV controller
+        if source == "av_controller" and not self.is_connected:
+            print(f"VideoVerify[{self.device_name}]: ERROR - Not connected for AV controller capture")
             return None
             
         timestamp = int(time.time())
@@ -971,13 +977,14 @@ class VideoVerificationController(VerificationControllerInterface):
         Returns:
             Dictionary with detailed blackscreen analysis results
         """
-        if not self.is_connected:
-            print(f"VideoVerify[{self.device_name}]: ERROR - Not connected")
-            return {'success': False, 'error': 'Not connected'}
-        
         try:
             # Determine which images to analyze
             if image_paths is None or len(image_paths) == 0:
+                # Only check connection when we need to capture screenshots
+                if not self.is_connected:
+                    print(f"VideoVerify[{self.device_name}]: ERROR - Not connected for screenshot capture")
+                    return {'success': False, 'error': 'Not connected for screenshot capture'}
+                
                 # Use last available capture
                 screenshot = self.capture_screenshot()
                 if not screenshot:
@@ -1074,13 +1081,14 @@ class VideoVerificationController(VerificationControllerInterface):
         Returns:
             Dictionary with detailed freeze analysis results
         """
-        if not self.is_connected:
-            print(f"VideoVerify[{self.device_name}]: ERROR - Not connected")
-            return {'success': False, 'error': 'Not connected'}
-        
         try:
             # Determine which images to analyze
             if image_paths is None or len(image_paths) == 0:
+                # Only check connection when we need to capture screenshots
+                if not self.is_connected:
+                    print(f"VideoVerify[{self.device_name}]: ERROR - Not connected for screenshot capture")
+                    return {'success': False, 'error': 'Not connected for screenshot capture'}
+                
                 # Use multiple recent captures for freeze detection
                 screenshots = []
                 for i in range(3):  # Get 3 screenshots with delay
@@ -1193,13 +1201,14 @@ class VideoVerificationController(VerificationControllerInterface):
         Returns:
             Dictionary with detailed subtitle analysis results
         """
-        if not self.is_connected:
-            print(f"VideoVerify[{self.device_name}]: ERROR - Not connected")
-            return {'success': False, 'error': 'Not connected'}
-        
         try:
             # Determine which images to analyze
             if image_paths is None or len(image_paths) == 0:
+                # Only check connection when we need to capture screenshots
+                if not self.is_connected:
+                    print(f"VideoVerify[{self.device_name}]: ERROR - Not connected for screenshot capture")
+                    return {'success': False, 'error': 'Not connected for screenshot capture'}
+                
                 # Use last available capture
                 screenshot = self.capture_screenshot()
                 if not screenshot:
