@@ -194,12 +194,15 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
 
       // Error state
       error,
+
+      // Host data (filtered by userInterface models)
+      availableHosts,
     } = useNavigationEditor();
 
     // Use the correct userInterfaceId - prefer prop over URL param
     const actualUserInterfaceId = userInterfaceId || interfaceId;
 
-    // Get host manager from context
+    // Get host manager from context (excluding availableHosts - we get that from useNavigationEditor)
     const {
       selectedHost,
       selectedDeviceId,
@@ -211,7 +214,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       handleControlStateChange,
       handleToggleRemotePanel,
       handleDisconnectComplete,
-      availableHosts,
     } = useHostManager();
 
     // Track the last loaded tree ID to prevent unnecessary reloads
