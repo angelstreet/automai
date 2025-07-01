@@ -111,7 +111,7 @@ export const useMonitoring = ({
           // Generate JSON URL - monitoring needs original filename + _thumbnail.json
           const jsonUrl = newImageUrl.replace('.jpg', '_thumbnail.json');
 
-          // Add 500ms delay to allow JSON file to be written
+          // Add 600ms delay to allow JSON file to be written
           setTimeout(() => {
             setFrames((prev) => {
               const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
@@ -124,7 +124,7 @@ export const useMonitoring = ({
 
               return updatedFrames;
             });
-          }, 500);
+          }, 600);
         }
       }
     };
