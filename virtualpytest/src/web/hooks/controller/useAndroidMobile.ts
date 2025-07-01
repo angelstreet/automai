@@ -93,6 +93,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
         text: el.text,
       })),
       timestamp: new Date().toISOString(),
+      stackTrace: new Error().stack?.split('\n').slice(1, 4).join('\n'), // Show call stack
     });
   }, [androidElements]);
 
