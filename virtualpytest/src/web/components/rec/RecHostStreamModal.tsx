@@ -83,9 +83,8 @@ const RecHostStreamModalContent: React.FC<{
     device_id: device?.device_id || 'device1',
   });
 
-  // Calculate stream container dimensions for overlay alignment
+  // Stable stream container dimensions to prevent re-renders
   const streamContainerDimensions = useMemo(() => {
-    // Use stable window dimensions to prevent infinite re-renders
     const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
     const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
 
@@ -93,11 +92,11 @@ const RecHostStreamModalContent: React.FC<{
     const modalWidth = windowWidth * 0.95;
     const modalHeight = windowHeight * 0.9;
 
-    // Header height (matches the minHeight + padding)
-    const headerHeight = 48; // minHeight from header styling
+    // Header height
+    const headerHeight = 48;
 
-    // Stream area dimensions
-    const streamAreaWidth = showRemote && isControlActive ? modalWidth * 0.75 : modalWidth;
+    // Use fixed stream area (assume remote might be shown)
+    const streamAreaWidth = modalWidth * 0.75;
     const streamAreaHeight = modalHeight - headerHeight;
 
     // Modal position (centered)
@@ -108,19 +107,13 @@ const RecHostStreamModalContent: React.FC<{
     const streamX = modalX;
     const streamY = modalY + headerHeight;
 
-    const dimensions = {
+    return {
       width: Math.round(streamAreaWidth),
       height: Math.round(streamAreaHeight),
       x: Math.round(streamX),
       y: Math.round(streamY),
     };
-
-    console.log(
-      '[@component:RecHostStreamModal] Calculated stream container dimensions:',
-      dimensions,
-    );
-    return dimensions;
-  }, [showRemote, isControlActive]);
+  }, []);
 
   // Handle remote toggle
   const handleToggleRemote = useCallback(() => {
