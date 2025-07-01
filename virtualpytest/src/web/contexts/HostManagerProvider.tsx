@@ -126,12 +126,15 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
         })),
       );
 
-      const filtered = availableHosts.filter((host) =>
-        host.devices?.some((device) => models.includes(device.model)),
-      );
+      const filtered = availableHosts
+        .map((host) => ({
+          ...host,
+          devices: (host.devices || []).filter((device) => models.includes(device.model)),
+        }))
+        .filter((host) => host.devices.length > 0); // Only include hosts that have compatible devices
 
       console.log(
-        '[@context:HostManagerProvider:getHostsByModel] Filtered hosts:',
+        '[@context:HostManagerProvider:getHostsByModel] Filtered hosts with compatible devices only:',
         filtered.map((h) => ({
           name: h.host_name,
           devices: h.devices?.map((d) => ({

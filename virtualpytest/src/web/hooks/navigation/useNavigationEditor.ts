@@ -451,8 +451,8 @@ export const useNavigationEditor = () => {
       handleConnectionChange: () => {}, // Not implemented
       handleDisconnectComplete: hostManager.handleDisconnectComplete,
 
-      // Host data - from HostManager
-      availableHosts: hostManager.getAllHosts(),
+      // Host data - from HostManager (filtered by userInterface models)
+      availableHosts: hostManager.getHostsByModel(navigation.userInterface?.models || []),
       getHostByName: hostManager.getHostByName,
     }),
     [
