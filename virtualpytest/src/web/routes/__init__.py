@@ -72,7 +72,6 @@ def _register_server_routes(app):
         ('server_system_routes', 'system_bp'),
 
         ('server_actions_routes', 'server_actions_bp'),  # ✅ Unified actions API
-        ('server_verifications_routes', 'server_verifications_bp'),  # ✅ Unified verifications API
         ('server_navigation_trees_routes', 'server_navigation_trees_bp'),  # ✅ Navigation trees with history
         ('server_execution_results_routes', 'execution_results_bp'),  # ✅ Execution results tracking
 
