@@ -592,12 +592,13 @@ def convertHostUrlToLocalPath(host_url: str) -> str:
         parsed_url = urlparse(host_url)
         url_path = parsed_url.path
         
-        # Validate URL format - must start with /host/
-        if not url_path.startswith('/host/'):
-            raise ValueError(f"Invalid host URL format - expected /host/ prefix: {host_url}")
+        # Validate URL format - must contain /host/ (support both /host/ and /pi2/host/ patterns)
+        if '/host/' not in url_path:
+            raise ValueError(f"Invalid host URL format - expected /host/ in path: {host_url}")
         
-        # Remove '/host/' prefix to get the relative path
-        relative_path = url_path[6:]  # Remove '/host/' prefix
+        # Find and remove everything up to and including '/host/' to get the relative path
+        host_index = url_path.find('/host/')
+        relative_path = url_path[host_index + 6:]  # Remove everything up to and including '/host/'
         
         # Security validation - prevent path traversal
         if '..' in relative_path or relative_path.startswith('/'):

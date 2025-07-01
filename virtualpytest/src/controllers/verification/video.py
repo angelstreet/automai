@@ -1236,7 +1236,24 @@ class VideoVerificationController(VerificationControllerInterface):
                             detected_language = self._detect_language(extracted_text)
                         else:
                             # If no text extracted, then no real subtitles detected
+                            print(f"VideoVerify[{self.device_name}]: Edge detection found {subtitle_edges} edges (threshold: {adaptive_threshold:.0f}) but OCR found no text - likely false positive")
                             has_subtitles = False
+                    elif extract_text and has_subtitles and not OCR_AVAILABLE:
+                        # If OCR is not available but we want text extraction, we can't verify subtitles
+                        print(f"VideoVerify[{self.device_name}]: OCR not available - cannot verify subtitle text")
+                        # Keep has_subtitles as True since we detected edges but can't verify text
+                    
+                    # Calculate confidence based on actual findings
+                    if has_subtitles and extracted_text:
+                        confidence = 0.9  # High confidence when we have both edges and text
+                    elif has_subtitles and not extract_text:
+                        confidence = 0.7  # Medium confidence when we have edges but didn't try OCR
+                    elif has_errors:
+                        confidence = 0.8  # High confidence for error detection
+                    elif subtitle_edges > adaptive_threshold and not extracted_text and extract_text:
+                        confidence = 0.2  # Low confidence when edges detected but no text found (likely false positive)
+                    else:
+                        confidence = 0.1  # Low confidence when nothing detected
                     
                     result = {
                         'image_path': os.path.basename(image_path),
@@ -1251,13 +1268,14 @@ class VideoVerificationController(VerificationControllerInterface):
                         'detected_language': detected_language,
                         'subtitle_region_size': f"{subtitle_region.shape[1]}x{subtitle_region.shape[0]}",
                         'image_size': f"{width}x{height}",
-                        'confidence': 0.9 if (has_subtitles or has_errors) else 0.1,
+                        'confidence': confidence,
                         'ocr_available': OCR_AVAILABLE
                     }
                     
                     results.append(result)
                     
-                    print(f"VideoVerify[{self.device_name}]: Subtitle analysis - subtitles={has_subtitles}, errors={has_errors}, text='{extracted_text[:50]}...'")
+                    text_preview = extracted_text[:50] + "..." if len(extracted_text) > 50 else extracted_text
+                    print(f"VideoVerify[{self.device_name}]: Subtitle analysis - edges={subtitle_edges}, threshold={adaptive_threshold:.0f}, subtitles={has_subtitles}, errors={has_errors}, text='{text_preview}', confidence={confidence}")
                     
                 except Exception as e:
                     results.append({
