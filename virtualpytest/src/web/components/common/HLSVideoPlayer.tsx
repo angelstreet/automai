@@ -226,13 +226,13 @@ export function HLSVideoPlayer({
       });
 
       hls.on(HLS.Events.ERROR, (_event, data) => {
-        console.warn('[@component:HLSVideoPlayer] HLS error:', data.type, data.details, data.fatal);
+        //console.warn('[@component:HLSVideoPlayer] HLS error:', data.type, data.details, data.fatal);
 
         // Ignore buffer stall errors - they are temporary and self-recovering
         if (data.details === 'bufferStalledError') {
-          console.log(
-            '[@component:HLSVideoPlayer] Buffer stall detected, ignoring (will self-recover)',
-          );
+          //console.log(
+          //  '[@component:HLSVideoPlayer] Buffer stall detected, ignoring (will self-recover)',
+          //);
           return;
         }
 

@@ -30,10 +30,6 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   device,
   baseUrlPattern,
 }) => {
-  console.log('[MonitoringPlayer] Debug:', {
-    hostName: host?.host_name,
-    deviceId: device?.device_id,
-  });
 
   // Image transition states for smooth fade effects
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
