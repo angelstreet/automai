@@ -388,9 +388,10 @@ export const AndroidMobileRemote = React.memo(
               >
                 <InputLabel>Select element...</InputLabel>
                 <Select
-                  value={selectedElement}
+                  value={selectedElement || ''}
                   label="Select element..."
                   disabled={!session.connected || androidElements.length === 0}
+                  key={`select-${androidElements.length}`}
                   sx={{
                     '& .MuiSelect-select': {
                       py: 0.75,
@@ -401,6 +402,11 @@ export const AndroidMobileRemote = React.memo(
                   }}
                   onChange={(e) => {
                     const elementId = e.target.value as string;
+                    console.log('[@component:AndroidMobileRemote] Select onChange:', {
+                      elementId,
+                      selectedElement,
+                      androidElementsCount: androidElements.length,
+                    });
                     const element = androidElements.find((el) => el.id === elementId);
                     if (element) {
                       setSelectedElement(element.id);
@@ -420,27 +426,38 @@ export const AndroidMobileRemote = React.memo(
                     keepMounted: false,
                   }}
                 >
-                  {androidElements
-                    .filter((element) => element && element.id) // Filter out invalid elements
-                    .map((element) => {
-                      return (
-                        <MenuItem
-                          key={element.id}
-                          value={element.id}
-                          sx={{
-                            fontSize: '0.75rem',
-                            py: 0.5,
-                            px: 1,
-                            minHeight: 'auto',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                          }}
-                        >
-                          {getElementDisplayName(element)}
-                        </MenuItem>
-                      );
-                    })}
+                  {(() => {
+                    console.log('[@component:AndroidMobileRemote] Rendering MenuItems:', {
+                      selectedElement,
+                      androidElementsCount: androidElements.length,
+                      firstFewElements: androidElements.slice(0, 3).map((el) => ({
+                        id: el.id,
+                        contentDesc: el.contentDesc,
+                        text: el.text,
+                      })),
+                    });
+                    return androidElements
+                      .filter((element) => element && element.id) // Filter out invalid elements
+                      .map((element) => {
+                        return (
+                          <MenuItem
+                            key={element.id}
+                            value={element.id}
+                            sx={{
+                              fontSize: '0.75rem',
+                              py: 0.5,
+                              px: 1,
+                              minHeight: 'auto',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {getElementDisplayName(element)}
+                          </MenuItem>
+                        );
+                      });
+                  })()}
                 </Select>
               </FormControl>
             </Box>
