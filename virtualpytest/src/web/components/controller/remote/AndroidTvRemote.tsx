@@ -60,15 +60,85 @@ export const AndroidTvRemote = React.memo(
       await handleRemoteCommand(buttonKey);
     };
 
-    // Clean context-based button layout selection
-    const isRecModal = !!streamContainerDimensions;
-    const buttonLayout = isRecModal
-      ? layoutConfig.button_layout_recmodal
-      : layoutConfig.button_layout;
+    // Calculate responsive remote scale based on available space
+    const calculateRemoteScale = () => {
+      // Base remote dimensions from config
+      const baseHeight = 1800;
 
-    console.log(
-      `[@component:AndroidTvRemote] Context: ${isRecModal ? 'rec modal' : 'floating panel'}, using ${isRecModal ? 'button_layout_recmodal' : 'button_layout'}`,
-    );
+      // Determine available height based on context
+      let availableHeight: number;
+
+      if (streamContainerDimensions) {
+        // Modal context: use the modal's stream container height
+        // Reserve space for disconnect button (60px) and some padding
+        availableHeight = streamContainerDimensions.height - 120;
+        console.log(
+          `[@component:AndroidTvRemote] Using modal container height: ${streamContainerDimensions.height}, available: ${availableHeight}`,
+        );
+      } else {
+        // Floating panel context: use window height
+        availableHeight = window.innerHeight - 120; // Reserve space for disconnect button
+        console.log(
+          `[@component:AndroidTvRemote] Using window height: ${window.innerHeight}, available: ${availableHeight}`,
+        );
+      }
+
+      // Calculate the base scale from available height
+      const baseScale = availableHeight / baseHeight;
+
+      if (isCollapsed) {
+        // For collapsed state, apply panel ratio reduction to the base scale
+        const collapsedHeight = parseInt(
+          layoutConfig.panel_layout.collapsed.height.replace('px', ''),
+          10,
+        );
+        const expandedHeight = parseInt(
+          layoutConfig.panel_layout.expanded.height.replace('px', ''),
+          10,
+        );
+        const collapsedWidth = parseInt(
+          layoutConfig.panel_layout.collapsed.width.replace('px', ''),
+          10,
+        );
+        const expandedWidth = parseInt(
+          layoutConfig.panel_layout.expanded.width.replace('px', ''),
+          10,
+        );
+
+        // Calculate scale ratio based on panel size difference
+        const heightRatio = collapsedHeight / expandedHeight; // 300/600 = 0.5
+        const widthRatio = collapsedWidth / expandedWidth; // 160/240 = 0.667
+
+        // Use the smaller ratio to ensure remote fits in collapsed panel
+        const panelReductionRatio = Math.min(heightRatio, widthRatio);
+
+        // Apply the reduction ratio to the base scale
+        const collapsedScale = baseScale * panelReductionRatio;
+
+        console.log(`[@component:AndroidTvRemote] Collapsed scale calculation:`, {
+          context: streamContainerDimensions ? 'modal' : 'floating',
+          availableHeight,
+          baseScale,
+          panelReductionRatio,
+          collapsedScale,
+          collapsedDimensions: { width: collapsedWidth, height: collapsedHeight },
+          expandedDimensions: { width: expandedWidth, height: expandedHeight },
+        });
+
+        return collapsedScale;
+      }
+
+      // For expanded state, use the base scale calculated from available height
+      console.log(`[@component:AndroidTvRemote] Expanded scale calculation:`, {
+        context: streamContainerDimensions ? 'modal' : 'floating',
+        availableHeight,
+        baseScale,
+      });
+
+      return baseScale;
+    };
+
+    const remoteScale = calculateRemoteScale();
 
     // Render remote interface with clickable buttons
     const renderRemoteInterface = () => {
@@ -150,15 +220,19 @@ export const AndroidTvRemote = React.memo(
             }}
           >
             {/* Render clickable button overlays */}
-            {Object.entries(buttonLayout).map(([buttonId, button]) => (
+            {Object.entries(
+              streamContainerDimensions
+                ? layoutConfig.button_layout_recmodal
+                : layoutConfig.button_layout,
+            ).map(([buttonId, button]) => (
               <Box
                 key={buttonId}
                 sx={{
                   position: 'absolute',
-                  left: `${button.position.x}px`,
-                  top: `${button.position.y}px`,
-                  width: `${button.size.width}px`,
-                  height: `${button.size.height}px`,
+                  left: `${button.position.x * remoteScale}px`,
+                  top: `${button.position.y * remoteScale}px`,
+                  width: `${button.size.width * layoutConfig.remote_info.button_scale_factor * remoteScale}px`,
+                  height: `${button.size.height * layoutConfig.remote_info.button_scale_factor * remoteScale}px`,
                   borderRadius: button.shape === 'circle' ? '50%' : '4px',
                   backgroundColor:
                     !isCollapsed && showOverlays ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
@@ -185,10 +259,10 @@ export const AndroidTvRemote = React.memo(
                   <Typography
                     variant="caption"
                     sx={{
-                      fontSize: isRecModal ? '14px' : '16px',
-                      fontWeight: 'bold',
-                      color: 'white',
-                      textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
+                      fontSize: `${parseInt(layoutConfig.remote_info.text_style.fontSize) * remoteScale}px`,
+                      fontWeight: layoutConfig.remote_info.text_style.fontWeight,
+                      color: layoutConfig.remote_info.text_style.color,
+                      textShadow: layoutConfig.remote_info.text_style.textShadow,
                       userSelect: 'none',
                     }}
                   >
