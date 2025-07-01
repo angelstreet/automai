@@ -198,36 +198,6 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
         </Box>
       </Box>
 
-      {/* Subtitle Trend Warning - center of screen */}
-      {subtitleTrendData?.showRedIndicator && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 25,
-            p: 2,
-            backgroundColor: 'rgba(255, 68, 68, 0.9)',
-            borderRadius: 2,
-            border: '2px solid #ff4444',
-            pointerEvents: 'none',
-            textAlign: 'center',
-            minWidth: 250,
-          }}
-        >
-          <Typography variant="h6" sx={{ color: '#ffffff', fontWeight: 'bold', mb: 1 }}>
-            ⚠️ NO SUBTITLES DETECTED
-          </Typography>
-          <Typography variant="body2" sx={{ color: '#ffffff' }}>
-            No subtitles found in last {subtitleTrendData.framesAnalyzed} frames
-          </Typography>
-          <Typography variant="caption" sx={{ color: '#ffffff', opacity: 0.8 }}>
-            Check if content has speech/dialogue
-          </Typography>
-        </Box>
-      )}
-
       {/* Error indicator - top right, but away from online status */}
       {(analysis.blackscreen || analysis.freeze) && (
         <Box

@@ -322,7 +322,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         <Box
           sx={{
             position: 'absolute',
-            bottom: hasControl && frames.length > 0 ? '80px' : '20px', // Above timeline if controls are visible
+            bottom: frames.length > 0 ? '80px' : '20px', // Above timeline if controls are visible
             left: '20px',
             right: '20px',
             zIndex: 1000015, // Above timeline controls
@@ -361,7 +361,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         <Box
           sx={{
             position: 'absolute',
-            bottom: hasControl && frames.length > 0 ? '80px' : '20px',
+            bottom: frames.length > 0 ? '80px' : '20px',
             left: '20px',
             right: '20px',
             zIndex: 1000015,
@@ -397,8 +397,8 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         </Box>
       )}
 
-      {/* Timeline controls - only when we have control and frames */}
-      {hasControl && frames.length > 0 && (
+      {/* Timeline controls - only when we have frames */}
+      {frames.length > 0 && (
         <Box
           sx={{
             position: 'absolute',
