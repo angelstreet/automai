@@ -339,6 +339,10 @@ export const useMonitoring = ({
       return;
     }
 
+    // Pause the player when detecting subtitles
+    setIsPlaying(false);
+    setUserSelectedFrame(true);
+
     setIsDetectingSubtitles(true);
 
     try {
