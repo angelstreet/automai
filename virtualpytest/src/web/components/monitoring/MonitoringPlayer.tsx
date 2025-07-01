@@ -30,7 +30,6 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   device,
   baseUrlPattern,
 }) => {
-
   // Image transition states for smooth fade effects
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [previousImageUrl, setPreviousImageUrl] = useState<string | null>(null);

@@ -103,10 +103,7 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
     loadAnalysis();
   }, [currentImageUrl, overrideAnalysis]);
 
-  // Always render overlay (don't check if analysis exists)
-  if (!analysis) {
-    return null; // Only null if analysis state is not initialized
-  }
+  // Always render overlay with empty state when no analysis
 
   return (
     <>
@@ -133,13 +130,13 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
           <Typography
             variant="body2"
             sx={{
-              color: analysis.blackscreen ? '#ff4444' : '#ffffff',
-              fontWeight: analysis.blackscreen ? 'bold' : 'normal',
+              color: analysis?.blackscreen ? '#ff4444' : '#ffffff',
+              fontWeight: analysis?.blackscreen ? 'bold' : 'normal',
             }}
           >
-            {analysis.blackscreen ? 'Yes' : 'No'}
+            {analysis?.blackscreen ? 'Yes' : 'No'}
           </Typography>
-          {analysis.confidence > 0 && (
+          {analysis && analysis.confidence > 0 && (
             <Typography variant="caption" sx={{ color: '#cccccc', ml: 1 }}>
               ({Math.round(analysis.confidence * 100)}%)
             </Typography>
@@ -154,13 +151,13 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
           <Typography
             variant="body2"
             sx={{
-              color: analysis.freeze ? '#ff4444' : '#ffffff',
-              fontWeight: analysis.freeze ? 'bold' : 'normal',
+              color: analysis?.freeze ? '#ff4444' : '#ffffff',
+              fontWeight: analysis?.freeze ? 'bold' : 'normal',
             }}
           >
-            {analysis.freeze ? 'Yes' : 'No'}
+            {analysis?.freeze ? 'Yes' : 'No'}
           </Typography>
-          {analysis.confidence > 0 && (
+          {analysis && analysis.confidence > 0 && (
             <Typography variant="caption" sx={{ color: '#cccccc', ml: 1 }}>
               ({Math.round(analysis.confidence * 100)}%)
             </Typography>
@@ -176,12 +173,12 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
             <Typography
               variant="body2"
               sx={{
-                color: analysis.subtitles ? '#00ff00' : '#ffffff',
-                fontWeight: analysis.subtitles ? 'bold' : 'normal',
+                color: analysis?.subtitles ? '#00ff00' : '#ffffff',
+                fontWeight: analysis?.subtitles ? 'bold' : 'normal',
                 mr: 1,
               }}
             >
-              {analysis.subtitles ? 'Yes' : 'No'}
+              {analysis?.subtitles ? 'Yes' : 'No'}
             </Typography>
             {subtitleTrendData && (
               <Typography variant="body2" sx={{ color: '#cccccc' }}>
@@ -190,7 +187,7 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
               </Typography>
             )}
           </Box>
-          {analysis.subtitles && analysis.text && (
+          {analysis?.subtitles && analysis?.text && (
             <Typography variant="caption" sx={{ color: '#cccccc', ml: 2 }}>
               Text detected ({analysis.text.length} chars)
             </Typography>
@@ -199,7 +196,7 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
       </Box>
 
       {/* Error indicator - top right, but away from online status */}
-      {(analysis.blackscreen || analysis.freeze) && (
+      {(analysis?.blackscreen || analysis?.freeze) && (
         <Box
           sx={{
             position: 'absolute',

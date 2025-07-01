@@ -107,17 +107,20 @@ export const useMonitoring = ({
           // Generate JSON URL - monitoring needs original filename + _thumbnail.json
           const jsonUrl = newImageUrl.replace('.jpg', '_thumbnail.json');
 
-          setFrames((prev) => {
-            const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
-            const updatedFrames = newFrames.slice(-30); // Keep last 30 frames
+          // Add 500ms delay to allow JSON file to be written
+          setTimeout(() => {
+            setFrames((prev) => {
+              const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
+              const updatedFrames = newFrames.slice(-30); // Keep last 30 frames
 
-            // Auto-follow new images unless user manually selected a previous frame
-            if (!userSelectedFrame || isPlaying) {
-              setCurrentIndex(updatedFrames.length - 1);
-            }
+              // Auto-follow new images unless user manually selected a previous frame
+              if (!userSelectedFrame || isPlaying) {
+                setCurrentIndex(updatedFrames.length - 1);
+              }
 
-            return updatedFrames;
-          });
+              return updatedFrames;
+            });
+          }, 500);
         }
       }
     };
