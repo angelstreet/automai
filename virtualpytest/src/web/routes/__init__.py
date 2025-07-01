@@ -86,11 +86,8 @@ def _register_server_routes(app):
             # Register with proper URL prefix for server routes
             if module_name == 'server_actions_routes':
                 app.register_blueprint(blueprint, url_prefix='/server')
-            elif module_name == 'server_verifications_routes':
-                app.register_blueprint(blueprint, url_prefix='/server')
             elif module_name == 'server_execution_results_routes':
                 app.register_blueprint(blueprint, url_prefix='/server')
-
             else:
                 app.register_blueprint(blueprint)
             print(f"   ✅ {module_name} -> {blueprint_name}")
