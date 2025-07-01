@@ -1109,8 +1109,7 @@ class VideoVerificationController(VerificationControllerInterface):
             all_frozen = all(comp['is_frozen'] for comp in comparisons)
             frozen_count = sum(1 for comp in comparisons if comp['is_frozen'])
             
-            # Analyze for subtitle patterns across frames
-            subtitle_analysis = self._analyze_subtitles_across_frames([img['path'] for img in images])
+            # Note: Multi-frame subtitle analysis could be added here if needed
             
             overall_result = {
                 'success': True,
@@ -1120,7 +1119,6 @@ class VideoVerificationController(VerificationControllerInterface):
                 'frozen_comparisons': frozen_count,
                 'freeze_threshold': freeze_threshold,
                 'comparisons': comparisons,
-                'subtitle_analysis': subtitle_analysis,
                 'confidence': 0.9 if all_frozen else 0.1,
                 'analysis_type': 'freeze_detection',
                 'timestamp': datetime.now().isoformat()
@@ -1314,41 +1312,7 @@ class VideoVerificationController(VerificationControllerInterface):
                 'analysis_type': 'subtitle_detection'
             }
 
-    def _analyze_subtitles_across_frames(self, frame_paths: List[str]) -> Dict[str, Any]:
-        """Analyze subtitle detection across multiple frames"""
-        subtitle_results = []
-        
-        for frame_path in frame_paths:
-            if os.path.exists(frame_path):
-                # Quick subtitle analysis without full processing
-                try:
-                    img = cv2.imread(frame_path)
-                    if img is not None:
-                        height, width = img.shape[:2]
-                        subtitle_region = img[int(height * 0.8):, int(width * 0.2):int(width * 0.8)]
-                        gray_subtitle = cv2.cvtColor(subtitle_region, cv2.COLOR_BGR2GRAY)
-                        edges = cv2.Canny(gray_subtitle, 50, 150)
-                        subtitle_edges = np.sum(edges > 0)
-                        region_pixels = subtitle_region.shape[0] * subtitle_region.shape[1]
-                        adaptive_threshold = max(SAMPLING_PATTERNS["subtitle_edge_threshold"], region_pixels * 0.002)
-                        has_subtitles = bool(subtitle_edges > adaptive_threshold)
-                        subtitle_results.append(has_subtitles)
-                    else:
-                        subtitle_results.append(False)
-                except Exception:
-                    subtitle_results.append(False)
-            else:
-                subtitle_results.append(False)
-        
-        # Count subtitle detections
-        subtitle_count = sum(subtitle_results)
-        
-        return {
-            'current_frame': bool(subtitle_results[0]) if subtitle_results else False,
-            'all_frames': [bool(x) for x in subtitle_results],
-            'subtitle_count': int(subtitle_count),
-            'no_subtitles_detected': bool(subtitle_count == 0 and len(subtitle_results) > 0)
-        }
+
 
     def _extract_text_from_region(self, region_image) -> str:
         """Extract text from subtitle region using OCR"""

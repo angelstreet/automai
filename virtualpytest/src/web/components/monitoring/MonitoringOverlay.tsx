@@ -13,7 +13,6 @@ interface MonitoringAnalysis {
   };
   errors: boolean;
   text: string;
-  confidence: number;
 }
 
 interface SubtitleTrendData {
@@ -74,11 +73,6 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
           >
             {analysis?.blackscreen ? 'Yes' : 'No'}
           </Typography>
-          {analysis && analysis.confidence > 0 && (
-            <Typography variant="caption" sx={{ color: '#cccccc', ml: 1 }}>
-              ({Math.round(analysis.confidence * 100)}%)
-            </Typography>
-          )}
         </Box>
 
         {/* Freeze */}
@@ -95,11 +89,6 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
           >
             {analysis?.freeze ? 'Yes' : 'No'}
           </Typography>
-          {analysis && analysis.confidence > 0 && (
-            <Typography variant="caption" sx={{ color: '#cccccc', ml: 1 }}>
-              ({Math.round(analysis.confidence * 100)}%)
-            </Typography>
-          )}
         </Box>
 
         {/* Subtitles - only shown when explicitly requested */}

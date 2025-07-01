@@ -475,7 +475,7 @@ def main():
         # LIGHTENED ANALYSIS - Only run essential detection
         print("=== LIGHTENED ANALYSIS MODE ===")
         print("Running: blackscreen, freeze, errors")
-        print("Skipping: subtitles, text extraction (available on-demand)")
+        print("Note: Subtitles and text extraction available via backend API")
         
         # Run core analysis on thumbnail (or original if thumbnail not available)
         blackscreen = analyze_blackscreen(analysis_image)
@@ -491,10 +491,7 @@ def main():
         elif errors:
             print(f"Error detection: Red content detected WITH freeze - flagging as error")
         
-        # Calculate confidence based on active detections only
-        confidence = 0.9 if (blackscreen or frozen or errors) else 0.1
-        
-        # Create analysis result - simplified without subtitle data
+        # Create analysis result - simplified without subtitle/text data
         analysis_result = {
             'timestamp': datetime.now().isoformat(),
             'filename': os.path.basename(image_path),
@@ -502,10 +499,7 @@ def main():
             'analysis': {
                 'blackscreen': bool(blackscreen),
                 'freeze': bool(frozen),
-                'subtitles': False,  # Always false in lightened mode
-                'errors': bool(errors),
-                'text': '',  # Always empty in lightened mode
-                'confidence': float(confidence)
+                'errors': bool(errors)
             },
             'processing_info': {
                 'analyzed_at': datetime.now().isoformat(),
@@ -526,7 +520,6 @@ def main():
         
         print(f"Analysis complete: {json_filename}")
         print(f"Results: blackscreen={blackscreen}, freeze={frozen}, errors={errors}")
-        print("Note: Subtitles and text extraction available on-demand via backend")
         
     except Exception as e:
         print(f"Analysis failed: {e}", file=sys.stderr)
