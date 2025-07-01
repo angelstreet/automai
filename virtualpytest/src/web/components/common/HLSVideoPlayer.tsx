@@ -164,12 +164,23 @@ export function HLSVideoPlayer({
   const initializeStream = useCallback(async () => {
     const now = Date.now();
     if (now - lastInitTime.current < 1000) {
+      console.log(
+        '[@component:HLSVideoPlayer] Throttling initialization, too soon since last attempt',
+      );
       return;
     }
     lastInitTime.current = now;
 
     if (!streamUrl || !videoRef.current) {
       setStreamError('Stream URL or video element not available');
+      return;
+    }
+
+    // Skip if we're already initialized with the same URL and stream is loaded
+    if (currentStreamUrl === streamUrl && streamLoaded && !streamError) {
+      console.log(
+        '[@component:HLSVideoPlayer] Stream already loaded with same URL, skipping initialization',
+      );
       return;
     }
 
@@ -310,25 +321,14 @@ export function HLSVideoPlayer({
     }
   }, [useNativePlayer, streamUrl, isStreamActive, tryNativePlayback]);
 
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isStreamActive && streamUrl) {
-        setRetryCount(0);
-        setTimeout(() => initializeStream(), 1000);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isStreamActive, streamUrl, initializeStream]);
+  // Removed visibility change handler since URL never changes - no need to re-initialize
 
   useEffect(() => {
-    if (streamUrl && isStreamActive && videoRef.current) {
-      console.log('[@component:HLSVideoPlayer] Stream URL changed, initializing:', streamUrl);
+    // Only initialize once when we first get a URL and stream becomes active
+    if (streamUrl && isStreamActive && videoRef.current && !currentStreamUrl) {
+      console.log('[@component:HLSVideoPlayer] Initializing stream for the first time:', streamUrl);
       setUseNativePlayer(false);
-      // Only reset retry count if the stream URL actually changed, not on every render
-      if (currentStreamUrl !== streamUrl) {
-        setRetryCount(0);
-      }
+      setRetryCount(0);
       setStreamLoaded(false);
       setStreamError(null);
 
@@ -340,9 +340,12 @@ export function HLSVideoPlayer({
     }
 
     return () => {
-      cleanupStream();
+      // Only cleanup when component unmounts or stream becomes inactive
+      if (!isStreamActive) {
+        cleanupStream();
+      }
     };
-  }, [streamUrl, isStreamActive, currentStreamUrl, initializeStream, cleanupStream]);
+  }, [streamUrl, isStreamActive, currentStreamUrl]); // Only run when these values change
 
   useEffect(() => {
     const checkVideoReady = () => {
