@@ -52,7 +52,17 @@ interface UseMonitoringReturn {
   } | null;
 }
 
-export const useMonitoring = (shouldDetectImages: boolean): UseMonitoringReturn => {
+interface UseMonitoringProps {
+  shouldDetectImages: boolean;
+  host?: any; // Host object for API requests
+  device?: any; // Device object for API requests
+}
+
+export const useMonitoring = ({
+  shouldDetectImages,
+  host,
+  device,
+}: UseMonitoringProps): UseMonitoringReturn => {
   const [frames, setFrames] = useState<FrameRef[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 import { Host, Device } from '../../types/common/Host_Types';
+import { useModal } from '../../contexts/ModalContext';
 import { useHostManager } from '../useHostManager';
 
 // Global state to persist across React remounts in development mode
@@ -27,6 +28,9 @@ export const useRec = (): UseRecReturn => {
   const [avDevices, setAvDevices] = useState<Array<{ host: Host; device: Device }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Add modal context hook
+  const { isAnyModalOpen } = useModal();
 
   // Use ref to persist baseUrlPatterns across React remounts in dev mode
   const baseUrlPatternsRef = useRef<Map<string, string>>(new Map());
@@ -111,6 +115,17 @@ export const useRec = (): UseRecReturn => {
     (host: Host, device: Device): string | null => {
       const deviceKey = `${host.host_name}-${device.device_id}`;
 
+      // Log which component initiated this call (using stack trace)
+      const stack = new Error().stack;
+      const callerLine = stack?.split('\n')[2]?.trim() || 'unknown caller';
+      console.log(`[@hook:useRec] generateThumbnailUrl called for ${deviceKey} by: ${callerLine}`);
+
+      // Check if any modal is open using ModalContext
+      if (isAnyModalOpen) {
+        console.log(`[@hook:useRec] Thumbnail generation paused for ${deviceKey} (modal open)`);
+        return null;
+      }
+
       // Check global first, then ref, then state
       let basePattern =
         globalBaseUrlPatterns.get(deviceKey) ||
@@ -144,7 +159,7 @@ export const useRec = (): UseRecReturn => {
       console.log(`[@hook:useRec] generateThumbnailUrl for ${deviceKey}: ${thumbnailUrl}`);
       return thumbnailUrl;
     },
-    [baseUrlPatterns],
+    [baseUrlPatterns, isAnyModalOpen],
   );
 
   // Sync global and ref to state on mount (handles remount scenario)
