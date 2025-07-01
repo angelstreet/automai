@@ -147,24 +147,19 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               if (!isMounted) return; // Check mount status before starting interval
 
               screenshotInterval = setInterval(() => {
-                // Stop polling when any modal is open, timeline is active, or requested to pause
+                // Stop polling when any modal is open or timeline is active
                 if (
                   isMounted &&
                   host &&
                   device &&
                   host.status === 'online' &&
                   !isStreamModalOpen &&
-                  !isAnyModalOpen &&
-                  !pausePolling
+                  !isAnyModalOpen
                 ) {
                   handleTakeScreenshot();
                 } else if (isStreamModalOpen || isAnyModalOpen) {
                   console.log(
                     `[RecHostPreview] ${host.host_name}-${device?.device_id}: Polling paused (modal open)`,
-                  );
-                } else if (pausePolling) {
-                  console.log(
-                    `[RecHostPreview] ${host.host_name}-${device?.device_id}: Polling paused (timeline active)`,
                   );
                 }
               }, 5000); // 5 seconds for debugging
@@ -204,7 +199,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     handleTakeScreenshot,
     isStreamModalOpen,
     isAnyModalOpen,
-    pausePolling,
   ]);
 
   // Log modal state changes for debugging
