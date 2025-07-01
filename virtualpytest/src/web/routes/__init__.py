@@ -110,6 +110,7 @@ def _register_host_routes(app):
         ('host_verification_image_routes', 'verification_image_host_bp'),
         ('host_verification_text_routes', 'verification_text_host_bp'),
         ('host_verification_adb_routes', 'verification_adb_host_bp'),
+        ('host_verification_video', 'host_verification_video_bp'),
         ('host_control_routes', 'control_bp'),  # ✅ Unified naming
         ('host_remote_routes', 'remote_bp'),  # ✅ Unified naming
         ('host_av_routes', 'av_bp'),  # ✅ Unified naming
