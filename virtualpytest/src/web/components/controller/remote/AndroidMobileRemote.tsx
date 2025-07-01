@@ -599,10 +599,11 @@ export const AndroidMobileRemote = React.memo(
         {panelInfo &&
         typeof document !== 'undefined' &&
         captureMode === 'stream' &&
-        !streamMinimized
+        !streamMinimized &&
+        androidElements.length > 0
           ? createPortal(
               <AndroidMobileOverlay
-                elements={androidElements} // Can be empty array when no UI dumped yet
+                elements={androidElements}
                 deviceWidth={1080} // Use actual Android device resolution from ADB
                 deviceHeight={2340} // Use actual Android device resolution from ADB
                 isVisible={captureMode === 'stream' && !streamMinimized} // Only visible in stream mode, not during screenshot/video capture
