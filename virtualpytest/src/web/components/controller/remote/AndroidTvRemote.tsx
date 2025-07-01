@@ -71,11 +71,13 @@ export const AndroidTvRemote = React.memo(
       let containerHeight: number;
 
       if (streamContainerDimensions) {
-        // Modal context: use the modal's remote panel area
-        containerWidth = streamContainerDimensions.width * 0.25; // Remote panel is 25% of modal width
+        // Modal context: calculate actual remote panel width
+        // Stream container is 75% of modal, so total modal width = streamWidth / 0.75
+        const totalModalWidth = streamContainerDimensions.width / 0.75;
+        containerWidth = totalModalWidth * 0.25; // Remote panel is 25% of total modal width
         containerHeight = streamContainerDimensions.height - 120; // Reserve space for disconnect button
         console.log(
-          `[@component:AndroidTvRemote] Using modal container: ${containerWidth}x${containerHeight}`,
+          `[@component:AndroidTvRemote] Using modal container: ${containerWidth}x${containerHeight} (totalModal: ${totalModalWidth}, stream: ${streamContainerDimensions.width})`,
         );
       } else {
         // Floating panel context: use actual panel dimensions
