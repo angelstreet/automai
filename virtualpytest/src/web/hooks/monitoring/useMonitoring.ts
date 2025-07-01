@@ -128,18 +128,22 @@ export const useMonitoring = ({
           setTimeout(() => {
             setFrames((prev) => {
               const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
-              const updatedFrames = newFrames.slice(-50); // Keep last 50 frames
+              const updatedFrames = newFrames.slice(-50); // Always keep last 50 frames
 
-              // Auto-follow new images only when playing
-              if (isPlaying) {
+              // ONLY auto-follow when actively playing
+              if (isPlaying && !userSelectedFrame) {
                 setCurrentIndex(updatedFrames.length - 1);
-              } else if (userSelectedFrame) {
-                // When paused, check if current frame was deleted from buffer
+              }
+              // ONLY move user if their selected frame was deleted from buffer
+              else if (userSelectedFrame) {
                 const currentFrameStillExists = currentIndex < updatedFrames.length;
                 if (!currentFrameStillExists) {
-                  // Current frame was deleted, move to latest available frame
+                  // Frame was deleted, move to newest and resume playing
                   setCurrentIndex(updatedFrames.length - 1);
+                  setIsPlaying(true); // Resume playing since we had to move
+                  setUserSelectedFrame(false); // No longer user-selected
                 }
+                // Otherwise: DO NOTHING - stay on selected frame
               }
 
               return updatedFrames;
@@ -167,14 +171,9 @@ export const useMonitoring = ({
   // Auto-play functionality
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (isPlaying && frames.length > 1) {
+    if (isPlaying && frames.length > 1 && !userSelectedFrame) {
       interval = setInterval(() => {
         setCurrentIndex((prev) => {
-          // If user manually selected a frame, don't auto-advance
-          if (userSelectedFrame) {
-            return prev;
-          }
-
           const next = prev + 1;
           if (next >= frames.length) {
             // Stay on latest frame when we reach the end
