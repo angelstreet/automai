@@ -23,18 +23,12 @@ interface AndroidMobileLayoutConfig {
   autoDumpDelay: number;
 }
 
-export function useAndroidMobile(
-  selectedHost: Host | null,
-  deviceId: string | null,
-  isConnected?: boolean,
-) {
+export function useAndroidMobile(selectedHost: Host | null, deviceId: string | null) {
   console.log(
     '[@hook:useAndroidMobile] Hook called for device:',
     deviceId,
     'host:',
     selectedHost?.host_name,
-    'isConnected:',
-    isConnected,
   );
 
   // Simple validation - no complex memoization
@@ -66,8 +60,8 @@ export function useAndroidMobile(
     [],
   );
 
-  // State management - initialize based on isConnected parameter
-  const [isConnected_internal, setIsConnected] = useState(isConnected ?? false);
+  // State management - initialize with default connection state
+  const [isConnected_internal, setIsConnected] = useState(false);
   const [androidScreenshot, setAndroidScreenshot] = useState<string | null>(null);
   const [androidElements, setAndroidElements] = useState<AndroidElement[]>([]);
   const [androidApps, setAndroidApps] = useState<AndroidApp[]>([]);
@@ -77,29 +71,6 @@ export function useAndroidMobile(
   const [isDumpingUI, setIsDumpingUI] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isRefreshingApps, setIsRefreshingApps] = useState(false);
-
-  // Update connection state based on external isConnected parameter (like useAndroidTv)
-  useEffect(() => {
-    if (isConnected !== undefined) {
-      setIsConnected(isConnected);
-      console.log(
-        `[@hook:useAndroidMobile] Connection state updated via external control: ${isConnected}`,
-        'host:',
-        selectedHost?.host_name,
-        'deviceId:',
-        deviceId,
-      );
-
-      // Clear state when disconnected
-      if (!isConnected) {
-        setAndroidElements([]);
-        setAndroidApps([]);
-        setSelectedElement('');
-        setSelectedApp('');
-        setAndroidScreenshot(null);
-      }
-    }
-  }, [isConnected]); // Removed selectedHost?.host_name and deviceId to prevent infinite re-renders
 
   // Debug logging for state changes
   useEffect(() => {

@@ -22,7 +22,6 @@ import { AppiumOverlay } from './AppiumOverlay';
 interface AppiumRemoteProps {
   host: Host;
   deviceId: string;
-  isConnected?: boolean;
   onDisconnectComplete?: () => void;
   sx?: any;
   // Simplified panel state props
@@ -49,7 +48,6 @@ export const AppiumRemote = React.memo(
   function AppiumRemote({
     host,
     deviceId,
-    isConnected,
     onDisconnectComplete,
     sx = {},
     isCollapsed,
@@ -61,7 +59,7 @@ export const AppiumRemote = React.memo(
     captureMode = 'stream',
     streamContainerDimensions,
   }: AppiumRemoteProps) {
-    const hookResult = useAppiumRemote(host, deviceId, isConnected);
+    const hookResult = useAppiumRemote(host, deviceId);
 
     const {
       // State

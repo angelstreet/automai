@@ -110,6 +110,14 @@ export const AndroidTvRemote = React.memo(
       // Use the smaller scale to ensure the remote fits completely (like 'contain')
       const remoteScale = Math.min(scaleByWidth, scaleByHeight);
 
+      // Calculate actual rendered image dimensions after scaling
+      const renderedWidth = baseWidth * remoteScale;
+      const renderedHeight = baseHeight * remoteScale;
+
+      // Calculate offset to center the image (like CSS 'backgroundPosition: center')
+      const offsetX = (containerWidth - renderedWidth) / 2;
+      const offsetY = (containerHeight - renderedHeight) / 2;
+
       console.log(`[@component:AndroidTvRemote] Scale calculation:`, {
         context: streamContainerDimensions ? 'modal' : 'floating',
         isCollapsed,
@@ -118,12 +126,15 @@ export const AndroidTvRemote = React.memo(
         scaleByWidth,
         scaleByHeight,
         finalScale: remoteScale,
+        renderedSize: { width: renderedWidth, height: renderedHeight },
+        imageOffset: { x: offsetX, y: offsetY },
       });
 
-      return remoteScale;
+      return { scale: remoteScale, offsetX, offsetY };
     };
 
-    const remoteScale = calculateRemoteScale();
+    const remoteInfo = calculateRemoteScale();
+    const { scale: remoteScale, offsetX, offsetY } = remoteInfo;
 
     // Render remote interface with clickable buttons
     const renderRemoteInterface = () => {
@@ -210,8 +221,8 @@ export const AndroidTvRemote = React.memo(
                 key={buttonId}
                 sx={{
                   position: 'absolute',
-                  left: `${button.position.x * remoteScale}px`,
-                  top: `${button.position.y * remoteScale}px`,
+                  left: `${offsetX + button.position.x * remoteScale}px`,
+                  top: `${offsetY + button.position.y * remoteScale}px`,
                   width: `${button.size.width * layoutConfig.remote_info.button_scale_factor * remoteScale}px`,
                   height: `${button.size.height * layoutConfig.remote_info.button_scale_factor * remoteScale}px`,
                   borderRadius: button.shape === 'circle' ? '50%' : '4px',

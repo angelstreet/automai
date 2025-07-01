@@ -36,11 +36,7 @@ interface UseAppiumRemoteReturn {
   session: AppiumSession;
 }
 
-export const useAppiumRemote = (
-  host: Host,
-  deviceId?: string,
-  isConnected?: boolean,
-): UseAppiumRemoteReturn => {
+export const useAppiumRemote = (host: Host, deviceId?: string): UseAppiumRemoteReturn => {
   // State management
   const [appiumElements, setAppiumElements] = useState<AppiumElement[]>([]);
   const [appiumApps, setAppiumApps] = useState<AppiumApp[]>([]);
@@ -52,7 +48,7 @@ export const useAppiumRemote = (
   const [isRefreshingApps, setIsRefreshingApps] = useState(false);
   const [detectedPlatform, setDetectedPlatform] = useState<string | null>(null);
 
-  // Session state - now reflects the passed connection status
+  // Session state - internal connection management
   const [session, setSession] = useState<AppiumSession>({
     connected: false,
     connectionInfo: '',
@@ -66,46 +62,7 @@ export const useAppiumRemote = (
     host?.host_name,
     'deviceId:',
     deviceId,
-    'isConnected:',
-    isConnected,
   );
-
-  // Update session based on external connection status
-  useEffect(() => {
-    if (isConnected) {
-      setSession({
-        connected: true,
-        connectionInfo: 'Connected via external control',
-        deviceInfo: {
-          platform: 'iOS', // Default, can be detected later
-          platformVersion: '',
-          deviceName: host.host_name,
-          udid: '',
-          automationName: '',
-        },
-        appiumConnected: true,
-        sessionId: 'external-session',
-      });
-
-      // Auto-load apps when connected
-      handleGetApps();
-    } else {
-      setSession({
-        connected: false,
-        connectionInfo: '',
-        deviceInfo: undefined,
-        appiumConnected: false,
-        sessionId: undefined,
-      });
-
-      // Clear state when disconnected
-      setAppiumElements([]);
-      setAppiumApps([]);
-      setSelectedElement('');
-      setSelectedApp('');
-      setDetectedPlatform(null);
-    }
-  }, [isConnected, host]);
 
   const handleDisconnect = useCallback(async () => {
     console.log(

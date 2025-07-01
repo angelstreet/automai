@@ -170,7 +170,6 @@ export const RemotePanel = React.memo(
             <AndroidMobileRemote
               host={host}
               deviceId={deviceId}
-              isConnected={isConnected}
               onDisconnectComplete={onReleaseControl}
               isCollapsed={isCollapsed}
               panelWidth={currentWidth}
@@ -250,7 +249,6 @@ export const RemotePanel = React.memo(
               streamCollapsed={streamCollapsed}
               streamMinimized={streamMinimized}
               captureMode={captureMode}
-              isConnected={isConnected}
               sx={{
                 height: '100%',
                 '& .MuiButton-root': {
@@ -289,7 +287,6 @@ export const RemotePanel = React.memo(
       streamMinimized,
       captureMode,
       stableStreamContainerDimensions,
-      isConnected,
     ]);
 
     return (
