@@ -1471,14 +1471,29 @@ class VideoVerificationController(VerificationControllerInterface):
                 with open(temp_path, 'rb') as f:
                     image_data = base64.b64encode(f.read()).decode()
                 
-                # Simple prompt for subtitle analysis
-                prompt = """Analyze this image for subtitles. Look at the bottom portion where subtitles typically appear. Respond ONLY in valid JSON format:
+                # Enhanced prompt for subtitle analysis with stronger JSON enforcement
+                prompt = """You are a subtitle detection system. Analyze this image for subtitles in the bottom portion.
+
+CRITICAL: You MUST respond with ONLY valid JSON. No other text before or after.
+
+Required JSON format:
 {
-  "subtitles_detected": true/false,
-  "extracted_text": "exact text here or empty string",
-  "detected_language": "English/French/German/Spanish/Italian/Portuguese/Dutch or unknown",
-  "confidence": 0.85
-}"""
+  "subtitles_detected": true,
+  "extracted_text": "exact subtitle text here",
+  "detected_language": "German",
+  "confidence": 0.95
+}
+
+If no subtitles found:
+{
+  "subtitles_detected": false,
+  "extracted_text": "",
+  "detected_language": "unknown",
+  "confidence": 0.1
+}
+
+Languages: English, French, German, Spanish, Italian, Portuguese, Dutch, or unknown
+JSON ONLY - NO OTHER TEXT"""
                 
                 # Call OpenRouter API
                 response = requests.post(
@@ -1490,7 +1505,7 @@ class VideoVerificationController(VerificationControllerInterface):
                         'X-Title': 'AutomAI-VirtualPyTest'
                     },
                     json={
-                        'model': 'meta-llama/llama-3.2-11b-vision-instruct',
+                        'model': 'qwen/qwen-2-vl-7b-instruct',
                         'messages': [
                             {
                                 'role': 'user',
@@ -1500,8 +1515,8 @@ class VideoVerificationController(VerificationControllerInterface):
                                 ]
                             }
                         ],
-                        'max_tokens': 200,
-                        'temperature': 0.1
+                        'max_tokens': 300,
+                        'temperature': 0.0
                     },
                     timeout=30
                 )
@@ -1510,9 +1525,10 @@ class VideoVerificationController(VerificationControllerInterface):
                     result = response.json()
                     content = result['choices'][0]['message']['content']
                     
-                    # Parse JSON response
+                    # Parse JSON response with fallback logic
                     import json
                     try:
+                        # Try to parse as JSON first
                         ai_result = json.loads(content)
                         
                         subtitles_detected = ai_result.get('subtitles_detected', False)
@@ -1531,7 +1547,16 @@ class VideoVerificationController(VerificationControllerInterface):
                     except json.JSONDecodeError as e:
                         print(f"VideoVerify[{self.device_name}]: Failed to parse AI JSON response: {e}")
                         print(f"VideoVerify[{self.device_name}]: Raw AI response: {content[:200]}...")
-                        return '', 'unknown', 0.0
+                        
+                        # Fallback: try to extract information from natural language response
+                        extracted_text, detected_language, confidence = self._parse_natural_language_response(content)
+                        
+                        if extracted_text:
+                            print(f"VideoVerify[{self.device_name}]: Fallback extraction successful: '{extracted_text}' -> Language: {detected_language}")
+                            return extracted_text, detected_language, confidence
+                        else:
+                            print(f"VideoVerify[{self.device_name}]: Fallback extraction failed")
+                            return '', 'unknown', 0.0
                 else:
                     print(f"VideoVerify[{self.device_name}]: OpenRouter API error: {response.status_code} - {response.text}")
                     return '', 'unknown', 0.0
@@ -1543,6 +1568,113 @@ class VideoVerificationController(VerificationControllerInterface):
                     
         except Exception as e:
             print(f"VideoVerify[{self.device_name}]: AI subtitle analysis error: {e}")
+            return '', 'unknown', 0.0
+
+    def _parse_natural_language_response(self, content: str) -> Tuple[str, str, float]:
+        """
+        Parse natural language AI response to extract subtitle information.
+        
+        Args:
+            content: Raw AI response content
+            
+        Returns:
+            Tuple of (extracted_text, detected_language, confidence)
+        """
+        try:
+            content_lower = content.lower()
+            
+            # Check if subtitles were mentioned as present
+            subtitle_indicators = ['subtitle', 'text reads', 'says', 'displays', 'shows']
+            has_subtitle_mention = any(indicator in content_lower for indicator in subtitle_indicators)
+            
+            if not has_subtitle_mention:
+                return '', 'unknown', 0.0
+            
+            # Extract text between quotes
+            import re
+            
+            # Look for text in quotes (various quote types)
+            quote_patterns = [
+                r'"([^"]+)"',           # Double quotes
+                r"'([^']+)'",           # Single quotes  
+                r'"([^"]+)"',           # Curly quotes
+                r'„([^"]+)"',           # German quotes
+                r'«([^»]+)»',           # French quotes
+            ]
+            
+            extracted_text = ''
+            for pattern in quote_patterns:
+                matches = re.findall(pattern, content)
+                if matches:
+                    # Take the longest match (likely the subtitle text)
+                    extracted_text = max(matches, key=len).strip()
+                    break
+            
+            # If no quotes found, try to extract after "reads:" or "says:"
+            if not extracted_text:
+                read_patterns = [
+                    r'text reads:?\s*(.+?)(?:\.|$)',
+                    r'says:?\s*(.+?)(?:\.|$)', 
+                    r'displays:?\s*(.+?)(?:\.|$)',
+                    r'shows:?\s*(.+?)(?:\.|$)'
+                ]
+                
+                for pattern in read_patterns:
+                    matches = re.findall(pattern, content, re.IGNORECASE)
+                    if matches:
+                        extracted_text = matches[0].strip()
+                        # Remove quotes if they exist
+                        extracted_text = re.sub(r'^["\'"„«]|["\'"„»]$', '', extracted_text)
+                        break
+            
+            # Clean up the extracted text
+            if extracted_text:
+                # Remove common OCR artifacts and clean the text
+                extracted_text = re.sub(r'\s+', ' ', extracted_text).strip()
+                
+                # Validate the text (should be at least 3 characters)
+                if len(extracted_text) < 3:
+                    return '', 'unknown', 0.0
+            
+            # Detect language from the response content
+            detected_language = 'unknown'
+            language_mentions = {
+                'german': 'German',
+                'deutsch': 'German', 
+                'english': 'English',
+                'french': 'French',
+                'français': 'French',
+                'spanish': 'Spanish',
+                'español': 'Spanish',
+                'italian': 'Italian',
+                'italiano': 'Italian',
+                'portuguese': 'Portuguese',
+                'português': 'Portuguese',
+                'dutch': 'Dutch',
+                'nederlands': 'Dutch'
+            }
+            
+            for lang_key, lang_name in language_mentions.items():
+                if lang_key in content_lower:
+                    detected_language = lang_name
+                    break
+            
+            # If we found text, try to detect language from the text itself
+            if extracted_text and detected_language == 'unknown':
+                detected_language = self._detect_language(extracted_text)
+            
+            # Set confidence based on what we found
+            if extracted_text and detected_language != 'unknown':
+                confidence = 0.8  # High confidence when we have both text and language
+            elif extracted_text:
+                confidence = 0.6  # Medium confidence when we have text but no language
+            else:
+                confidence = 0.1  # Low confidence
+            
+            return extracted_text, detected_language, confidence
+            
+        except Exception as e:
+            print(f"VideoVerify[{self.device_name}]: Natural language parsing error: {e}")
             return '', 'unknown', 0.0
 
     def detect_subtitles_ai(self, image_paths: List[str] = None, extract_text: bool = True) -> Dict[str, Any]:

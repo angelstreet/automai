@@ -52,6 +52,7 @@ interface UseMonitoringReturn {
   detectSubtitles: () => Promise<void>;
   detectSubtitlesAI: () => Promise<void>;
   isDetectingSubtitles: boolean;
+  isDetectingSubtitlesAI: boolean;
   hasSubtitleDetectionResults: boolean; // Whether current frame has subtitle detection results
 
   // Subtitle trend analysis
@@ -87,6 +88,7 @@ export const useMonitoring = ({
   );
   const [isHistoricalFrameLoaded, setIsHistoricalFrameLoaded] = useState(false);
   const [isDetectingSubtitles, setIsDetectingSubtitles] = useState(false);
+  const [isDetectingSubtitlesAI, setIsDetectingSubtitlesAI] = useState(false);
 
   // Generate monitoring URL (same as useRec pattern)
   const generateMonitoringUrl = useCallback((): string => {
@@ -129,7 +131,7 @@ export const useMonitoring = ({
           setTimeout(() => {
             setFrames((prev) => {
               const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
-              const updatedFrames = newFrames.slice(-50); // Always keep last 50 frames
+              const updatedFrames = newFrames.slice(-100); // Always keep last 100 frames
 
               // ONLY auto-follow when actively playing
               if (isPlaying && !userSelectedFrame) {
@@ -512,7 +514,7 @@ export const useMonitoring = ({
 
   // AI Subtitle detection function
   const detectSubtitlesAI = useCallback(async () => {
-    if (frames.length === 0 || currentIndex >= frames.length || isDetectingSubtitles) {
+    if (frames.length === 0 || currentIndex >= frames.length || isDetectingSubtitlesAI) {
       return;
     }
 
@@ -525,7 +527,7 @@ export const useMonitoring = ({
     setIsPlaying(false);
     setUserSelectedFrame(true);
 
-    setIsDetectingSubtitles(true);
+    setIsDetectingSubtitlesAI(true);
 
     try {
       console.log('[useMonitoring] Detecting AI subtitles for frame:', currentFrame.imageUrl);
@@ -595,9 +597,16 @@ export const useMonitoring = ({
     } catch (error) {
       console.error('[useMonitoring] AI Subtitle detection error:', error);
     } finally {
-      setIsDetectingSubtitles(false);
+      setIsDetectingSubtitlesAI(false);
     }
-  }, [frames, currentIndex, selectedFrameAnalysis, isDetectingSubtitles, host, device?.device_id]);
+  }, [
+    frames,
+    currentIndex,
+    selectedFrameAnalysis,
+    isDetectingSubtitlesAI,
+    host,
+    device?.device_id,
+  ]);
 
   return {
     // Frame management
@@ -620,6 +629,7 @@ export const useMonitoring = ({
     detectSubtitles,
     detectSubtitlesAI,
     isDetectingSubtitles,
+    isDetectingSubtitlesAI,
     hasSubtitleDetectionResults,
 
     // Subtitle trend analysis

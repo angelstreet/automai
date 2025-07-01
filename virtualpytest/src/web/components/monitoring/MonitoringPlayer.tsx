@@ -52,6 +52,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     detectSubtitles,
     detectSubtitlesAI,
     isDetectingSubtitles,
+    isDetectingSubtitlesAI,
     hasSubtitleDetectionResults,
   } = useMonitoring({
     host: host,
@@ -287,48 +288,11 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         <MonitoringOverlay
           overrideAnalysis={frames.length > 0 ? selectedFrameAnalysis || undefined : undefined}
           errorTrendData={errorTrendData}
-          showSubtitles={isDetectingSubtitles || hasSubtitleDetectionResults}
+          showSubtitles={
+            isDetectingSubtitles || isDetectingSubtitlesAI || hasSubtitleDetectionResults
+          }
         />
       </Box>
-
-      {/* Subtitle text display - positioned above timeline controls */}
-      {selectedFrameAnalysis?.subtitles && selectedFrameAnalysis?.text && (
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: frames.length > 0 ? '80px' : '20px', // Above timeline if controls are visible
-            left: '20px',
-            right: '20px',
-            zIndex: 1000015, // Above timeline controls
-            pointerEvents: 'none',
-          }}
-        >
-          <Box
-            sx={{
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              backdropFilter: 'blur(4px)',
-              borderRadius: '8px',
-              padding: '12px 16px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#ffffff',
-                fontSize: '0.9rem',
-                lineHeight: 1.4,
-                textAlign: 'center',
-                textShadow: '1px 1px 2px rgba(0, 0, 0, 0.8)',
-                fontWeight: 500,
-              }}
-            >
-              {selectedFrameAnalysis.text}
-            </Typography>
-          </Box>
-        </Box>
-      )}
 
       {/* Timeline controls - only when we have frames */}
       {frames.length > 0 && (
@@ -365,7 +329,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             <IconButton
               size="medium"
               onClick={detectSubtitles}
-              disabled={isDetectingSubtitles}
+              disabled={isDetectingSubtitles || isDetectingSubtitlesAI}
               sx={{
                 color: selectedFrameAnalysis?.subtitles ? '#4caf50' : '#ffffff',
                 backgroundColor: 'rgba(255,255,255,0.1)',
@@ -396,7 +360,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             <IconButton
               size="medium"
               onClick={detectSubtitlesAI}
-              disabled={isDetectingSubtitles}
+              disabled={isDetectingSubtitles || isDetectingSubtitlesAI}
               sx={{
                 color: selectedFrameAnalysis?.subtitles ? '#ff9800' : '#ffffff',
                 backgroundColor: 'rgba(255,255,255,0.1)',
@@ -412,12 +376,12 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
                 },
               }}
               title={
-                isDetectingSubtitles
+                isDetectingSubtitlesAI
                   ? 'Detecting AI subtitles...'
                   : 'Detect subtitles using AI in current frame'
               }
             >
-              {isDetectingSubtitles ? (
+              {isDetectingSubtitlesAI ? (
                 <CircularProgress size={20} sx={{ color: '#ffffff' }} />
               ) : (
                 <Box

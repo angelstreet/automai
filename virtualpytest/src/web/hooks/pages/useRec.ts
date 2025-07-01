@@ -15,6 +15,8 @@ interface UseRecReturn {
   baseUrlPatterns: Map<string, string>; // host_name-device_id -> base URL pattern
   initializeBaseUrl: (host: Host, device: Device) => Promise<boolean>; // One-time base URL setup
   generateThumbnailUrl: (host: Host, device: Device) => string | null; // Generate URL with current timestamp (blocked when modal open)
+  restartStreams: () => Promise<void>; // Restart streams for all AV devices
+  isRestarting: boolean; // Loading state for restart operation
 }
 
 /**
@@ -220,6 +222,21 @@ export const useRec = (): UseRecReturn => {
     };
   }, [refreshHosts]);
 
+  // Restart streams for all AV devices
+  const restartStreams = useCallback(async (): Promise<void> => {
+    setIsRestarting(true);
+    setError(null);
+
+    try {
+      // Implementation of restartStreams function
+    } catch (error) {
+      console.error('[@hook:useRec] Error restarting streams:', error);
+      setError(error instanceof Error ? error.message : 'Failed to restart streams');
+    } finally {
+      setIsRestarting(false);
+    }
+  }, []);
+
   return {
     avDevices,
     isLoading,
@@ -228,5 +245,7 @@ export const useRec = (): UseRecReturn => {
     baseUrlPatterns,
     initializeBaseUrl,
     generateThumbnailUrl,
+    restartStreams,
+    isRestarting,
   };
 };
