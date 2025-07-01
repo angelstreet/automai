@@ -1338,7 +1338,7 @@ class VideoVerificationController(VerificationControllerInterface):
                 return ''
             
             # Check for garbled text
-            valid_chars = sum(1 for c in text if c.isprintable() and not c.iscntrl())
+            valid_chars = sum(1 for c in text if c.isprintable())
             if len(text) > 0 and valid_chars / len(text) < 0.7:
                 return ''
             
