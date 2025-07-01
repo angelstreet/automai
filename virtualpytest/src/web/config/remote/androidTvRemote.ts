@@ -195,7 +195,7 @@ export const androidTvRemoteConfig = {
     power: {
       key: 'POWER',
       label: 'PWR',
-      position: { x: 55, y: 35 },
+      position: { x: 110, y: 70 },
       size: { width: 14, height: 14 },
       shape: 'circle' as const,
       comment: 'Power button',
@@ -203,7 +203,7 @@ export const androidTvRemoteConfig = {
     nav_up: {
       key: 'UP',
       label: '▲',
-      position: { x: 105, y: 128 },
+      position: { x: 210, y: 256 },
       size: { width: 18, height: 14 },
       shape: 'rectangle' as const,
       comment: 'Navigation up',
@@ -211,7 +211,7 @@ export const androidTvRemoteConfig = {
     nav_left: {
       key: 'LEFT',
       label: '◄',
-      position: { x: 50, y: 180 },
+      position: { x: 100, y: 360 },
       size: { width: 14, height: 18 },
       shape: 'rectangle' as const,
       comment: 'Navigation left',
@@ -219,7 +219,7 @@ export const androidTvRemoteConfig = {
     nav_center: {
       key: 'SELECT',
       label: 'OK',
-      position: { x: 80, y: 155 },
+      position: { x: 160, y: 310 },
       size: { width: 45, height: 45 },
       shape: 'circle' as const,
       comment: 'Navigation center/select',
@@ -227,7 +227,7 @@ export const androidTvRemoteConfig = {
     nav_right: {
       key: 'RIGHT',
       label: '►',
-      position: { x: 170, y: 180 },
+      position: { x: 340, y: 360 },
       size: { width: 14, height: 18 },
       shape: 'rectangle' as const,
       comment: 'Navigation right',
@@ -235,7 +235,7 @@ export const androidTvRemoteConfig = {
     nav_down: {
       key: 'DOWN',
       label: '▼',
-      position: { x: 105, y: 245 },
+      position: { x: 210, y: 490 },
       size: { width: 18, height: 14 },
       shape: 'rectangle' as const,
       comment: 'Navigation down',
@@ -243,7 +243,7 @@ export const androidTvRemoteConfig = {
     back: {
       key: 'BACK',
       label: '←',
-      position: { x: 50, y: 287 },
+      position: { x: 99, y: 574 },
       size: { width: 20, height: 20 },
       shape: 'circle' as const,
       comment: 'Back button',
@@ -251,7 +251,7 @@ export const androidTvRemoteConfig = {
     home: {
       key: 'HOME',
       label: '🏠',
-      position: { x: 105, y: 287 },
+      position: { x: 210, y: 574 },
       size: { width: 20, height: 20 },
       shape: 'circle' as const,
       comment: 'Home button',
@@ -259,7 +259,7 @@ export const androidTvRemoteConfig = {
     menu: {
       key: 'MENU',
       label: '☰',
-      position: { x: 159, y: 287 },
+      position: { x: 318, y: 574 },
       size: { width: 20, height: 20 },
       shape: 'circle' as const,
       comment: 'Menu button',
@@ -267,7 +267,7 @@ export const androidTvRemoteConfig = {
     rewind: {
       key: 'REWIND',
       label: '<<',
-      position: { x: 50, y: 341 },
+      position: { x: 99, y: 682 },
       size: { width: 20, height: 20 },
       shape: 'circle' as const,
       comment: 'Rewind button',
@@ -275,7 +275,7 @@ export const androidTvRemoteConfig = {
     play_pause: {
       key: 'PLAY_PAUSE',
       label: '⏯',
-      position: { x: 105, y: 341 },
+      position: { x: 210, y: 682 },
       size: { width: 20, height: 20 },
       shape: 'circle' as const,
       comment: 'Play/pause button',
@@ -283,7 +283,7 @@ export const androidTvRemoteConfig = {
     fast_forward: {
       key: 'FAST_FORWARD',
       label: '>>',
-      position: { x: 159, y: 341 },
+      position: { x: 318, y: 682 },
       size: { width: 20, height: 20 },
       shape: 'circle' as const,
       comment: 'Fast forward button',
@@ -291,7 +291,7 @@ export const androidTvRemoteConfig = {
     volume_up: {
       key: 'VOLUME_UP',
       label: 'V+',
-      position: { x: 105, y: 395 },
+      position: { x: 210, y: 790 },
       size: { width: 20, height: 20 },
       shape: 'circle' as const,
       comment: 'Volume up button',
@@ -299,7 +299,7 @@ export const androidTvRemoteConfig = {
     volume_down: {
       key: 'VOLUME_DOWN',
       label: 'V-',
-      position: { x: 105, y: 449 },
+      position: { x: 210, y: 898 },
       size: { width: 20, height: 20 },
       shape: 'circle' as const,
       comment: 'Volume down button',
@@ -307,7 +307,7 @@ export const androidTvRemoteConfig = {
     mute: {
       key: 'VOLUME_MUTE',
       label: 'MUTE',
-      position: { x: 105, y: 505 },
+      position: { x: 210, y: 1010 },
       size: { width: 20, height: 20 },
       shape: 'circle' as const,
       comment: 'Mute button',
