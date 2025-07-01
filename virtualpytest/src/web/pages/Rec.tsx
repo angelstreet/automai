@@ -1,4 +1,4 @@
-import { Computer as ComputerIcon } from '@mui/icons-material';
+import { Computer as ComputerIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -11,6 +11,7 @@ import {
   MenuItem,
   Chip,
   Stack,
+  Button,
 } from '@mui/material';
 import React, { useEffect, useState, useMemo } from 'react';
 
@@ -21,7 +22,15 @@ import { useRec } from '../hooks/pages/useRec';
 // REC page - directly uses the global HostManagerProvider from App.tsx
 // No local HostManagerProvider needed since we only need AV capability filtering
 const RecContent: React.FC = () => {
-  const { avDevices, isLoading, error, initializeBaseUrl, generateThumbnailUrl } = useRec();
+  const {
+    avDevices,
+    isLoading,
+    error,
+    initializeBaseUrl,
+    generateThumbnailUrl,
+    restartStreams,
+    isRestarting,
+  } = useRec();
 
   // Filter states
   const [hostFilter, setHostFilter] = useState<string>('');
@@ -98,8 +107,20 @@ const RecContent: React.FC = () => {
           </Typography>
         </Box>
 
-        {/* Right side - Compact filters */}
+        {/* Right side - Restart button and compact filters */}
         <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+          {/* Restart Streams Button */}
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={isRestarting ? <CircularProgress size={16} /> : <RefreshIcon />}
+            onClick={restartStreams}
+            disabled={isRestarting || avDevices.length === 0}
+            sx={{ height: 32, minWidth: 120 }}
+          >
+            {isRestarting ? 'Restarting...' : 'Restart Streams'}
+          </Button>
+
           {/* Host Filter */}
           <FormControl size="small" sx={{ minWidth: 140 }}>
             <InputLabel>Host</InputLabel>

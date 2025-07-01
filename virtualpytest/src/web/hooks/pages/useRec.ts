@@ -30,6 +30,7 @@ export const useRec = (): UseRecReturn => {
   const [avDevices, setAvDevices] = useState<Array<{ host: Host; device: Device }>>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRestarting, setIsRestarting] = useState(false);
 
   // Add modal context hook
   const { isAnyModalOpen } = useModal();
@@ -224,18 +225,64 @@ export const useRec = (): UseRecReturn => {
 
   // Restart streams for all AV devices
   const restartStreams = useCallback(async (): Promise<void> => {
+    if (isRestarting) return; // Prevent multiple concurrent restarts
+
     setIsRestarting(true);
     setError(null);
 
     try {
-      // Implementation of restartStreams function
+      console.log(`[@hook:useRec] Starting stream restart for ${avDevices.length} devices`);
+
+      // Restart streams sequentially for each AV device
+      for (const { host, device } of avDevices) {
+        try {
+          console.log(`[@hook:useRec] Restarting stream for ${host.host_name}-${device.device_id}`);
+
+          const response = await fetch('/server/av/restartStream', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              host: host,
+              device_id: device.device_id || 'device1',
+            }),
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+              console.log(
+                `[@hook:useRec] Successfully restarted stream for ${host.host_name}-${device.device_id}`,
+              );
+            } else {
+              console.error(
+                `[@hook:useRec] Failed to restart stream for ${host.host_name}-${device.device_id}:`,
+                result.error,
+              );
+            }
+          } else {
+            console.error(
+              `[@hook:useRec] Restart request failed for ${host.host_name}-${device.device_id}:`,
+              response.status,
+            );
+          }
+        } catch (deviceError) {
+          console.error(
+            `[@hook:useRec] Error restarting stream for ${host.host_name}-${device.device_id}:`,
+            deviceError,
+          );
+        }
+      }
+
+      console.log(`[@hook:useRec] Completed stream restart for all devices`);
     } catch (error) {
       console.error('[@hook:useRec] Error restarting streams:', error);
       setError(error instanceof Error ? error.message : 'Failed to restart streams');
     } finally {
       setIsRestarting(false);
     }
-  }, []);
+  }, [avDevices, isRestarting]);
 
   return {
     avDevices,
