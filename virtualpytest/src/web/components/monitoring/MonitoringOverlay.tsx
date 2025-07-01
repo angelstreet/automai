@@ -99,36 +99,6 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
             </Typography>
           )}
         </Box>
-
-        {/* Subtitles */}
-        <Box sx={{ mb: 0.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Typography variant="body2" sx={{ color: '#ffffff', mr: 1 }}>
-              Subtitles:
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: analysis?.subtitles ? '#00ff00' : '#ffffff',
-                fontWeight: analysis?.subtitles ? 'bold' : 'normal',
-                mr: 1,
-              }}
-            >
-              {analysis?.subtitles ? 'Yes' : 'No'}
-            </Typography>
-            {subtitleTrendData && (
-              <Typography variant="body2" sx={{ color: '#cccccc' }}>
-                ({subtitleTrendData.framesAnalyzed - subtitleTrendData.noSubtitlesStreak}/
-                {subtitleTrendData.framesAnalyzed} frames)
-              </Typography>
-            )}
-          </Box>
-          {analysis?.subtitles && analysis?.text && (
-            <Typography variant="caption" sx={{ color: '#cccccc', ml: 2 }}>
-              Text detected ({analysis.text.length} chars)
-            </Typography>
-          )}
-        </Box>
       </Box>
 
       {/* Error indicator - top right, but away from online status */}

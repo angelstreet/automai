@@ -963,16 +963,16 @@ class VideoVerificationController(VerificationControllerInterface):
                     dark_percentage = (very_dark_pixels / total_pixels) * 100
                     
                     # If more than 95% of pixels are very dark, it's a blackscreen
-                    is_blackscreen = dark_percentage > 95
+                    is_blackscreen = bool(dark_percentage > 95)
                     
                     result = {
                         'image_path': os.path.basename(image_path),
                         'success': True,
                         'is_blackscreen': is_blackscreen,
-                        'dark_percentage': round(dark_percentage, 2),
+                        'dark_percentage': round(float(dark_percentage), 2),
                         'threshold': threshold,
-                        'very_dark_pixels': very_dark_pixels,
-                        'total_pixels': total_pixels,
+                        'very_dark_pixels': int(very_dark_pixels),
+                        'total_pixels': int(total_pixels),
                         'image_size': f"{img.shape[1]}x{img.shape[0]}",
                         'confidence': 0.9 if is_blackscreen else 0.1
                     }
@@ -1088,8 +1088,8 @@ class VideoVerificationController(VerificationControllerInterface):
                 comparison = {
                     'frame1': img1['filename'],
                     'frame2': img2['filename'],
-                    'mean_difference': round(mean_diff, 2),
-                    'is_frozen': mean_diff < freeze_threshold,
+                    'mean_difference': round(float(mean_diff), 2),
+                    'is_frozen': bool(mean_diff < freeze_threshold),
                     'threshold': freeze_threshold
                 }
                 
@@ -1194,7 +1194,7 @@ class VideoVerificationController(VerificationControllerInterface):
                     # Dynamic threshold based on region size
                     region_pixels = subtitle_region.shape[0] * subtitle_region.shape[1]
                     adaptive_threshold = max(SAMPLING_PATTERNS["subtitle_edge_threshold"], region_pixels * 0.002)
-                    has_subtitles = subtitle_edges > adaptive_threshold
+                    has_subtitles = bool(subtitle_edges > adaptive_threshold)
                     
                     # Error detection - look for prominent red content
                     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -1215,10 +1215,10 @@ class VideoVerificationController(VerificationControllerInterface):
                     
                     red_pixels = np.sum(red_mask > 0)
                     total_sampled_pixels = sampled_hsv.shape[0] * sampled_hsv.shape[1]
-                    red_percentage = (red_pixels / total_sampled_pixels) * 100
+                    red_percentage = float((red_pixels / total_sampled_pixels) * 100)
                     
                     # Higher threshold for error detection
-                    has_errors = red_percentage > 8.0
+                    has_errors = bool(red_percentage > 8.0)
                     
                     # Extract text if requested and subtitles detected
                     extracted_text = ""
@@ -1230,8 +1230,8 @@ class VideoVerificationController(VerificationControllerInterface):
                         'success': True,
                         'has_subtitles': has_subtitles,
                         'has_errors': has_errors,
-                        'subtitle_edges': subtitle_edges,
-                        'subtitle_threshold': adaptive_threshold,
+                        'subtitle_edges': int(subtitle_edges),
+                        'subtitle_threshold': float(adaptive_threshold),
                         'red_percentage': round(red_percentage, 2),
                         'error_threshold': 8.0,
                         'extracted_text': extracted_text,
@@ -1299,7 +1299,7 @@ class VideoVerificationController(VerificationControllerInterface):
                         subtitle_edges = np.sum(edges > 0)
                         region_pixels = subtitle_region.shape[0] * subtitle_region.shape[1]
                         adaptive_threshold = max(SAMPLING_PATTERNS["subtitle_edge_threshold"], region_pixels * 0.002)
-                        has_subtitles = subtitle_edges > adaptive_threshold
+                        has_subtitles = bool(subtitle_edges > adaptive_threshold)
                         subtitle_results.append(has_subtitles)
                     else:
                         subtitle_results.append(False)
@@ -1312,10 +1312,10 @@ class VideoVerificationController(VerificationControllerInterface):
         subtitle_count = sum(subtitle_results)
         
         return {
-            'current_frame': subtitle_results[0] if subtitle_results else False,
-            'all_frames': subtitle_results,
-            'subtitle_count': subtitle_count,
-            'no_subtitles_detected': subtitle_count == 0 and len(subtitle_results) > 0
+            'current_frame': bool(subtitle_results[0]) if subtitle_results else False,
+            'all_frames': [bool(x) for x in subtitle_results],
+            'subtitle_count': int(subtitle_count),
+            'no_subtitles_detected': bool(subtitle_count == 0 and len(subtitle_results) > 0)
         }
 
     def _extract_text_from_region(self, region_image) -> str:
