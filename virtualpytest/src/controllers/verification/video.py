@@ -334,13 +334,6 @@ class VideoVerificationController(VerificationControllerInterface):
             result_text = "detected" if motion_detected else "not detected"
             print(f"VideoVerify[{self.device_name}]: Motion {result_text}")
             
-            self._log_verification("motion_detection", f"threshold_{threshold}", motion_detected, {
-                "threshold": threshold,
-                "duration": duration,
-                "frame1": screenshot1,
-                "frame2": screenshot2
-            })
-            
             return motion_detected
             
         except Exception as e:
@@ -478,11 +471,6 @@ class VideoVerificationController(VerificationControllerInterface):
         result_text = "found" if color_found else "not found"
         print(f"VideoVerify[{self.device_name}]: Color '{color}' {result_text}")
         
-        self._log_verification("color_present", color, color_found, {
-            "tolerance": tolerance,
-            "analysis": color_analysis
-        })
-        
         return color_found
         
     def verify_screen_state(self, expected_state: str, timeout: float = 5.0) -> bool:
@@ -528,21 +516,11 @@ class VideoVerificationController(VerificationControllerInterface):
                 elapsed = time.time() - start_time
                 print(f"VideoVerify[{self.device_name}]: Screen state '{expected_state}' verified after {elapsed:.1f}s")
                 
-                self._log_verification("screen_state", expected_state, True, {
-                    "timeout": timeout,
-                    "elapsed": elapsed,
-                    "analysis": analysis
-                })
-                
                 return True
             
             time.sleep(0.5)
         
         print(f"VideoVerify[{self.device_name}]: Screen state '{expected_state}' not detected within {timeout}s")
-        
-        self._log_verification("screen_state", expected_state, False, {
-            "timeout": timeout
-        })
         
         return False
         
@@ -564,12 +542,6 @@ class VideoVerificationController(VerificationControllerInterface):
             within_tolerance = abs(current_value - expected_value) <= tolerance_range
             
             print(f"VideoVerify[{self.device_name}]: {metric_name} = {current_value:.2f} (expected: {expected_value} ±{tolerance}%)")
-            
-            self._log_verification("performance_metric", metric_name, within_tolerance, {
-                "expected": expected_value,
-                "measured": current_value,
-                "tolerance": tolerance
-            })
             
             return within_tolerance
         else:
@@ -603,7 +575,6 @@ class VideoVerificationController(VerificationControllerInterface):
             'device_name': self.device_name,
             'connected': self.is_connected,
             'session_id': self.verification_session_id,
-            'verification_count': len(self.verification_results),
             'acquisition_source': self.av_controller.device_name if self.av_controller else None,
             'capabilities': [
                 'motion_detection', 'video_playback_verification',
@@ -896,24 +867,11 @@ class VideoVerificationController(VerificationControllerInterface):
                 elapsed = time.time() - start_time
                 print(f"VideoVerify[{self.device_name}]: Video appeared after {elapsed:.1f}s")
                 
-                self._log_verification("video_appears", f"motion_threshold_{motion_threshold}", True, {
-                    "motion_threshold": motion_threshold,
-                    "duration": duration,
-                    "timeout": timeout,
-                    "elapsed": elapsed
-                })
-                
                 return True
             
             time.sleep(check_interval)
         
         print(f"VideoVerify[{self.device_name}]: Video did not appear within {timeout}s")
-        
-        self._log_verification("video_appears", f"motion_threshold_{motion_threshold}", False, {
-            "motion_threshold": motion_threshold,
-            "duration": duration,
-            "timeout": timeout
-        })
         
         return False
 
@@ -945,24 +903,11 @@ class VideoVerificationController(VerificationControllerInterface):
                 elapsed = time.time() - start_time
                 print(f"VideoVerify[{self.device_name}]: Video disappeared after {elapsed:.1f}s")
                 
-                self._log_verification("video_disappears", f"motion_threshold_{motion_threshold}", True, {
-                    "motion_threshold": motion_threshold,
-                    "duration": duration,
-                    "timeout": timeout,
-                    "elapsed": elapsed
-                })
-                
                 return True
             
             time.sleep(check_interval)
         
         print(f"VideoVerify[{self.device_name}]: Video still present after {timeout}s")
-        
-        self._log_verification("video_disappears", f"motion_threshold_{motion_threshold}", False, {
-            "motion_threshold": motion_threshold,
-            "duration": duration,
-            "timeout": timeout
-        })
         
         return False
 
@@ -1056,9 +1001,6 @@ class VideoVerificationController(VerificationControllerInterface):
                 'analysis_type': 'blackscreen_detection',
                 'timestamp': datetime.now().isoformat()
             }
-            
-            # Log verification
-            self._log_verification("blackscreen_detection", f"threshold_{threshold}", blackscreen_detected, overall_result)
             
             return overall_result
             
@@ -1176,9 +1118,6 @@ class VideoVerificationController(VerificationControllerInterface):
                 'analysis_type': 'freeze_detection',
                 'timestamp': datetime.now().isoformat()
             }
-            
-            # Log verification
-            self._log_verification("freeze_detection", f"threshold_{freeze_threshold}", all_frozen, overall_result)
             
             return overall_result
             
@@ -1332,9 +1271,6 @@ class VideoVerificationController(VerificationControllerInterface):
                 'analysis_type': 'subtitle_detection',
                 'timestamp': datetime.now().isoformat()
             }
-            
-            # Log verification
-            self._log_verification("subtitle_detection", "subtitle_analysis", subtitles_detected, overall_result)
             
             return overall_result
             

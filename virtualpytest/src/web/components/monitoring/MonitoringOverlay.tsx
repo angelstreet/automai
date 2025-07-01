@@ -36,75 +36,8 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
   overrideAnalysis,
   subtitleTrendData,
 }) => {
-  // Use override analysis if provided (from useMonitoring), otherwise fetch our own
-  // This prevents duplicate JSON fetching when used in monitoring mode
-  const [analysis, setAnalysis] = useState<MonitoringAnalysis | null>(null);
-  const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
-
-  // Monitor for image URL changes in the RecHostPreview component
-  useEffect(() => {
-    // Use override URL if provided, otherwise auto-detect
-    if (overrideImageUrl) {
-      if (overrideImageUrl !== currentImageUrl) {
-        setCurrentImageUrl(overrideImageUrl);
-      }
-      return; // Don't set up auto-detection when overriding
-    }
-
-    const detectImageUrl = () => {
-      // Find the current screenshot image in RecHostPreview
-      const imgElement = document.querySelector('[alt="Current screenshot"]') as HTMLImageElement;
-      if (imgElement && imgElement.src && imgElement.src !== currentImageUrl) {
-        setCurrentImageUrl(imgElement.src);
-      }
-    };
-
-    // Check immediately
-    detectImageUrl();
-
-    // Set up interval to check for changes
-    const interval = setInterval(detectImageUrl, 1000);
-
-    return () => clearInterval(interval);
-  }, [currentImageUrl, overrideImageUrl]);
-
-  // Load analysis data - but ONLY if override analysis is not provided
-  useEffect(() => {
-    // If override analysis is provided (monitoring mode), use it and skip JSON fetching
-    if (overrideAnalysis !== undefined) {
-      setAnalysis(overrideAnalysis);
-      return;
-    }
-
-    // Only fetch JSON when NOT in monitoring mode (e.g., RecHostPreview)
-    const loadAnalysis = async () => {
-      if (!currentImageUrl) return;
-
-      // Wait 300ms for JSON analysis to be created
-      await new Promise((resolve) => setTimeout(resolve, 300));
-
-      // If we're loading a thumbnail image, look for the corresponding thumbnail JSON
-      const jsonUrl = currentImageUrl.includes('_thumbnail')
-        ? currentImageUrl.replace('.jpg', '.json')
-        : currentImageUrl.replace('.jpg', '_thumbnail.json');
-
-      try {
-        const response = await fetch(jsonUrl);
-        if (response.ok) {
-          const data = await response.json();
-          setAnalysis(data.analysis || null);
-        } else {
-          // JSON not available yet, keep previous analysis or show empty
-          setAnalysis(null);
-        }
-      } catch {
-        // JSON not available, show empty analysis
-        setAnalysis(null);
-      }
-    };
-
-    loadAnalysis();
-  }, [currentImageUrl, overrideAnalysis]);
+  // Pure display component - only use props, no fetching
+  const analysis = overrideAnalysis;
 
   // Always render overlay with empty state when no analysis
 
