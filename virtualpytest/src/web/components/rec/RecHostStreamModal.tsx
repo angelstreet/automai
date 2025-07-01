@@ -370,7 +370,7 @@ const RecHostStreamModalContent: React.FC<{
                 isStreamActive={true}
                 isCapturing={false}
                 model={device?.device_model || 'unknown'}
-                isExpanded={false}
+                isExpanded={true}
                 sx={{
                   width: isMobileModel ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
                   height: isMobileModel ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
