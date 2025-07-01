@@ -86,7 +86,7 @@ export const AndroidMobileOverlay = React.memo(
 
       // Ensure positive dimensions
       if (width <= 0 || height <= 0) {
-        console.warn(`[@component:AndroidMobileOverlay] Invalid dimensions: ${width}x${height}`);
+        // Silently skip invalid dimensions to prevent overlay errors in modal context
         return null;
       }
 
