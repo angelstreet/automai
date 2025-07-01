@@ -218,6 +218,11 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
 
   // Interface state
   const [userInterface, setUserInterface] = useState<any>(null);
+
+  // Debug logging for userInterface changes
+  useEffect(() => {
+    console.log('[@context:NavigationProvider] userInterface changed:', userInterface);
+  }, [userInterface]);
   const [rootTree, setRootTree] = useState<any>(null);
   const [isLoadingInterface, setIsLoadingInterface] = useState<boolean>(!!interfaceId);
 
