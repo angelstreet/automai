@@ -444,38 +444,39 @@ export const AndroidMobileRemote = React.memo(
                     keepMounted: false,
                   }}
                 >
-                  {(() => {
-                    console.log('[@component:AndroidMobileRemote] Rendering MenuItems:', {
-                      selectedElement,
-                      androidElementsCount: androidElements.length,
-                      firstFewElements: androidElements.slice(0, 3).map((el) => ({
-                        id: el.id,
-                        contentDesc: el.contentDesc,
-                        text: el.text,
-                      })),
-                    });
-                    return androidElements
-                      .filter((element) => element && element.id) // Filter out invalid elements
-                      .map((element) => {
-                        return (
-                          <MenuItem
-                            key={element.id}
-                            value={element.id}
-                            sx={{
-                              fontSize: '0.75rem',
-                              py: 0.5,
-                              px: 1,
-                              minHeight: 'auto',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {getElementDisplayName(element)}
-                          </MenuItem>
-                        );
-                      });
-                  })()}
+                  {androidElements
+                    .filter((element) => element && element.id) // Filter out invalid elements
+                    .map((element) => {
+                      // Debug logging moved outside of render
+                      if (androidElements.length > 0) {
+                        console.log('[@component:AndroidMobileRemote] Rendering MenuItems:', {
+                          selectedElement,
+                          androidElementsCount: androidElements.length,
+                          firstFewElements: androidElements.slice(0, 3).map((el) => ({
+                            id: el.id,
+                            contentDesc: el.contentDesc,
+                            text: el.text,
+                          })),
+                        });
+                      }
+                      return (
+                        <MenuItem
+                          key={element.id}
+                          value={element.id}
+                          sx={{
+                            fontSize: '0.75rem',
+                            py: 0.5,
+                            px: 1,
+                            minHeight: 'auto',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {getElementDisplayName(element)}
+                        </MenuItem>
+                      );
+                    })}
                 </Select>
               </FormControl>
             </Box>
