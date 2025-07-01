@@ -98,6 +98,25 @@ export const AndroidMobileRemote = React.memo(
       }
     }, [androidElements]);
 
+    // Debug logging for component mount/unmount
+    React.useEffect(() => {
+      console.log('[@component:AndroidMobileRemote] Component MOUNTED with props:', {
+        hostName: host?.host_name,
+        deviceId,
+        isCollapsed,
+        streamContainerDimensions: !!streamContainerDimensions,
+        timestamp: new Date().toISOString(),
+      });
+
+      return () => {
+        console.log('[@component:AndroidMobileRemote] Component UNMOUNTING:', {
+          hostName: host?.host_name,
+          deviceId,
+          timestamp: new Date().toISOString(),
+        });
+      };
+    }, []); // Empty dependency array to only run on mount/unmount
+
     // Panel integration - prepare panelInfo for overlay
     const panelInfo: PanelInfo | undefined = React.useMemo(() => {
       // Skip unnecessary recalculations if missing required props
