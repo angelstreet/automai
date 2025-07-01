@@ -198,6 +198,26 @@ def verification_video_detect_subtitles():
             'error': str(e)
         }), 500
 
+@server_verification_common_bp.route('/video/detectSubtitlesAI', methods=['POST'])
+def verification_video_detect_subtitles_ai():
+    """Proxy video AI subtitle detection to host"""
+    try:
+        print("[@route:server_verification_common:verification_video_detect_subtitles_ai] Proxying AI subtitle detection request")
+        
+        # Get request data
+        request_data = request.get_json() or {}
+        
+        # Proxy to host video AI subtitle detection endpoint
+        response_data, status_code = proxy_to_host('/host/verification/video/detectSubtitlesAI', 'POST', request_data, timeout=60)
+        
+        return jsonify(response_data), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # =====================================================
 # BATCH VERIFICATION COORDINATION (SERVER-SIDE LOGIC)
 # =====================================================

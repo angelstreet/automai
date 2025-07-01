@@ -655,6 +655,13 @@ class VideoVerificationController(VerificationControllerInterface):
                     'extract_text': True        # Default to extract text
                 },
                 'verification_type': 'video'
+            },
+            {
+                'command': 'DetectSubtitlesAI',
+                'params': {
+                    'extract_text': True        # Default to extract text
+                },
+                'verification_type': 'video'
             }
         ]
 
@@ -811,6 +818,14 @@ class VideoVerificationController(VerificationControllerInterface):
                 result = self.detect_subtitles(image_paths, extract_text)
                 success = result.get('success', False) and result.get('subtitles_detected', False)
                 message = f"Subtitles {'detected' if success else 'not detected'}"
+                details = result
+                
+            elif command == 'DetectSubtitlesAI':
+                extract_text = params.get('extract_text', True)
+                
+                result = self.detect_subtitles_ai(image_paths, extract_text)
+                success = result.get('success', False) and result.get('subtitles_detected', False)
+                message = f"AI Subtitles {'detected' if success else 'not detected'}"
                 details = result
                 
             else:
@@ -1314,8 +1329,6 @@ class VideoVerificationController(VerificationControllerInterface):
                 'analysis_type': 'subtitle_detection'
             }
 
-
-
     def _extract_text_from_region(self, region_image) -> str:
         """Extract text from subtitle region using OCR"""
         if not OCR_AVAILABLE:
@@ -1425,4 +1438,266 @@ class VideoVerificationController(VerificationControllerInterface):
         except (LangDetectException, Exception) as e:
             print(f"VideoVerify[{self.device_name}]: Language detection error: {e}")
             return 'unknown'
+
+    def _analyze_subtitle_with_ai(self, region_image) -> Tuple[str, str, float]:
+        """
+        AI-powered subtitle analysis using OpenRouter - equivalent to _extract_text_from_region
+        
+        Args:
+            region_image: Cropped subtitle region image (same as OCR method)
+            
+        Returns:
+            Tuple of (extracted_text, detected_language, confidence)
+        """
+        try:
+            import os
+            import base64
+            import requests
+            import tempfile
+            
+            # Get API key from environment
+            api_key = os.getenv('OPENROUTER_API_KEY')
+            if not api_key:
+                print(f"VideoVerify[{self.device_name}]: OpenRouter API key not found in environment")
+                return '', 'unknown', 0.0
+            
+            # Save cropped region to temporary file for encoding
+            with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
+                cv2.imwrite(tmp_file.name, region_image)
+                temp_path = tmp_file.name
+            
+            try:
+                # Encode image to base64
+                with open(temp_path, 'rb') as f:
+                    image_data = base64.b64encode(f.read()).decode()
+                
+                # Simple prompt for subtitle analysis
+                prompt = """Analyze this image for subtitles. Look at the bottom portion where subtitles typically appear. Respond ONLY in valid JSON format:
+{
+  "subtitles_detected": true/false,
+  "extracted_text": "exact text here or empty string",
+  "detected_language": "English/French/German/Spanish/Italian/Portuguese/Dutch or unknown",
+  "confidence": 0.85
+}"""
+                
+                # Call OpenRouter API
+                response = requests.post(
+                    'https://openrouter.ai/api/v1/chat/completions',
+                    headers={
+                        'Authorization': f'Bearer {api_key}',
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://automai.dev',
+                        'X-Title': 'AutomAI-VirtualPyTest'
+                    },
+                    json={
+                        'model': 'meta-llama/llama-3.2-11b-vision-instruct',
+                        'messages': [
+                            {
+                                'role': 'user',
+                                'content': [
+                                    {'type': 'text', 'text': prompt},
+                                    {'type': 'image_url', 'image_url': {'url': f'data:image/jpeg;base64,{image_data}'}}
+                                ]
+                            }
+                        ],
+                        'max_tokens': 200,
+                        'temperature': 0.1
+                    },
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    content = result['choices'][0]['message']['content']
+                    
+                    # Parse JSON response
+                    import json
+                    try:
+                        ai_result = json.loads(content)
+                        
+                        subtitles_detected = ai_result.get('subtitles_detected', False)
+                        extracted_text = ai_result.get('extracted_text', '').strip()
+                        detected_language = ai_result.get('detected_language', 'unknown')
+                        confidence = float(ai_result.get('confidence', 0.0))
+                        
+                        if not subtitles_detected or not extracted_text:
+                            print(f"VideoVerify[{self.device_name}]: AI found no subtitles")
+                            return '', 'unknown', 0.0
+                        
+                        print(f"VideoVerify[{self.device_name}]: AI extracted subtitle text: '{extracted_text}' -> Language: {detected_language}, Confidence: {confidence}")
+                        
+                        return extracted_text, detected_language, confidence
+                        
+                    except json.JSONDecodeError as e:
+                        print(f"VideoVerify[{self.device_name}]: Failed to parse AI JSON response: {e}")
+                        print(f"VideoVerify[{self.device_name}]: Raw AI response: {content[:200]}...")
+                        return '', 'unknown', 0.0
+                else:
+                    print(f"VideoVerify[{self.device_name}]: OpenRouter API error: {response.status_code} - {response.text}")
+                    return '', 'unknown', 0.0
+                    
+            finally:
+                # Clean up temporary file
+                if os.path.exists(temp_path):
+                    os.unlink(temp_path)
+                    
+        except Exception as e:
+            print(f"VideoVerify[{self.device_name}]: AI subtitle analysis error: {e}")
+            return '', 'unknown', 0.0
+
+    def detect_subtitles_ai(self, image_paths: List[str] = None, extract_text: bool = True) -> Dict[str, Any]:
+        """
+        AI-powered subtitle detection using OpenRouter - exact copy of detect_subtitles() workflow
+        
+        Args:
+            image_paths: List of image paths to analyze, or None to use last capture
+            extract_text: Whether to extract text using AI (always True for AI method)
+            
+        Returns:
+            Dictionary with detailed AI subtitle analysis results
+        """
+        try:
+            # Determine which images to analyze (same logic as detect_subtitles)
+            if image_paths is None or len(image_paths) == 0:
+                # Only check connection when we need to capture screenshots
+                if not self.is_connected:
+                    print(f"VideoVerify[{self.device_name}]: ERROR - Not connected for screenshot capture")
+                    return {'success': False, 'error': 'Not connected for screenshot capture'}
+                
+                # Use last available capture
+                screenshot = self.capture_screenshot()
+                if not screenshot:
+                    return {'success': False, 'error': 'Failed to capture screenshot'}
+                image_paths = [screenshot]
+            
+            results = []
+            
+            for image_path in image_paths:
+                if not os.path.exists(image_path):
+                    results.append({
+                        'image_path': image_path,
+                        'success': False,
+                        'error': 'Image file not found'
+                    })
+                    continue
+                
+                try:
+                    img = cv2.imread(image_path)
+                    if img is None:
+                        results.append({
+                            'image_path': image_path,
+                            'success': False,
+                            'error': 'Could not load image'
+                        })
+                        continue
+                    
+                    height, width = img.shape[:2]
+                    
+                    # Enhanced subtitle detection with adaptive region processing (same as OCR method)
+                    # Expanded to capture 2-line subtitles - start from 70% to bottom (30% of screen height)
+                    subtitle_height_start = int(height * 0.7)
+                    subtitle_width_start = int(width * 0.2)  # Skip left 20%
+                    subtitle_width_end = int(width * 0.8)    # Skip right 20%
+                    
+                    subtitle_region = img[subtitle_height_start:, subtitle_width_start:subtitle_width_end]
+                    
+                    # AI-powered subtitle analysis
+                    extracted_text, detected_language, ai_confidence = self._analyze_subtitle_with_ai(subtitle_region)
+                    
+                    # Determine if subtitles were detected
+                    has_subtitles = bool(extracted_text and len(extracted_text.strip()) > 0)
+                    
+                    # Error detection (same logic as OCR method for consistency)
+                    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+                    
+                    # Use configurable grid sampling rate
+                    grid_rate = SAMPLING_PATTERNS["error_grid_rate"]
+                    sampled_hsv = hsv[::grid_rate, ::grid_rate]
+                    
+                    # Red color range in HSV - more restrictive for actual error messages
+                    lower_red1 = np.array([0, 100, 100])
+                    upper_red1 = np.array([10, 255, 255])
+                    lower_red2 = np.array([170, 100, 100])
+                    upper_red2 = np.array([180, 255, 255])
+                    
+                    mask1 = cv2.inRange(sampled_hsv, lower_red1, upper_red1)
+                    mask2 = cv2.inRange(sampled_hsv, lower_red2, upper_red2)
+                    red_mask = mask1 + mask2
+                    
+                    red_pixels = np.sum(red_mask > 0)
+                    total_sampled_pixels = sampled_hsv.shape[0] * sampled_hsv.shape[1]
+                    red_percentage = float((red_pixels / total_sampled_pixels) * 100)
+                    
+                    # Higher threshold for error detection
+                    has_errors = bool(red_percentage > 8.0)
+                    
+                    # Use AI confidence or set default
+                    confidence = ai_confidence if has_subtitles else 0.1
+                    
+                    result = {
+                        'image_path': os.path.basename(image_path),
+                        'success': True,
+                        'has_subtitles': has_subtitles,
+                        'has_errors': has_errors,
+                        'subtitle_edges': 0,  # Not applicable for AI method
+                        'subtitle_threshold': 0.0,  # Not applicable for AI method
+                        'red_percentage': round(red_percentage, 2),
+                        'error_threshold': 8.0,
+                        'extracted_text': extracted_text,
+                        'detected_language': detected_language,
+                        'subtitle_region_size': f"{subtitle_region.shape[1]}x{subtitle_region.shape[0]}",
+                        'image_size': f"{width}x{height}",
+                        'confidence': confidence,
+                        'ai_powered': True  # Flag to indicate AI analysis
+                    }
+                    
+                    results.append(result)
+                    
+                    text_preview = extracted_text[:50] + "..." if len(extracted_text) > 50 else extracted_text
+                    print(f"VideoVerify[{self.device_name}]: AI Subtitle analysis - subtitles={has_subtitles}, errors={has_errors}, text='{text_preview}', confidence={confidence}")
+                    
+                except Exception as e:
+                    results.append({
+                        'image_path': image_path,
+                        'success': False,
+                        'error': f'AI analysis error: {str(e)}'
+                    })
+            
+            # Calculate overall result (same logic as OCR method)
+            successful_analyses = [r for r in results if r.get('success')]
+            subtitles_detected = any(r.get('has_subtitles', False) for r in successful_analyses)
+            errors_detected = any(r.get('has_errors', False) for r in successful_analyses)
+            
+            # Combine all extracted text and find the most confident language detection
+            all_extracted_text = " ".join([r.get('extracted_text', '') for r in successful_analyses if r.get('extracted_text')])
+            
+            # Get the language from the result with highest confidence and subtitles detected
+            detected_language = 'unknown'
+            for result in successful_analyses:
+                if result.get('has_subtitles') and result.get('detected_language') != 'unknown':
+                    detected_language = result.get('detected_language')
+                    break
+            
+            overall_result = {
+                'success': len(successful_analyses) > 0,
+                'subtitles_detected': subtitles_detected,
+                'errors_detected': errors_detected,
+                'analyzed_images': len(results),
+                'successful_analyses': len(successful_analyses),
+                'combined_extracted_text': all_extracted_text.strip(),
+                'detected_language': detected_language,
+                'results': results,
+                'analysis_type': 'ai_subtitle_detection',
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            return overall_result
+            
+        except Exception as e:
+            print(f"VideoVerify[{self.device_name}]: AI subtitle detection error: {e}")
+            return {
+                'success': False,
+                'error': f'AI subtitle detection failed: {str(e)}',
+                'analysis_type': 'ai_subtitle_detection'
+            }
 

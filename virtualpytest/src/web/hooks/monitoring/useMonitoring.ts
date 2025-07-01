@@ -50,6 +50,7 @@ interface UseMonitoringReturn {
 
   // Subtitle detection
   detectSubtitles: () => Promise<void>;
+  detectSubtitlesAI: () => Promise<void>;
   isDetectingSubtitles: boolean;
   hasSubtitleDetectionResults: boolean; // Whether current frame has subtitle detection results
 
@@ -509,6 +510,95 @@ export const useMonitoring = ({
     }
   }, [frames, currentIndex, selectedFrameAnalysis, isDetectingSubtitles, host, device?.device_id]);
 
+  // AI Subtitle detection function
+  const detectSubtitlesAI = useCallback(async () => {
+    if (frames.length === 0 || currentIndex >= frames.length || isDetectingSubtitles) {
+      return;
+    }
+
+    const currentFrame = frames[currentIndex];
+    if (!currentFrame) {
+      return;
+    }
+
+    // Pause the player when detecting subtitles
+    setIsPlaying(false);
+    setUserSelectedFrame(true);
+
+    setIsDetectingSubtitles(true);
+
+    try {
+      console.log('[useMonitoring] Detecting AI subtitles for frame:', currentFrame.imageUrl);
+
+      const response = await fetch('/server/verification/video/detectSubtitlesAI', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          host: host,
+          device_id: device?.device_id,
+          image_source_url: currentFrame.imageUrl,
+          extract_text: true,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[useMonitoring] AI Subtitle detection result:', result);
+
+        if (result.success) {
+          // Extract subtitle data from the response
+          const subtitleData = result.results && result.results.length > 0 ? result.results[0] : {};
+          const hasSubtitles = result.subtitles_detected || false;
+          const extractedText = result.combined_extracted_text || subtitleData.extracted_text || '';
+          const detectedLanguage =
+            result.detected_language || subtitleData.detected_language || undefined;
+
+          // Update the selectedFrameAnalysis with the detected subtitle data
+          const updatedAnalysis: MonitoringAnalysis = {
+            ...selectedFrameAnalysis,
+            blackscreen: selectedFrameAnalysis?.blackscreen || false,
+            freeze: selectedFrameAnalysis?.freeze || false,
+            subtitles: hasSubtitles,
+            errors: selectedFrameAnalysis?.errors || false,
+            text: extractedText,
+            language: detectedLanguage !== 'unknown' ? detectedLanguage : undefined,
+            confidence: subtitleData.confidence || (hasSubtitles ? 0.9 : 0.1),
+          };
+
+          setSelectedFrameAnalysis(updatedAnalysis);
+
+          // Update the frame's cached analysis and mark subtitle detection as performed
+          setFrames((prev) =>
+            prev.map((frame, index) =>
+              index === currentIndex
+                ? { ...frame, analysis: updatedAnalysis, subtitleDetectionPerformed: true }
+                : frame,
+            ),
+          );
+
+          console.log(
+            '[useMonitoring] Updated frame analysis with AI subtitle data:',
+            updatedAnalysis,
+          );
+          console.log('[useMonitoring] Cached AI subtitle results for frame:', {
+            frameIndex: currentIndex,
+            timestamp: currentFrame.timestamp,
+          });
+        } else {
+          console.error('[useMonitoring] AI Subtitle detection failed:', result.error);
+        }
+      } else {
+        console.error('[useMonitoring] AI Subtitle detection request failed:', response.status);
+      }
+    } catch (error) {
+      console.error('[useMonitoring] AI Subtitle detection error:', error);
+    } finally {
+      setIsDetectingSubtitles(false);
+    }
+  }, [frames, currentIndex, selectedFrameAnalysis, isDetectingSubtitles, host, device?.device_id]);
+
   return {
     // Frame management
     frames,
@@ -528,6 +618,7 @@ export const useMonitoring = ({
 
     // Subtitle detection
     detectSubtitles,
+    detectSubtitlesAI,
     isDetectingSubtitles,
     hasSubtitleDetectionResults,
 

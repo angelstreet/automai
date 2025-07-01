@@ -50,6 +50,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     handleSliderChange,
     errorTrendData,
     detectSubtitles,
+    detectSubtitlesAI,
     isDetectingSubtitles,
     hasSubtitleDetectionResults,
   } = useMonitoring({
@@ -390,6 +391,63 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             </IconButton>
           </Box>
 
+          {/* AI Subtitle detection button */}
+          <Box sx={{ position: 'absolute', bottom: 8, left: 112 }}>
+            <IconButton
+              size="medium"
+              onClick={detectSubtitlesAI}
+              disabled={isDetectingSubtitles}
+              sx={{
+                color: selectedFrameAnalysis?.subtitles ? '#ff9800' : '#ffffff',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,152,0,0.3)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255,152,0,0.1)',
+                  borderColor: 'rgba(255,152,0,0.5)',
+                },
+                '&:disabled': {
+                  color: 'rgba(255,255,255,0.5)',
+                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  borderColor: 'rgba(255,255,255,0.1)',
+                },
+              }}
+              title={
+                isDetectingSubtitles
+                  ? 'Detecting AI subtitles...'
+                  : 'Detect subtitles using AI in current frame'
+              }
+            >
+              {isDetectingSubtitles ? (
+                <CircularProgress size={20} sx={{ color: '#ffffff' }} />
+              ) : (
+                <Box
+                  sx={{
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Subtitles />
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      position: 'absolute',
+                      bottom: -2,
+                      right: -1,
+                      fontSize: '0.6rem',
+                      fontWeight: 'bold',
+                      color: '#ff9800',
+                      textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                    }}
+                  >
+                    AI
+                  </Typography>
+                </Box>
+              )}
+            </IconButton>
+          </Box>
+
           {/* Frame counter */}
           <Box sx={{ position: 'absolute', bottom: 16, right: 16 }}>
             <Typography
@@ -409,7 +467,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             sx={{
               position: 'absolute',
               bottom: 12,
-              left: '120px', // Adjusted to account for subtitle button
+              left: '172px', // Adjusted to account for both subtitle buttons
               right: '80px',
             }}
           >

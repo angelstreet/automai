@@ -53,7 +53,7 @@ def get_verification_controller(device_id: str, controller_type: str, check_devi
 # =====================================================
 
 @host_verification_video_bp.route('/execute', methods=['POST'])
-def host_video_verification_execute():
+def execute_video_verification():
     """Execute video verification using VideoVerificationController"""
     try:
         print("[@route:host_verification_video:execute] Processing video verification request")
@@ -97,7 +97,7 @@ def host_video_verification_execute():
 # =====================================================
 
 @host_verification_video_bp.route('/detectBlackscreen', methods=['POST'])
-def host_video_detect_blackscreen():
+def detect_blackscreen():
     """Detect blackscreen in video frames"""
     try:
         print("[@route:host_verification_video:detectBlackscreen] Processing blackscreen detection request")
@@ -151,7 +151,7 @@ def host_video_detect_blackscreen():
         }), 500
 
 @host_verification_video_bp.route('/detectFreeze', methods=['POST'])
-def host_video_detect_freeze():
+def detect_freeze():
     """Detect freeze in video frames"""
     try:
         print("[@route:host_verification_video:detectFreeze] Processing freeze detection request")
@@ -205,7 +205,7 @@ def host_video_detect_freeze():
         }), 500
 
 @host_verification_video_bp.route('/detectSubtitles', methods=['POST'])
-def host_video_detect_subtitles():
+def detect_subtitles():
     """Detect subtitles in video frames"""
     try:
         print("[@route:host_verification_video:detectSubtitles] Processing subtitle detection request")
@@ -263,12 +263,71 @@ def host_video_detect_subtitles():
             'error': f'Subtitle detection error: {str(e)}'
         }), 500
 
+@host_verification_video_bp.route('/detectSubtitlesAI', methods=['POST'])
+def detect_subtitles_ai():
+    """Detect subtitles in video frames using AI"""
+    try:
+        print("[@route:host_verification_video:detectSubtitlesAI] Processing AI subtitle detection request")
+        
+        # Get request data
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
+        image_paths = data.get('image_paths')  # Array of image paths
+        image_source_url = data.get('image_source_url')  # Single image or comma-separated
+        extract_text = data.get('extract_text', True)
+        
+        # Parse image sources
+        final_image_paths = None
+        if image_paths:
+            final_image_paths = image_paths
+        elif image_source_url:
+            if isinstance(image_source_url, str):
+                if ',' in image_source_url:
+                    final_image_paths = [path.strip() for path in image_source_url.split(',')]
+                else:
+                    final_image_paths = [image_source_url]
+            elif isinstance(image_source_url, list):
+                final_image_paths = image_source_url
+        
+        print(f"[@route:host_verification_video:detectSubtitlesAI] Image paths: {final_image_paths}")
+        print(f"[@route:host_verification_video:detectSubtitlesAI] Extract text: {extract_text}")
+        
+        # Convert URLs to local paths if needed
+        if final_image_paths and any(path.startswith(('http://', 'https://')) for path in final_image_paths):
+            from src.utils.build_url_utils import convertHostUrlToLocalPath
+            final_image_paths = [convertHostUrlToLocalPath(path) if path.startswith(('http://', 'https://')) else path for path in final_image_paths]
+        
+        # Get video verification controller
+        video_controller, device, error_response = get_verification_controller(device_id, 'verification_video')
+        if error_response:
+            return error_response
+        
+        # Execute AI subtitle detection
+        start_time = time.time()
+        result = video_controller.detect_subtitles_ai(final_image_paths, extract_text)
+        execution_time = int((time.time() - start_time) * 1000)
+        
+        # Add execution time to result
+        result['execution_time_ms'] = execution_time
+        
+        print(f"[@route:host_verification_video:detectSubtitlesAI] Result: success={result.get('success')}, subtitles={result.get('subtitles_detected')}, time={execution_time}ms")
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"[@route:host_verification_video:detectSubtitlesAI] Error: {str(e)}")
+        print(f"[@route:host_verification_video:detectSubtitlesAI] Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': f'AI subtitle detection error: {str(e)}'
+        }), 500
+
 # =====================================================
 # STATUS AND INFO ENDPOINTS
 # =====================================================
 
 @host_verification_video_bp.route('/status', methods=['GET'])
-def host_video_verification_status():
+def get_status():
     """Get video verification controller status"""
     try:
         # Get device_id from query params (defaults to device1)
@@ -297,7 +356,7 @@ def host_video_verification_status():
         }), 500
 
 @host_verification_video_bp.route('/availableVerifications', methods=['GET'])
-def host_video_verification_available():
+def get_available_verifications():
     """Get available video verifications"""
     try:
         # Get device_id from query params (defaults to device1)
