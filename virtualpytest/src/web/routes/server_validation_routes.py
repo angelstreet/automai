@@ -497,35 +497,10 @@ class ValidationService:
         if not verifications:
             return []
         
-        # Import verification functions directly instead of HTTP calls
-        from server_verification_execution_routes import execute_verification_batch_direct
-        
-        try:
-            # Execute verifications directly
-            verification_data = execute_verification_batch_direct(verifications, node_id, tree_id)
-            
-            verification_results = []
-            if verification_data.get('success', False):
-                api_results = verification_data.get('results', [])
-                
-                for i, (api_result, original_verification) in enumerate(zip(api_results, verifications)):
-                    mapped_result = {
-                        'verificationId': api_result.get('verification_id', original_verification.get('id', f'verification_{i}')),
-                        'verificationLabel': original_verification.get('label', f'Verification {i+1}'),
-                        'verificationCommand': original_verification.get('command', 'unknown'),
-                        'success': api_result.get('success', False),
-                        'error': api_result.get('error'),
-                        'resultType': api_result.get('resultType', 'FAIL' if not api_result.get('success', False) else 'PASS'),
-                        'message': api_result.get('message'),
-                        'inputValue': original_verification.get('inputValue')
-                    }
-                    verification_results.append(mapped_result)
-            
-            return verification_results
-            
-        except Exception as e:
-            print(f"[@service:validation:_execute_target_node_verifications] Exception: {e}")
-            return []
+        # NOTE: Verification execution should be handled by frontend calling /server/verification/executeBatch directly
+        # This validation service should only handle navigation path testing, not verification execution
+        print(f"[@service:validation:_execute_target_node_verifications] Skipping verification execution - frontend should call verification endpoints directly")
+        return []
 
     def _convert_path_results_to_node_results(self, path_results: List[Dict], graph) -> List[Dict[str, Any]]:
         """
