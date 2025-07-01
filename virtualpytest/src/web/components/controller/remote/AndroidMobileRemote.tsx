@@ -98,25 +98,6 @@ export const AndroidMobileRemote = React.memo(
       }
     }, [androidElements]);
 
-    // Debug logging for component mount/unmount
-    React.useEffect(() => {
-      console.log('[@component:AndroidMobileRemote] Component MOUNTED with props:', {
-        hostName: host?.host_name,
-        deviceId,
-        isCollapsed,
-        streamContainerDimensions: !!streamContainerDimensions,
-        timestamp: new Date().toISOString(),
-      });
-
-      return () => {
-        console.log('[@component:AndroidMobileRemote] Component UNMOUNTING:', {
-          hostName: host?.host_name,
-          deviceId,
-          timestamp: new Date().toISOString(),
-        });
-      };
-    }, []); // Empty dependency array to only run on mount/unmount
-
     // Panel integration - prepare panelInfo for overlay
     const panelInfo: PanelInfo | undefined = React.useMemo(() => {
       // Skip unnecessary recalculations if missing required props
@@ -407,7 +388,7 @@ export const AndroidMobileRemote = React.memo(
               >
                 <InputLabel>Select element...</InputLabel>
                 <Select
-                  value={androidElements.length > 0 && selectedElement ? selectedElement : ''}
+                  value={selectedElement}
                   label="Select element..."
                   disabled={!session.connected || androidElements.length === 0}
                   sx={{
@@ -420,11 +401,6 @@ export const AndroidMobileRemote = React.memo(
                   }}
                   onChange={(e) => {
                     const elementId = e.target.value as string;
-                    console.log('[@component:AndroidMobileRemote] Select onChange:', {
-                      elementId,
-                      selectedElement,
-                      androidElementsCount: androidElements.length,
-                    });
                     const element = androidElements.find((el) => el.id === elementId);
                     if (element) {
                       setSelectedElement(element.id);
@@ -447,18 +423,6 @@ export const AndroidMobileRemote = React.memo(
                   {androidElements
                     .filter((element) => element && element.id) // Filter out invalid elements
                     .map((element) => {
-                      // Debug logging moved outside of render
-                      if (androidElements.length > 0) {
-                        console.log('[@component:AndroidMobileRemote] Rendering MenuItems:', {
-                          selectedElement,
-                          androidElementsCount: androidElements.length,
-                          firstFewElements: androidElements.slice(0, 3).map((el) => ({
-                            id: el.id,
-                            contentDesc: el.contentDesc,
-                            text: el.text,
-                          })),
-                        });
-                      }
                       return (
                         <MenuItem
                           key={element.id}
@@ -600,11 +564,10 @@ export const AndroidMobileRemote = React.memo(
         {panelInfo &&
         typeof document !== 'undefined' &&
         captureMode === 'stream' &&
-        !streamMinimized &&
-        androidElements.length > 0
+        !streamMinimized
           ? createPortal(
               <AndroidMobileOverlay
-                elements={androidElements}
+                elements={androidElements} // Can be empty array when no UI dumped yet
                 deviceWidth={1080} // Use actual Android device resolution from ADB
                 deviceHeight={2340} // Use actual Android device resolution from ADB
                 isVisible={captureMode === 'stream' && !streamMinimized} // Only visible in stream mode, not during screenshot/video capture
