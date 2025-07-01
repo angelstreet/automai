@@ -60,81 +60,85 @@ export const AndroidTvRemote = React.memo(
       await handleRemoteCommand(buttonKey);
     };
 
-    // Calculate responsive remote scale based on container size and remote image aspect ratio
+    // Calculate responsive remote scale based on available space
     const calculateRemoteScale = () => {
-      // Base remote image dimensions from config
-      const baseWidth = 640; // From aspectRatio '640/1800'
-      const baseHeight = 1800; // From aspectRatio '640/1800'
+      // Base remote dimensions from config
+      const baseHeight = 1800;
 
-      // Determine available container dimensions
-      let containerWidth: number;
-      let containerHeight: number;
+      // Determine available height based on context
+      let availableHeight: number;
 
       if (streamContainerDimensions) {
-        // Modal context: calculate actual remote panel width
-        // Stream container is 75% of modal, so total modal width = streamWidth / 0.75
-        const totalModalWidth = streamContainerDimensions.width / 0.75;
-        containerWidth = totalModalWidth * 0.25; // Remote panel is 25% of total modal width
-        containerHeight = streamContainerDimensions.height - 120; // Reserve space for disconnect button
+        // Modal context: use the modal's stream container height
+        // Reserve space for disconnect button (60px) and some padding
+        availableHeight = streamContainerDimensions.height - 120;
         console.log(
-          `[@component:AndroidTvRemote] Using modal container: ${containerWidth}x${containerHeight} (totalModal: ${totalModalWidth}, stream: ${streamContainerDimensions.width})`,
+          `[@component:AndroidTvRemote] Using modal container height: ${streamContainerDimensions.height}, available: ${availableHeight}`,
         );
       } else {
-        // Floating panel context: use actual panel dimensions
-        const panelWidth = parseInt(
-          (isCollapsed
-            ? layoutConfig.panel_layout.collapsed.width
-            : layoutConfig.panel_layout.expanded.width
-          ).replace('px', ''),
-          10,
-        );
-        const panelHeight = parseInt(
-          (isCollapsed
-            ? layoutConfig.panel_layout.collapsed.height
-            : layoutConfig.panel_layout.expanded.height
-          ).replace('px', ''),
-          10,
-        );
-        containerWidth = panelWidth;
-        containerHeight = panelHeight - 120; // Reserve space for disconnect button
+        // Floating panel context: use window height
+        availableHeight = window.innerHeight - 120; // Reserve space for disconnect button
         console.log(
-          `[@component:AndroidTvRemote] Using panel container: ${containerWidth}x${containerHeight}`,
+          `[@component:AndroidTvRemote] Using window height: ${window.innerHeight}, available: ${availableHeight}`,
         );
       }
 
-      // Calculate scale based on which dimension is more constraining
-      // This matches how CSS 'backgroundSize: contain' works
-      const scaleByWidth = containerWidth / baseWidth;
-      const scaleByHeight = containerHeight / baseHeight;
+      // Calculate the base scale from available height
+      const baseScale = availableHeight / baseHeight;
 
-      // Use the smaller scale to ensure the remote fits completely (like 'contain')
-      const remoteScale = Math.min(scaleByWidth, scaleByHeight);
+      if (isCollapsed) {
+        // For collapsed state, apply panel ratio reduction to the base scale
+        const collapsedHeight = parseInt(
+          layoutConfig.panel_layout.collapsed.height.replace('px', ''),
+          10,
+        );
+        const expandedHeight = parseInt(
+          layoutConfig.panel_layout.expanded.height.replace('px', ''),
+          10,
+        );
+        const collapsedWidth = parseInt(
+          layoutConfig.panel_layout.collapsed.width.replace('px', ''),
+          10,
+        );
+        const expandedWidth = parseInt(
+          layoutConfig.panel_layout.expanded.width.replace('px', ''),
+          10,
+        );
 
-      // Calculate actual rendered image dimensions after scaling
-      const renderedWidth = baseWidth * remoteScale;
-      const renderedHeight = baseHeight * remoteScale;
+        // Calculate scale ratio based on panel size difference
+        const heightRatio = collapsedHeight / expandedHeight; // 300/600 = 0.5
+        const widthRatio = collapsedWidth / expandedWidth; // 160/240 = 0.667
 
-      // Calculate offset to center the image (like CSS 'backgroundPosition: center')
-      const offsetX = (containerWidth - renderedWidth) / 2;
-      const offsetY = (containerHeight - renderedHeight) / 2;
+        // Use the smaller ratio to ensure remote fits in collapsed panel
+        const panelReductionRatio = Math.min(heightRatio, widthRatio);
 
-      console.log(`[@component:AndroidTvRemote] Scale calculation:`, {
+        // Apply the reduction ratio to the base scale
+        const collapsedScale = baseScale * panelReductionRatio;
+
+        console.log(`[@component:AndroidTvRemote] Collapsed scale calculation:`, {
+          context: streamContainerDimensions ? 'modal' : 'floating',
+          availableHeight,
+          baseScale,
+          panelReductionRatio,
+          collapsedScale,
+          collapsedDimensions: { width: collapsedWidth, height: collapsedHeight },
+          expandedDimensions: { width: expandedWidth, height: expandedHeight },
+        });
+
+        return collapsedScale;
+      }
+
+      // For expanded state, use the base scale calculated from available height
+      console.log(`[@component:AndroidTvRemote] Expanded scale calculation:`, {
         context: streamContainerDimensions ? 'modal' : 'floating',
-        isCollapsed,
-        baseImageSize: { width: baseWidth, height: baseHeight },
-        containerSize: { width: containerWidth, height: containerHeight },
-        scaleByWidth,
-        scaleByHeight,
-        finalScale: remoteScale,
-        renderedSize: { width: renderedWidth, height: renderedHeight },
-        imageOffset: { x: offsetX, y: offsetY },
+        availableHeight,
+        baseScale,
       });
 
-      return { scale: remoteScale, offsetX, offsetY };
+      return baseScale;
     };
 
-    const remoteInfo = calculateRemoteScale();
-    const { scale: remoteScale, offsetX, offsetY } = remoteInfo;
+    const remoteScale = calculateRemoteScale();
 
     // Render remote interface with clickable buttons
     const renderRemoteInterface = () => {
@@ -221,8 +225,8 @@ export const AndroidTvRemote = React.memo(
                 key={buttonId}
                 sx={{
                   position: 'absolute',
-                  left: `${offsetX + button.position.x * remoteScale}px`,
-                  top: `${offsetY + button.position.y * remoteScale}px`,
+                  left: `${button.position.x * remoteScale}px`,
+                  top: `${button.position.y * remoteScale}px`,
                   width: `${button.size.width * layoutConfig.remote_info.button_scale_factor * remoteScale}px`,
                   height: `${button.size.height * layoutConfig.remote_info.button_scale_factor * remoteScale}px`,
                   borderRadius: button.shape === 'circle' ? '50%' : '4px',
