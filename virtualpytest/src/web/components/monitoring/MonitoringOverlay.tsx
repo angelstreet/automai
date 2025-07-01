@@ -36,6 +36,8 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
   overrideAnalysis,
   subtitleTrendData,
 }) => {
+  // Use override analysis if provided (from useMonitoring), otherwise fetch our own
+  // This prevents duplicate JSON fetching when used in monitoring mode
   const [analysis, setAnalysis] = useState<MonitoringAnalysis | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
 
@@ -66,14 +68,15 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
     return () => clearInterval(interval);
   }, [currentImageUrl, overrideImageUrl]);
 
-  // Load analysis data when imageUrl changes
+  // Load analysis data - but ONLY if override analysis is not provided
   useEffect(() => {
-    // Use override analysis if provided
-    if (overrideAnalysis) {
+    // If override analysis is provided (monitoring mode), use it and skip JSON fetching
+    if (overrideAnalysis !== undefined) {
       setAnalysis(overrideAnalysis);
       return;
     }
 
+    // Only fetch JSON when NOT in monitoring mode (e.g., RecHostPreview)
     const loadAnalysis = async () => {
       if (!currentImageUrl) return;
 
