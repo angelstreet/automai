@@ -5,6 +5,7 @@ interface FrameRef {
   imageUrl: string;
   jsonUrl: string;
   analysis?: MonitoringAnalysis | null;
+  subtitleDetectionPerformed?: boolean; // Flag to track if manual subtitle detection was done
 }
 
 interface MonitoringAnalysis {
@@ -42,6 +43,7 @@ interface UseMonitoringReturn {
   // Subtitle detection
   detectSubtitles: () => Promise<void>;
   isDetectingSubtitles: boolean;
+  hasSubtitleDetectionResults: boolean; // Whether current frame has subtitle detection results
 
   // Subtitle trend analysis
   subtitleTrendData: {
@@ -308,6 +310,24 @@ export const useMonitoring = ({
   // Get current frame URL for display
   const currentFrameUrl = frames[currentIndex]?.imageUrl || '';
 
+  // Check if current frame has subtitle detection results
+  const hasSubtitleDetectionResults = useMemo(() => {
+    if (frames.length === 0 || currentIndex >= frames.length) return false;
+    const currentFrame = frames[currentIndex];
+    const hasResults = currentFrame?.subtitleDetectionPerformed === true;
+
+    if (hasResults) {
+      console.log('[useMonitoring] Frame has cached subtitle results:', {
+        frameIndex: currentIndex,
+        timestamp: currentFrame?.timestamp,
+        subtitles: currentFrame?.analysis?.subtitles,
+        textLength: currentFrame?.analysis?.text?.length || 0,
+      });
+    }
+
+    return hasResults;
+  }, [frames, currentIndex]);
+
   // Subtitle detection function
   const detectSubtitles = useCallback(async () => {
     if (frames.length === 0 || currentIndex >= frames.length || isDetectingSubtitles) {
@@ -360,10 +380,12 @@ export const useMonitoring = ({
 
           setSelectedFrameAnalysis(updatedAnalysis);
 
-          // Update the frame's cached analysis
+          // Update the frame's cached analysis and mark subtitle detection as performed
           setFrames((prev) =>
             prev.map((frame, index) =>
-              index === currentIndex ? { ...frame, analysis: updatedAnalysis } : frame,
+              index === currentIndex
+                ? { ...frame, analysis: updatedAnalysis, subtitleDetectionPerformed: true }
+                : frame,
             ),
           );
 
@@ -371,6 +393,10 @@ export const useMonitoring = ({
             '[useMonitoring] Updated frame analysis with subtitle data:',
             updatedAnalysis,
           );
+          console.log('[useMonitoring] Cached subtitle results for frame:', {
+            frameIndex: currentIndex,
+            timestamp: currentFrame.timestamp,
+          });
         } else {
           console.error('[useMonitoring] Subtitle detection failed:', result.error);
         }
@@ -404,6 +430,7 @@ export const useMonitoring = ({
     // Subtitle detection
     detectSubtitles,
     isDetectingSubtitles,
+    hasSubtitleDetectionResults,
 
     // Subtitle trend analysis
     subtitleTrendData,

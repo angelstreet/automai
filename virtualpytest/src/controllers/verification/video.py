@@ -29,6 +29,13 @@ try:
 except ImportError:
     OCR_AVAILABLE = False
 
+# Language detection import
+try:
+    from langdetect import detect, LangDetectException
+    LANG_DETECT_AVAILABLE = True
+except ImportError:
+    LANG_DETECT_AVAILABLE = False
+
 # Simplified sampling patterns for performance optimization (from analyze_frame.py)
 SAMPLING_PATTERNS = {
     "freeze_sample_rate": 10,     # Every 10th pixel for freeze detection
@@ -1222,8 +1229,14 @@ class VideoVerificationController(VerificationControllerInterface):
                     
                     # Extract text if requested and subtitles detected
                     extracted_text = ""
+                    detected_language = "unknown"
                     if extract_text and has_subtitles and OCR_AVAILABLE:
                         extracted_text = self._extract_text_from_region(subtitle_region)
+                        if extracted_text:
+                            detected_language = self._detect_language(extracted_text)
+                        else:
+                            # If no text extracted, then no real subtitles detected
+                            has_subtitles = False
                     
                     result = {
                         'image_path': os.path.basename(image_path),
@@ -1235,6 +1248,7 @@ class VideoVerificationController(VerificationControllerInterface):
                         'red_percentage': round(red_percentage, 2),
                         'error_threshold': 8.0,
                         'extracted_text': extracted_text,
+                        'detected_language': detected_language,
                         'subtitle_region_size': f"{subtitle_region.shape[1]}x{subtitle_region.shape[0]}",
                         'image_size': f"{width}x{height}",
                         'confidence': 0.9 if (has_subtitles or has_errors) else 0.1,
@@ -1351,4 +1365,36 @@ class VideoVerificationController(VerificationControllerInterface):
         except Exception as e:
             print(f"VideoVerify[{self.device_name}]: Text extraction error: {e}")
             return ''
+
+    def _detect_language(self, text: str) -> str:
+        """Detect language of extracted text"""
+        if not LANG_DETECT_AVAILABLE or not text:
+            return 'unknown'
+        
+        try:
+            # Check word count - need at least 7 words for reliable language detection
+            words = text.split()
+            if len(words) < 7:
+                return 'unknown'
+            
+            # Check for garbled text - if less than 80% of characters are alphabetic/space, likely OCR noise
+            valid_chars = sum(1 for c in text if c.isalpha() or c.isspace())
+            if valid_chars / len(text) < 0.8:
+                return 'unknown'
+            
+            # Detect language
+            detected_lang = detect(text)
+            
+            # Only allow specific languages - map to full names
+            allowed_languages = {
+                'en': 'English',
+                'fr': 'French', 
+                'de': 'German',
+                'it': 'Italian'
+            }
+            
+            return allowed_languages.get(detected_lang, 'unknown')
+            
+        except (LangDetectException, Exception):
+            return 'unknown'
 

@@ -51,6 +51,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     subtitleTrendData,
     detectSubtitles,
     isDetectingSubtitles,
+    hasSubtitleDetectionResults,
   } = useMonitoring({
     host: host,
     device: device,
@@ -286,6 +287,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
           overrideImageUrl={frames.length > 0 ? currentImageUrl || undefined : undefined}
           overrideAnalysis={frames.length > 0 ? selectedFrameAnalysis || undefined : undefined}
           subtitleTrendData={subtitleTrendData}
+          showSubtitles={isDetectingSubtitles || hasSubtitleDetectionResults}
         />
       </Box>
 
@@ -323,47 +325,6 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
               }}
             >
               {selectedFrameAnalysis.text}
-            </Typography>
-          </Box>
-        </Box>
-      )}
-
-      {/* Subtitle detection status display */}
-      {isDetectingSubtitles && (
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: frames.length > 0 ? '80px' : '20px',
-            left: '20px',
-            right: '20px',
-            zIndex: 1000015,
-            pointerEvents: 'none',
-          }}
-        >
-          <Box
-            sx={{
-              backgroundColor: 'rgba(0, 100, 200, 0.8)',
-              backdropFilter: 'blur(4px)',
-              borderRadius: '8px',
-              padding: '12px 16px',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 1,
-            }}
-          >
-            <CircularProgress size={16} sx={{ color: '#ffffff' }} />
-            <Typography
-              variant="body2"
-              sx={{
-                color: '#ffffff',
-                fontSize: '0.9rem',
-                fontWeight: 500,
-              }}
-            >
-              Detecting subtitles...
             </Typography>
           </Box>
         </Box>
