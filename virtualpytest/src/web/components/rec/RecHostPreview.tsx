@@ -48,6 +48,18 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   // Hook for notifications only
   const { showError } = useToast();
 
+  // Stabilize host and device objects to prevent infinite re-renders
+  // Only recreate when the actual data changes, not the object reference
+  const stableHost = useMemo(
+    () => host,
+    [host?.host_name, host?.host_url, host?.host_port, host?.status],
+  );
+
+  const stableDevice = useMemo(
+    () => device,
+    [device?.device_id, device?.device_name, device?.device_model],
+  );
+
   // Handle smooth transition when new image loads
   const handleImageLoad = useCallback(() => {
     if (isTransitioning) {
@@ -68,12 +80,12 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     // Don't take screenshots when modal is open
     if (isAnyModalOpen) {
       console.log(
-        `[RecHostPreview] ${host.host_name}-${device?.device_id}: Screenshot skipped (modal open)`,
+        `[RecHostPreview] ${stableHost.host_name}-${stableDevice?.device_id}: Screenshot skipped (modal open)`,
       );
       return;
     }
 
-    if (!generateThumbnailUrl || !device) {
+    if (!generateThumbnailUrl || !stableDevice) {
       return;
     }
 
@@ -82,7 +94,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
     try {
       // Generate thumbnail URL directly with current timestamp (no server call)
-      const newThumbnailUrl = generateThumbnailUrl(host, device);
+      const newThumbnailUrl = generateThumbnailUrl(stableHost, stableDevice);
 
       if (newThumbnailUrl) {
         // Add 1 second delay to ensure thumbnail is properly generated and available
@@ -100,7 +112,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         // If base URL is not available, try to initialize it again
         if (initializeBaseUrl) {
           setTimeout(async () => {
-            const reInitialized = await initializeBaseUrl(host, device);
+            const reInitialized = await initializeBaseUrl(stableHost, stableDevice);
             if (reInitialized) {
               // Try taking screenshot again after re-initialization
               setTimeout(() => handleTakeScreenshot(), 500);
@@ -110,18 +122,25 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       }
     } catch (err: any) {
       console.error(
-        `[@component:RecHostPreview] Thumbnail generation error for ${host.host_name}-${device.device_id}:`,
+        `[@component:RecHostPreview] Thumbnail generation error for ${stableHost.host_name}-${stableDevice.device_id}:`,
         err,
       );
       setError(err.message || 'Thumbnail generation failed');
     } finally {
       setIsLoading(false);
     }
-  }, [host, device, thumbnailUrl, generateThumbnailUrl, initializeBaseUrl, isAnyModalOpen]);
+  }, [
+    stableHost,
+    stableDevice,
+    thumbnailUrl,
+    generateThumbnailUrl,
+    initializeBaseUrl,
+    isAnyModalOpen,
+  ]);
 
   // Initialize base URL once, then auto-generate URLs
   useEffect(() => {
-    if (!host || !device || !initializeBaseUrl || !generateThumbnailUrl) return;
+    if (!stableHost || !stableDevice || !initializeBaseUrl || !generateThumbnailUrl) return;
 
     let screenshotInterval: NodeJS.Timeout | null = null;
     let isMounted = true; // Track mount status to prevent race conditions
@@ -134,7 +153,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
       try {
         // Initialize base URL pattern (only called once)
-        const initialized = await initializeBaseUrl(host, device);
+        const initialized = await initializeBaseUrl(stableHost, stableDevice);
 
         // Check if still mounted after async operation
         if (!isMounted) {
@@ -156,16 +175,16 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                 // Stop polling when any modal is open or timeline is active
                 if (
                   isMounted &&
-                  host &&
-                  device &&
-                  host.status === 'online' &&
+                  stableHost &&
+                  stableDevice &&
+                  stableHost.status === 'online' &&
                   !isStreamModalOpen &&
                   !isAnyModalOpen
                 ) {
                   handleTakeScreenshot();
                 } else if (isStreamModalOpen || isAnyModalOpen) {
                   console.log(
-                    `[RecHostPreview] ${host.host_name}-${device?.device_id}: Polling paused (modal open)`,
+                    `[RecHostPreview] ${stableHost.host_name}-${stableDevice?.device_id}: Polling paused (modal open)`,
                   );
                 }
               }, 5000); // 5 seconds for debugging
@@ -178,7 +197,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         }
       } catch (error) {
         console.error(
-          `[@component:RecHostPreview] Error during initialization for: ${host.host_name}-${device.device_id}`,
+          `[@component:RecHostPreview] Error during initialization for: ${stableHost.host_name}-${stableDevice.device_id}`,
           error,
         );
         if (isMounted) {
@@ -198,8 +217,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
       }
     };
   }, [
-    host,
-    device,
+    stableHost,
+    stableDevice,
     initializeBaseUrl,
     generateThumbnailUrl,
     handleTakeScreenshot,
@@ -210,21 +229,21 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   // Log modal state changes for debugging
   useEffect(() => {
     console.log(
-      `[RecHostPreview] ${host.host_name}-${device?.device_id}: Modal ${isStreamModalOpen ? 'opened' : 'closed'} - polling ${isStreamModalOpen ? 'paused' : 'resumed'}`,
+      `[RecHostPreview] ${stableHost.host_name}-${stableDevice?.device_id}: Modal ${isStreamModalOpen ? 'opened' : 'closed'} - polling ${isStreamModalOpen ? 'paused' : 'resumed'}`,
     );
-  }, [isStreamModalOpen, host.host_name, device?.device_id]);
+  }, [isStreamModalOpen, stableHost.host_name, stableDevice?.device_id]);
 
   // Handle opening stream modal - control will be handled by the modal itself
   const handleOpenStreamModal = useCallback(() => {
     // Basic check if host is online
-    if (host.status !== 'online') {
+    if (stableHost.status !== 'online') {
       showError('Host is not online');
       return;
     }
 
     // Just open the modal - let it handle control logic
     setIsStreamModalOpen(true);
-  }, [host, showError]);
+  }, [stableHost, showError]);
 
   // Handle closing stream modal
   const handleCloseStreamModal = useCallback(() => {
@@ -243,7 +262,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   };
 
   // Clean display values
-  const displayName = device ? `${device.device_name} - ${host.host_name}` : host.host_name;
+  const displayName = stableDevice
+    ? `${stableDevice.device_name} - ${stableHost.host_name}`
+    : stableHost.host_name;
 
   return (
     <Card
@@ -281,9 +302,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
             {displayName}
           </Typography>
           <Chip
-            label={host.status}
+            label={stableHost.status}
             size="small"
-            color={getStatusColor(host.status) as any}
+            color={getStatusColor(stableHost.status) as any}
             sx={{ fontSize: '0.7rem', height: 20 }}
           />
         </Box>
@@ -459,11 +480,10 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
       {/* Stream Modal */}
       <RecHostStreamModal
-        host={host}
-        device={device}
+        host={stableHost}
+        device={stableDevice}
         isOpen={isStreamModalOpen}
         onClose={handleCloseStreamModal}
-        showRemoteByDefault={false}
       />
     </Card>
   );
