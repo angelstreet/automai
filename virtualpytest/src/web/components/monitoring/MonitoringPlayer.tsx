@@ -16,7 +16,7 @@ interface MonitoringPlayerProps {
 
 // Image cache to store loaded images and prevent refetching
 const imageCache = new Map<string, HTMLImageElement>();
-const MAX_CACHE_SIZE = 30; // Keep last 30 images
+const MAX_CACHE_SIZE = 50; // Keep last 50 images
 
 // Simple mobile detection function (matching RecHostPreview logic)
 const isMobileModel = (model?: string): boolean => {
@@ -82,7 +82,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         // Add to cache
         imageCache.set(url, img);
 
-        // Clean cache if it gets too large (keep only last 30 images)
+        // Clean cache if it gets too large (keep only last 50 images)
         if (imageCache.size > MAX_CACHE_SIZE) {
           const keys = Array.from(imageCache.keys());
           const keysToDelete = keys.slice(0, imageCache.size - MAX_CACHE_SIZE);

@@ -13,6 +13,7 @@ interface MonitoringAnalysis {
   };
   errors: boolean;
   text: string;
+  language?: string;
 }
 
 interface SubtitleTrendData {
@@ -106,11 +107,19 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
                 }}
               >
                 {analysis?.subtitles ? 'Yes' : 'No'}
+                {analysis?.subtitles && analysis?.language && (
+                  <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
+                    ({analysis.language})
+                  </Typography>
+                )}
               </Typography>
             </Box>
             {analysis?.subtitles && analysis?.text && (
-              <Typography variant="caption" sx={{ color: '#cccccc', ml: 2 }}>
-                Text detected ({analysis.text.length} chars)
+              <Typography variant="body2" sx={{ color: '#ffffff', ml: 0, mt: 0.5 }}>
+                Text:{' '}
+                <Typography component="span" sx={{ color: '#cccccc' }}>
+                  {analysis.text}
+                </Typography>
               </Typography>
             )}
           </Box>

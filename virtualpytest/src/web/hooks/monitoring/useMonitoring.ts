@@ -117,11 +117,20 @@ export const useMonitoring = ({
           setTimeout(() => {
             setFrames((prev) => {
               const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
-              const updatedFrames = newFrames.slice(-30); // Keep last 30 frames
+              const updatedFrames = newFrames.slice(-50); // Keep last 50 frames
 
-              // Auto-follow new images unless user manually selected a previous frame
-              if (!userSelectedFrame || isPlaying) {
+              // Auto-follow new images only when playing
+              if (isPlaying) {
                 setCurrentIndex(updatedFrames.length - 1);
+              } else if (userSelectedFrame) {
+                // When paused, check if current frame was deleted from buffer
+                const currentFrameStillExists = updatedFrames.some(
+                  (frame, index) => index === currentIndex,
+                );
+                if (!currentFrameStillExists) {
+                  // Current frame was deleted, move to latest available frame
+                  setCurrentIndex(updatedFrames.length - 1);
+                }
               }
 
               return updatedFrames;
