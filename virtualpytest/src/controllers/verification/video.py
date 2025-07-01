@@ -1232,6 +1232,7 @@ class VideoVerificationController(VerificationControllerInterface):
                         extracted_text = self._extract_text_from_region(subtitle_region)
                         if extracted_text:
                             detected_language = self._detect_language(extracted_text)
+                            print(f"VideoVerify[{self.device_name}]: Extracted subtitle text: '{extracted_text}' -> Language: {detected_language}")
                         else:
                             # If no text extracted, then no real subtitles detected
                             print(f"VideoVerify[{self.device_name}]: Edge detection found {subtitle_edges} edges (threshold: {adaptive_threshold:.0f}) but OCR found no text - likely false positive")
@@ -1287,8 +1288,15 @@ class VideoVerificationController(VerificationControllerInterface):
             subtitles_detected = any(r.get('has_subtitles', False) for r in successful_analyses)
             errors_detected = any(r.get('has_errors', False) for r in successful_analyses)
             
-            # Combine all extracted text
+            # Combine all extracted text and find the most confident language detection
             all_extracted_text = " ".join([r.get('extracted_text', '') for r in successful_analyses if r.get('extracted_text')])
+            
+            # Get the language from the result with highest confidence and subtitles detected
+            detected_language = 'unknown'
+            for result in successful_analyses:
+                if result.get('has_subtitles') and result.get('detected_language') != 'unknown':
+                    detected_language = result.get('detected_language')
+                    break
             
             overall_result = {
                 'success': len(successful_analyses) > 0,
@@ -1297,6 +1305,7 @@ class VideoVerificationController(VerificationControllerInterface):
                 'analyzed_images': len(results),
                 'successful_analyses': len(successful_analyses),
                 'combined_extracted_text': all_extracted_text.strip(),
+                'detected_language': detected_language,
                 'results': results,
                 'analysis_type': 'subtitle_detection',
                 'timestamp': datetime.now().isoformat()
@@ -1337,16 +1346,47 @@ class VideoVerificationController(VerificationControllerInterface):
             if len(text) < 3:
                 return ''
             
-            # Check for garbled text
-            valid_chars = sum(1 for c in text if c.isprintable())
-            if len(text) > 0 and valid_chars / len(text) < 0.7:
-                return ''
+            # Clean and filter the text for better language detection
+            cleaned_text = self._clean_ocr_text(text)
             
-            return text
+            # Return cleaned text if it has meaningful content
+            if len(cleaned_text) >= 3:
+                return cleaned_text
+            else:
+                # If cleaned text is too short, return original for display but it won't be good for language detection
+                return text
             
         except Exception as e:
             print(f"VideoVerify[{self.device_name}]: Text extraction error: {e}")
             return ''
+
+    def _clean_ocr_text(self, text: str) -> str:
+        """Clean OCR text by removing noise and keeping only meaningful words"""
+        if not text:
+            return ''
+        
+        # Remove newlines and extra whitespace
+        text = re.sub(r'\s+', ' ', text.replace('\n', ' ')).strip()
+        
+        # Split into words and filter out noise
+        words = text.split()
+        cleaned_words = []
+        
+        for word in words:
+            # Remove common OCR noise patterns
+            cleaned_word = re.sub(r'[^\w\s\'-]', '', word)  # Keep letters, numbers, apostrophes, hyphens
+            cleaned_word = cleaned_word.strip()
+            
+            # Keep words that are:
+            # - At least 2 characters long
+            # - Contain at least one letter
+            # - Are not just numbers or symbols
+            if (len(cleaned_word) >= 2 and 
+                re.search(r'[a-zA-ZÀ-ÿ]', cleaned_word) and  # Contains letters (including accented)
+                not cleaned_word.isdigit()):  # Not just numbers
+                cleaned_words.append(cleaned_word)
+        
+        return ' '.join(cleaned_words)
 
     def _detect_language(self, text: str) -> str:
         """Detect language of extracted text"""
@@ -1354,29 +1394,42 @@ class VideoVerificationController(VerificationControllerInterface):
             return 'unknown'
         
         try:
-            # Check word count - need at least 7 words for reliable language detection
-            words = text.split()
-            if len(words) < 7:
+            # Clean the text for better language detection
+            cleaned_text = self._clean_ocr_text(text)
+            
+            # Use cleaned text for detection, but fall back to original if cleaning removed too much
+            detection_text = cleaned_text if len(cleaned_text) >= 6 else text
+            
+            # Check word count - need at least 3 meaningful words for detection
+            words = detection_text.split()
+            if len(words) < 3:
                 return 'unknown'
             
-            # Check for garbled text - if less than 80% of characters are alphabetic/space, likely OCR noise
-            valid_chars = sum(1 for c in text if c.isalpha() or c.isspace())
-            if valid_chars / len(text) < 0.8:
-                return 'unknown'
+            # For shorter text (3-5 words), try to detect anyway but with lower confidence
+            # For longer text (6+ words), use standard detection
+            
+            print(f"VideoVerify[{self.device_name}]: Language detection - original: '{text[:50]}...', cleaned: '{detection_text[:50]}...', words: {len(words)}")
             
             # Detect language
-            detected_lang = detect(text)
+            detected_lang = detect(detection_text)
             
             # Only allow specific languages - map to full names
             allowed_languages = {
                 'en': 'English',
                 'fr': 'French', 
                 'de': 'German',
-                'it': 'Italian'
+                'it': 'Italian',
+                'es': 'Spanish',
+                'pt': 'Portuguese',
+                'nl': 'Dutch'
             }
             
-            return allowed_languages.get(detected_lang, 'unknown')
+            result = allowed_languages.get(detected_lang, 'unknown')
+            print(f"VideoVerify[{self.device_name}]: Language detected: {detected_lang} -> {result}")
             
-        except (LangDetectException, Exception):
+            return result
+            
+        except (LangDetectException, Exception) as e:
+            print(f"VideoVerify[{self.device_name}]: Language detection error: {e}")
             return 'unknown'
 

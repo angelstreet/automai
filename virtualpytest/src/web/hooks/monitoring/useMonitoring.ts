@@ -20,6 +20,7 @@ interface MonitoringAnalysis {
   };
   errors: boolean;
   text: string;
+  language?: string;
   confidence: number;
 }
 
@@ -379,6 +380,8 @@ export const useMonitoring = ({
           const subtitleData = result.results && result.results.length > 0 ? result.results[0] : {};
           const hasSubtitles = result.subtitles_detected || false;
           const extractedText = result.combined_extracted_text || subtitleData.extracted_text || '';
+          const detectedLanguage =
+            result.detected_language || subtitleData.detected_language || undefined;
 
           // Update the selectedFrameAnalysis with the detected subtitle data
           const updatedAnalysis: MonitoringAnalysis = {
@@ -388,6 +391,7 @@ export const useMonitoring = ({
             subtitles: hasSubtitles,
             errors: selectedFrameAnalysis?.errors || false,
             text: extractedText,
+            language: detectedLanguage !== 'unknown' ? detectedLanguage : undefined,
             confidence: subtitleData.confidence || (hasSubtitles ? 0.9 : 0.1),
           };
 
