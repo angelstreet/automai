@@ -124,7 +124,7 @@ export const useMonitoring = ({
           // Generate JSON URL - monitoring needs original filename + _thumbnail.json
           const jsonUrl = newImageUrl.replace('.jpg', '_thumbnail.json');
 
-          // Add 600ms delay to allow JSON file to be written
+          // Add 300ms delay to allow image to be captured and available
           setTimeout(() => {
             setFrames((prev) => {
               const newFrames = [...prev, { timestamp, imageUrl: newImageUrl, jsonUrl }];
@@ -144,7 +144,7 @@ export const useMonitoring = ({
 
               return updatedFrames;
             });
-          }, 600);
+          }, 300);
         }
       }
     };
@@ -207,20 +207,32 @@ export const useMonitoring = ({
         return;
       }
 
-      // Load analysis for this frame
-      try {
-        const response = await fetch(selectedFrame.jsonUrl);
-        if (response.ok) {
-          const data = await response.json();
-          const analysis = data.analysis || null;
+      // Add 600ms delay before fetching JSON to ensure analysis is complete
+      // (Total delay: 300ms for image + 600ms for JSON = 900ms from capture)
+      setTimeout(async () => {
+        // Load analysis for this frame
+        try {
+          const response = await fetch(selectedFrame.jsonUrl);
+          if (response.ok) {
+            const data = await response.json();
+            const analysis = data.analysis || null;
 
-          // Cache the analysis in the frame reference
-          setFrames((prev) =>
-            prev.map((frame, index) => (index === currentIndex ? { ...frame, analysis } : frame)),
-          );
+            // Cache the analysis in the frame reference
+            setFrames((prev) =>
+              prev.map((frame, index) => (index === currentIndex ? { ...frame, analysis } : frame)),
+            );
 
-          setSelectedFrameAnalysis(analysis);
-        } else {
+            setSelectedFrameAnalysis(analysis);
+          } else {
+            // Cache the failed load as null to avoid repeated attempts
+            setFrames((prev) =>
+              prev.map((frame, index) =>
+                index === currentIndex ? { ...frame, analysis: null } : frame,
+              ),
+            );
+            setSelectedFrameAnalysis(null);
+          }
+        } catch {
           // Cache the failed load as null to avoid repeated attempts
           setFrames((prev) =>
             prev.map((frame, index) =>
@@ -229,15 +241,7 @@ export const useMonitoring = ({
           );
           setSelectedFrameAnalysis(null);
         }
-      } catch {
-        // Cache the failed load as null to avoid repeated attempts
-        setFrames((prev) =>
-          prev.map((frame, index) =>
-            index === currentIndex ? { ...frame, analysis: null } : frame,
-          ),
-        );
-        setSelectedFrameAnalysis(null);
-      }
+      }, 600);
     };
 
     loadSelectedFrameAnalysis();

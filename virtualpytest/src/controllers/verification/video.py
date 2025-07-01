@@ -1175,7 +1175,8 @@ class VideoVerificationController(VerificationControllerInterface):
                     height, width = img.shape[:2]
                     
                     # Enhanced subtitle detection with adaptive region processing
-                    subtitle_height_start = int(height * 0.8)
+                    # Expanded to capture 2-line subtitles - start from 70% to bottom (30% of screen height)
+                    subtitle_height_start = int(height * 0.7)
                     subtitle_width_start = int(width * 0.2)  # Skip left 20%
                     subtitle_width_end = int(width * 0.8)    # Skip right 20%
                     
