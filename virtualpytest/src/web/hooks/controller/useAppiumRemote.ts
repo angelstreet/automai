@@ -57,6 +57,27 @@ export const useAppiumRemote = (host: Host, deviceId?: string): UseAppiumRemoteR
     sessionId: undefined,
   });
 
+  // Auto-connect when host and deviceId are available
+  useEffect(() => {
+    if (host && deviceId) {
+      console.log('[@hook:useAppiumRemote] Auto-connecting with host and device');
+      setSession((prev) => ({
+        ...prev,
+        connected: true,
+        connectionInfo: 'Connected',
+        appiumConnected: true,
+      }));
+    } else {
+      console.log('[@hook:useAppiumRemote] No host or device, disconnecting');
+      setSession((prev) => ({
+        ...prev,
+        connected: false,
+        connectionInfo: 'Disconnected',
+        appiumConnected: false,
+      }));
+    }
+  }, [host, deviceId]);
+
   console.log(
     '[@hook:useAppiumRemote] Hook initialized for host:',
     host?.host_name,

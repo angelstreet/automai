@@ -72,6 +72,17 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isRefreshingApps, setIsRefreshingApps] = useState(false);
 
+  // Auto-connect when host and deviceId are available
+  useEffect(() => {
+    if (selectedHost && deviceId) {
+      console.log('[@hook:useAndroidMobile] Auto-connecting with host and device');
+      setIsConnected(true);
+    } else {
+      console.log('[@hook:useAndroidMobile] No host or device, disconnecting');
+      setIsConnected(false);
+    }
+  }, [selectedHost, deviceId]);
+
   // Debug logging for state changes
   useEffect(() => {
     console.log('[@hook:useAndroidMobile] androidElements state changed:', {
