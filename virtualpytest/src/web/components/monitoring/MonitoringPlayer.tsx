@@ -1,5 +1,5 @@
-import { PlayArrow, Pause } from '@mui/icons-material';
-import { Box, Slider, IconButton, Typography } from '@mui/material';
+import { PlayArrow, Pause, Subtitles } from '@mui/icons-material';
+import { Box, Slider, IconButton, Typography, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 
 import { getStreamViewerLayout } from '../../config/layoutConfig';
@@ -35,6 +35,14 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
   // Control is active only when we have both required functions
   const hasControl = !!(initializeBaseUrl && generateThumbnailUrl);
 
+  console.log('[MonitoringPlayer] Debug:', {
+    initializeBaseUrl: !!initializeBaseUrl,
+    generateThumbnailUrl: !!generateThumbnailUrl,
+    hasControl,
+    hostName: _host?.host_name,
+    deviceId: device?.device_id,
+  });
+
   // Image transition states for smooth fade effects
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [previousImageUrl, setPreviousImageUrl] = useState<string | null>(null);
@@ -54,6 +62,8 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     handlePlayPause,
     handleSliderChange,
     subtitleTrendData,
+    detectSubtitles,
+    isDetectingSubtitles,
   } = useMonitoring(hasControl);
 
   // Device model detection for proper image sizing
@@ -346,6 +356,47 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         </Box>
       )}
 
+      {/* Subtitle detection status display */}
+      {isDetectingSubtitles && (
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: hasControl && frames.length > 0 ? '80px' : '20px',
+            left: '20px',
+            right: '20px',
+            zIndex: 1000015,
+            pointerEvents: 'none',
+          }}
+        >
+          <Box
+            sx={{
+              backgroundColor: 'rgba(0, 100, 200, 0.8)',
+              backdropFilter: 'blur(4px)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1,
+            }}
+          >
+            <CircularProgress size={16} sx={{ color: '#ffffff' }} />
+            <Typography
+              variant="body2"
+              sx={{
+                color: '#ffffff',
+                fontSize: '0.9rem',
+                fontWeight: 500,
+              }}
+            >
+              Detecting subtitles...
+            </Typography>
+          </Box>
+        </Box>
+      )}
+
       {/* Timeline controls - only when we have control and frames */}
       {hasControl && frames.length > 0 && (
         <Box
@@ -376,6 +427,37 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             </IconButton>
           </Box>
 
+          {/* Subtitle detection button */}
+          <Box sx={{ position: 'absolute', bottom: 8, left: 60 }}>
+            <IconButton
+              size="medium"
+              onClick={detectSubtitles}
+              disabled={isDetectingSubtitles}
+              sx={{
+                color: selectedFrameAnalysis?.subtitles ? '#4caf50' : '#ffffff',
+                backgroundColor: 'rgba(255,255,255,0.1)',
+                '&:hover': {
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                },
+                '&:disabled': {
+                  color: 'rgba(255,255,255,0.5)',
+                  backgroundColor: 'rgba(255,255,255,0.05)',
+                },
+              }}
+              title={
+                isDetectingSubtitles
+                  ? 'Detecting subtitles...'
+                  : 'Detect subtitles in current frame'
+              }
+            >
+              {isDetectingSubtitles ? (
+                <CircularProgress size={20} sx={{ color: '#ffffff' }} />
+              ) : (
+                <Subtitles />
+              )}
+            </IconButton>
+          </Box>
+
           {/* Frame counter */}
           <Box sx={{ position: 'absolute', bottom: 16, right: 16 }}>
             <Typography
@@ -395,7 +477,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
             sx={{
               position: 'absolute',
               bottom: 12,
-              left: '80px',
+              left: '120px', // Adjusted to account for subtitle button
               right: '80px',
             }}
           >

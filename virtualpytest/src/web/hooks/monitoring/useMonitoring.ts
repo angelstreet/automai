@@ -39,6 +39,10 @@ interface UseMonitoringReturn {
   handleSliderChange: (event: Event, newValue: number | number[]) => void;
   handleHistoricalFrameLoad: () => void;
 
+  // Subtitle detection
+  detectSubtitles: () => Promise<void>;
+  isDetectingSubtitles: boolean;
+
   // Subtitle trend analysis
   subtitleTrendData: {
     showRedIndicator: boolean;
@@ -58,6 +62,7 @@ export const useMonitoring = (shouldDetectImages: boolean): UseMonitoringReturn 
     null,
   );
   const [isHistoricalFrameLoaded, setIsHistoricalFrameLoaded] = useState(false);
+  const [isDetectingSubtitles, setIsDetectingSubtitles] = useState(false);
 
   // Monitor RecHostPreview for new images - only when enabled
   useEffect(() => {
@@ -293,6 +298,80 @@ export const useMonitoring = (shouldDetectImages: boolean): UseMonitoringReturn 
   // Get current frame URL for display
   const currentFrameUrl = frames[currentIndex]?.imageUrl || '';
 
+  // Subtitle detection function
+  const detectSubtitles = useCallback(async () => {
+    if (frames.length === 0 || currentIndex >= frames.length || isDetectingSubtitles) {
+      return;
+    }
+
+    const currentFrame = frames[currentIndex];
+    if (!currentFrame) {
+      return;
+    }
+
+    setIsDetectingSubtitles(true);
+
+    try {
+      console.log('[useMonitoring] Detecting subtitles for frame:', currentFrame.imageUrl);
+
+      const response = await fetch('/server/verification/video/detectSubtitles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image_source_url: currentFrame.imageUrl,
+          extract_text: true,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[useMonitoring] Subtitle detection result:', result);
+
+        if (result.success) {
+          // Extract subtitle data from the response
+          const subtitleData = result.results && result.results.length > 0 ? result.results[0] : {};
+          const hasSubtitles = result.subtitles_detected || false;
+          const extractedText = result.combined_extracted_text || subtitleData.extracted_text || '';
+
+          // Update the selectedFrameAnalysis with the detected subtitle data
+          const updatedAnalysis: MonitoringAnalysis = {
+            ...selectedFrameAnalysis,
+            blackscreen: selectedFrameAnalysis?.blackscreen || false,
+            freeze: selectedFrameAnalysis?.freeze || false,
+            subtitles: hasSubtitles,
+            errors: selectedFrameAnalysis?.errors || false,
+            text: extractedText,
+            confidence: subtitleData.confidence || (hasSubtitles ? 0.9 : 0.1),
+          };
+
+          setSelectedFrameAnalysis(updatedAnalysis);
+
+          // Update the frame's cached analysis
+          setFrames((prev) =>
+            prev.map((frame, index) =>
+              index === currentIndex ? { ...frame, analysis: updatedAnalysis } : frame,
+            ),
+          );
+
+          console.log(
+            '[useMonitoring] Updated frame analysis with subtitle data:',
+            updatedAnalysis,
+          );
+        } else {
+          console.error('[useMonitoring] Subtitle detection failed:', result.error);
+        }
+      } else {
+        console.error('[useMonitoring] Subtitle detection request failed:', response.status);
+      }
+    } catch (error) {
+      console.error('[useMonitoring] Subtitle detection error:', error);
+    } finally {
+      setIsDetectingSubtitles(false);
+    }
+  }, [frames, currentIndex, selectedFrameAnalysis, isDetectingSubtitles]);
+
   return {
     // Frame management
     frames,
@@ -309,6 +388,10 @@ export const useMonitoring = (shouldDetectImages: boolean): UseMonitoringReturn 
     handlePlayPause,
     handleSliderChange,
     handleHistoricalFrameLoad,
+
+    // Subtitle detection
+    detectSubtitles,
+    isDetectingSubtitles,
 
     // Subtitle trend analysis
     subtitleTrendData,

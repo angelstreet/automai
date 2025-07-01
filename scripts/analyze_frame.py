@@ -115,13 +115,13 @@ def analyze_freeze(image_path, previous_frames_cache=None):
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             print(f"Error: Could not load image for freeze analysis: {image_path}", file=sys.stderr)
-            return False, None
+            return False
         
         # Extract timestamp from current filename
         current_match = re.search(r'capture_(\d{14})(?:_thumbnail)?\.jpg', image_path)
         if not current_match:
             print(f"Could not extract timestamp from filename: {image_path}", file=sys.stderr)
-            return False, None
+            return False
         
         current_timestamp = current_match.group(1)
         current_filename = os.path.basename(image_path)
@@ -143,7 +143,7 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             
             if current_filename not in all_files:
                 print(f"Current file not found in directory listing: {current_filename}")
-                return False, None
+                return False
             
             current_index = all_files.index(current_filename)
             
@@ -156,7 +156,7 @@ def analyze_freeze(image_path, previous_frames_cache=None):
                     'last_updated': current_timestamp
                 }
                 save_frame_cache(cache_file_path, new_cache)
-                return False, None
+                return False
             
             # Get the 2 previous frames
             prev1_filename = all_files[current_index - 1]  # Most recent previous
@@ -181,12 +181,12 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             
             if prev1_img is None or prev2_img is None:
                 print(f"Could not load previous images: {prev1_filename}, {prev2_filename}")
-                return False, None
+                return False
             
             # Check if all images have same dimensions
             if img.shape != prev1_img.shape or img.shape != prev2_img.shape:
                 print(f"Image dimensions don't match: {img.shape} vs {prev1_img.shape} vs {prev2_img.shape}")
-                return False, None
+                return False
             
             # Optimized sampling for pixel difference (every 10th pixel for performance)
             sample_rate = SAMPLING_PATTERNS["freeze_sample_rate"]
@@ -219,13 +219,6 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             else:
                 print(f"No freeze: At least one frame pair shows significant difference (threshold={freeze_threshold})")
             
-            # Analyze subtitles across all 3 frames using cached images
-            subtitle_history = analyze_subtitles_across_frames([
-                (current_filename, image_path),
-                (prev1_filename, os.path.join(directory, prev1_filename) if get_cached_frame_data(cache, prev1_filename) is None else None),
-                (prev2_filename, os.path.join(directory, prev2_filename) if get_cached_frame_data(cache, prev2_filename) is None else None)
-            ])
-            
             # Update cache with the 2 most recent frames for next execution
             # Extract timestamps for proper ordering
             prev1_match = re.search(r'capture_(\d{14})(?:_thumbnail)?\.jpg', prev1_filename)
@@ -239,18 +232,59 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             save_frame_cache(cache_file_path, new_cache)
             print(f"Updated cache with {prev1_filename} and {current_filename}")
             
-            return is_frozen, subtitle_history
+            return is_frozen
             
         except Exception as e:
             print(f"Could not compare with previous frames: {e}")
-            return False, None
+            return False
         
     except Exception as e:
         print(f"Error analyzing freeze: {e}", file=sys.stderr)
-        return False, None
+        return False
 
+def analyze_errors_only(image_path):
+    """Detect error messages without subtitle dependency - Optimized with region processing and sampling"""
+    try:
+        img = cv2.imread(image_path)
+        if img is None:
+            return False
+        
+        # More restrictive error detection - only look for real error messages
+        # Errors should be prominent red text/backgrounds, not just any red content
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        
+        # Use configurable grid sampling rate
+        grid_rate = SAMPLING_PATTERNS["error_grid_rate"]
+        sampled_hsv = hsv[::grid_rate, ::grid_rate]
+        
+        # Red color range in HSV - more restrictive for actual error messages
+        lower_red1 = np.array([0, 100, 100])  # Higher saturation and value for prominent reds
+        upper_red1 = np.array([10, 255, 255])
+        lower_red2 = np.array([170, 100, 100])  # Higher saturation and value for prominent reds
+        upper_red2 = np.array([180, 255, 255])
+        
+        mask1 = cv2.inRange(sampled_hsv, lower_red1, upper_red1)
+        mask2 = cv2.inRange(sampled_hsv, lower_red2, upper_red2)
+        red_mask = mask1 + mask2
+        
+        red_pixels = np.sum(red_mask > 0)
+        total_sampled_pixels = sampled_hsv.shape[0] * sampled_hsv.shape[1]
+        red_percentage = (red_pixels / total_sampled_pixels) * 100
+        
+        # Much higher threshold - only flag as error if there's significant prominent red content
+        # This should catch error pages (404, connection errors) but not normal red UI elements
+        has_errors = red_percentage > 8.0  # Increased from 2% to 8% for more prominent red content
+        
+        print(f"Error detection: {red_percentage:.1f}% red pixels in {total_sampled_pixels} sampled pixels (threshold: 8.0%)")
+        
+        return has_errors
+    except Exception as e:
+        print(f"Error analyzing errors: {e}", file=sys.stderr)
+        return False
+
+# Keep subtitle functions available for on-demand use but don't call them automatically
 def analyze_subtitles_across_frames(frame_list):
-    """Analyze subtitle detection across multiple frames"""
+    """Analyze subtitle detection across multiple frames - AVAILABLE FOR ON-DEMAND USE"""
     subtitle_results = []
     
     for filename, image_path in frame_list:
@@ -275,7 +309,7 @@ def analyze_subtitles_across_frames(frame_list):
     }
 
 def analyze_subtitles_and_errors(image_path):
-    """Detect subtitles and error messages - Optimized with region processing and sampling"""
+    """Detect subtitles and error messages - AVAILABLE FOR ON-DEMAND USE"""
     try:
         img = cv2.imread(image_path)
         if img is None:
@@ -338,7 +372,7 @@ def analyze_subtitles_and_errors(image_path):
         return False, False
 
 def extract_text(has_subtitles, image_path=None):
-    """Extract text from subtitle region using OCR"""
+    """Extract text from subtitle region using OCR - AVAILABLE FOR ON-DEMAND USE"""
     if not has_subtitles:
         return ''
     
@@ -438,10 +472,15 @@ def main():
         if img is None:
             raise Exception("Could not load original image")
         
-        # Run analysis on thumbnail (or original if thumbnail not available)
+        # LIGHTENED ANALYSIS - Only run essential detection
+        print("=== LIGHTENED ANALYSIS MODE ===")
+        print("Running: blackscreen, freeze, errors")
+        print("Skipping: subtitles, text extraction (available on-demand)")
+        
+        # Run core analysis on thumbnail (or original if thumbnail not available)
         blackscreen = analyze_blackscreen(analysis_image)
-        frozen, subtitle_history = analyze_freeze(analysis_image)
-        subtitles, potential_errors = analyze_subtitles_and_errors(analysis_image)
+        frozen = analyze_freeze(analysis_image)
+        potential_errors = analyze_errors_only(analysis_image)
         
         # Only flag errors if there's also a freeze - this makes error detection much more restrictive
         # Real errors (404, no internet, etc.) usually cause the screen to freeze on an error page
@@ -452,21 +491,10 @@ def main():
         elif errors:
             print(f"Error detection: Red content detected WITH freeze - flagging as error")
         
-        extracted_text = extract_text(subtitles, analysis_image)
+        # Calculate confidence based on active detections only
+        confidence = 0.9 if (blackscreen or frozen or errors) else 0.1
         
-        # If we don't have subtitle history (not enough frames), use current frame analysis
-        if subtitle_history is None:
-            subtitle_history = {
-                'current_frame': subtitles,
-                'last_3_frames': [subtitles],
-                'subtitle_count_in_3': 1 if subtitles else 0,
-                'no_subtitles_for_3_frames': not subtitles
-            }
-        
-        # Calculate confidence
-        confidence = 0.9 if (blackscreen or frozen or subtitles or errors) else 0.1
-        
-        # Create analysis result
+        # Create analysis result - simplified without subtitle data
         analysis_result = {
             'timestamp': datetime.now().isoformat(),
             'filename': os.path.basename(image_path),
@@ -474,21 +502,16 @@ def main():
             'analysis': {
                 'blackscreen': bool(blackscreen),
                 'freeze': bool(frozen),
-                'subtitles': bool(subtitles),
-                'subtitles_trend': {
-                    'current': bool(subtitle_history['current_frame']),
-                    'last_3_frames': [bool(x) for x in subtitle_history['last_3_frames']],
-                    'count_in_last_3': int(subtitle_history['subtitle_count_in_3']),
-                    'no_subtitles_for_3_frames': bool(subtitle_history['no_subtitles_for_3_frames'])
-                },
+                'subtitles': False,  # Always false in lightened mode
                 'errors': bool(errors),
-                'text': str(extracted_text),
+                'text': '',  # Always empty in lightened mode
                 'confidence': float(confidence)
             },
             'processing_info': {
                 'analyzed_at': datetime.now().isoformat(),
                 'image_size': f"{img.shape[1]}x{img.shape[0]}",
-                'analyzed_image': os.path.basename(analysis_image)
+                'analyzed_image': os.path.basename(analysis_image),
+                'analysis_mode': 'lightened'  # Indicate this is lightened analysis
             }
         }
         
@@ -502,7 +525,8 @@ def main():
             json.dump(analysis_result, f, indent=2)
         
         print(f"Analysis complete: {json_filename}")
-        print(f"Results: blackscreen={blackscreen}, freeze={frozen}, subtitles={subtitles}, errors={errors}, text='{extracted_text}'")
+        print(f"Results: blackscreen={blackscreen}, freeze={frozen}, errors={errors}")
+        print("Note: Subtitles and text extraction available on-demand via backend")
         
     except Exception as e:
         print(f"Analysis failed: {e}", file=sys.stderr)

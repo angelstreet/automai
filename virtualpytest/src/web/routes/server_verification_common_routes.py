@@ -138,6 +138,66 @@ def verification_video_execute():
             'error': str(e)
         }), 500
 
+@server_verification_common_bp.route('/video/detectBlackscreen', methods=['POST'])
+def verification_video_detect_blackscreen():
+    """Proxy video blackscreen detection to host"""
+    try:
+        print("[@route:server_verification_common:verification_video_detect_blackscreen] Proxying blackscreen detection request")
+        
+        # Get request data
+        request_data = request.get_json() or {}
+        
+        # Proxy to host video blackscreen detection endpoint
+        response_data, status_code = proxy_to_host('/host/verification/video/detectBlackscreen', 'POST', request_data, timeout=60)
+        
+        return jsonify(response_data), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@server_verification_common_bp.route('/video/detectFreeze', methods=['POST'])
+def verification_video_detect_freeze():
+    """Proxy video freeze detection to host"""
+    try:
+        print("[@route:server_verification_common:verification_video_detect_freeze] Proxying freeze detection request")
+        
+        # Get request data
+        request_data = request.get_json() or {}
+        
+        # Proxy to host video freeze detection endpoint
+        response_data, status_code = proxy_to_host('/host/verification/video/detectFreeze', 'POST', request_data, timeout=60)
+        
+        return jsonify(response_data), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@server_verification_common_bp.route('/video/detectSubtitles', methods=['POST'])
+def verification_video_detect_subtitles():
+    """Proxy video subtitle detection to host"""
+    try:
+        print("[@route:server_verification_common:verification_video_detect_subtitles] Proxying subtitle detection request")
+        
+        # Get request data
+        request_data = request.get_json() or {}
+        
+        # Proxy to host video subtitle detection endpoint
+        response_data, status_code = proxy_to_host('/host/verification/video/detectSubtitles', 'POST', request_data, timeout=60)
+        
+        return jsonify(response_data), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # =====================================================
 # BATCH VERIFICATION COORDINATION (SERVER-SIDE LOGIC)
 # =====================================================
