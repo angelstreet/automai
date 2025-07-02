@@ -618,52 +618,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                     'inputLabel': 'Coordinates (x,y)',
                     'inputPlaceholder': '100,200'
                 },
-                {
-                    'id': 'press_key_up',
-                    'label': 'Up',
-                    'command': 'press_key',
-                    'action_type': 'remote',
-                    'params': {'key': 'UP'},
-                    'description': 'Navigate up in the interface',
-                    'requiresInput': False
-                },
-                {
-                    'id': 'press_key_down',
-                    'label': 'Down', 
-                    'command': 'press_key',
-                    'action_type': 'remote',
-                    'params': {'key': 'DOWN'},
-                    'description': 'Navigate down in the interface',
-                    'requiresInput': False
-                },
-                {
-                    'id': 'press_key_left',
-                    'label': 'Left',
-                    'command': 'press_key',
-                    'action_type': 'remote',
-                    'params': {'key': 'LEFT'},
-                    'description': 'Navigate left in the interface',
-                    'requiresInput': False
-                },
-                {
-                    'id': 'press_key_right',
-                    'label': 'Right',
-                    'command': 'press_key',
-                    'action_type': 'remote',
-                    'params': {'key': 'RIGHT'}, 
-                    'description': 'Navigate right in the interface',
-                    'requiresInput': False
-                },
-                # Control actions
-                {
-                    'id': 'press_key_enter',
-                    'label': 'Select/Enter',
-                    'command': 'press_key',
-                    'action_type': 'remote',
-                    'params': {'key': 'ENTER'},
-                    'description': 'Select current item or confirm action',
-                    'requiresInput': False
-                },
+               
                 {
                     'id': 'press_key_back',
                     'label': 'Back',
@@ -680,15 +635,6 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                     'action_type': 'remote',
                     'params': {'key': 'HOME'},
                     'description': 'Go to home screen',
-                    'requiresInput': False
-                },
-                {
-                    'id': 'press_key_menu',
-                    'label': 'Menu',
-                    'command': 'press_key',
-                    'action_type': 'remote',
-                    'params': {'key': 'MENU'},
-                    'description': 'Open menu',
                     'requiresInput': False
                 },
                 # Text input actions

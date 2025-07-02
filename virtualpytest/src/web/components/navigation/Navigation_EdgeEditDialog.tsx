@@ -96,39 +96,118 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           />
 
           {/* Main Actions */}
-          <Box>
-            <Typography variant="h6" sx={{ mb: 1, fontSize: '1rem' }}>
-              Main Actions
-            </Typography>
-            <ActionsList
-              actions={edgeEdit.localActions}
-              onActionsUpdate={edgeEdit.handleActionsChange}
-            />
+          <Box
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1,
+              p: 2,
+              mb: 2,
+            }}
+          >
+            <Box
+              sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
+            >
+              <Typography variant="h6" sx={{ fontSize: '1rem', m: 0 }}>
+                Main Actions
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  const newAction = {
+                    id: `action_${Date.now()}`,
+                    command: '',
+                    params: {},
+                    description: '',
+                  };
+                  edgeEdit.handleActionsChange([...edgeEdit.localActions, newAction]);
+                }}
+                sx={{ fontSize: '0.75rem', px: 1 }}
+              >
+                + Add Action
+              </Button>
+            </Box>
+            {edgeEdit.localActions.length > 0 ? (
+              <ActionsList
+                actions={edgeEdit.localActions}
+                onActionsUpdate={edgeEdit.handleActionsChange}
+              />
+            ) : (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontStyle: 'italic', textAlign: 'center', py: 2 }}
+              >
+                No actions found
+              </Typography>
+            )}
           </Box>
 
           {/* Retry Actions */}
-          <Box>
-            <Typography variant="h6" sx={{ mb: 1, fontSize: '1rem' }}>
-              Retry Actions (executed if main actions fail)
-            </Typography>
-            <ActionsList
-              actions={edgeEdit.localRetryActions}
-              onActionsUpdate={edgeEdit.handleRetryActionsChange}
-            />
+          <Box
+            sx={{
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 1,
+              p: 2,
+              mb: 2,
+            }}
+          >
+            <Box
+              sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
+            >
+              <Typography variant="h6" sx={{ fontSize: '1rem', m: 0 }}>
+                Retry Actions (executed if main actions fail)
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  const newAction = {
+                    id: `retry_action_${Date.now()}`,
+                    command: '',
+                    params: {},
+                    description: '',
+                  };
+                  edgeEdit.handleRetryActionsChange([...edgeEdit.localRetryActions, newAction]);
+                }}
+                sx={{ fontSize: '0.75rem', px: 1 }}
+              >
+                + Add Action
+              </Button>
+            </Box>
+            {edgeEdit.localRetryActions.length > 0 ? (
+              <ActionsList
+                actions={edgeEdit.localRetryActions}
+                onActionsUpdate={edgeEdit.handleRetryActionsChange}
+              />
+            ) : (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontStyle: 'italic', textAlign: 'center', py: 2 }}
+              >
+                No retry actions found
+              </Typography>
+            )}
           </Box>
 
-          {/* Final Wait Time */}
-          <TextField
-            label="Final Wait Time (ms)"
-            type="number"
-            value={edgeForm?.finalWaitTime || 2000}
-            onChange={(e) =>
-              setEdgeForm({ ...edgeForm, finalWaitTime: parseInt(e.target.value) || 2000 })
-            }
-            fullWidth
-            size="small"
-            helperText="Time to wait after all actions complete"
-          />
+          {/* Separator */}
+          <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2, mt: 1 }}>
+            {/* Final Wait Time */}
+            <TextField
+              label="Final Wait Time (ms)"
+              type="number"
+              value={edgeForm?.finalWaitTime || 0}
+              onChange={(e) =>
+                setEdgeForm({ ...edgeForm, finalWaitTime: parseInt(e.target.value) || 0 })
+              }
+              fullWidth
+              size="small"
+              helperText="Time to wait after all actions complete"
+            />
+          </Box>
 
           {edgeEdit.actionResult && (
             <Box

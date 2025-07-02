@@ -1,5 +1,4 @@
-import { Add as AddIcon } from '@mui/icons-material';
-import { Box, Button, Typography } from '@mui/material';
+import { Box } from '@mui/material';
 import React from 'react';
 
 import { useDeviceData } from '../../contexts/device/DeviceDataContext';
@@ -15,16 +14,6 @@ interface ActionsListProps {
 export const ActionsList: React.FC<ActionsListProps> = ({ actions, onActionsUpdate }) => {
   const { getAvailableActions } = useDeviceData();
   const availableActions = getAvailableActions();
-
-  const handleAddAction = () => {
-    const newAction: EdgeAction = {
-      id: `action_${Date.now()}`,
-      command: '',
-      params: {},
-      description: '',
-    };
-    onActionsUpdate([...actions, newAction]);
-  };
 
   const handleActionSelect = (index: number, command: string) => {
     // Find the selected action from available actions
@@ -92,41 +81,21 @@ export const ActionsList: React.FC<ActionsListProps> = ({ actions, onActionsUpda
 
   return (
     <Box>
-      {actions.length > 0 && (
-        <Box sx={{ mb: 2 }}>
-          {actions.map((action, index) => (
-            <ActionItem
-              key={action.id}
-              action={action}
-              index={index}
-              availableActions={availableActions}
-              onActionSelect={handleActionSelect}
-              onUpdateAction={handleUpdateAction}
-              onRemoveAction={handleRemoveAction}
-              onMoveUp={handleMoveUp}
-              onMoveDown={handleMoveDown}
-              canMoveUp={index > 0}
-              canMoveDown={index < actions.length - 1}
-            />
-          ))}
-        </Box>
-      )}
-
-      <Button
-        variant="outlined"
-        startIcon={<AddIcon />}
-        onClick={handleAddAction}
-        fullWidth
-        sx={{ mt: 1 }}
-      >
-        Add Action
-      </Button>
-
-      {actions.length === 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 2 }}>
-          No actions configured. Click "Add Action" to get started.
-        </Typography>
-      )}
+      {actions.map((action, index) => (
+        <ActionItem
+          key={action.id}
+          action={action}
+          index={index}
+          availableActions={availableActions}
+          onActionSelect={handleActionSelect}
+          onUpdateAction={handleUpdateAction}
+          onRemoveAction={handleRemoveAction}
+          onMoveUp={handleMoveUp}
+          onMoveDown={handleMoveDown}
+          canMoveUp={index > 0}
+          canMoveDown={index < actions.length - 1}
+        />
+      ))}
     </Box>
   );
 };
