@@ -20,6 +20,7 @@ from ..controllers.verification.text import TextVerificationController
 from ..controllers.verification.adb import ADBVerificationController
 from ..controllers.verification.appium import AppiumVerificationController
 from ..controllers.verification.video import VideoVerificationController
+from ..controllers.ai.ai_agent import AIAgentController
 
 
 def create_host_from_environment() -> Host:
@@ -157,8 +158,8 @@ def _create_controller_instance(controller_type: str, implementation: str, param
     Create a controller instance based on type and implementation.
     
     Args:
-        controller_type: Abstract type ('av', 'remote', 'verification', etc.)
-        implementation: Specific implementation ('hdmi_stream', 'android_mobile', etc.)
+        controller_type: Abstract type ('av', 'remote', 'verification', 'ai', etc.)
+        implementation: Specific implementation ('hdmi_stream', 'android_mobile', 'ai_agent', etc.)
         params: Constructor parameters
         
     Returns:
@@ -177,6 +178,11 @@ def _create_controller_instance(controller_type: str, implementation: str, param
             return AndroidTVRemoteController(**params)
         elif implementation == 'appium':
             return AppiumRemoteController(**params)
+    
+    # AI Controllers
+    elif controller_type == 'ai':
+        if implementation == 'ai_agent':
+            return AIAgentController(**params)
     
     # Verification Controllers - now require device_model
     elif controller_type == 'verification':
@@ -232,6 +238,7 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
     # Separate controllers by type to handle dependencies
     av_controllers = [c for c in controller_list if c['type'] == 'av']
     remote_controllers = [c for c in controller_list if c['type'] == 'remote']
+    ai_controllers = [c for c in controller_list if c['type'] == 'ai']
     verification_controllers = [c for c in controller_list if c['type'] == 'verification']
     power_controllers = [c for c in controller_list if c['type'] == 'power']
     
@@ -262,7 +269,19 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
         if controller:
             device.add_controller(controller_type, controller)
     
-    # Step 3: Create verification controllers (depend on AV controller and device model)
+    # Step 3: Create AI controllers (no dependencies)
+    for controller_config in ai_controllers:
+        controller_type = controller_config['type']
+        implementation = controller_config['implementation']
+        controller_params = controller_config['params']
+        
+        print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {implementation}")
+        
+        controller = _create_controller_instance(controller_type, implementation, controller_params)
+        if controller:
+            device.add_controller(controller_type, controller)
+    
+    # Step 4: Create verification controllers (depend on AV controller and device model)
     for controller_config in verification_controllers:
         controller_type = controller_config['type']
         implementation = controller_config['implementation']
@@ -290,7 +309,7 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
         else:
             print(f"[@controller_manager:_create_device_with_controllers] ✗ Failed to create {implementation} verification controller")
     
-    # Step 4: Create power controllers (no dependencies)
+    # Step 5: Create power controllers (no dependencies)
     for controller_config in power_controllers:
         controller_type = controller_config['type']
         implementation = controller_config['implementation']

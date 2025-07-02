@@ -38,6 +38,9 @@ from .verification.appium import AppiumVerificationController
 from .verification.video import VideoVerificationController
 from .verification.audio import AudioVerificationController
 
+# Import AI implementations
+from .ai.ai_agent import AIAgentController
+
 # Controller type registry
 CONTROLLER_REGISTRY = {
     'remote': {
@@ -49,6 +52,9 @@ CONTROLLER_REGISTRY = {
     },
     'av': {
         'hdmi_stream': HDMIStreamController, # HDMI stream URL controller
+    },
+    'ai': {
+        'ai_agent': AIAgentController,       # AI task execution agent
     },
     'verification': {
         'ocr': TextVerificationController,   # OCR-based text verification using Tesseract
