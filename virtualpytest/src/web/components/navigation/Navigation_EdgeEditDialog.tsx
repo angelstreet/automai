@@ -125,7 +125,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
                 }}
                 sx={{ fontSize: '0.75rem', px: 1 }}
               >
-                + Add Action
+                + Add
               </Button>
             </Box>
             {edgeEdit.localActions.length > 0 ? (
@@ -158,7 +158,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
             >
               <Typography variant="h6" sx={{ fontSize: '1rem', m: 0 }}>
-                Retry Actions (executed if main actions fail)
+                Retry Actions
               </Typography>
               <Button
                 variant="outlined"
@@ -174,7 +174,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
                 }}
                 sx={{ fontSize: '0.75rem', px: 1 }}
               >
-                + Add Action
+                + Add
               </Button>
             </Box>
             {edgeEdit.localRetryActions.length > 0 ? (
