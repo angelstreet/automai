@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 
+import { useMonitoringAI } from './useMonitoringAI';
+import { useMonitoringSubtitles } from './useMonitoringSubtitles';
+
 interface FrameRef {
   timestamp: string;
   imageUrl: string;
@@ -97,14 +100,29 @@ export const useMonitoring = ({
     null,
   );
   const [isHistoricalFrameLoaded, setIsHistoricalFrameLoaded] = useState(false);
-  const [isDetectingSubtitles, setIsDetectingSubtitles] = useState(false);
-  const [isDetectingSubtitlesAI, setIsDetectingSubtitlesAI] = useState(false);
 
-  // AI Query state
-  const [isAIQueryVisible, setIsAIQueryVisible] = useState(false);
-  const [aiQuery, setAiQuery] = useState('');
-  const [aiResponse, setAiResponse] = useState('');
-  const [isProcessingAIQuery, setIsProcessingAIQuery] = useState(false);
+  // Use dedicated hooks for subtitle detection
+  const subtitleHook = useMonitoringSubtitles({
+    frames,
+    currentIndex,
+    selectedFrameAnalysis,
+    setSelectedFrameAnalysis,
+    setFrames,
+    setIsPlaying,
+    setUserSelectedFrame,
+    host,
+    device,
+  });
+
+  // Use dedicated hook for AI functionality
+  const aiHook = useMonitoringAI({
+    frames,
+    currentIndex,
+    setIsPlaying,
+    setUserSelectedFrame,
+    host,
+    device,
+  });
 
   // Generate monitoring URL (same as useRec pattern)
   const generateMonitoringUrl = useCallback((): string => {
@@ -421,303 +439,6 @@ export const useMonitoring = ({
   // Get current frame URL for display
   const currentFrameUrl = frames[currentIndex]?.imageUrl || '';
 
-  // Check if current frame has subtitle detection results
-  const hasSubtitleDetectionResults = useMemo(() => {
-    if (frames.length === 0 || currentIndex >= frames.length) return false;
-    const currentFrame = frames[currentIndex];
-    const hasResults = currentFrame?.subtitleDetectionPerformed === true;
-
-    if (hasResults) {
-      console.log('[useMonitoring] Frame has cached subtitle results:', {
-        frameIndex: currentIndex,
-        timestamp: currentFrame?.timestamp,
-        subtitles: currentFrame?.analysis?.subtitles,
-        textLength: currentFrame?.analysis?.text?.length || 0,
-      });
-    }
-
-    return hasResults;
-  }, [frames, currentIndex]);
-
-  // Subtitle detection function
-  const detectSubtitles = useCallback(async () => {
-    if (frames.length === 0 || currentIndex >= frames.length || isDetectingSubtitles) {
-      return;
-    }
-
-    const currentFrame = frames[currentIndex];
-    if (!currentFrame) {
-      return;
-    }
-
-    // Pause the player when detecting subtitles
-    setIsPlaying(false);
-    setUserSelectedFrame(true);
-
-    setIsDetectingSubtitles(true);
-
-    try {
-      console.log('[useMonitoring] Detecting subtitles for frame:', currentFrame.imageUrl);
-
-      const response = await fetch('/server/verification/video/detectSubtitles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host: host,
-          device_id: device?.device_id,
-          image_source_url: currentFrame.imageUrl,
-          extract_text: true,
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('[useMonitoring] Subtitle detection result:', result);
-
-        if (result.success) {
-          // Extract subtitle data from the response
-          const subtitleData = result.results && result.results.length > 0 ? result.results[0] : {};
-          const hasSubtitles = result.subtitles_detected || false;
-          const extractedText = result.combined_extracted_text || subtitleData.extracted_text || '';
-          const detectedLanguage =
-            result.detected_language || subtitleData.detected_language || undefined;
-
-          // Update the selectedFrameAnalysis with the detected subtitle data
-          const updatedAnalysis: MonitoringAnalysis = {
-            ...selectedFrameAnalysis,
-            blackscreen: selectedFrameAnalysis?.blackscreen || false,
-            freeze: selectedFrameAnalysis?.freeze || false,
-            subtitles: hasSubtitles,
-            errors: selectedFrameAnalysis?.errors || false,
-            text: extractedText,
-            language: detectedLanguage !== 'unknown' ? detectedLanguage : undefined,
-            confidence: subtitleData.confidence || (hasSubtitles ? 0.9 : 0.1),
-          };
-
-          setSelectedFrameAnalysis(updatedAnalysis);
-
-          // Update the frame's cached analysis and mark subtitle detection as performed
-          setFrames((prev) =>
-            prev.map((frame, index) =>
-              index === currentIndex
-                ? { ...frame, analysis: updatedAnalysis, subtitleDetectionPerformed: true }
-                : frame,
-            ),
-          );
-
-          console.log(
-            '[useMonitoring] Updated frame analysis with subtitle data:',
-            updatedAnalysis,
-          );
-          console.log('[useMonitoring] Cached subtitle results for frame:', {
-            frameIndex: currentIndex,
-            timestamp: currentFrame.timestamp,
-          });
-        } else {
-          console.error('[useMonitoring] Subtitle detection failed:', result.error);
-        }
-      } else {
-        console.error('[useMonitoring] Subtitle detection request failed:', response.status);
-      }
-    } catch (error) {
-      console.error('[useMonitoring] Subtitle detection error:', error);
-    } finally {
-      setIsDetectingSubtitles(false);
-    }
-  }, [frames, currentIndex, selectedFrameAnalysis, isDetectingSubtitles, host, device?.device_id]);
-
-  // AI Subtitle detection function
-  const detectSubtitlesAI = useCallback(async () => {
-    if (frames.length === 0 || currentIndex >= frames.length || isDetectingSubtitlesAI) {
-      return;
-    }
-
-    const currentFrame = frames[currentIndex];
-    if (!currentFrame) {
-      return;
-    }
-
-    // Pause the player when detecting subtitles
-    setIsPlaying(false);
-    setUserSelectedFrame(true);
-
-    setIsDetectingSubtitlesAI(true);
-
-    try {
-      console.log('[useMonitoring] Detecting AI subtitles for frame:', currentFrame.imageUrl);
-
-      const response = await fetch('/server/verification/video/detectSubtitlesAI', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host: host,
-          device_id: device?.device_id,
-          image_source_url: currentFrame.imageUrl,
-          extract_text: true,
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('[useMonitoring] AI Subtitle detection result:', result);
-
-        if (result.success) {
-          // Extract subtitle data from the response
-          const subtitleData = result.results && result.results.length > 0 ? result.results[0] : {};
-          const hasSubtitles = result.subtitles_detected || false;
-          const extractedText = result.combined_extracted_text || subtitleData.extracted_text || '';
-          const detectedLanguage =
-            result.detected_language || subtitleData.detected_language || undefined;
-
-          // Update the selectedFrameAnalysis with the detected subtitle data
-          const updatedAnalysis: MonitoringAnalysis = {
-            ...selectedFrameAnalysis,
-            blackscreen: selectedFrameAnalysis?.blackscreen || false,
-            freeze: selectedFrameAnalysis?.freeze || false,
-            subtitles: hasSubtitles,
-            errors: selectedFrameAnalysis?.errors || false,
-            text: extractedText,
-            language: detectedLanguage !== 'unknown' ? detectedLanguage : undefined,
-            confidence: subtitleData.confidence || (hasSubtitles ? 0.9 : 0.1),
-          };
-
-          setSelectedFrameAnalysis(updatedAnalysis);
-
-          // Update the frame's cached analysis and mark subtitle detection as performed
-          setFrames((prev) =>
-            prev.map((frame, index) =>
-              index === currentIndex
-                ? { ...frame, analysis: updatedAnalysis, subtitleDetectionPerformed: true }
-                : frame,
-            ),
-          );
-
-          console.log(
-            '[useMonitoring] Updated frame analysis with AI subtitle data:',
-            updatedAnalysis,
-          );
-          console.log('[useMonitoring] Cached AI subtitle results for frame:', {
-            frameIndex: currentIndex,
-            timestamp: currentFrame.timestamp,
-          });
-        } else {
-          console.error('[useMonitoring] AI Subtitle detection failed:', result.error);
-        }
-      } else {
-        console.error('[useMonitoring] AI Subtitle detection request failed:', response.status);
-      }
-    } catch (error) {
-      console.error('[useMonitoring] AI Subtitle detection error:', error);
-    } finally {
-      setIsDetectingSubtitlesAI(false);
-    }
-  }, [
-    frames,
-    currentIndex,
-    selectedFrameAnalysis,
-    isDetectingSubtitlesAI,
-    host,
-    device?.device_id,
-  ]);
-
-  // Auto-cleanup AI query when frame changes
-  useEffect(() => {
-    if (isAIQueryVisible) {
-      clearAIQuery();
-    }
-  }, [currentIndex, clearAIQuery]);
-
-  // AI Query functions
-  const toggleAIPanel = useCallback(() => {
-    if (isAIQueryVisible) {
-      clearAIQuery();
-    } else {
-      setIsAIQueryVisible(true);
-    }
-  }, [isAIQueryVisible]);
-
-  const clearAIQuery = useCallback(() => {
-    setIsAIQueryVisible(false);
-    setAiQuery('');
-    setAiResponse('');
-    setIsProcessingAIQuery(false);
-  }, []);
-
-  // Auto-cleanup AI query when frame changes
-  useEffect(() => {
-    if (isAIQueryVisible) {
-      clearAIQuery();
-    }
-  }, [currentIndex, clearAIQuery, isAIQueryVisible]);
-
-  const handleAIQueryChange = useCallback((query: string) => {
-    // Limit to 100 characters
-    setAiQuery(query.slice(0, 100));
-  }, []);
-
-  const submitAIQuery = useCallback(async () => {
-    if (
-      !aiQuery.trim() ||
-      isProcessingAIQuery ||
-      frames.length === 0 ||
-      currentIndex >= frames.length
-    ) {
-      return;
-    }
-
-    const currentFrame = frames[currentIndex];
-    if (!currentFrame) {
-      return;
-    }
-
-    // Pause the player when processing AI query
-    setIsPlaying(false);
-    setUserSelectedFrame(true);
-
-    setIsProcessingAIQuery(true);
-    setAiResponse('');
-
-    try {
-      console.log('[useMonitoring] Processing AI query for frame:', currentFrame.imageUrl);
-
-      const response = await fetch('/server/verification/video/analyzeImageAI', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          host: host,
-          device_id: device?.device_id,
-          image_source_url: currentFrame.imageUrl,
-          query: aiQuery.trim(),
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('[useMonitoring] AI query result:', result);
-
-        if (result.success && result.response) {
-          setAiResponse(result.response);
-        } else {
-          setAiResponse('Unable to analyze image. Please try again.');
-        }
-      } else {
-        console.error('[useMonitoring] AI query request failed:', response.status);
-        setAiResponse('Request failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('[useMonitoring] AI query error:', error);
-      setAiResponse('Error processing request. Please try again.');
-    } finally {
-      setIsProcessingAIQuery(false);
-    }
-  }, [aiQuery, isProcessingAIQuery, frames, currentIndex, host, device?.device_id]);
-
   return {
     // Frame management
     frames,
@@ -735,22 +456,22 @@ export const useMonitoring = ({
     handleSliderChange,
     handleHistoricalFrameLoad,
 
-    // Subtitle detection
-    detectSubtitles,
-    detectSubtitlesAI,
-    isDetectingSubtitles,
-    isDetectingSubtitlesAI,
-    hasSubtitleDetectionResults,
+    // Subtitle detection (from dedicated hook)
+    detectSubtitles: subtitleHook.detectSubtitles,
+    detectSubtitlesAI: subtitleHook.detectSubtitlesAI,
+    isDetectingSubtitles: subtitleHook.isDetectingSubtitles,
+    isDetectingSubtitlesAI: subtitleHook.isDetectingSubtitlesAI,
+    hasSubtitleDetectionResults: subtitleHook.hasSubtitleDetectionResults,
 
-    // AI Query functionality
-    isAIQueryVisible,
-    aiQuery,
-    aiResponse,
-    isProcessingAIQuery,
-    toggleAIPanel,
-    submitAIQuery,
-    clearAIQuery,
-    handleAIQueryChange,
+    // AI Query functionality (from dedicated hook)
+    isAIQueryVisible: aiHook.isAIQueryVisible,
+    aiQuery: aiHook.aiQuery,
+    aiResponse: aiHook.aiResponse,
+    isProcessingAIQuery: aiHook.isProcessingAIQuery,
+    toggleAIPanel: aiHook.toggleAIPanel,
+    submitAIQuery: aiHook.submitAIQuery,
+    clearAIQuery: aiHook.clearAIQuery,
+    handleAIQueryChange: aiHook.handleAIQueryChange,
 
     // Subtitle trend analysis
     subtitleTrendData,
