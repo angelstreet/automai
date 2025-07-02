@@ -113,37 +113,12 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // Get hosts filtered by device models
   const getHostsByModel = useCallback(
     (models: string[]): Host[] => {
-      console.log('[@context:HostManagerProvider:getHostsByModel] Input models:', models);
-      console.log(
-        '[@context:HostManagerProvider:getHostsByModel] Available hosts:',
-        availableHosts.map((h) => ({
-          host_name: h.host_name,
-          devices: h.devices?.map((d) => ({
-            device_id: d.device_id,
-            device_model: d.device_model,
-            device_name: d.device_name,
-          })),
-        })),
-      );
-
       const filtered = availableHosts
         .map((host) => ({
           ...host,
           devices: (host.devices || []).filter((device) => models.includes(device.device_model)),
         }))
         .filter((host) => host.devices.length > 0); // Only include hosts that have compatible devices
-
-      console.log(
-        '[@context:HostManagerProvider:getHostsByModel] Filtered hosts with compatible devices only:',
-        filtered.map((h) => ({
-          host_name: h.host_name,
-          devices: h.devices?.map((d) => ({
-            device_id: d.device_id,
-            device_model: d.device_model,
-            device_name: d.device_name,
-          })),
-        })),
-      );
 
       return filtered;
     },
@@ -155,9 +130,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     const allDevices = availableHosts.flatMap((host) =>
       (host.devices || []).map((device) => ({ ...device, hostName: host.host_name })),
     );
-    console.log(
-      `[@context:HostManagerProvider] getAllDevices() returning ${allDevices.length} devices from ${availableHosts.length} hosts`,
-    );
     return allDevices;
   }, [availableHosts]);
 
@@ -166,9 +138,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     (hostName: string): Device[] => {
       const host = availableHosts.find((h) => h.host_name === hostName);
       const devices = host?.devices || [];
-      console.log(
-        `[@context:HostManagerProvider] getDevicesFromHost(${hostName}) returning ${devices.length} devices`,
-      );
       return devices;
     },
     [availableHosts],
@@ -190,9 +159,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
         }
       });
 
-      console.log(
-        `[@context:HostManagerProvider] getDevicesByCapability(${capability}) found ${matchingDevices.length} devices with capability`,
-      );
       return matchingDevices;
     },
     [availableHosts],
@@ -608,9 +574,9 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // Update filtered hosts when availableHosts changes
   useEffect(() => {
     if (stableUserInterface?.models && availableHosts.length > 0) {
-      // Fix model filtering to check device models
+      // Filter hosts to only include those with devices matching the interface models
       const compatibleHosts = availableHosts.filter((host) =>
-        host.devices?.some((device) => stableUserInterface.models!.includes(device.model)),
+        host.devices?.some((device) => stableUserInterface.models!.includes(device.device_model)),
       );
 
       setFilteredAvailableHosts(compatibleHosts);

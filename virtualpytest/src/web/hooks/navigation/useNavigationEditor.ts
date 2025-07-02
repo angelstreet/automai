@@ -281,10 +281,6 @@ export const useNavigationEditor = () => {
 
   const setUserInterfaceFromProps = useCallback(
     (userInterface: any) => {
-      console.log(
-        '[@hook:useNavigationEditor] setUserInterfaceFromProps called with:',
-        userInterface,
-      );
       navigation.setUserInterface(userInterface);
     },
     [navigation],

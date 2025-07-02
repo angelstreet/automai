@@ -133,27 +133,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       return `${url}${separator}cache=${Date.now()}`;
     }, []);
 
-    // Debug logging for testResults changes
-    useEffect(() => {
-      console.log('[@component:VerificationsList] testResults updated:', testResults);
-    }, [testResults]);
-
-    // Debug logging for verifications changes
-    useEffect(() => {
-      console.log(
-        `[@component:VerificationsList] Verifications updated: ${verifications.length} verifications for model ${model}:`,
-        verifications,
-      );
-    }, [verifications, model]);
-
-    // Debug logging for model references - moved to useEffect to avoid render-time logging
-    useEffect(() => {
-      console.log(
-        `[@component:VerificationsList] Using passed model references for ${model}:`,
-        Object.keys(modelReferences).length,
-        'references',
-      );
-    }, [model, modelReferences]);
+    // Note: Debug logging removed to reduce console spam
 
     const addVerification = useCallback(() => {
       const newVerification: Verification = {

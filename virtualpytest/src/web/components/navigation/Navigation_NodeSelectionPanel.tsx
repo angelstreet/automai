@@ -135,9 +135,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     // Memoize handlers to prevent unnecessary re-renders of child components
     const handleEdit = useCallback(() => {
       const nodeForm = nodeHook.getNodeFormWithVerifications(selectedNode);
-      console.log(
-        `[@component:NodeSelectionPanel] Found ${nodeForm.verifications?.length || 0} verifications for node ${selectedNode.data.label}`,
-      );
       setNodeForm(nodeForm);
       setIsNodeDialogOpen(true);
     }, [nodeHook, selectedNode, setNodeForm, setIsNodeDialogOpen]);
@@ -151,18 +148,9 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     }, [onReset, selectedNode.id]);
 
     const handleScreenshotConfirm = useCallback(async () => {
-      const selectedDevice = selectedHost?.devices?.find((d) => d.device_id === selectedDeviceId);
-
-      // Only log when actually taking a screenshot, not on every render
-      console.log('[@component:NodeSelectionPanel] Taking screenshot for node:', {
-        nodeId: selectedNode.id,
-        nodeLabel: selectedNode.data.label,
-        deviceModel: selectedDevice?.device_model || 'unknown',
-      });
-
       await nodeHook.handleScreenshotConfirm(selectedNode, onUpdateNode);
       setShowScreenshotConfirm(false);
-    }, [nodeHook, selectedNode, onUpdateNode, selectedHost?.devices, selectedDeviceId]);
+    }, [nodeHook, selectedNode, onUpdateNode]);
 
     // Get memoized button visibility from hook
     const { showSaveScreenshotButton, showGoToButton } = nodeHook.getButtonVisibility();
