@@ -26,6 +26,7 @@ interface UseAIAgentReturn {
 
   // AI plan from backend
   aiPlan: any;
+  isPlanFeasible: boolean;
 
   // Actions
   setTaskInput: (input: string) => void;
@@ -43,6 +44,7 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
 
   // AI plan response
   const [aiPlan, setAiPlan] = useState<any>(null);
+  const [isPlanFeasible, setIsPlanFeasible] = useState<boolean>(true);
 
   const executeTask = useCallback(async () => {
     if (!enabled || !taskInput.trim() || isExecuting) return;
@@ -53,6 +55,7 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
       setCurrentStep('Asking AI for execution plan...');
       setExecutionLog([]);
       setAiPlan(null);
+      setIsPlanFeasible(true);
 
       console.log('[useAIAgent] Executing task:', taskInput);
 
@@ -74,16 +77,29 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
       if (result.success) {
         setCurrentStep(result.current_step || 'Plan generated');
         setExecutionLog(result.execution_log || []);
-        setAiPlan(result.ai_plan);
+
+        // Extract AI plan from execution_log
+        const executionLog = result.execution_log || [];
+        const planEntry = executionLog.find(
+          (entry: ExecutionLogEntry) =>
+            entry.action_type === 'plan_generated' && entry.type === 'ai_plan',
+        );
+
+        if (planEntry && planEntry.value) {
+          setAiPlan(planEntry.value);
+          setIsPlanFeasible(planEntry.value.feasible !== false);
+        }
       } else {
         setErrorMessage(result.error || 'Failed to generate plan');
         setCurrentStep('Plan generation failed');
         setExecutionLog(result.execution_log || []);
+        setIsPlanFeasible(false);
       }
     } catch (error) {
       console.error('[useAIAgent] Task execution error:', error);
       setErrorMessage('Network error during plan generation');
       setCurrentStep('Error');
+      setIsPlanFeasible(false);
     } finally {
       setIsExecuting(false);
     }
@@ -125,6 +141,7 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
     setErrorMessage(null);
     setCurrentStep('');
     setAiPlan(null);
+    setIsPlanFeasible(true);
   }, []);
 
   return {
@@ -135,6 +152,7 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
     taskInput,
     errorMessage,
     aiPlan,
+    isPlanFeasible,
 
     // Actions
     setTaskInput,

@@ -95,6 +95,7 @@ const RecHostStreamModalContent: React.FC<{
     isExecuting: isAIExecuting,
     taskInput,
     aiPlan,
+    isPlanFeasible,
     errorMessage: aiError,
     setTaskInput,
     executeTask: executeAITask,
@@ -539,6 +540,19 @@ const RecHostStreamModalContent: React.FC<{
                 >
                   <AIIcon />
                   AI Agent
+                  {/* Show cross icon when plan is not feasible */}
+                  {aiPlan && !isPlanFeasible && (
+                    <Box
+                      sx={{
+                        color: '#f44336',
+                        display: 'flex',
+                        alignItems: 'center',
+                        ml: 1,
+                      }}
+                    >
+                      ✕
+                    </Box>
+                  )}
                 </Typography>
 
                 {/* Task Input */}
@@ -555,8 +569,6 @@ const RecHostStreamModalContent: React.FC<{
                       }
                     }}
                     disabled={isAIExecuting}
-                    multiline
-                    rows={2}
                     sx={{
                       flex: 1,
                       '& .MuiOutlinedInput-root': {
@@ -614,97 +626,123 @@ const RecHostStreamModalContent: React.FC<{
                       p: 1,
                       backgroundColor: 'rgba(0, 0, 0, 0.8)',
                       borderRadius: 1,
-                      border: '1px solid #444',
+                      border: `1px solid ${isPlanFeasible ? '#444' : '#f44336'}`,
                       maxHeight: '400px',
                       overflowY: 'auto',
                     }}
                   >
-                    <Typography variant="subtitle2" sx={{ color: '#ffffff', mb: 1 }}>
-                      AI Execution Plan:
-                    </Typography>
-
-                    {/* Analysis */}
-                    <Typography variant="body2" sx={{ color: '#cccccc', mb: 1 }}>
-                      {aiPlan.analysis}
-                    </Typography>
-
-                    {/* Plan Steps */}
-                    {aiPlan.plan && aiPlan.plan.length > 0 && (
-                      <Box sx={{ mt: 2 }}>
-                        <Typography
-                          variant="caption"
-                          sx={{ color: '#aaa', mb: 1, display: 'block' }}
-                        >
-                          Steps ({aiPlan.plan.length}):
+                    {/* Show Analysis when not feasible */}
+                    {!isPlanFeasible && (
+                      <>
+                        <Typography variant="subtitle2" sx={{ color: '#f44336', mb: 1 }}>
+                          Task Analysis:
                         </Typography>
-                        {aiPlan.plan.map((step: any, index: number) => (
-                          <Box
-                            key={index}
-                            sx={{
-                              mb: 1,
-                              p: 1,
-                              backgroundColor: 'rgba(255,255,255,0.05)',
-                              borderRadius: 0.5,
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              sx={{ color: '#fff', fontWeight: 'bold' }}
-                            >
-                              {step.step}. {step.description}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              sx={{ color: '#aaa', display: 'block', mt: 0.5 }}
-                            >
-                              {step.command} {step.params && `| ${JSON.stringify(step.params)}`}
-                            </Typography>
-                          </Box>
-                        ))}
-                      </Box>
+                        <Box
+                          sx={{
+                            p: 1,
+                            backgroundColor: 'rgba(244,67,54,0.1)',
+                            borderRadius: 0.5,
+                            border: '1px solid rgba(244,67,54,0.3)',
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ color: '#ffffff' }}>
+                            {aiPlan.analysis}
+                          </Typography>
+                        </Box>
+                      </>
                     )}
 
-                    {/* Summary Info */}
-                    <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                      {aiPlan.estimated_time && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color: '#4caf50',
-                            backgroundColor: 'rgba(76,175,80,0.1)',
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 0.5,
-                          }}
-                        >
-                          Time: {aiPlan.estimated_time}
+                    {/* Show Plan when feasible */}
+                    {isPlanFeasible && (
+                      <>
+                        <Typography variant="subtitle2" sx={{ color: '#4caf50', mb: 1 }}>
+                          AI Execution Plan:
                         </Typography>
-                      )}
-                      {aiPlan.risk_level && (
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            color:
-                              aiPlan.risk_level === 'low'
-                                ? '#4caf50'
-                                : aiPlan.risk_level === 'high'
-                                  ? '#f44336'
-                                  : '#ff9800',
-                            backgroundColor:
-                              aiPlan.risk_level === 'low'
-                                ? 'rgba(76,175,80,0.1)'
-                                : aiPlan.risk_level === 'high'
-                                  ? 'rgba(244,67,54,0.1)'
-                                  : 'rgba(255,152,0,0.1)',
-                            px: 1,
-                            py: 0.5,
-                            borderRadius: 0.5,
-                          }}
-                        >
-                          Risk: {aiPlan.risk_level}
+
+                        {/* Analysis */}
+                        <Typography variant="body2" sx={{ color: '#cccccc', mb: 1 }}>
+                          {aiPlan.analysis}
                         </Typography>
-                      )}
-                    </Box>
+
+                        {/* Plan Steps */}
+                        {aiPlan.plan && aiPlan.plan.length > 0 && (
+                          <Box sx={{ mt: 2 }}>
+                            <Typography
+                              variant="caption"
+                              sx={{ color: '#aaa', mb: 1, display: 'block' }}
+                            >
+                              Steps ({aiPlan.plan.length}):
+                            </Typography>
+                            {aiPlan.plan.map((step: any, index: number) => (
+                              <Box
+                                key={index}
+                                sx={{
+                                  mb: 1,
+                                  p: 1,
+                                  backgroundColor: 'rgba(255,255,255,0.05)',
+                                  borderRadius: 0.5,
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  sx={{ color: '#fff', fontWeight: 'bold' }}
+                                >
+                                  {step.step}. {step.description}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  sx={{ color: '#aaa', display: 'block', mt: 0.5 }}
+                                >
+                                  {step.command} {step.params && `| ${JSON.stringify(step.params)}`}
+                                </Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        )}
+
+                        {/* Summary Info */}
+                        <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          {aiPlan.estimated_time && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: '#4caf50',
+                                backgroundColor: 'rgba(76,175,80,0.1)',
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: 0.5,
+                              }}
+                            >
+                              Time: {aiPlan.estimated_time}
+                            </Typography>
+                          )}
+                          {aiPlan.risk_level && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color:
+                                  aiPlan.risk_level === 'low'
+                                    ? '#4caf50'
+                                    : aiPlan.risk_level === 'high'
+                                      ? '#f44336'
+                                      : '#ff9800',
+                                backgroundColor:
+                                  aiPlan.risk_level === 'low'
+                                    ? 'rgba(76,175,80,0.1)'
+                                    : aiPlan.risk_level === 'high'
+                                      ? 'rgba(244,67,54,0.1)'
+                                      : 'rgba(255,152,0,0.1)',
+                                px: 1,
+                                py: 0.5,
+                                borderRadius: 0.5,
+                              }}
+                            >
+                              Risk: {aiPlan.risk_level}
+                            </Typography>
+                          )}
+                        </Box>
+                      </>
+                    )}
                   </Box>
                 )}
               </Box>

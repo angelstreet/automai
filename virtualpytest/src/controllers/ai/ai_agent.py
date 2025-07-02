@@ -134,18 +134,14 @@ Required JSON format:
       "params": {{"text": "Home", "timeout": 5.0}},
       "description": "Verify home screen"
     }}
-  ],
-  "estimated_time": "10 seconds",
-  "risk_level": "low"
+  ]
 }}
 
 If not feasible:
 {{
   "analysis": "why task cannot be completed",
   "feasible": false,
-  "plan": [],
-  "estimated_time": "0 seconds", 
-  "risk_level": "none"
+  "plan": []
 }}
 
 JSON ONLY - NO OTHER TEXT"""
