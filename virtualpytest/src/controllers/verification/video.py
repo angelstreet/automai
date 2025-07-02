@@ -1833,3 +1833,94 @@ JSON ONLY - NO OTHER TEXT"""
                 'analysis_type': 'ai_subtitle_detection'
             }
 
+    def analyze_image_with_ai(self, image_path: str, user_question: str) -> str:
+        """
+        Analyze full image with AI using user's question.
+        
+        Args:
+            image_path: Path to image file
+            user_question: User's question about the image
+            
+        Returns:
+            AI's text response (max 3 lines) or empty string if failed
+        """
+        try:
+            import os
+            import base64
+            import requests
+            import tempfile
+            
+            print(f"VideoVerify[{self.device_name}]: AI image analysis - Question: '{user_question}'")
+            
+            # Check if image exists
+            if not os.path.exists(image_path):
+                print(f"VideoVerify[{self.device_name}]: Image file not found: {image_path}")
+                return "Image file not found."
+            
+            # Get API key from environment
+            api_key = os.getenv('OPENROUTER_API_KEY')
+            if not api_key:
+                print(f"VideoVerify[{self.device_name}]: OpenRouter API key not found in environment")
+                return "AI service not available."
+            
+            # Load and encode the full image
+            try:
+                # Read the image file directly
+                with open(image_path, 'rb') as f:
+                    image_data = base64.b64encode(f.read()).decode()
+                
+                # Simple prompt for general image analysis
+                prompt = f"""Analyze this image and answer the user's question: "{user_question}"
+
+Provide a clear, concise answer in maximum 3 lines.
+Be specific and helpful."""
+                
+                # Call OpenRouter API
+                response = requests.post(
+                    'https://openrouter.ai/api/v1/chat/completions',
+                    headers={
+                        'Authorization': f'Bearer {api_key}',
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://automai.dev',
+                        'X-Title': 'AutomAI-VirtualPyTest'
+                    },
+                    json={
+                        'model': 'qwen/qwen-2-vl-7b-instruct',
+                        'messages': [
+                            {
+                                'role': 'user',
+                                'content': [
+                                    {'type': 'text', 'text': prompt},
+                                    {'type': 'image_url', 'image_url': {'url': f'data:image/jpeg;base64,{image_data}'}}
+                                ]
+                            }
+                        ],
+                        'max_tokens': 200,
+                        'temperature': 0.0
+                    },
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    ai_response = result['choices'][0]['message']['content'].strip()
+                    
+                    # Limit to 3 lines maximum
+                    lines = ai_response.split('\n')
+                    if len(lines) > 3:
+                        ai_response = '\n'.join(lines[:3])
+                    
+                    print(f"VideoVerify[{self.device_name}]: AI response: '{ai_response}'")
+                    return ai_response
+                else:
+                    print(f"VideoVerify[{self.device_name}]: OpenRouter API error: {response.status_code}")
+                    return "AI service error. Please try again."
+                    
+            except Exception as e:
+                print(f"VideoVerify[{self.device_name}]: Image processing error: {e}")
+                return "Failed to process image."
+                
+        except Exception as e:
+            print(f"VideoVerify[{self.device_name}]: AI image analysis error: {e}")
+            return "Analysis error. Please try again."
+

@@ -322,6 +322,74 @@ def detect_subtitles_ai():
             'error': f'AI subtitle detection error: {str(e)}'
         }), 500
 
+@host_verification_video_bp.route('/analyzeImageAI', methods=['POST'])
+def analyze_image_ai():
+    """Analyze image using AI with user question"""
+    try:
+        print("[@route:host_verification_video:analyzeImageAI] Processing AI image analysis request")
+        
+        # Get request data
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
+        image_source_url = data.get('image_source_url')  # Single image URL
+        user_query = data.get('query', '')
+        
+        print(f"[@route:host_verification_video:analyzeImageAI] Image source: {image_source_url}")
+        print(f"[@route:host_verification_video:analyzeImageAI] User query: {user_query}")
+        
+        if not image_source_url:
+            return jsonify({
+                'success': False,
+                'error': 'image_source_url is required'
+            }), 400
+        
+        if not user_query.strip():
+            return jsonify({
+                'success': False,
+                'error': 'query is required'
+            }), 400
+        
+        # Convert URL to local path if needed
+        image_path = image_source_url
+        if image_source_url.startswith(('http://', 'https://')):
+            from src.utils.build_url_utils import convertHostUrlToLocalPath
+            image_path = convertHostUrlToLocalPath(image_source_url)
+        
+        # Get video verification controller
+        video_controller, device, error_response = get_verification_controller(device_id, 'verification_video')
+        if error_response:
+            return error_response
+        
+        # Execute AI image analysis
+        start_time = time.time()
+        response_text = video_controller.analyze_image_with_ai(image_path, user_query.strip())
+        execution_time = int((time.time() - start_time) * 1000)
+        
+        if response_text:
+            result = {
+                'success': True,
+                'response': response_text,
+                'execution_time_ms': execution_time
+            }
+        else:
+            result = {
+                'success': False,
+                'error': 'Failed to analyze image',
+                'execution_time_ms': execution_time
+            }
+        
+        print(f"[@route:host_verification_video:analyzeImageAI] Result: success={result.get('success')}, time={execution_time}ms")
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        print(f"[@route:host_verification_video:analyzeImageAI] Error: {str(e)}")
+        print(f"[@route:host_verification_video:analyzeImageAI] Traceback: {traceback.format_exc()}")
+        return jsonify({
+            'success': False,
+            'error': f'AI image analysis error: {str(e)}'
+        }), 500
+
 # =====================================================
 # STATUS AND INFO ENDPOINTS
 # =====================================================

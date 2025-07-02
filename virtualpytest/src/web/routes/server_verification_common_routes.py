@@ -222,6 +222,26 @@ def verification_video_detect_subtitles_ai():
             'error': str(e)
         }), 500
 
+@server_verification_common_bp.route('/video/analyzeImageAI', methods=['POST'])
+def verification_video_analyze_image_ai():
+    """Proxy AI image analysis to host"""
+    try:
+        print("[@route:server_verification_common:verification_video_analyze_image_ai] Proxying AI image analysis request")
+        
+        # Get request data
+        request_data = request.get_json() or {}
+        
+        # Proxy to host video AI image analysis endpoint
+        response_data, status_code = proxy_to_host('/host/verification/video/analyzeImageAI', 'POST', request_data, timeout=60)
+        
+        return jsonify(response_data), status_code
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # =====================================================
 # BATCH VERIFICATION COORDINATION (SERVER-SIDE LOGIC)
 # =====================================================
