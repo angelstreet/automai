@@ -271,7 +271,27 @@ export const ActionItem: React.FC<ActionItemProps> = ({
         break;
     }
 
-    return fields;
+    // Organize fields based on count
+    if (fields.length <= 3) {
+      // ≤3 parameters: show in one line
+      return (
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'nowrap' }}>
+          {fields}
+        </Box>
+      );
+    } else {
+      // >3 parameters: show 3 per line
+      const rows = [];
+      for (let i = 0; i < fields.length; i += 3) {
+        const rowFields = fields.slice(i, i + 3);
+        rows.push(
+          <Box key={i} sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0.5 }}>
+            {rowFields}
+          </Box>,
+        );
+      }
+      return <Box>{rows}</Box>;
+    }
   };
 
   return (
@@ -290,6 +310,10 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             sx={{
               '& .MuiSelect-select': {
                 fontSize: '0.8rem',
+                py: 0.5,
+              },
+              '& .MuiInputBase-root': {
+                minHeight: '32px',
               },
             }}
             renderValue={(selected) => {
@@ -365,22 +389,8 @@ export const ActionItem: React.FC<ActionItemProps> = ({
         </IconButton>
       </Box>
 
-      {/* Line 2: Parameter fields - conditional based on action type */}
-      {action.command && (
-        <Box
-          sx={{
-            display: 'flex',
-            gap: 0.5,
-            alignItems: 'center',
-            mb: 0,
-            px: 0,
-            mx: 0,
-            flexWrap: 'wrap',
-          }}
-        >
-          {renderParameterFields()}
-        </Box>
-      )}
+      {/* Parameter fields section - organized by count */}
+      {action.command && renderParameterFields()}
     </Box>
   );
 };

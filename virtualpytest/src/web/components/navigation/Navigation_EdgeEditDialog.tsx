@@ -62,38 +62,31 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     ); // Only check real DB IDs
 
     if (actionsToCheck.length > 0) {
-      let hasSharedActions = false;
-      const allAffectedEdges: any[] = [];
+      // Batch check dependencies for all actions
+      const actionIds = actionsToCheck.map((action) => action.id);
 
-      // Check dependencies for all actions
-      for (const action of actionsToCheck) {
-        try {
-          const response = await fetch('/server/action/checkDependencies', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              action_id: action.id,
-            }),
-          });
+      try {
+        const response = await fetch('/server/action/checkDependenciesBatch', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action_ids: actionIds,
+          }),
+        });
 
-          const result = await response.json();
-          if (result.success && result.count > 1) {
-            hasSharedActions = true;
-            allAffectedEdges.push(...result.edges);
-          }
-        } catch (error) {
-          console.warn('Failed to check dependencies for action:', action.id, error);
+        const result = await response.json();
+        if (result.success && result.has_shared_actions) {
+          // Show dependency dialog
+          setDependencyEdges(result.edges);
+          setPendingSubmit(edgeForm);
+          setDependencyDialogOpen(true);
+          return;
         }
-      }
-
-      if (hasSharedActions) {
-        // Show dependency dialog
-        setDependencyEdges(allAffectedEdges);
-        setPendingSubmit(edgeForm);
-        setDependencyDialogOpen(true);
-        return;
+      } catch (error) {
+        console.warn('Failed to check dependencies for actions:', error);
+        // Continue with save if dependency check fails
       }
     }
 

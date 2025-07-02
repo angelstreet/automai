@@ -330,7 +330,7 @@ def save_navigation_actions_batch():
                         'error': f'Missing required field: {field} in action'
                     }), 400
             
-            # Save to database
+            # Save to database (this will reuse existing actions with same command/params)
             result = save_action(
                 name=action['name'],
                 device_model=action['device_model'],
@@ -362,7 +362,7 @@ def save_navigation_actions_batch():
                         'error': f'Missing required field: {field} in retry action'
                     }), 400
             
-            # Save to database
+            # Save to database (this will reuse existing actions with same command/params)
             result = save_action(
                 name=action['name'],
                 device_model=action['device_model'],
@@ -536,6 +536,60 @@ def check_action_dependencies():
                 'error': result['error']
             }), 500
             
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@server_actions_bp.route('/checkDependenciesBatch', methods=['POST'])
+def check_action_dependencies_batch():
+    """
+    Check which edges use multiple actions in a single request.
+    
+    Expected JSON payload:
+    {
+        "action_ids": ["uuid1", "uuid2", "uuid3"]
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if 'action_ids' not in data or not isinstance(data['action_ids'], list):
+            return jsonify({
+                'success': False,
+                'error': 'Missing required field: action_ids (array)'
+            }), 400
+        
+        # Use default team ID
+        team_id = DEFAULT_TEAM_ID
+        action_ids = data['action_ids']
+        
+        all_edges = []
+        has_shared_actions = False
+        
+        # Check dependencies for all actions
+        for action_id in action_ids:
+            result = get_edges_using_action(team_id, action_id)
+            if result['success'] and len(result['edges']) > 1:
+                has_shared_actions = True
+                all_edges.extend(result['edges'])
+        
+        # Remove duplicates by tree_name
+        unique_edges = []
+        seen_names = set()
+        for edge in all_edges:
+            if edge['tree_name'] not in seen_names:
+                unique_edges.append(edge)
+                seen_names.add(edge['tree_name'])
+        
+        return jsonify({
+            'success': True,
+            'edges': unique_edges,
+            'count': len(unique_edges),
+            'has_shared_actions': has_shared_actions
+        })
+        
     except Exception as e:
         return jsonify({
             'success': False,
