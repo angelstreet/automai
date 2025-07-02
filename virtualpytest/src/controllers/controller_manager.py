@@ -61,7 +61,7 @@ def create_host_from_environment() -> Host:
     for device_config in devices_config:
         device = _create_device_with_controllers(device_config)
         host.add_device(device)
-        print(f"[@controller_manager:create_host_from_environment] Added device: {device.device_id} ({device.name})")
+        print(f"[@controller_manager:create_host_from_environment] Added device: {device.device_id} ({device.device_name})")
     
     print(f"[@controller_manager:create_host_from_environment] Host created with {host.get_device_count()} devices")
     return host
@@ -213,16 +213,16 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
         Device instance with controllers
     """
     device_id = device_config['device_id']
-    name = device_config['device_name']
-    model = device_config['device_model']
+    device_name = device_config['device_name']
+    device_model = device_config['device_model']
     
     print(f"[@controller_manager:_create_device_with_controllers] Creating device: {device_id}")
     
     # Create device with IP/port values and video paths for URL building
     device = Device(
         device_id, 
-        name, 
-        model,
+        device_name, 
+        device_model,
         device_config.get('device_ip'),
         device_config.get('device_port'),
         device_config.get('video_stream_path'),

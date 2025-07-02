@@ -19,22 +19,22 @@ class Device:
         verification_controllers = device.get_controllers('verification')
     """
     
-    def __init__(self, device_id: str, name: str, model: str, device_ip: str = None, device_port: str = None, video_stream_path: str = None, video_capture_path: str = None):
+    def __init__(self, device_id: str, device_name: str, device_model: str, device_ip: str = None, device_port: str = None, video_stream_path: str = None, video_capture_path: str = None):
         """
         Initialize a device.
         
         Args:
             device_id: Device identifier (e.g., 'device1', 'device2')
-            name: Device name from environment (e.g., 'EOSv1_PROD_Test2')
-            model: Device model from environment (e.g., 'stb')
+            device_name: Device name from environment (e.g., 'EOSv1_PROD_Test2')
+            device_model: Device model from environment (e.g., 'stb')
             device_ip: Device IP address
             device_port: Device port
             video_stream_path: Video stream path for URL building (e.g., '/host/stream/capture1')
             video_capture_path: Video capture path for URL building (e.g., '/var/www/html/stream/capture1')
         """
         self.device_id = device_id
-        self.name = name
-        self.model = model
+        self.device_name = device_name
+        self.device_model = device_model
         self.device_ip = device_ip
         self.device_port = device_port
         
@@ -187,22 +187,22 @@ class Device:
         from ..controllers.controller_config_factory import get_device_capabilities
         
         # Get detailed capabilities from factory
-        detailed_capabilities = get_device_capabilities(self.model)
+        detailed_capabilities = get_device_capabilities(self.device_model)
         
-        print(f"[@device:to_dict] Device {self.name} ({self.model}) detailed capabilities: {detailed_capabilities}")
+        print(f"[@device:to_dict] Device {self.device_name} ({self.device_model}) detailed capabilities: {detailed_capabilities}")
         
         # Collect available verification types and action types from controllers
         device_verification_types = self.get_available_verification_types()
         device_action_types = self.get_available_action_types()
         
-        print(f"[@device:to_dict] Device {self.name} verification types: {len(device_verification_types)} controller types")
-        print(f"[@device:to_dict] Device {self.name} action types: {len(device_action_types)} action categories")
+        print(f"[@device:to_dict] Device {self.device_name} verification types: {len(device_verification_types)} controller types")
+        print(f"[@device:to_dict] Device {self.device_name} action types: {len(device_action_types)} action categories")
         
         # Base device information
         device_dict = {
             'device_id': self.device_id,
-            'device_name': self.name,  # Updated field name to match frontend expectations
-            'device_model': self.model,  # Updated field name to match frontend expectations
+            'device_name': self.device_name,  # Updated field name to match frontend expectations
+            'device_model': self.device_model,  # Updated field name to match frontend expectations
             'device_ip': self.device_ip,
             'device_port': self.device_port,
             'device_capabilities': detailed_capabilities,  # Updated field name to match frontend expectations
