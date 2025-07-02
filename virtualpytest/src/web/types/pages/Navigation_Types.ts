@@ -76,7 +76,8 @@ export interface EdgeAction {
 export interface UINavigationEdgeData {
   actions?: EdgeAction[]; // Array of actions for UI display (loaded from DB via action_ids)
   action_ids?: string[]; // Array of action database IDs for persistence (saved to tree)
-  retryActions?: EdgeAction[]; // Array of retry actions for failure scenarios
+  retryActions?: EdgeAction[]; // Array of retry actions for UI display (loaded from DB via retry_action_ids)
+  retry_action_ids?: string[]; // Array of retry action database IDs for persistence (saved to tree)
   finalWaitTime?: number; // Wait time after all actions
   description?: string;
   from?: string; // Source node label

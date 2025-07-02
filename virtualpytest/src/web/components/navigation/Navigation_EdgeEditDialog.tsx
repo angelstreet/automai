@@ -48,6 +48,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     isOpen,
     edgeForm,
     setEdgeForm,
+    selectedEdge: _selectedEdge,
     selectedHost,
     isControlActive,
   });

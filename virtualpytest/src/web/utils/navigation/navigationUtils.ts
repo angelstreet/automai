@@ -198,6 +198,11 @@ function sanitizeEdge(edge: any): any {
     source: edge.source,
     target: edge.target,
     type: edge.type || 'default',
-    data: edge.data || {},
+    data: {
+      ...edge.data,
+      // Ensure final wait time is in data for persistence
+      finalWaitTime:
+        edge.finalWaitTime !== undefined ? edge.finalWaitTime : edge.data?.finalWaitTime,
+    },
   };
 }

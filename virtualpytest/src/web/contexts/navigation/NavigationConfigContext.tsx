@@ -292,7 +292,13 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
           // Update state with loaded data
           let nodes = treeData.nodes || [];
-          let edges = treeData.edges || [];
+          let edges = (treeData.edges || []).map((edge: any) => ({
+            ...edge,
+            // Extract final wait time from data to top level for UI compatibility
+            // Note: retryActions will be loaded from retry_action_ids by useEdge hook
+            finalWaitTime:
+              edge.data?.finalWaitTime !== undefined ? edge.data.finalWaitTime : edge.finalWaitTime,
+          }));
 
           state.setNodes(nodes);
           state.setEdges(edges);
@@ -351,6 +357,11 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
               ...edge.data,
               // Store action_ids for reference
               action_ids: edge.data?.action_ids || [],
+              // Store retry_action_ids for reference (consistent with action_ids pattern)
+              retry_action_ids: edge.data?.retry_action_ids || [],
+              // Store final wait time in data for persistence
+              finalWaitTime:
+                edge.finalWaitTime !== undefined ? edge.finalWaitTime : edge.data?.finalWaitTime,
             },
           })),
         };

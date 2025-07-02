@@ -1,13 +1,15 @@
 import { useCallback, useState, useEffect } from 'react';
 
 import { Host } from '../../types/common/Host_Types';
-import { EdgeForm, EdgeAction } from '../../types/pages/Navigation_Types';
+import { EdgeForm, EdgeAction, UINavigationEdge } from '../../types/pages/Navigation_Types';
 import { useAction } from '../actions';
+import { useEdge } from './useEdge';
 
 export interface UseEdgeEditProps {
   isOpen: boolean;
   edgeForm: EdgeForm | null;
   setEdgeForm: (form: EdgeForm) => void;
+  selectedEdge?: UINavigationEdge | null;
   selectedHost?: Host | null;
   isControlActive?: boolean;
 }
@@ -16,6 +18,7 @@ export const useEdgeEdit = ({
   isOpen,
   edgeForm,
   setEdgeForm,
+  selectedEdge,
   selectedHost,
   isControlActive = false,
 }: UseEdgeEditProps) => {
@@ -25,20 +28,43 @@ export const useEdgeEdit = ({
     isControlActive,
   });
 
+  // Edge hook for loading actions from IDs
+  const edgeHook = useEdge({
+    selectedHost,
+    isControlActive,
+  });
+
   // Local state for dialog-specific concerns
   const [localActions, setLocalActions] = useState<EdgeAction[]>([]);
   const [localRetryActions, setLocalRetryActions] = useState<EdgeAction[]>([]);
   const [actionResult, setActionResult] = useState<string | null>(null);
 
-  // Initialize actions when dialog opens or edgeForm changes
+  // Initialize actions when dialog opens or edgeForm/selectedEdge changes
   useEffect(() => {
     if (isOpen && edgeForm?.actions) {
       setLocalActions(edgeForm.actions);
     }
-    if (isOpen && edgeForm?.retryActions) {
-      setLocalRetryActions(edgeForm.retryActions);
+
+    // Load retry actions from selectedEdge using ID resolution if edgeForm has none
+    if (isOpen && selectedEdge) {
+      if (edgeForm?.retryActions && edgeForm.retryActions.length > 0) {
+        // Use retry actions from form if they exist
+        setLocalRetryActions(edgeForm.retryActions);
+      } else {
+        // Load retry actions from edge using ID resolution
+        const resolvedRetryActions = edgeHook.getRetryActionsFromEdge(selectedEdge);
+        setLocalRetryActions(resolvedRetryActions);
+
+        // Update the form with resolved retry actions
+        if (edgeForm) {
+          setEdgeForm({
+            ...edgeForm,
+            retryActions: resolvedRetryActions,
+          });
+        }
+      }
     }
-  }, [isOpen, edgeForm?.actions, edgeForm?.retryActions]);
+  }, [isOpen, edgeForm?.actions, edgeForm?.retryActions, selectedEdge, edgeHook, setEdgeForm]);
 
   // Reset state when dialog closes
   useEffect(() => {

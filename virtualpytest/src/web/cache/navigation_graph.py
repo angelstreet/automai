@@ -101,10 +101,11 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
                     }
                     actions_list.append(action_info)
         
-        # Handle retry actions format (new format)
+        # Handle retry actions format (both full objects and ID references)
         retry_actions_list = []
+        
+        # Handle full retry action objects (legacy format)
         if edge_data.get('retryActions') and isinstance(edge_data['retryActions'], list) and len(edge_data['retryActions']) > 0:
-            # New format: multiple retry actions
             for action in edge_data['retryActions']:
                 if action and action.get('id'):  # Only include actions that have an ID
                     action_info = {
@@ -115,6 +116,22 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
                         'requiresInput': action.get('requiresInput', False),
                         'inputValue': action.get('inputValue', ''),
                         'waitTime': action.get('waitTime', 1000)
+                    }
+                    retry_actions_list.append(action_info)
+        
+        # Handle retry action IDs (new format) - just store the IDs for now
+        # Resolution of IDs to full actions should be done by the UI layer
+        elif edge_data.get('retry_action_ids') and isinstance(edge_data['retry_action_ids'], list) and len(edge_data['retry_action_ids']) > 0:
+            for action_id in edge_data['retry_action_ids']:
+                if action_id:  # Only include non-empty IDs
+                    action_info = {
+                        'id': action_id,
+                        'label': f'Retry Action {action_id[:8]}...',  # Placeholder label
+                        'command': 'resolve_from_id',  # Placeholder command indicating ID needs resolution
+                        'params': {},
+                        'requiresInput': False,
+                        'inputValue': '',
+                        'waitTime': 1000
                     }
                     retry_actions_list.append(action_info)
         

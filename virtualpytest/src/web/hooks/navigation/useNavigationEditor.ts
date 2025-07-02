@@ -258,6 +258,8 @@ export const useNavigationEditor = () => {
         // Update edge with action IDs and retry action IDs
         const updatedEdge = {
           ...navigation.selectedEdge,
+          // Ensure finalWaitTime is at top level for UI compatibility
+          finalWaitTime: edgeForm.finalWaitTime,
           data: {
             ...navigation.selectedEdge.data,
             ...edgeForm,
