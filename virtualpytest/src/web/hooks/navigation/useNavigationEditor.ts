@@ -183,12 +183,77 @@ export const useNavigationEditor = () => {
 
   const handleEdgeFormSubmit = useCallback(
     async (edgeForm: any) => {
-      if (navigation.selectedEdge) {
+      try {
+        if (!navigation.selectedEdge) return;
+
+        // Save main actions to database and get their IDs
+        const actionIds: string[] = [];
+        const actionsToSave = edgeForm.actions || [];
+
+        if (actionsToSave.length > 0) {
+          for (const action of actionsToSave) {
+            try {
+              const response = await fetch('/server/actions/saveAction', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  name: action.description || action.command,
+                  device_model: 'android_mobile',
+                  command: action.command,
+                  params: action.params || {},
+                }),
+              });
+
+              const result = await response.json();
+              if (result.success && result.action_id) {
+                actionIds.push(result.action_id);
+              }
+            } catch (error) {
+              console.error('Error saving action:', error);
+            }
+          }
+        }
+
+        // Save retry actions to database and get their IDs
+        const retryActionIds: string[] = [];
+        const retryActionsToSave = edgeForm.retryActions || [];
+
+        if (retryActionsToSave.length > 0) {
+          for (const action of retryActionsToSave) {
+            try {
+              const response = await fetch('/server/actions/saveAction', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  name: action.description || action.command,
+                  device_model: 'android_mobile',
+                  command: action.command,
+                  params: action.params || {},
+                }),
+              });
+
+              const result = await response.json();
+              if (result.success && result.action_id) {
+                retryActionIds.push(result.action_id);
+              }
+            } catch (error) {
+              console.error('Error saving retry action:', error);
+            }
+          }
+        }
+
+        // Update edge with action IDs and retry action IDs
         const updatedEdge = {
           ...navigation.selectedEdge,
           data: {
             ...navigation.selectedEdge.data,
             ...edgeForm,
+            action_ids: actionIds,
+            retry_action_ids: retryActionIds,
           },
         };
 
@@ -200,6 +265,9 @@ export const useNavigationEditor = () => {
         navigation.setSelectedEdge(updatedEdge);
         navigation.setIsEdgeDialogOpen(false);
         navigation.markUnsavedChanges();
+      } catch (error) {
+        console.error('Error during edge save:', error);
+        navigation.setError('Failed to save edge actions');
       }
     },
     [navigation],

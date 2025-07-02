@@ -286,7 +286,64 @@ def save_action_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
-
+@server_actions_bp.route('/saveAction', methods=['POST'])
+def save_navigation_action():
+    """
+    Save navigation action definition to database.
+    
+    Expected JSON payload:
+    {
+        "name": "action_description",
+        "device_model": "android_mobile",
+        "command": "action_command",
+        "params": {...}
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'device_model', 'command']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required field: {field}'
+                }), 400
+        
+        # Use default team ID
+        team_id = DEFAULT_TEAM_ID
+        
+        # Save to database using existing save_action function
+        result = save_action(
+            name=data['name'],
+            device_model=data['device_model'],
+            action_type='remote',  # Navigation actions are remote type
+            command=data['command'],
+            team_id=team_id,
+            params=data.get('params', {}),
+            requires_input=False
+        )
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'action_id': result['action_id'],
+                'reused': result.get('reused', False),
+                'message': 'Action saved successfully'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error')
+            }), 500
+            
+    except Exception as e:
+        print(f"[@server_actions_routes:save_navigation_action] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
 
 @server_actions_bp.route('/getActions', methods=['GET'])
 def get_actions():
