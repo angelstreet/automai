@@ -4,16 +4,16 @@ import {
   Analytics as AnalyticsIcon,
   SmartToy as AIIcon,
 } from '@mui/icons-material';
-import { Box, IconButton, Typography, Button, CircularProgress } from '@mui/material';
+import { Box, IconButton, Typography, Button, CircularProgress, TextField } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
 import { useModal } from '../../contexts/ModalContext';
+import { useAIAgent } from '../../hooks/aiagent/useAIAgent';
 import { useStream } from '../../hooks/controller';
 import { useRec } from '../../hooks/pages/useRec';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
-import { AIAgentPlayer } from '../aiagent/AIAgentPlayer';
 import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
 import { RemotePanel } from '../controller/remote/RemotePanel';
 import { MonitoringPlayer } from '../monitoring/MonitoringPlayer';
@@ -88,6 +88,21 @@ const RecHostStreamModalContent: React.FC<{
   const { streamUrl, isLoadingUrl, urlError } = useStream({
     host,
     device_id: device?.device_id || 'device1',
+  });
+
+  // AI Agent hook - only active when aiAgentMode is true
+  const {
+    isExecuting: isAIExecuting,
+    taskInput,
+    aiPlan,
+    errorMessage: aiError,
+    setTaskInput,
+    executeTask: executeAITask,
+    clearLog: clearAILog,
+  } = useAIAgent({
+    host,
+    device: device!,
+    enabled: aiAgentMode && isControlActive,
   });
 
   // Stable stream container dimensions to prevent re-renders
@@ -171,15 +186,13 @@ const RecHostStreamModalContent: React.FC<{
       // Disable monitoring mode when enabling AI agent
       if (newMode) {
         setMonitoringMode(false);
-        // Auto-show remote when enabling AI agent for full control
-        if (!showRemote) {
-          setShowRemote(true);
-        }
+        // Clear any previous AI results when toggling
+        clearAILog();
       }
 
       return newMode;
     });
-  }, [isControlActive, showRemote, showWarning]);
+  }, [isControlActive, clearAILog, showWarning]);
 
   // Stable device resolution to prevent re-renders
   const stableDeviceResolution = useMemo(() => ({ width: 1920, height: 1080 }), []);
@@ -239,6 +252,13 @@ const RecHostStreamModalContent: React.FC<{
     }
   }, [urlError, showError]);
 
+  // Show AI errors
+  useEffect(() => {
+    if (aiError) {
+      showError(`AI Agent error: ${aiError}`);
+    }
+  }, [aiError, showError]);
+
   return (
     <Box
       sx={{
@@ -279,7 +299,7 @@ const RecHostStreamModalContent: React.FC<{
         >
           <Typography variant="h6" component="h2">
             {device?.device_name || host.host_name} -{' '}
-            {monitoringMode ? 'Monitoring' : aiAgentMode ? 'AI Agent' : 'Live Stream'}
+            {monitoringMode ? 'Monitoring' : 'Live Stream'}
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -399,6 +419,7 @@ const RecHostStreamModalContent: React.FC<{
             display: 'flex',
             overflow: 'hidden',
             backgroundColor: 'black',
+            position: 'relative',
           }}
         >
           {/* Stream Viewer / Monitoring Player */}
@@ -419,8 +440,6 @@ const RecHostStreamModalContent: React.FC<{
                 device={device!}
                 baseUrlPattern={baseUrlPatterns.get(`${host.host_name}-${device?.device_id}`)}
               />
-            ) : aiAgentMode && isControlActive ? (
-              <AIAgentPlayer host={host} device={device!} />
             ) : streamUrl ? (
               <HLSVideoPlayer
                 streamUrl={streamUrl}
@@ -486,6 +505,209 @@ const RecHostStreamModalContent: React.FC<{
                 streamMinimized={false}
                 streamContainerDimensions={streamContainerDimensions}
               />
+            </Box>
+          )}
+
+          {/* AI Agent Sliding Panel - positioned on the right like monitoring AI query */}
+          {aiAgentMode && isControlActive && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                right: 16,
+                transform: 'translateY(-50%)',
+                zIndex: 1000020,
+                pointerEvents: 'auto',
+                width: '380px',
+                backgroundColor: 'rgba(0,0,0,0.85)',
+                borderRadius: 1,
+                border: '1px solid rgba(255,255,255,0.2)',
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              <Box sx={{ p: 3 }}>
+                {/* Header */}
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: '#ffffff',
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                  }}
+                >
+                  <AIIcon />
+                  AI Agent
+                </Typography>
+
+                {/* Task Input */}
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 2 }}>
+                  <TextField
+                    size="small"
+                    placeholder="Enter task (e.g., 'go to live and zap 10 times')"
+                    value={taskInput}
+                    onChange={(e) => setTaskInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        executeAITask();
+                      }
+                    }}
+                    disabled={isAIExecuting}
+                    multiline
+                    rows={2}
+                    sx={{
+                      flex: 1,
+                      '& .MuiOutlinedInput-root': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        '& fieldset': {
+                          borderColor: '#444',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#666',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#2196f3',
+                        },
+                      },
+                      '& .MuiInputBase-input': {
+                        color: '#ffffff',
+                        '&::placeholder': {
+                          color: '#888',
+                          opacity: 1,
+                        },
+                      },
+                    }}
+                  />
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={executeAITask}
+                    disabled={!taskInput.trim() || isAIExecuting}
+                    sx={{
+                      backgroundColor: '#2196f3',
+                      color: '#ffffff',
+                      minWidth: '80px',
+                      '&:hover': {
+                        backgroundColor: '#1976d2',
+                      },
+                      '&.Mui-disabled': {
+                        backgroundColor: '#444',
+                        color: '#888',
+                      },
+                    }}
+                  >
+                    {isAIExecuting ? (
+                      <CircularProgress size={16} sx={{ color: '#888' }} />
+                    ) : (
+                      'Generate'
+                    )}
+                  </Button>
+                </Box>
+
+                {/* AI Plan Display */}
+                {aiPlan && (
+                  <Box
+                    sx={{
+                      mt: 2,
+                      p: 2,
+                      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                      borderRadius: 1,
+                      border: '1px solid #444',
+                      maxHeight: '400px',
+                      overflowY: 'auto',
+                    }}
+                  >
+                    <Typography variant="subtitle2" sx={{ color: '#ffffff', mb: 1 }}>
+                      AI Execution Plan:
+                    </Typography>
+
+                    {/* Analysis */}
+                    <Typography variant="body2" sx={{ color: '#cccccc', mb: 1 }}>
+                      {aiPlan.analysis}
+                    </Typography>
+
+                    {/* Plan Steps */}
+                    {aiPlan.plan && aiPlan.plan.length > 0 && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography
+                          variant="caption"
+                          sx={{ color: '#aaa', mb: 1, display: 'block' }}
+                        >
+                          Steps ({aiPlan.plan.length}):
+                        </Typography>
+                        {aiPlan.plan.map((step: any, index: number) => (
+                          <Box
+                            key={index}
+                            sx={{
+                              mb: 1,
+                              p: 1,
+                              backgroundColor: 'rgba(255,255,255,0.05)',
+                              borderRadius: 0.5,
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              sx={{ color: '#fff', fontWeight: 'bold' }}
+                            >
+                              {step.step}. {step.description}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{ color: '#aaa', display: 'block', mt: 0.5 }}
+                            >
+                              {step.command} {step.params && `| ${JSON.stringify(step.params)}`}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+
+                    {/* Summary Info */}
+                    <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {aiPlan.estimated_time && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: '#4caf50',
+                            backgroundColor: 'rgba(76,175,80,0.1)',
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 0.5,
+                          }}
+                        >
+                          Time: {aiPlan.estimated_time}
+                        </Typography>
+                      )}
+                      {aiPlan.risk_level && (
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color:
+                              aiPlan.risk_level === 'low'
+                                ? '#4caf50'
+                                : aiPlan.risk_level === 'high'
+                                  ? '#f44336'
+                                  : '#ff9800',
+                            backgroundColor:
+                              aiPlan.risk_level === 'low'
+                                ? 'rgba(76,175,80,0.1)'
+                                : aiPlan.risk_level === 'high'
+                                  ? 'rgba(244,67,54,0.1)'
+                                  : 'rgba(255,152,0,0.1)',
+                            px: 1,
+                            py: 0.5,
+                            borderRadius: 0.5,
+                          }}
+                        >
+                          Risk: {aiPlan.risk_level}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                )}
+              </Box>
             </Box>
           )}
         </Box>

@@ -13,6 +13,7 @@ interface ExecutionLogEntry {
 interface UseAIAgentProps {
   host: Host;
   device: Device;
+  enabled?: boolean;
 }
 
 interface UseAIAgentReturn {
@@ -33,7 +34,7 @@ interface UseAIAgentReturn {
   clearLog: () => void;
 }
 
-export const useAIAgent = ({ host, device }: UseAIAgentProps): UseAIAgentReturn => {
+export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): UseAIAgentReturn => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentStep, setCurrentStep] = useState('');
   const [executionLog, setExecutionLog] = useState<ExecutionLogEntry[]>([]);
@@ -44,7 +45,7 @@ export const useAIAgent = ({ host, device }: UseAIAgentProps): UseAIAgentReturn 
   const [aiPlan, setAiPlan] = useState<any>(null);
 
   const executeTask = useCallback(async () => {
-    if (!taskInput.trim() || isExecuting) return;
+    if (!enabled || !taskInput.trim() || isExecuting) return;
 
     try {
       setIsExecuting(true);
@@ -86,10 +87,10 @@ export const useAIAgent = ({ host, device }: UseAIAgentProps): UseAIAgentReturn 
     } finally {
       setIsExecuting(false);
     }
-  }, [taskInput, isExecuting, host, device?.device_id]);
+  }, [enabled, taskInput, isExecuting, host, device?.device_id]);
 
   const stopExecution = useCallback(async () => {
-    if (!isExecuting) return;
+    if (!enabled || !isExecuting) return;
 
     try {
       console.log('[useAIAgent] Stopping task execution');
@@ -117,7 +118,7 @@ export const useAIAgent = ({ host, device }: UseAIAgentProps): UseAIAgentReturn 
     } finally {
       setIsExecuting(false);
     }
-  }, [isExecuting, host, device?.device_id]);
+  }, [enabled, isExecuting, host, device?.device_id]);
 
   const clearLog = useCallback(() => {
     setExecutionLog([]);
