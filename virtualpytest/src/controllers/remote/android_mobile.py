@@ -594,7 +594,7 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
     def get_available_actions(self) -> Dict[str, Any]:
         """Get available actions for this Android mobile controller."""
         return {
-            'remote': [
+            'Remote': [
                 # Navigation actions
                 {
                     'id': 'click_element',

@@ -293,15 +293,12 @@ export const ActionItem: React.FC<ActionItemProps> = ({
               },
             }}
             renderValue={(selected) => {
-              // Find the selected action and return its formatted name
+              // Find the selected action and return its label
               const selectedAction = Object.values(availableActions)
                 .flat()
                 .find((act) => act.command === selected);
               if (selectedAction) {
-                return selectedAction.command
-                  .replace(/_/g, ' ')
-                  .replace(/([A-Z])/g, ' $1')
-                  .trim();
+                return selectedAction.label;
               }
               return selected;
             }}
@@ -330,10 +327,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                     value={actionDef.command}
                     sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
                   >
-                    {actionDef.command
-                      .replace(/_/g, ' ')
-                      .replace(/([A-Z])/g, ' $1')
-                      .trim()}
+                    {actionDef.label}
                   </MenuItem>
                 )),
               ];
