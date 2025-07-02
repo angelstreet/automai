@@ -27,16 +27,29 @@ export const ActionsList: React.FC<ActionsListProps> = ({ actions, onActionsUpda
   };
 
   const handleActionSelect = (index: number, command: string) => {
+    // Find the selected action from available actions
+    let selectedAction: any = undefined;
+
+    // Search through all controller types to find the action
+    for (const actions of Object.values(availableActions)) {
+      if (!Array.isArray(actions)) continue;
+
+      const action = actions.find((a) => a.command === command);
+      if (action) {
+        selectedAction = action;
+        break;
+      }
+    }
+
     const updatedActions = actions.map((action, i) => {
       if (i === index) {
         return {
           ...action,
           command,
-          // Keep existing params but ensure delay is set
-          params: {
-            ...action.params,
-            delay: action.params?.delay || 0.5,
-          },
+          // Use the action definition's params or initialize with defaults
+          params: selectedAction
+            ? { ...selectedAction.params, delay: 0.5 }
+            : { ...action.params, delay: action.params?.delay || 0.5 },
         };
       }
       return action;
