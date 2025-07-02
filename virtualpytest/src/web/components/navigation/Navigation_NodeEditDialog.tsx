@@ -14,12 +14,10 @@ import {
   Typography,
   IconButton,
 } from '@mui/material';
-import React, { useEffect, useCallback } from 'react';
+import React from 'react';
 
-// Import proper types from navigationTypes
-import { useNode } from '../../hooks/navigation/useNode';
+import { useNodeEdit } from '../../hooks/navigation/useNodeEdit';
 import { NodeEditDialogProps } from '../../types/pages/Navigation_Types';
-import { Verification } from '../../types/verification/Verification_Types';
 import { VerificationsList } from '../verification/VerificationsList';
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
@@ -31,11 +29,10 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   onClose,
   onResetNode,
   selectedHost,
-  selectedDeviceId,
   isControlActive = false,
   model,
 }) => {
-  // Early return if nodeForm is null or undefined - MUST be before any hooks
+  // Early return if nodeForm is null or undefined
   if (!nodeForm) {
     return null;
   }
@@ -45,7 +42,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     return null;
   }
 
-  // Early return if selectedHost is invalid - MUST be before verification hook
+  // Early return if selectedHost is invalid
   if (!selectedHost) {
     return (
       <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
@@ -62,49 +59,24 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     );
   }
 
-  // Use the consolidated node hook
-  const nodeHook = useNode({
+  // Use the focused node edit hook
+  const nodeEdit = useNodeEdit({
+    isOpen,
+    nodeForm,
+    setNodeForm,
     selectedHost,
-    selectedDeviceId,
     isControlActive,
   });
 
-  // Initialize verifications from nodeForm when dialog opens
-  useEffect(() => {
-    if (!isOpen) return;
-
-    console.log(`[@component:NodeEditDialog] Dialog opened, initializing verifications`);
-    nodeHook.initializeVerifications(nodeForm);
-  }, [isOpen, nodeForm, nodeHook]);
-
-  // Handle verification changes by creating a custom handler that updates nodeForm
-  const handleVerificationsChange = useCallback(
-    (newVerifications: Verification[]) => {
-      console.log(
-        `[@component:NodeEditDialog] Updating nodeForm with new verifications:`,
-        newVerifications,
-      );
-
-      nodeHook.handleVerificationsChange(newVerifications, nodeForm, setNodeForm);
-    },
-    [nodeForm, setNodeForm, nodeHook],
-  );
-
-  useEffect(() => {
-    if (!isOpen) {
-      // Reset state when dialog closes
-      nodeHook.resetDialogState();
-    }
-  }, [isOpen, nodeHook]);
-
   const handleSave = () => {
-    nodeHook.handleSave(onSubmit);
+    nodeEdit.handleSave(onSubmit);
   };
 
-  // Use the runGoto function
   const handleRunGoto = () => {
-    nodeHook.runGoto();
+    nodeEdit.runGoto();
   };
+
+  const buttonVisibility = nodeEdit.getButtonVisibility();
 
   return (
     <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
@@ -155,7 +127,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             />
             <TextField
               label="Parent"
-              value={nodeHook.getParentNames(nodeForm?.parent || [], nodes)}
+              value={nodeEdit.getParentNames(nodeForm?.parent || [], nodes)}
               fullWidth
               InputProps={{ readOnly: true }}
               variant="outlined"
@@ -183,29 +155,29 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             />
           )}
 
-          {/* Verification Section - using same hooks as VerificationEditor */}
+          {/* Verification Section */}
           <VerificationsList
-            verifications={nodeHook.verification.verifications}
-            availableVerifications={nodeHook.verification.availableVerificationTypes}
-            onVerificationsChange={handleVerificationsChange}
-            loading={nodeHook.verification.loading}
-            model={nodeHook.deviceModel || model || 'android_mobile'}
+            verifications={nodeEdit.verification.verifications}
+            availableVerifications={nodeEdit.verification.availableVerificationTypes}
+            onVerificationsChange={nodeEdit.handleVerificationsChange}
+            loading={nodeEdit.verification.loading}
+            model={model || 'android_mobile'}
             selectedHost={selectedHost}
-            onTest={nodeHook.verification.handleTest}
-            testResults={nodeHook.verification.testResults}
+            onTest={nodeEdit.verification.handleTest}
+            testResults={nodeEdit.verification.testResults}
             onReferenceSelected={() => {}}
-            modelReferences={nodeHook.modelReferences}
-            referencesLoading={nodeHook.referencesLoading}
+            modelReferences={{}}
+            referencesLoading={false}
             showCollapsible={false}
             title="Verifications"
           />
 
-          {nodeHook.gotoResult && (
+          {nodeEdit.gotoResult && (
             <Box
               sx={{
                 p: 2,
                 bgcolor:
-                  nodeHook.gotoResult.includes('❌') || nodeHook.gotoResult.includes('⚠️')
+                  nodeEdit.gotoResult.includes('❌') || nodeEdit.gotoResult.includes('⚠️')
                     ? 'error.light'
                     : 'success.light',
                 borderRadius: 1,
@@ -215,17 +187,9 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
               }}
             >
               <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
-                {nodeHook.gotoResult}
+                {nodeEdit.gotoResult}
               </Typography>
             </Box>
-          )}
-
-          {/* Entry node note */}
-          {(nodeForm?.type as string) === 'entry' && (
-            <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-              Entry points are automatically positioned. Edit the connecting edge to change entry
-              method and details.
-            </Typography>
           )}
         </Box>
       </DialogContent>
@@ -235,44 +199,33 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             Reset Node
           </Button>
         )}
-        <Button onClick={handleSave} variant="contained" disabled={!nodeHook.isFormValid(nodeForm)}>
-          {nodeHook.saveSuccess ? '✓' : 'Save'}
+        <Button onClick={handleSave} variant="contained" disabled={!nodeEdit.isFormValid(nodeForm)}>
+          {nodeEdit.saveSuccess ? '✓' : 'Save'}
         </Button>
         <Button
-          onClick={nodeHook.verification.handleTest}
+          onClick={nodeEdit.verification.handleTest}
           variant="contained"
-          disabled={
-            !isControlActive ||
-            !selectedHost ||
-            nodeHook.verification.verifications.length === 0 ||
-            nodeHook.verification.loading
-          }
+          disabled={!buttonVisibility.canTest || nodeEdit.verification.loading}
           sx={{
-            opacity:
-              !isControlActive ||
-              !selectedHost ||
-              nodeHook.verification.verifications.length === 0 ||
-              nodeHook.verification.loading
-                ? 0.5
-                : 1,
+            opacity: !buttonVisibility.canTest || nodeEdit.verification.loading ? 0.5 : 1,
           }}
         >
-          {nodeHook.verification.loading ? 'Running...' : 'Run'}
+          {nodeEdit.verification.loading ? 'Running...' : 'Run'}
         </Button>
         <Button
           onClick={handleRunGoto}
           variant="contained"
           color="primary"
-          disabled={!nodeHook.getButtonVisibility().canRunGoto || nodeHook.isRunningGoto}
+          disabled={!buttonVisibility.canRunGoto || nodeEdit.isRunningGoto}
           sx={{
-            opacity: !nodeHook.getButtonVisibility().canRunGoto || nodeHook.isRunningGoto ? 0.5 : 1,
+            opacity: !buttonVisibility.canRunGoto || nodeEdit.isRunningGoto ? 0.5 : 1,
             bgcolor: 'primary.main',
             '&:hover': {
               bgcolor: 'primary.dark',
             },
           }}
         >
-          {nodeHook.isRunningGoto ? 'Going...' : 'Go To'}
+          {nodeEdit.isRunningGoto ? 'Going...' : 'Go To'}
         </Button>
       </DialogActions>
     </Dialog>

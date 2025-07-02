@@ -27,6 +27,9 @@ export const useEdge = (props?: UseEdgeProps) => {
   // Validation colors hook for edge styling
   const { getEdgeColors } = useValidationColors([]);
 
+  // State for edge operations
+  const [runResult, setRunResult] = useState<string | null>(null);
+
   /**
    * Convert navigation EdgeAction to controller EdgeAction for action execution
    */
@@ -36,7 +39,7 @@ export const useEdge = (props?: UseEdgeProps) => {
       label: navAction.description || navAction.command,
       command: navAction.command,
       params: navAction.params,
-      requiresInput: false, // We handle input differently now
+      requiresInput: false,
       inputValue:
         navAction.params?.input ||
         navAction.params?.text ||
@@ -44,15 +47,9 @@ export const useEdge = (props?: UseEdgeProps) => {
         navAction.params?.package ||
         navAction.params?.element_identifier ||
         '',
-      waitTime: (navAction.params?.delay || 0.5) * 1000, // Convert seconds to milliseconds
+      waitTime: (navAction.params?.delay || 0.5) * 1000,
     };
   }, []);
-
-  // State for edge operations
-  const [runResult, setRunResult] = useState<string | null>(null);
-  const [actionResult, setActionResult] = useState<string | null>(null);
-  const [localActions, setLocalActions] = useState<EdgeAction[]>([]);
-  const [localRetryActions, setLocalRetryActions] = useState<EdgeAction[]>([]);
 
   /**
    * Get edge colors based on validation status
@@ -93,35 +90,29 @@ export const useEdge = (props?: UseEdgeProps) => {
       // Handle action_ids format (similar to verification_ids in nodes)
       if (edge.data?.action_ids && edge.data.action_ids.length > 0) {
         const allActions = getActions();
-
-        // Match action_ids with actual action objects
         const edgeActions: EdgeAction[] = [];
-        if (edge.data.action_ids && edge.data.action_ids.length > 0) {
-          for (const actionId of edge.data.action_ids) {
-            const action = allActions.find((a: any) => a.id === actionId);
-            if (action) {
-              // Convert saved action to EdgeAction format
-              const edgeAction: EdgeAction = {
-                id: action.id,
-                command: action.command,
-                params: {
-                  ...action.params,
-                  delay: action.params?.delay || 0.5,
-                },
-                description:
-                  action.description || action.label || action.command || 'Unnamed Action',
-              };
-              edgeActions.push(edgeAction);
-            } else {
-              // Create a placeholder action for missing actions
-              const placeholderAction: EdgeAction = {
-                id: actionId,
-                command: '', // Empty command indicates it needs to be reconfigured
-                params: { delay: 0.5 },
-                description: `Missing Action (ID: ${actionId.substring(0, 8)}...)`,
-              };
-              edgeActions.push(placeholderAction);
-            }
+
+        for (const actionId of edge.data.action_ids) {
+          const action = allActions.find((a: any) => a.id === actionId);
+          if (action) {
+            const edgeAction: EdgeAction = {
+              id: action.id,
+              command: action.command,
+              params: {
+                ...action.params,
+                delay: action.params?.delay || 0.5,
+              },
+              description: action.description || action.label || action.command || 'Unnamed Action',
+            };
+            edgeActions.push(edgeAction);
+          } else {
+            const placeholderAction: EdgeAction = {
+              id: actionId,
+              command: '',
+              params: { delay: 0.5 },
+              description: `Missing Action (ID: ${actionId.substring(0, 8)}...)`,
+            };
+            edgeActions.push(placeholderAction);
           }
         }
 
@@ -173,18 +164,6 @@ export const useEdge = (props?: UseEdgeProps) => {
   );
 
   /**
-   * Check if edge can run actions for local actions (in dialog)
-   */
-  const canRunLocalActions = useCallback((): boolean => {
-    return (
-      props?.isControlActive === true &&
-      props?.selectedHost !== null &&
-      localActions.length > 0 &&
-      !actionHook.loading
-    );
-  }, [props?.isControlActive, props?.selectedHost, localActions.length, actionHook.loading]);
-
-  /**
    * Format run result for compact display
    */
   const formatRunResult = useCallback((result: string): string => {
@@ -194,34 +173,20 @@ export const useEdge = (props?: UseEdgeProps) => {
     const formattedLines: string[] = [];
 
     for (const line of lines) {
-      // Skip verbose messages we don't want
       if (
         line.includes('⏹️ Execution stopped due to failed action') ||
         line.includes('📋 Processing') ||
-        line.includes('retry action(s)')
+        line.includes('⏳ Starting execution') ||
+        line.includes('🔄 Executing action') ||
+        line.includes('✅ Action completed') ||
+        line.includes('❌ Action failed') ||
+        line.includes('🎯 Final result')
       ) {
         continue;
       }
 
-      // Format action lines to be more compact
-      if (line.includes('Action') && (line.includes('✅') || line.includes('❌'))) {
+      if (line.trim()) {
         formattedLines.push(line);
-      }
-      // Format retry action lines to be more compact
-      else if (line.includes('Retry Action') && (line.includes('✅') || line.includes('❌'))) {
-        formattedLines.push(line);
-      }
-      // Keep confidence lines
-      else if (line.includes('📊 Confidence:')) {
-        formattedLines.push(line);
-      }
-      // Keep overall result
-      else if (line.includes('OVERALL RESULT:')) {
-        formattedLines.push(line);
-      }
-      // Keep starting retry actions message but make it shorter
-      else if (line.includes('🔄 Main actions failed. Starting retry actions...')) {
-        formattedLines.push('🔄 Starting retry actions...');
       }
     }
 
@@ -229,7 +194,7 @@ export const useEdge = (props?: UseEdgeProps) => {
   }, []);
 
   /**
-   * Execute actions for an edge
+   * Execute edge actions
    */
   const executeEdgeActions = useCallback(
     async (edge: UINavigationEdge) => {
@@ -237,19 +202,20 @@ export const useEdge = (props?: UseEdgeProps) => {
       const retryActions = getRetryActionsFromEdge(edge);
 
       if (actions.length === 0) {
-        console.log('[@hook:useEdge] No actions to run');
+        setRunResult('❌ No actions to execute');
+        return;
+      }
+
+      if (!props?.isControlActive || !props?.selectedHost) {
+        setRunResult('❌ Device control not active or host not available');
         return;
       }
 
       if (actionHook.loading) {
-        console.log('[@hook:useEdge] Execution already in progress, ignoring duplicate request');
         return;
       }
 
       setRunResult(null);
-      console.log(
-        `[@hook:useEdge] Starting batch execution of ${actions.length} actions with ${retryActions.length} retry actions`,
-      );
 
       try {
         const result = await actionHook.executeActions(
@@ -258,144 +224,25 @@ export const useEdge = (props?: UseEdgeProps) => {
           edge.data?.finalWaitTime || 2000,
         );
 
-        // Format the result for display
-        const formattedResult = actionHook.formatExecutionResults(result);
+        const formattedResult = formatRunResult(actionHook.formatExecutionResults(result));
         setRunResult(formattedResult);
         return result;
       } catch (err: any) {
-        console.error('[@hook:useEdge] Error executing actions:', err);
         const errorResult = `❌ Network error: ${err.message}`;
         setRunResult(errorResult);
         throw err;
       }
     },
-    [actionHook, getActionsFromEdge, getRetryActionsFromEdge, convertToControllerAction],
+    [
+      actionHook,
+      getActionsFromEdge,
+      getRetryActionsFromEdge,
+      convertToControllerAction,
+      formatRunResult,
+      props?.isControlActive,
+      props?.selectedHost,
+    ],
   );
-
-  /**
-   * Execute local actions (for dialog)
-   */
-  const executeLocalActions = useCallback(
-    async (edgeForm: EdgeForm) => {
-      if (!localActions || localActions.length === 0) return;
-
-      if (actionHook.loading) {
-        console.log('[@hook:useEdge] Execution already in progress, ignoring duplicate request');
-        return;
-      }
-
-      setActionResult(null);
-      console.log(
-        `[@hook:useEdge] Starting batch execution of ${localActions.length} actions with ${localRetryActions.length} retry actions`,
-      );
-
-      try {
-        const result = await actionHook.executeActions(
-          localActions.map(convertToControllerAction),
-          localRetryActions.map(convertToControllerAction),
-          edgeForm?.finalWaitTime || 2000,
-        );
-
-        // Format the result for display
-        const formattedResult = actionHook.formatExecutionResults(result);
-        setActionResult(formattedResult);
-        return result;
-      } catch (err: any) {
-        console.error('[@hook:useEdge] Error executing actions:', err);
-        const errorResult = `❌ Network error: ${err.message}`;
-        setActionResult(errorResult);
-        throw err;
-      }
-    },
-    [actionHook, localActions, localRetryActions, convertToControllerAction],
-  );
-
-  /**
-   * Initialize actions from edge form when dialog opens
-   */
-  const initializeActions = useCallback((edgeForm: EdgeForm) => {
-    if (edgeForm?.actions) {
-      setLocalActions(edgeForm.actions);
-    } else {
-      setLocalActions([]);
-    }
-
-    if (edgeForm?.retryActions) {
-      setLocalRetryActions(edgeForm.retryActions);
-    } else {
-      setLocalRetryActions([]);
-    }
-  }, []);
-
-  /**
-   * Handle actions change for dialog
-   */
-  const handleActionsChange = useCallback(
-    (newActions: EdgeAction[], edgeForm: EdgeForm, setEdgeForm: (form: EdgeForm) => void) => {
-      // Update both local state and edgeForm
-      setLocalActions(newActions);
-      setEdgeForm({
-        ...edgeForm,
-        actions: newActions,
-      });
-    },
-    [],
-  );
-
-  /**
-   * Handle retry actions change for dialog
-   */
-  const handleRetryActionsChange = useCallback(
-    (newRetryActions: EdgeAction[], edgeForm: EdgeForm, setEdgeForm: (form: EdgeForm) => void) => {
-      // Update both local state and edgeForm
-      setLocalRetryActions(newRetryActions);
-      setEdgeForm({
-        ...edgeForm,
-        retryActions: newRetryActions,
-      });
-    },
-    [],
-  );
-
-  /**
-   * Check if edge form is valid
-   */
-  const isFormValid = useCallback((): boolean => {
-    return localActions.every((action) => {
-      // Action must have a command
-      if (!action.command || action.command.trim() === '') {
-        return false;
-      }
-
-      // Check if action has required input based on command
-      if (
-        action.command === 'input_text' &&
-        (!action.params?.text || action.params.text.trim() === '')
-      ) {
-        return false;
-      }
-      if (
-        action.command === 'click_element' &&
-        (!action.params?.element_identifier || action.params.element_identifier.trim() === '')
-      ) {
-        return false;
-      }
-      if (
-        (action.command === 'launch_app' || action.command === 'close_app') &&
-        (!action.params?.package || action.params.package.trim() === '')
-      ) {
-        return false;
-      }
-      if (
-        action.command === 'tap_coordinates' &&
-        (action.params?.x === undefined || action.params?.y === undefined)
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [localActions]);
 
   /**
    * Create edge form from edge data
@@ -405,14 +252,12 @@ export const useEdge = (props?: UseEdgeProps) => {
       const actions = getActionsFromEdge(edge);
       const retryActions = getRetryActionsFromEdge(edge);
 
-      const edgeForm = {
+      return {
         description: edge.data?.description || '',
         actions: actions,
         retryActions: retryActions,
         finalWaitTime: edge.data?.finalWaitTime ?? 2000,
       };
-
-      return edgeForm;
     },
     [getActionsFromEdge, getRetryActionsFromEdge],
   );
@@ -422,16 +267,6 @@ export const useEdge = (props?: UseEdgeProps) => {
    */
   const clearResults = useCallback(() => {
     setRunResult(null);
-    setActionResult(null);
-  }, []);
-
-  /**
-   * Reset dialog state
-   */
-  const resetDialogState = useCallback(() => {
-    setActionResult(null);
-    setLocalActions([]);
-    setLocalRetryActions([]);
   }, []);
 
   return {
@@ -440,9 +275,6 @@ export const useEdge = (props?: UseEdgeProps) => {
 
     // State
     runResult,
-    actionResult,
-    localActions,
-    localRetryActions,
 
     // Utility functions
     getEdgeColorsForEdge,
@@ -450,18 +282,11 @@ export const useEdge = (props?: UseEdgeProps) => {
     getActionsFromEdge,
     getRetryActionsFromEdge,
     canRunActions,
-    canRunLocalActions,
     formatRunResult,
-    isFormValid,
     createEdgeForm,
 
     // Action functions
     executeEdgeActions,
-    executeLocalActions,
-    initializeActions,
-    handleActionsChange,
-    handleRetryActionsChange,
     clearResults,
-    resetDialogState,
   };
 };

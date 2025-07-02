@@ -10,11 +10,10 @@ import {
   Typography,
   IconButton,
 } from '@mui/material';
-import React, { useEffect, useCallback } from 'react';
+import React from 'react';
 
-import { useEdge } from '../../hooks/navigation/useEdge';
+import { useEdgeEdit } from '../../hooks/navigation/useEdgeEdit';
 import { Host } from '../../types/common/Host_Types';
-import type { Actions } from '../../types/controller/Action_Types';
 import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
 import { ActionsList } from '../actions';
 
@@ -26,9 +25,7 @@ interface EdgeEditDialogProps {
   onClose: () => void;
   selectedEdge?: UINavigationEdge | null;
   isControlActive?: boolean;
-  selectedHost?: Host | null; // The selected host
-  selectedDeviceId?: string | null; // The selected device ID
-  availableActions?: Actions; // Pass actions from parent instead of computing them
+  selectedHost?: Host | null;
 }
 
 export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
@@ -40,63 +37,23 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   selectedEdge,
   isControlActive = false,
   selectedHost,
-  selectedDeviceId,
-  availableActions = {}, // Default to empty object
 }) => {
-  // Early return if edgeForm is null or undefined - MUST be before any hooks
+  // Early return if edgeForm is null or undefined
   if (!edgeForm) {
     return null;
   }
 
-  // Use the consolidated edge hook
-  const edgeHook = useEdge({
-    selectedHost: selectedHost || null,
-    selectedDeviceId,
+  // Use the focused edge edit hook
+  const edgeEdit = useEdgeEdit({
+    isOpen,
+    edgeForm,
+    setEdgeForm,
+    selectedHost,
     isControlActive,
-    availableActions,
   });
 
-  // Use availableActions passed from parent (NavigationEditor)
-  const controllerActions: Actions = availableActions;
-
-  // Initialize actions from edgeForm when dialog opens
-  useEffect(() => {
-    if (isOpen && edgeForm) {
-      edgeHook.initializeActions(edgeForm);
-    }
-  }, [isOpen, edgeForm.actions, edgeForm.retryActions, edgeHook]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      edgeHook.resetDialogState();
-    }
-  }, [isOpen, edgeHook]);
-
-  // Handle action changes using hook functions
-  const handleActionsChange = useCallback(
-    (newActions: any[]) => {
-      edgeHook.handleActionsChange(newActions, edgeForm, setEdgeForm);
-    },
-    [edgeForm, edgeHook, setEdgeForm],
-  );
-
-  const handleRetryActionsChange = useCallback(
-    (newRetryActions: any[]) => {
-      edgeHook.handleRetryActionsChange(newRetryActions, edgeForm, setEdgeForm);
-    },
-    [edgeForm, edgeHook, setEdgeForm],
-  );
-
-  useEffect(() => {
-    if (isOpen) {
-      if (Object.keys(controllerActions).length === 0) {
-        console.log('[@component:EdgeEditDialog] No actions available - control may not be active');
-      }
-    }
-  }, [isOpen, selectedHost, selectedDeviceId, controllerActions]);
-
   const handleRunActions = async () => {
-    await edgeHook.executeLocalActions(edgeForm);
+    await edgeEdit.executeLocalActions(edgeForm);
   };
 
   return (
@@ -138,19 +95,22 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             size="small"
           />
 
-          <ActionsList actions={edgeHook.localActions} onActionsUpdate={handleActionsChange} />
+          <ActionsList
+            actions={edgeEdit.localActions}
+            onActionsUpdate={edgeEdit.handleActionsChange}
+          />
 
-          {edgeHook.actionResult && (
+          {edgeEdit.actionResult && (
             <Box
               sx={{
                 p: 2,
-                bgcolor: edgeHook.actionResult.includes('❌ OVERALL RESULT: FAILED')
+                bgcolor: edgeEdit.actionResult.includes('❌ OVERALL RESULT: FAILED')
                   ? 'error.light'
-                  : edgeHook.actionResult.includes('✅ OVERALL RESULT: SUCCESS')
+                  : edgeEdit.actionResult.includes('✅ OVERALL RESULT: SUCCESS')
                     ? 'success.light'
-                    : edgeHook.actionResult.includes('❌') && !edgeHook.actionResult.includes('✅')
+                    : edgeEdit.actionResult.includes('❌') && !edgeEdit.actionResult.includes('✅')
                       ? 'error.light'
-                      : edgeHook.actionResult.includes('⚠️')
+                      : edgeEdit.actionResult.includes('⚠️')
                         ? 'warning.light'
                         : 'success.light',
                 borderRadius: 1,
@@ -159,7 +119,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               }}
             >
               <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
-                {edgeHook.actionResult}
+                {edgeEdit.actionResult}
               </Typography>
             </Box>
           )}
@@ -169,17 +129,17 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         <Button
           onClick={() => onSubmit(edgeForm)}
           variant="contained"
-          disabled={!edgeHook.isFormValid()}
+          disabled={!edgeEdit.isFormValid()}
         >
           Save
         </Button>
         <Button
           onClick={handleRunActions}
           variant="contained"
-          disabled={!edgeHook.canRunLocalActions()}
-          sx={{ opacity: !edgeHook.canRunLocalActions() ? 0.5 : 1 }}
+          disabled={!edgeEdit.canRunLocalActions()}
+          sx={{ opacity: !edgeEdit.canRunLocalActions() ? 0.5 : 1 }}
         >
-          {edgeHook.actionHook.loading ? 'Running...' : 'Run'}
+          {edgeEdit.actionHook.loading ? 'Running...' : 'Run'}
         </Button>
       </DialogActions>
     </Dialog>

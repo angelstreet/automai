@@ -9,8 +9,6 @@ import {
   NavigationPreviewResponse,
   NavigationExecuteResponse,
 } from '../../types/pages/Navigation_Types';
-import { Verification } from '../../types/verification/Verification_Types';
-import { useVerification } from '../verification/useVerification';
 
 export interface UseNodeProps {
   selectedHost?: Host;
@@ -36,33 +34,22 @@ export const useNode = (props?: UseNodeProps) => {
   // Get model references using the device model
   const modelReferences = useMemo(() => {
     if (!deviceModel) {
-      return {}; // Return empty object without calling getModelReferences when deviceModel is undefined
+      return {};
     }
-    const references = getModelReferences(deviceModel);
-
-    return references;
+    return getModelReferences(deviceModel);
   }, [getModelReferences, deviceModel]);
 
-  // State for various node operations
+  // State for screenshot operations
   const [screenshotSaveStatus, setScreenshotSaveStatus] = useState<'idle' | 'success' | 'error'>(
     'idle',
   );
-  const [gotoResult, setGotoResult] = useState<string>('');
-  const [isRunningGoto, setIsRunningGoto] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Navigation state
+  // Navigation state for NodeGotoPanel
   const [navigationSteps, setNavigationSteps] = useState<NavigationStep[]>([]);
   const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [navigationError, setNavigationError] = useState<string | null>(null);
   const [executionMessage, setExecutionMessage] = useState<string | null>(null);
-
-  // Verification hook for NodeEditDialog
-  const verification = useVerification({
-    selectedHost: props?.selectedHost || null,
-    captureSourcePath: undefined,
-  });
 
   /**
    * Get node form data with properly formatted verifications
@@ -72,21 +59,15 @@ export const useNode = (props?: UseNodeProps) => {
       const allVerifications = getVerifications();
 
       // Match verification_ids with actual verification objects
-      const nodeVerifications: Verification[] = [];
+      const nodeVerifications = [];
       if (node.data.verification_ids && node.data.verification_ids.length > 0) {
         for (const verificationId of node.data.verification_ids) {
           const verification = allVerifications.find((v: any) => v.id === verificationId);
           if (verification) {
             nodeVerifications.push(verification);
-          } else {
-            console.warn(`[useNode] Could not find verification with ID: ${verificationId}`);
           }
         }
       }
-
-      console.log(
-        `[useNode] Found ${nodeVerifications.length} verifications for node ${node.data.label}`,
-      );
 
       return {
         label: node.data.label,
@@ -113,13 +94,10 @@ export const useNode = (props?: UseNodeProps) => {
       onUpdateNode?: (nodeId: string, updatedData: any) => void,
     ) => {
       if (!props?.selectedHost || !props?.selectedDeviceId) {
-        console.error('[useNode] Cannot take screenshot - host or device not available');
         return { success: false, message: 'Host or device not available' };
       }
 
       try {
-        console.log(`[useNode] Taking screenshot for node: ${nodeId} (${label})`);
-
         const response = await fetch('/server/navigation/takeNodeScreenshot', {
           method: 'POST',
           headers: {
@@ -136,19 +114,14 @@ export const useNode = (props?: UseNodeProps) => {
         const result = await response.json();
 
         if (result.success) {
-          console.log(`[useNode] Screenshot saved successfully: ${result.screenshot_url}`);
-
           if (onUpdateNode) {
             onUpdateNode(nodeId, { screenshot: result.screenshot_url });
           }
-
           return { success: true, screenshot_url: result.screenshot_url };
         } else {
-          console.error(`[useNode] Screenshot failed: ${result.message}`);
           return { success: false, message: result.message };
         }
       } catch (error) {
-        console.error('[useNode] Screenshot error:', error);
         return {
           success: false,
           message: error instanceof Error ? error.message : 'Unknown error',
@@ -166,15 +139,7 @@ export const useNode = (props?: UseNodeProps) => {
       selectedNode: UINavigationNode,
       onUpdateNode?: (nodeId: string, updatedData: any) => void,
     ) => {
-      if (!props?.isControlActive || !props?.selectedHost) {
-        console.warn(
-          '[useNode] Cannot take screenshot - device control not active or host not available',
-        );
-        return;
-      }
-
-      if (!props?.selectedDeviceId) {
-        console.warn('[useNode] Cannot take screenshot - no device selected');
+      if (!props?.isControlActive || !props?.selectedHost || !props?.selectedDeviceId) {
         return;
       }
 
@@ -188,112 +153,12 @@ export const useNode = (props?: UseNodeProps) => {
         setScreenshotSaveStatus('success');
         setTimeout(() => setScreenshotSaveStatus('idle'), 3000);
       } else {
-        console.error('[useNode] Screenshot failed:', result.message);
         setScreenshotSaveStatus('error');
         setTimeout(() => setScreenshotSaveStatus('idle'), 3000);
       }
     },
     [props?.isControlActive, props?.selectedHost, props?.selectedDeviceId, takeAndSaveScreenshot],
   );
-
-  /**
-   * Run goto operation for NodeEditDialog
-   */
-  const runGoto = useCallback(async () => {
-    const canRunGoto = props?.isControlActive && props?.selectedHost;
-    if (!canRunGoto) return;
-
-    setIsRunningGoto(true);
-    setGotoResult('Running goto operation...');
-
-    try {
-      // Mock implementation - replace with actual goto logic
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      setGotoResult('✅ Goto operation completed successfully');
-    } catch (error) {
-      setGotoResult(`❌ Goto operation failed: ${error}`);
-    } finally {
-      setIsRunningGoto(false);
-    }
-  }, [props?.isControlActive, props?.selectedHost]);
-
-  /**
-   * Handle verification changes for NodeEditDialog
-   */
-  const handleVerificationsChange = useCallback(
-    (
-      newVerifications: Verification[],
-      nodeForm: NodeForm,
-      setNodeForm: (form: NodeForm) => void,
-    ) => {
-      console.log('[useNode] Updating nodeForm with new verifications:', newVerifications);
-
-      verification.handleVerificationsChange(newVerifications);
-      setNodeForm({
-        ...nodeForm,
-        verifications: newVerifications,
-      });
-    },
-    [verification],
-  );
-
-  /**
-   * Initialize verifications for NodeEditDialog
-   */
-  const initializeVerifications = useCallback(
-    (nodeForm: NodeForm | null) => {
-      if (!nodeForm) return;
-
-      console.log('[useNode] Initializing verifications');
-      const nodeVerifications = nodeForm.verifications || [];
-      console.log('[useNode] Using verifications from nodeForm:', nodeVerifications);
-      verification.handleVerificationsChange(nodeVerifications);
-    },
-    [verification],
-  );
-
-  /**
-   * Handle save operation for NodeEditDialog
-   */
-  const handleSave = useCallback((onSubmit: () => void) => {
-    onSubmit();
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2000);
-  }, []);
-
-  /**
-   * Validate form for NodeEditDialog
-   */
-  const isFormValid = useCallback(
-    (nodeForm: NodeForm | null) => {
-      const basicFormValid = nodeForm?.label?.trim();
-      const verificationsValid =
-        !verification.verifications ||
-        verification.verifications.every((verificationItem) => {
-          if (!verificationItem.command) return true;
-
-          if (verificationItem.verification_type === 'image') {
-            const hasImagePath = verificationItem.params?.image_path;
-            return Boolean(hasImagePath);
-          } else if (verificationItem.verification_type === 'text') {
-            const hasText = verificationItem.params?.text;
-            return Boolean(hasText);
-          }
-
-          return true;
-        });
-      return basicFormValid && verificationsValid;
-    },
-    [verification.verifications],
-  );
-
-  /**
-   * Reset dialog state when closing
-   */
-  const resetDialogState = useCallback(() => {
-    setSaveSuccess(false);
-    verification.handleVerificationsChange([]);
-  }, [verification]);
 
   /**
    * Get parent names from parent IDs
@@ -335,8 +200,6 @@ export const useNode = (props?: UseNodeProps) => {
       setNavigationError(null);
 
       try {
-        console.log(`[useNode] Loading navigation preview for node: ${selectedNode.id}`);
-
         const url = new URL(
           `/server/navigation/preview/${props.treeId}/${selectedNode.id}`,
           window.location.origin,
@@ -356,7 +219,6 @@ export const useNode = (props?: UseNodeProps) => {
 
         if (result.success) {
           setNavigationSteps(result.steps);
-          console.log(`[useNode] Loaded ${result.total_steps} navigation steps`);
         } else {
           setNavigationError(result.error || 'Failed to load navigation preview');
         }
@@ -382,8 +244,6 @@ export const useNode = (props?: UseNodeProps) => {
       setNavigationError(null);
 
       try {
-        console.log(`[useNode] Executing navigation to node: ${selectedNode.id}`);
-
         const response = await fetch(
           `/server/navigation/navigate/${props.treeId}/${selectedNode.id}`,
           {
@@ -402,15 +262,11 @@ export const useNode = (props?: UseNodeProps) => {
 
         if (result.success) {
           let successMessage = 'Navigation completed successfully!';
-
           if (result.steps_executed && result.total_steps) {
             successMessage = `Executed ${result.steps_executed}/${result.total_steps} steps in ${result.execution_time?.toFixed(2) || 0}s`;
           }
-
           setExecutionMessage(successMessage);
           setIsExecuting(false);
-
-          // Refresh the step list to show any updates
           await loadNavigationPreview(selectedNode);
         } else {
           const errorMessage = result.error || 'Navigation failed';
@@ -431,7 +287,6 @@ export const useNode = (props?: UseNodeProps) => {
         }
 
         setNavigationError(errorMessage);
-        console.error('[useNode] Navigation execution error:', err);
       }
     },
     [props?.treeId, props?.currentNodeId, loadNavigationPreview],
@@ -467,7 +322,7 @@ export const useNode = (props?: UseNodeProps) => {
   }, []);
 
   /**
-   * Check button visibility states - memoized to prevent unnecessary re-renders
+   * Check button visibility states
    */
   const buttonVisibility = useMemo(() => {
     return {
@@ -477,9 +332,6 @@ export const useNode = (props?: UseNodeProps) => {
     };
   }, [props?.isControlActive, props?.selectedHost, props?.treeId]);
 
-  /**
-   * Memoized function to get button visibility
-   */
   const getButtonVisibility = useCallback(() => buttonVisibility, [buttonVisibility]);
 
   // Auto-clear screenshot status when node selection might change
@@ -499,22 +351,10 @@ export const useNode = (props?: UseNodeProps) => {
     handleScreenshotConfirm,
     screenshotSaveStatus,
 
-    // Model references (for VerificationsList)
+    // Model references
     modelReferences,
     referencesLoading,
     deviceModel,
-
-    // NodeEditDialog operations
-    verification,
-    runGoto,
-    handleVerificationsChange,
-    initializeVerifications,
-    handleSave,
-    isFormValid,
-    resetDialogState,
-    gotoResult,
-    isRunningGoto,
-    saveSuccess,
 
     // NodeGotoPanel operations
     navigationSteps,
