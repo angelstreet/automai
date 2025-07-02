@@ -38,7 +38,7 @@ def action_execute_batch():
         data = request.get_json() or {}
         actions = data.get('actions', [])  # Array of EdgeAction objects
         host = data.get('host', {})
-        final_wait_time = data.get('final_wait_time', 2000)
+        final_wait_time = data.get('final_wait_time', 0)
         retry_actions = data.get('retry_actions', [])
         
         print(f"[@route:server_actions:action_execute_batch] Processing {len(actions)} main actions, {len(retry_actions)} retry actions")
@@ -122,7 +122,7 @@ def execute_single_action(action, host, execution_order, action_number, action_c
         response_data, status_code = proxy_to_host('/host/remote/executeCommand', 'POST', {
             'command': action.get('command'),
             'params': action.get('params', {}),
-            'wait_time': action.get('waitTime', 2000)
+            'wait_time': action.get('waitTime', 0)
         })
         
         execution_time = int((time.time() - start_time) * 1000)
@@ -225,7 +225,7 @@ def save_action_endpoint():
         "command": "action_command",
         "params": {
             "key": "value",        // Action-specific parameters
-            "wait_time": 500,      // Wait time in ms (now inside params)
+            "wait_time": 0,      // Wait time in ms (now inside params)
             // ... other action-specific parameters
         },
         "requires_input": false    // Optional requires input flag

@@ -112,60 +112,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
             </Typography>
           )}
 
-          {/* Helper function to format action display */}
-          {(() => {
-            const formatActionDisplay = (action: any) => {
-              if (!action.command) return 'No action selected';
-
-              const commandDisplay = action.command.replace(/_/g, ' ').trim();
-              const params = action.params || {};
-
-              // Build parameter display based on action type
-              const paramParts = [];
-
-              switch (action.command) {
-                case 'press_key':
-                  if (params.key) paramParts.push(`"${params.key}"`);
-                  break;
-                case 'input_text':
-                  if (params.text) paramParts.push(`"${params.text}"`);
-                  break;
-                case 'click_element':
-                  if (params.element_id) paramParts.push(`"${params.element_id}"`);
-                  break;
-                case 'tap_coordinates':
-                  if (params.x !== undefined && params.y !== undefined) {
-                    paramParts.push(`(${params.x}, ${params.y})`);
-                  }
-                  break;
-                case 'swipe':
-                  if (params.direction) paramParts.push(`"${params.direction}"`);
-                  break;
-                case 'launch_app':
-                case 'close_app':
-                  if (params.package) paramParts.push(`"${params.package}"`);
-                  break;
-                case 'wait':
-                  if (params.duration) paramParts.push(`${params.duration}s`);
-                  break;
-                case 'scroll':
-                  if (params.direction) paramParts.push(`"${params.direction}"`);
-                  if (params.amount) paramParts.push(`${params.amount}x`);
-                  break;
-              }
-
-              // Add timeout if specified and not default
-              if (params.timeout && params.timeout !== 0.5) {
-                paramParts.push(`timeout: ${params.timeout}s`);
-              }
-
-              const paramDisplay = paramParts.length > 0 ? ` → ${paramParts.join(', ')}` : '';
-              return `${commandDisplay}${paramDisplay}`;
-            };
-
-            return null; // This is just to define the function
-          })()}
-
           {/* Show main actions list */}
           {actions.length > 0 && (
             <Box sx={{ mb: 1 }}>
@@ -211,8 +157,8 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
                       if (params.amount) paramParts.push(`${params.amount}x`);
                       break;
                   }
-                  if (params.timeout && params.timeout !== 0.5) {
-                    paramParts.push(`timeout: ${params.timeout}s`);
+                  if (params.wait_time && params.wait_time !== 500) {
+                    paramParts.push(`wait: ${params.wait_time}ms`);
                   }
                   const paramDisplay = paramParts.length > 0 ? ` → ${paramParts.join(', ')}` : '';
                   return `${commandDisplay}${paramDisplay}`;
@@ -278,8 +224,8 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
                       if (params.amount) paramParts.push(`${params.amount}x`);
                       break;
                   }
-                  if (params.timeout && params.timeout !== 0.5) {
-                    paramParts.push(`timeout: ${params.timeout}s`);
+                  if (params.wait_time && params.wait_time !== 500) {
+                    paramParts.push(`wait: ${params.wait_time}ms`);
                   }
                   const paramDisplay = paramParts.length > 0 ? ` → ${paramParts.join(', ')}` : '';
                   return `${commandDisplay}${paramDisplay}`;

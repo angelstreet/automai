@@ -5,8 +5,6 @@ Uses NetworkX for shortest path calculations
 
 import networkx as nx
 from typing import List, Dict, Optional, Tuple
-import sys
-import os
 
 def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_node_id: str = None) -> Optional[List[Dict]]:
     """
@@ -25,7 +23,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
     
     # Get cached NetworkX graph
     from src.web.cache.navigation_cache import get_cached_graph
-    from src.web.cache.navigation_graph import get_entry_points, get_node_info, get_edge_action
+    from src.web.cache.navigation_graph import get_entry_points, get_node_info
     
     G = get_cached_graph(tree_id, team_id)
     if not G:
@@ -56,7 +54,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         print(f"[@navigation:pathfinding:find_shortest_path] ERROR: Target node {target_node_id} not found in graph")
         return None
     
-    # SPECIAL CASE: If target is a root node (entry point), handle entry edge navigation
+    # Handle entry point navigation
     target_node_info = get_node_info(G, target_node_id)
     is_target_entry_point = target_node_info and target_node_info.get('is_entry_point', False)
     
@@ -67,7 +65,6 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         entry_edges = []
         for from_node, to_node, edge_data in G.edges(data=True):
             if to_node == target_node_id:
-                # Check if this is an entry edge (from an entry-type node or special entry node)
                 from_node_info = get_node_info(G, from_node)
                 if from_node_info and (from_node_info.get('node_type') == 'entry' or 'entry' in from_node.lower()):
                     entry_edges.append((from_node, to_node, edge_data))
@@ -299,8 +296,6 @@ def get_navigation_transitions(tree_id: str, target_node_id: str, team_id: str, 
     
     return enhanced_transitions
 
-# Deprecated function removed - use get_navigation_transitions instead
-
 def find_entry_point(tree_id: str, team_id: str) -> Optional[str]:
     """
     Find the entry/root node of a navigation tree
@@ -468,7 +463,6 @@ def find_optimal_edge_validation_sequence(tree_id: str, team_id: str) -> List[Di
             to_label = to_info.get('label', to_node)
             print(f"  {i:2d}. {from_label} → {to_label} ({from_node} → {to_node})")
         
-        # Get all edges that need to be validated - SORT FOR DETERMINISTIC BEHAVIOR
         edges_raw = list(G.edges(data=True))
         if not edges_raw:
             print(f"[@navigation:pathfinding:find_optimal_edge_validation_sequence] No edges found in graph for tree {tree_id}")
@@ -529,8 +523,6 @@ def analyze_validation_sequence_efficiency(validation_sequence: List[Dict]) -> D
             optimization_types.add(opt)
         else:
             optimization_types.add('none')
-    
-    optimizations_used = list(str(opt) for opt in optimization_types)
     
     optimization_counts = {}
     for opt in optimization_types:
@@ -593,11 +585,11 @@ def _create_simple_networkx_validation_sequence(G: nx.DiGraph, edges_to_validate
     
     print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Creating depth-first validation sequence")
     
-    # CRITICAL FIX: Get ALL edges from the graph, not just the provided list
+    # Get ALL edges from the graph
     all_edges_in_graph = list(G.edges(data=True))
     print(f"[@navigation:pathfinding:_create_simple_networkx_validation_sequence] Found {len(all_edges_in_graph)} edges in graph")
     
-    # Use ALL edges from the graph, not just the parameter
+    # Use ALL edges from the graph
     edges_to_validate = all_edges_in_graph
     
     if not edges_to_validate:
@@ -617,7 +609,7 @@ def _create_simple_networkx_validation_sequence(G: nx.DiGraph, edges_to_validate
     for u, v, data in edges_to_validate:
         edge_map[(u, v)] = data
     
-    # PRIORITY: Find and separate ENTRY edges first
+    # Find and separate ENTRY edges first
     entry_edges = []
     regular_edges = set()
     
@@ -776,7 +768,7 @@ def _create_simple_networkx_validation_sequence(G: nx.DiGraph, edges_to_validate
     # Start optimal traversal from hub node
     optimal_traversal(start_node)
     
-    # Step 3: Add any remaining unvisited edges (shouldn't happen with proper traversal)
+    # Step 3: Add any remaining unvisited edges
     remaining_edges = [edge for edge in regular_edges if edge not in visited_edges]
     for edge in remaining_edges:
         validation_step = _create_validation_step(
@@ -813,31 +805,4 @@ def _create_validation_step(G: nx.DiGraph, from_node: str, to_node: str, edge_da
         'description': f"Validate edge: {from_info.get('label', from_node)} → {to_info.get('label', to_node)}",
         'navigation_cost': 0,
         'optimization': optimization
-    }
-
-def _create_simple_edge_validation_sequence(G: nx.DiGraph, edges_to_validate: List[Tuple]) -> List[Dict]:
-    """Fallback: create simple sequential edge validation"""
-    from src.web.cache.navigation_graph import get_node_info
-    
-    validation_sequence = []
-    
-    for i, (from_node, to_node, edge_data) in enumerate(edges_to_validate):
-        from_info = get_node_info(G, from_node)
-        to_info = get_node_info(G, to_node)
-        
-        validation_sequence.append({
-            'step_number': i + 1,
-            'validation_type': 'edge',
-            'from_node_id': from_node,
-            'to_node_id': to_node,
-            'from_node_label': from_info.get('label', from_node) if from_info else from_node,
-            'to_node_label': to_info.get('label', to_node) if to_info else to_node,
-            'actions': edge_data.get('actions', []),
-            'retryActions': edge_data.get('retryActions', []),
-            'description': f"Validate edge: {from_info.get('label', from_node) if from_info else from_node} → {to_info.get('label', to_node) if to_info else to_node}",
-            'navigation_cost': 1,  # Assume navigation needed between each edge
-            'optimization': 'simple_sequential'
-        })
-    
-    print(f"[@navigation:pathfinding:_create_simple_edge_validation_sequence] Created simple validation sequence with {len(validation_sequence)} steps")
-    return validation_sequence 
+    } 

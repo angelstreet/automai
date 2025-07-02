@@ -56,18 +56,18 @@ export const ActionItem: React.FC<ActionItemProps> = ({
 
     const fields = [];
 
-    // Common timeout field for all actions
+    // Common wait_time field for all actions
     fields.push(
       <TextField
-        key="timeout"
-        label="Timeout (s)"
+        key="wait_time"
+        label="Wait Time (ms)"
         type="number"
         size="small"
-        value={action.params?.timeout || 0.5}
-        onChange={(e) => handleParamChange('timeout', parseFloat(e.target.value) || 0)}
-        inputProps={{ min: 0, max: 60, step: 0.1 }}
+        value={action.params?.wait_time || 500}
+        onChange={(e) => handleParamChange('wait_time', parseInt(e.target.value) || 0)}
+        inputProps={{ min: 0, max: 10000, step: 100 }}
         sx={{
-          width: 120,
+          width: 140,
           '& .MuiInputBase-input': {
             padding: '4px 8px',
             fontSize: '0.8rem',

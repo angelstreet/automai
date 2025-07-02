@@ -611,7 +611,3 @@ def convertHostUrlToLocalPath(host_url: str) -> str:
         
     except Exception as e:
         raise ValueError(f"Failed to convert host URL to local path: {e}")
-
-# =====================================================
-# LEGACY/COMPATIBILITY FUNCTIONS
-# ===================================================== 

@@ -21,7 +21,7 @@ export interface UINavigationNodeData {
   tree_id?: string; // For menu nodes, references the associated tree
   tree_name?: string; // For menu nodes, the name of the associated tree
 
-  // NEW: Simple parent chain approach
+  // Simple parent chain approach
   parent?: string[]; // ["home", "tvguide"] - array of parent node IDs
   depth?: number; // parent?.length || 0
 
@@ -30,7 +30,7 @@ export interface UINavigationNodeData {
   child_count?: number; // Number of direct children
   menu_type?: 'main' | 'submenu' | 'leaf'; // Type of menu node
 
-  // NEW: Verification support
+  // Verification support
   verifications?: Verification[]; // Array of full verification objects for UI display (loaded from DB via verification_ids)
   verification_ids?: string[]; // Array of verification database IDs for persistence (saved to tree)
 }
@@ -42,13 +42,13 @@ export type UINavigationNode = Node<UINavigationNodeData>;
 // NAVIGATION EDGE ACTION TYPES
 // =====================================================
 
-// Edge action for navigation workflows (simplified structure for navigation use)
+// Edge action for navigation workflows
 export interface EdgeAction {
   id: string;
   command: string;
   params: {
     // Common parameters for all actions
-    timeout?: number; // Wait time after execution (in seconds)
+    wait_time?: number; // Wait time after execution (in milliseconds)
 
     // Remote action parameters
     key?: string; // For press_key commands (UP, DOWN, LEFT, RIGHT, etc.)
@@ -59,7 +59,6 @@ export interface EdgeAction {
     element_id?: string; // For click_element commands
     input?: string; // Generic input field for requiresInput actions
 
-    // Legacy compatibility
     [key: string]: any;
   };
   description?: string;
@@ -75,17 +74,14 @@ export interface EdgeAction {
 
 // Define the data type for navigation edges
 export interface UINavigationEdgeData {
-  actions?: EdgeAction[]; // New: array of actions for UI display (loaded from DB via action_ids)
-  action_ids?: string[]; // New: array of action database IDs for persistence (saved to tree)
-  retryActions?: EdgeAction[]; // New: array of retry actions for failure scenarios
-  finalWaitTime?: number; // New: wait time after all actions
+  actions?: EdgeAction[]; // Array of actions for UI display (loaded from DB via action_ids)
+  action_ids?: string[]; // Array of action database IDs for persistence (saved to tree)
+  retryActions?: EdgeAction[]; // Array of retry actions for failure scenarios
+  finalWaitTime?: number; // Wait time after all actions
   description?: string;
   from?: string; // Source node label
   to?: string; // Target node label
   edgeType?: 'horizontal' | 'vertical'; // For edge coloring: horizontal=siblings, vertical=parent-child
-
-  // Legacy action field - deprecated, use actions array instead
-  action?: string;
 }
 
 // Use ReactFlow's Edge type with our custom data
@@ -95,7 +91,6 @@ export interface NavigationTreeData {
   nodes: UINavigationNode[];
   edges: UINavigationEdge[];
 
-  // Progressive loading removed - loading all nodes at once
   root_node_id?: string; // ID of the root node
   metadata?: {
     tv_interface_type?: 'android_tv' | 'fire_tv' | 'apple_tv' | 'generic';
@@ -108,18 +103,18 @@ export interface NavigationTreeData {
 // =====================================================
 
 export interface NodeForm {
-  id?: string; // Add id field for node identification
+  id?: string; // Node identification
   label: string;
   type: 'screen' | 'dialog' | 'popup' | 'overlay' | 'menu' | 'entry';
   description: string;
-  screenshot?: string; // Add screenshot field to preserve during editing
+  screenshot?: string; // Preserve during editing
 
-  // New form fields for TV menus
+  // Form fields for TV menus
   depth?: number;
   parent?: string[];
   menu_type?: 'main' | 'submenu' | 'leaf';
 
-  // Add verifications field to preserve during editing
+  // Verifications field to preserve during editing
   verifications?: Verification[];
   verification_ids?: string[]; // Database IDs for persistence
 }
@@ -133,7 +128,7 @@ export interface EdgeForm {
 }
 
 // =====================================================
-// NAVIGATION EXECUTION TYPES (from navigationUtils.ts)
+// NAVIGATION EXECUTION TYPES
 // =====================================================
 
 export interface NavigationStep {
@@ -191,27 +186,6 @@ export interface ControllerActions {
 }
 
 // =====================================================
-// VERIFICATION RESULT TYPES
-// =====================================================
-
-// VerificationTestResult is now merged into Verification
-
-// =====================================================
-// NAVIGATION UI COMPONENT TYPES
-// =====================================================
-
-export interface NavigationItem {
-  label: string;
-  path: string;
-  icon?: React.ReactNode;
-}
-
-export interface NavigationDropdownProps {
-  label: string;
-  items: NavigationItem[];
-}
-
-// =====================================================
 // CONNECTION & HOOK TYPES
 // =====================================================
 
@@ -222,8 +196,6 @@ export interface ConnectionResult {
   sourceNodeUpdates?: Partial<UINavigationNodeData>;
   targetNodeUpdates?: Partial<UINavigationNodeData>;
 }
-
-// NavigationConfigState moved to NavigationConfig_Types.ts to avoid duplication
 
 export interface NodeEdgeManagementProps {
   nodes: UINavigationNode[];
@@ -324,7 +296,6 @@ export interface NodeEditDialogProps {
   selectedDeviceId?: string; // Device ID for getting model references
   isControlActive?: boolean;
   model?: string;
-  // modelReferences and referencesLoading are now obtained from useNode hook
 }
 
 export interface EdgeEditDialogProps {
@@ -469,4 +440,17 @@ export interface NodeVerificationsListProps {
   referencesLoading: boolean;
 }
 
-// Progressive loading interfaces removed - loading all nodes at once
+// =====================================================
+// NAVIGATION UI COMPONENT TYPES
+// =====================================================
+
+export interface NavigationItem {
+  label: string;
+  path: string;
+  icon?: React.ReactNode;
+}
+
+export interface NavigationDropdownProps {
+  label: string;
+  items: NavigationItem[];
+}

@@ -23,11 +23,11 @@ def take_control():
     """Host-side take control - Check controllers for the requested device"""
     try:
         data = request.get_json() or {}
-        device_id = data.get('device_id', 'default')  # Default device_id if not provided
+        device_id = data.get('device_id', 'default')
         
         print(f"[@route:take_control] Host checking controllers for device: {device_id}")
         
-        # Step 1: Check AV controller (optional)
+        # Check AV controller
         av_available = False
         try:
             av_controller = get_controller(device_id, 'av')
@@ -38,12 +38,12 @@ def take_control():
                 print(f"[@route:take_control] AV controller status: {av_status}")
                 av_available = av_status.get('success', False)
             else:
-                print(f"[@route:take_control] No AV controller found for device {device_id} - continuing without AV")
+                print(f"[@route:take_control] No AV controller found for device {device_id}")
             
         except Exception as e:
-            print(f"[@route:take_control] AV controller error (continuing without AV): {e}")
+            print(f"[@route:take_control] AV controller error: {e}")
         
-        # Step 2: Check remote controller (optional) - simplified for Appium
+        # Check remote controller
         remote_available = False
         try:
             remote_controller = get_controller(device_id, 'remote')
@@ -52,14 +52,12 @@ def take_control():
                 controller_type = type(remote_controller).__name__
                 print(f"[@route:take_control] Using remote controller: {controller_type}")
                 
-                # For AppiumRemoteController, just check status without connecting
                 if controller_type == 'AppiumRemoteController':
                     print(f"[@route:take_control] Appium controller - checking server status only")
                     remote_status = remote_controller.get_status()
                     remote_available = remote_status.get('success', False)
                     print(f"[@route:take_control] Appium server status: {remote_status}")
                 else:
-                    # For other controllers (AndroidMobile, etc.), connect as before
                     if not remote_controller.is_connected:
                         print(f"[@route:take_control] Connecting remote controller to device...")
                         connection_success = remote_controller.connect()
@@ -73,10 +71,10 @@ def take_control():
                         print(f"[@route:take_control] Remote controller status: {remote_status}")
                         remote_available = remote_status.get('success', False)
             else:
-                print(f"[@route:take_control] No remote controller found for device {device_id} - continuing without remote")
+                print(f"[@route:take_control] No remote controller found for device {device_id}")
                     
         except Exception as e:
-            print(f"[@route:take_control] Remote controller error (continuing without remote): {e}")
+            print(f"[@route:take_control] Remote controller error: {e}")
         
         # Check if at least one controller is available
         if not av_available and not remote_available:
@@ -85,7 +83,7 @@ def take_control():
                 'error': f'No working controllers found for device {device_id}. Need at least AV or remote controller.'
             })
         
-        # Controllers are ready - simple response
+        # Controllers are ready
         available_controllers = []
         if av_available:
             available_controllers.append('av')
@@ -108,18 +106,15 @@ def take_control():
 
 @control_bp.route('/releaseControl', methods=['POST'])
 def release_control():
-    """Host-side release control - Release local controllers (no parameters needed)"""
+    """Host-side release control"""
     try:
         print(f"[@route:release_control] Host releasing control using own stored host_device")
         
-        # Get own stored host_device object
         host_device = getattr(current_app, 'my_host_device', None)
         
         if not host_device:
             print(f"[@route:release_control] No host_device found, assuming already released")
-            return jsonify({
-                'success': True
-            })
+            return jsonify({'success': True})
         
         if not isinstance(host_device, dict):
             return jsonify({
@@ -128,13 +123,8 @@ def release_control():
             }), 500
             
         print(f"[@route:release_control] Host device releasing controllers")
-
-        # Release resources (implementation depends on controller types)
-        # For now, just return success as controllers are session-based
         
-        return jsonify({
-            'success': True
-        })
+        return jsonify({'success': True})
             
     except Exception as e:
         print(f"[@route:release_control] Error releasing control: {str(e)}")
@@ -150,7 +140,6 @@ def list_devices():
     try:
         print(f"[@route:list_devices] Getting available devices")
         
-        # Get own stored host_device object
         host_device = getattr(current_app, 'my_host_device', None)
         
         if not host_device:
@@ -163,7 +152,6 @@ def list_devices():
         devices = host_device.get('devices', [])
         
         if not devices:
-            # Legacy single device mode
             device_info = {
                 'device_id': 'default',
                 'device_name': host_device.get('device_name', 'Unknown Device'),
@@ -177,7 +165,6 @@ def list_devices():
             devices = [device_info]
         
         # Get available controller types for each device
-                    # Using already imported functions
         available_device_ids = list_available_devices()
         
         for device in devices:
@@ -241,7 +228,6 @@ def controller_status():
     try:
         print(f"[@route:controller_status] Getting controller status")
         
-        # Get own stored host_device object
         host_device = getattr(current_app, 'my_host_device', None)
         
         if not host_device:

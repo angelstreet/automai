@@ -24,7 +24,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // STATE
   // ========================================
 
-  // Host data state (simplified architecture - no more RegistrationContext)
+  // Host data state
   const [availableHosts, setAvailableHosts] = useState<Host[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // Memoize userInterface to prevent unnecessary re-renders
   const stableUserInterface = useMemo(() => userInterface, [userInterface]);
 
-  // Host loading logic (simplified architecture - no more RegistrationContext)
+  // Host loading logic
   const loadHosts = useCallback(async (): Promise<{ hosts: Host[]; error: string | null }> => {
     try {
       const fullUrl = '/server/system/getAllHosts';
@@ -66,7 +66,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
       if (result.success) {
         const rawHosts = result.hosts || [];
-
         return { hosts: rawHosts, error: null };
       } else {
         throw new Error(result.error || 'Server returned success: false');
@@ -77,7 +76,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     }
   }, []);
 
-  // Auto-load hosts on mount - only once
+  // Auto-load hosts on mount
   useEffect(() => {
     const loadHostsOnMount = async () => {
       setIsLoading(true);
@@ -91,10 +90,10 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     };
 
     loadHostsOnMount();
-  }, []); // Empty dependency array to run only once on mount
+  }, [loadHosts]);
 
   // ========================================
-  // NEW: DIRECT DATA ACCESS FUNCTIONS (Phase 1.2)
+  // DIRECT DATA ACCESS FUNCTIONS
   // ========================================
 
   // Get all hosts without filtering (raw data from server)
@@ -118,7 +117,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
           ...host,
           devices: (host.devices || []).filter((device) => models.includes(device.device_model)),
         }))
-        .filter((host) => host.devices.length > 0); // Only include hosts that have compatible devices
+        .filter((host) => host.devices.length > 0);
 
       return filtered;
     },
@@ -203,9 +202,9 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
               `[@context:HostManagerProvider] Found ${userLockedDevices.length} devices locked by current user, reclaiming...`,
             );
 
-            // Reclaim each device lock - now supports device-oriented locking
+            // Reclaim each device lock
             for (const [deviceKey, _lockInfo] of userLockedDevices) {
-              // deviceKey must be "hostname:device_id" format - no fallbacks
+              // deviceKey must be "hostname:device_id" format
               if (!deviceKey.includes(':')) {
                 console.warn(
                   `[@context:HostManagerProvider] Skipping legacy lock key without device_id: ${deviceKey}`,
@@ -226,7 +225,6 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
               );
               setActiveLocks((prev) => new Map(prev).set(`${hostName}:${deviceId}`, userId));
             }
-          } else {
           }
         }
       }
@@ -257,7 +255,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     }> => {
       try {
         const effectiveSessionId = sessionId || browserSessionId;
-        const effectiveDeviceId = device_id || 'device1'; // Default to device1 if not specified
+        const effectiveDeviceId = device_id || 'device1';
 
         console.log(
           `[@context:HostManagerProvider] Taking control of device: ${host.host_name}, device_id: ${effectiveDeviceId}`,
@@ -271,7 +269,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
           },
           body: JSON.stringify({
             host: host,
-            device_id: effectiveDeviceId, // Always include device_id
+            device_id: effectiveDeviceId,
             session_id: effectiveSessionId,
             user_id: userId,
           }),
@@ -357,7 +355,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     }> => {
       try {
         const effectiveSessionId = sessionId || browserSessionId;
-        const effectiveDeviceId = device_id || 'device1'; // Default to device1 if not specified
+        const effectiveDeviceId = device_id || 'device1';
 
         console.log(
           `[@context:HostManagerProvider] Releasing control of device: ${host.host_name}, device_id: ${effectiveDeviceId}`,
@@ -371,7 +369,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
           },
           body: JSON.stringify({
             host: host,
-            device_id: effectiveDeviceId, // Always include device_id
+            device_id: effectiveDeviceId,
             session_id: effectiveSessionId,
             user_id: userId,
           }),
@@ -421,7 +419,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     [browserSessionId, userId],
   );
 
-  // Check if we have an active lock for a device (device-oriented)
+  // Check if we have an active lock for a device
   const hasActiveLock = useCallback(
     (deviceKey: string): boolean => {
       // Support both legacy "hostname" and new "hostname:device_id" formats
@@ -438,7 +436,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     [activeLocks],
   );
 
-  // Check if device is locked (based on host data and local active locks) - device-oriented
+  // Check if device is locked (based on host data and local active locks)
   const isDeviceLocked = useCallback(
     (host: Host | null, deviceId?: string): boolean => {
       if (!host) return false;
@@ -456,7 +454,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
     [hasActiveLock],
   );
 
-  // Check if device can be locked (based on host data) - device-oriented
+  // Check if device can be locked (based on host data)
   const canLockDevice = useCallback(
     (host: Host | null, deviceId?: string): boolean => {
       if (!host) return false;
@@ -523,7 +521,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   }, [isRemotePanelOpen]);
 
   // Handle connection change (for panels)
-  const handleConnectionChange = useCallback((connected: boolean) => {
+  const handleConnectionChange = useCallback((_connected: boolean) => {
     // Could update UI state based on connection status
   }, []);
 
@@ -539,7 +537,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // EFFECTS
   // ========================================
 
-  // Initialize lock reclaim on mount - only once to prevent React 18 double effects
+  // Initialize lock reclaim on mount
   useEffect(() => {
     if (!initializedRef.current) {
       initializedRef.current = true;
@@ -566,10 +564,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
         }
       });
     };
-  }, [releaseControl, activeLocks]);
-
-  // Note: Hosts are now automatically loaded in HostManagerProvider
-  // No manual fetching needed - data loads automatically on mount
+  }, [releaseControl, activeLocks, availableHosts]);
 
   // Update filtered hosts when availableHosts changes
   useEffect(() => {
@@ -606,7 +601,7 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
       isLoading,
       error,
 
-      // NEW: Direct data access functions (Phase 1.2)
+      // Direct data access functions
       getAllHosts,
       getHostsByModel,
       getAllDevices,

@@ -38,7 +38,10 @@ export const useEdge = (props?: UseEdgeProps) => {
       id: navAction.id,
       label: navAction.description || navAction.command,
       command: navAction.command,
-      params: navAction.params,
+      params: {
+        ...navAction.params,
+        wait_time: navAction.params?.wait_time || 0, // Use wait_time in ms
+      },
       requiresInput: false,
       inputValue:
         navAction.params?.input ||
@@ -47,7 +50,6 @@ export const useEdge = (props?: UseEdgeProps) => {
         navAction.params?.package ||
         navAction.params?.element_id ||
         '',
-      waitTime: (navAction.params?.timeout || 0.5) * 1000,
     };
   }, []);
 
@@ -101,7 +103,7 @@ export const useEdge = (props?: UseEdgeProps) => {
               command: action.command,
               params: {
                 ...action.params,
-                timeout: action.params?.timeout || 0.5,
+                wait_time: action.params?.wait_time || 500,
               },
               description: action.description || action.label || action.command || 'Unnamed Action',
             };
@@ -118,22 +120,6 @@ export const useEdge = (props?: UseEdgeProps) => {
         }
 
         return edgeActions;
-      }
-
-      // Handle legacy format (single action) - convert to array
-      if (edge.data?.action && typeof edge.data.action === 'object') {
-        const legacyAction = edge.data.action as any;
-        return [
-          {
-            id: legacyAction.id || `legacy_${Date.now()}`,
-            command: legacyAction.command,
-            params: {
-              ...legacyAction.params,
-              timeout: legacyAction.waitTime ? legacyAction.waitTime / 1000 : 0.5,
-            },
-            description: legacyAction.label || legacyAction.command || 'Legacy Action',
-          },
-        ];
       }
 
       return [];

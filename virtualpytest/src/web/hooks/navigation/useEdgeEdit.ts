@@ -53,7 +53,10 @@ export const useEdgeEdit = ({
   const convertToControllerAction = useCallback((action: EdgeAction) => {
     return {
       command: action.command,
-      params: action.params,
+      params: {
+        ...action.params,
+        wait_time: action.params?.wait_time || 500, // Use wait_time in ms
+      },
       description: action.description,
     };
   }, []);
