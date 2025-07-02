@@ -31,12 +31,19 @@ export const useNodeEdit = ({
   const [isRunningGoto, setIsRunningGoto] = useState(false);
   const [gotoResult, setGotoResult] = useState('');
 
-  // Initialize verifications ONCE when dialog opens - stable dependency
+  // Initialize verifications when dialog opens or nodeForm changes
   useEffect(() => {
     if (isOpen && nodeForm?.verifications) {
+      console.log('[useNodeEdit] Initializing with verifications:', nodeForm.verifications.length);
       verification.handleVerificationsChange(nodeForm.verifications);
+    } else if (isOpen) {
+      console.log('[useNodeEdit] Dialog opened but no verifications in nodeForm:', {
+        hasNodeForm: !!nodeForm,
+        hasVerifications: !!nodeForm?.verifications,
+        verificationsLength: nodeForm?.verifications?.length || 0,
+      });
     }
-  }, [isOpen]); // Only depend on isOpen to avoid infinite loops
+  }, [isOpen, nodeForm?.verifications, verification.handleVerificationsChange]);
 
   // Reset state when dialog closes
   useEffect(() => {

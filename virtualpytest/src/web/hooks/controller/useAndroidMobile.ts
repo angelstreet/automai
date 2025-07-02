@@ -24,13 +24,6 @@ interface AndroidMobileLayoutConfig {
 }
 
 export function useAndroidMobile(selectedHost: Host | null, deviceId: string | null) {
-  console.log(
-    '[@hook:useAndroidMobile] Hook called for device:',
-    deviceId,
-    'host:',
-    selectedHost?.host_name,
-  );
-
   // Simple validation - no complex memoization
   if (!selectedHost || !deviceId) {
     console.warn('[@hook:useAndroidMobile] Missing host or deviceId');
@@ -75,41 +68,17 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
   // Auto-connect when host and deviceId are available
   useEffect(() => {
     if (selectedHost && deviceId) {
-      console.log('[@hook:useAndroidMobile] Auto-connecting with host and device');
       setIsConnected(true);
     } else {
-      console.log('[@hook:useAndroidMobile] No host or device, disconnecting');
       setIsConnected(false);
     }
   }, [selectedHost, deviceId]);
 
-  // Debug logging for state changes
-  useEffect(() => {
-    console.log('[@hook:useAndroidMobile] androidElements state changed:', {
-      count: androidElements.length,
-      elements: androidElements.slice(0, 3).map((el) => ({
-        id: el.id,
-        contentDesc: el.contentDesc,
-        text: el.text,
-      })),
-      timestamp: new Date().toISOString(),
-    });
-  }, [androidElements]);
+  // Note: Debug logging removed to reduce console spam
 
   const screenshotRef = useRef<HTMLImageElement>(null);
 
-  // Debug hook lifecycle
-  useEffect(() => {
-    console.log(
-      '[@hook:useAndroidMobile] Hook mounted for device:',
-      deviceId,
-      'host:',
-      selectedHost?.host_name,
-    );
-    return () => {
-      console.log('[@hook:useAndroidMobile] Hook unmounting for device:', deviceId);
-    };
-  }, []); // Empty dependency array to only run on mount/unmount
+  // Note: Hook lifecycle logging removed to reduce console spam
 
   // Action handlers
   const handleTap = useCallback(
@@ -119,7 +88,6 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
         return { success: false, error: 'No host data available' };
       }
 
-      console.log(`[@hook:useAndroidMobile] Executing tap at (${x}, ${y})`);
       try {
         const response = await fetch('/server/remote/tapCoordinates', {
           method: 'POST',
@@ -133,7 +101,6 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
         });
 
         const result = await response.json();
-        console.log('[@hook:useAndroidMobile] Tap result:', result);
         return result;
       } catch (error) {
         console.error('[@hook:useAndroidMobile] Tap error:', error);
@@ -187,14 +154,7 @@ export function useAndroidMobile(selectedHost: Host | null, deviceId: string | n
 
       const result = await response.json();
       if (result.success && result.elements) {
-        console.log(
-          '[@hook:useAndroidMobile] Setting elements:',
-          result.elements.length,
-          'elements',
-        );
         setAndroidElements(result.elements);
-      } else {
-        console.warn('[@hook:useAndroidMobile] No elements in response:', result);
       }
     } catch (error) {
       console.error('[@hook:useAndroidMobile] Elements error:', error);
