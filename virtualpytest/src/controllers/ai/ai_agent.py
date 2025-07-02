@@ -17,13 +17,13 @@ class AIAgentController(BaseController):
     
     def __init__(self, **kwargs):
         """Initialize AI agent controller."""
-        super().__init__("AI Agent Controller", "AI")
+        super().__init__("ai", "AI Agent Controller")
         
         self.is_executing = False
         self.current_step = ""
         self.execution_log = []
         
-        print(f"AI[{self.controller_name}]: Initialized")
+        print(f"AI[{self.device_name}]: Initialized")
     
     def execute_task(self, task_description: str, available_actions: List[Dict], available_verifications: List[Dict], device_model: str = None) -> Dict[str, Any]:
         """
@@ -36,7 +36,7 @@ class AIAgentController(BaseController):
             device_model: Device model for context
         """
         try:
-            print(f"AI[{self.controller_name}]: Starting task: {task_description}")
+            print(f"AI[{self.device_name}]: Starting task: {task_description}")
             
             self.is_executing = True
             self.current_step = "Generating AI plan"
@@ -74,7 +74,7 @@ class AIAgentController(BaseController):
             }
                 
         except Exception as e:
-            print(f"AI[{self.controller_name}]: Task execution error: {e}")
+            print(f"AI[{self.device_name}]: Task execution error: {e}")
             return {
                 'success': False,
                 'error': f'Task execution failed: {str(e)}',
@@ -91,7 +91,7 @@ class AIAgentController(BaseController):
             # Get API key from environment
             api_key = os.getenv('OPENROUTER_API_KEY')
             if not api_key:
-                print(f"AI[{self.controller_name}]: OpenRouter API key not found in environment")
+                print(f"AI[{self.device_name}]: OpenRouter API key not found in environment")
                 return {
                     'success': False,
                     'error': 'AI service not available - no API key'
@@ -182,28 +182,28 @@ JSON ONLY - NO OTHER TEXT"""
                 # Parse JSON response
                 try:
                     ai_plan = json.loads(content)
-                    print(f"AI[{self.controller_name}]: AI plan generated successfully")
+                    print(f"AI[{self.device_name}]: AI plan generated successfully")
                     return {
                         'success': True,
                         'plan': ai_plan
                     }
                     
                 except json.JSONDecodeError as e:
-                    print(f"AI[{self.controller_name}]: Failed to parse AI JSON: {e}")
-                    print(f"AI[{self.controller_name}]: Raw AI response: {content[:200]}...")
+                    print(f"AI[{self.device_name}]: Failed to parse AI JSON: {e}")
+                    print(f"AI[{self.device_name}]: Raw AI response: {content[:200]}...")
                     return {
                         'success': False,
                         'error': f'AI returned invalid JSON: {str(e)}'
                     }
             else:
-                print(f"AI[{self.controller_name}]: OpenRouter API error: {response.status_code}")
+                print(f"AI[{self.device_name}]: OpenRouter API error: {response.status_code}")
                 return {
                     'success': False,
                     'error': f'AI API error: {response.status_code}'
                 }
                 
         except Exception as e:
-            print(f"AI[{self.controller_name}]: AI plan generation error: {e}")
+            print(f"AI[{self.device_name}]: AI plan generation error: {e}")
             return {
                 'success': False,
                 'error': f'AI plan generation failed: {str(e)}'
@@ -214,7 +214,7 @@ JSON ONLY - NO OTHER TEXT"""
         Execute the AI plan.
         For now, just return True.
         """
-        print(f"AI[{self.controller_name}]: Executing plan (mock)")
+        print(f"AI[{self.device_name}]: Executing plan (mock)")
         time.sleep(0.5)  # Small delay to simulate execution
         return True
     
@@ -223,7 +223,7 @@ JSON ONLY - NO OTHER TEXT"""
         Generate result summary.
         For now, just return True.
         """
-        print(f"AI[{self.controller_name}]: Generating result summary (mock)")
+        print(f"AI[{self.device_name}]: Generating result summary (mock)")
         time.sleep(0.2)  # Small delay to simulate summary generation
         return True
     
@@ -237,7 +237,7 @@ JSON ONLY - NO OTHER TEXT"""
             'description': description
         }
         self.execution_log.append(log_entry)
-        print(f"AI[{self.controller_name}]: {description}")
+        print(f"AI[{self.device_name}]: {description}")
     
     def get_status(self) -> Dict[str, Any]:
         """Get current execution status."""
