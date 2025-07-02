@@ -525,13 +525,13 @@ const RecHostStreamModalContent: React.FC<{
                 backdropFilter: 'blur(10px)',
               }}
             >
-              <Box sx={{ p: 3 }}>
+              <Box sx={{ p: 1 }}>
                 {/* Header */}
                 <Typography
                   variant="h6"
                   sx={{
                     color: '#ffffff',
-                    mb: 2,
+                    mb: 1,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 1,
@@ -542,7 +542,7 @@ const RecHostStreamModalContent: React.FC<{
                 </Typography>
 
                 {/* Task Input */}
-                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 2 }}>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mb: 1 }}>
                   <TextField
                     size="small"
                     placeholder="Enter task (e.g., 'go to live and zap 10 times')"
@@ -601,7 +601,7 @@ const RecHostStreamModalContent: React.FC<{
                     {isAIExecuting ? (
                       <CircularProgress size={16} sx={{ color: '#888' }} />
                     ) : (
-                      'Generate'
+                      'Execute'
                     )}
                   </Button>
                 </Box>
@@ -610,8 +610,8 @@ const RecHostStreamModalContent: React.FC<{
                 {aiPlan && (
                   <Box
                     sx={{
-                      mt: 2,
-                      p: 2,
+                      mt: 1,
+                      p: 1,
                       backgroundColor: 'rgba(0, 0, 0, 0.8)',
                       borderRadius: 1,
                       border: '1px solid #444',
@@ -665,7 +665,7 @@ const RecHostStreamModalContent: React.FC<{
                     )}
 
                     {/* Summary Info */}
-                    <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                       {aiPlan.estimated_time && (
                         <Typography
                           variant="caption"
