@@ -75,7 +75,7 @@ export const useScreenEditor = (selectedHost: any, selectedDeviceId: string | nu
 
     try {
       console.log(
-        `[@hook:useScreenEditor] Getting stream URL from AV controller proxy for device: ${device.name} (${device.model})...`,
+        `[@hook:useScreenEditor] Getting stream URL from AV controller proxy for device: ${device.device_name} (${device.device_model})...`,
       );
 
       // Get the AV controller proxy from selectedHost
@@ -128,20 +128,20 @@ export const useScreenEditor = (selectedHost: any, selectedDeviceId: string | nu
       }
 
       console.log(
-        `🎯 [@hook:useScreenEditor] Tapped at device coordinates: ${x}, ${y} on device: ${device.name} (${device.model})`,
+        `🎯 [@hook:useScreenEditor] Tapped at device coordinates: ${x}, ${y} on device: ${device.device_name} (${device.device_model})`,
       );
 
       // Try to use remote controller proxy if available
       if (selectedHost?.controllerProxies?.remote) {
         try {
           console.log(
-            `[@hook:useScreenEditor] Using remote controller proxy to tap at coordinates: (${x}, ${y}) for device: ${device.name}`,
+            `[@hook:useScreenEditor] Using remote controller proxy to tap at coordinates: (${x}, ${y}) for device: ${device.device_name}`,
           );
           const result = await selectedHost.controllerProxies.remote.tap(x, y);
 
           if (result.success) {
             console.log(
-              `[@hook:useScreenEditor] Tap successful at coordinates: (${x}, ${y}) on device: ${device.name}`,
+              `[@hook:useScreenEditor] Tap successful at coordinates: (${x}, ${y}) on device: ${device.device_name}`,
             );
           } else {
             console.error(`[@hook:useScreenEditor] Tap failed: ${result.error}`);
@@ -169,7 +169,7 @@ export const useScreenEditor = (selectedHost: any, selectedDeviceId: string | nu
     setCaptureStartTime(new Date());
 
     console.log(
-      `[@hook:useScreenEditor] Started capture for device: ${device.name} (${device.model})`,
+      `[@hook:useScreenEditor] Started capture for device: ${device.device_name} (${device.device_model})`,
     );
   }, [device]);
 
@@ -185,7 +185,7 @@ export const useScreenEditor = (selectedHost: any, selectedDeviceId: string | nu
     setCaptureEndTime(new Date());
 
     console.log(
-      `[@hook:useScreenEditor] Stopped capture for device: ${device.name} (${device.model})`,
+      `[@hook:useScreenEditor] Stopped capture for device: ${device.device_name} (${device.device_model})`,
     );
 
     // Simulate processing delay
@@ -205,13 +205,13 @@ export const useScreenEditor = (selectedHost: any, selectedDeviceId: string | nu
     setViewMode('screenshot');
 
     console.log(
-      `[@hook:useScreenEditor] Taking screenshot for device: ${device.name} (${device.model})`,
+      `[@hook:useScreenEditor] Taking screenshot for device: ${device.device_name} (${device.device_model})`,
     );
 
     // Simulate screenshot API call
     setTimeout(() => {
       setIsScreenshotLoading(false);
-      setLastScreenshotPath(`/screenshots/${device.model}_${Date.now()}.png`);
+      setLastScreenshotPath(`/screenshots/${device.device_model}_${Date.now()}.png`);
     }, 1500);
   }, [device]);
 
@@ -223,7 +223,7 @@ export const useScreenEditor = (selectedHost: any, selectedDeviceId: string | nu
     }
 
     console.log(
-      `[@hook:useScreenEditor] Closing capture/video and returning to stream view for device: ${device.name} (${device.model})`,
+      `[@hook:useScreenEditor] Closing capture/video and returning to stream view for device: ${device.device_name} (${device.device_model})`,
     );
 
     // Close capture/video screen and return to stream view
@@ -331,7 +331,7 @@ export const useScreenEditor = (selectedHost: any, selectedDeviceId: string | nu
   useEffect(() => {
     if (selectedHost && device) {
       console.log(
-        `[@hook:useScreenEditor] Auto-connecting to device: ${device.name} (${device.model})`,
+        `[@hook:useScreenEditor] Auto-connecting to device: ${device.device_name} (${device.device_model})`,
       );
       setIsConnected(true);
       setConnectionError(null);

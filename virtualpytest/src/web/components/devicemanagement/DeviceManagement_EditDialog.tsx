@@ -119,17 +119,17 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
 
       setActiveStep(0);
       setFormData({
-        name: device.name || '',
-        description: device.description || '',
-        model: device.model || '',
-        controllerConfigs: device.controllerConfigs || {},
+        name: device.device_name || '',
+        description: device.device_description || '',
+        model: device.device_model || '',
+        controllerConfigs: device.controller_configs || {},
       });
       setFormErrors({});
       setIsSubmitting(false);
 
       // Find and set the selected model
-      if (device.model && deviceModels.length > 0) {
-        const model = deviceModels.find((m) => m.name === device.model);
+      if (device.device_model && deviceModels.length > 0) {
+        const model = deviceModels.find((m) => m.name === device.device_model);
         setSelectedModel(model || null);
       }
     } else if (open && !device) {
@@ -256,7 +256,7 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
         JSON.stringify(formData.controllerConfigs, null, 2),
       );
 
-      await onSubmit(device.id, deviceData as any);
+      await onSubmit(device.device_id, deviceData as any);
     } catch (err) {
       console.error('[@component:EditDeviceDialog] Error updating device:', err);
     } finally {
@@ -320,7 +320,7 @@ const EditDeviceDialog: React.FC<EditDeviceDialogProps> = ({
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth fullScreen={isMobile}>
       <DialogTitle sx={{ pb: 1 }}>
-        <Typography variant="h5">Edit Device: {device?.name || 'Unknown Device'}</Typography>
+        <Typography variant="h5">Edit Device: {device?.device_name || 'Unknown Device'}</Typography>
       </DialogTitle>
 
       <DialogContent sx={{ pt: 1, mb: 1 }}>

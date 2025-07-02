@@ -375,15 +375,15 @@ const Dashboard: React.FC = () => {
                           '&:hover': { backgroundColor: 'grey.100' },
                         }}
                       >
-                        {getDeviceIcon(device.model)}
+                        {getDeviceIcon(device.device_model)}
                         <Typography
                           variant="body2"
                           sx={{ minWidth: '70px', fontWeight: 500, fontSize: '0.8rem' }}
                         >
-                          {device.name}
+                          {device.device_name}
                         </Typography>
                         <Chip
-                          label={device.model}
+                          label={device.device_model}
                           size="small"
                           variant="outlined"
                           sx={{ fontSize: '0.6rem', height: '18px' }}
@@ -458,9 +458,9 @@ const Dashboard: React.FC = () => {
                 <Box>
                   {host.devices.map((device) => (
                     <Box key={device.device_id} display="flex" alignItems="center" gap={1} mb={0.5}>
-                      {getDeviceIcon(device.model)}
+                      {getDeviceIcon(device.device_model)}
                       <Typography variant="body2" fontFamily="monospace">
-                        {device.name} ({device.device_ip}:{device.device_port})
+                        {device.device_name} ({device.device_ip}:{device.device_port})
                       </Typography>
                     </Box>
                   ))}

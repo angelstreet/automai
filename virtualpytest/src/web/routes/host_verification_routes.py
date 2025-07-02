@@ -63,8 +63,8 @@ def verification_status():
             'message': 'Verification system is ready',
             'host_connected': True,
             'device_id': device_id,
-            'device_model': device.model,
-            'device_name': device.name
+            'device_model': device.device_model,
+            'device_name': device.device_name
         })
         
     except Exception as e:

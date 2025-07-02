@@ -31,7 +31,34 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 import CreateDeviceDialog from '../components/devicemanagement/DeviceManagement_CreateDialog';
 import EditDeviceDialog from '../components/devicemanagement/DeviceManagement_EditDialog';
-import { Device, DeviceCreatePayload } from '../types';
+
+// Device type for device management (extends Host Device with management fields)
+interface Device {
+  id: string;
+  name: string;
+  description?: string;
+  device_model?: string;
+  device_name?: string;
+  device_description?: string;
+  controllerConfigs?: {
+    [controllerType: string]: {
+      implementation: string;
+      parameters: { [key: string]: any };
+    };
+  };
+}
+
+interface DeviceCreatePayload {
+  name: string;
+  description: string;
+  device_model: string;
+  controllerConfigs?: {
+    [controllerType: string]: {
+      implementation: string;
+      parameters: { [key: string]: any };
+    };
+  };
+}
 
 const DeviceManagement: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([]);
@@ -46,7 +73,7 @@ const DeviceManagement: React.FC = () => {
   const [editForm, setEditForm] = useState({
     name: '',
     description: '',
-    model: '',
+    device_model: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -120,9 +147,13 @@ const DeviceManagement: React.FC = () => {
   useEffect(() => {
     const filtered = devices.filter(
       (device) =>
-        device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        device.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        device.model?.toLowerCase().includes(searchTerm.toLowerCase()),
+        (device.device_name || device.name || '')
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (device.device_description || device.description || '')
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        (device.device_model || '').toLowerCase().includes(searchTerm.toLowerCase()),
     );
     setFilteredDevices(filtered);
   }, [devices, searchTerm]);
@@ -303,7 +334,7 @@ const DeviceManagement: React.FC = () => {
         body: JSON.stringify({
           name: editForm.name.trim(),
           description: editForm.description.trim(),
-          model: editForm.model.trim(),
+          device_model: editForm.device_model.trim(),
         }),
       });
 
@@ -542,14 +573,16 @@ const DeviceManagement: React.FC = () => {
                           {editingId === device.id ? (
                             <TextField
                               size="small"
-                              value={editForm.model}
-                              onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
+                              value={editForm.device_model}
+                              onChange={(e) =>
+                                setEditForm({ ...editForm, device_model: e.target.value })
+                              }
                               fullWidth
                               variant="outlined"
                               sx={{ '& .MuiInputBase-root': { height: '32px' } }}
                             />
                           ) : (
-                            device.model || 'N/A'
+                            device.device_model || 'N/A'
                           )}
                         </TableCell>
                         <TableCell>
@@ -625,7 +658,7 @@ const DeviceManagement: React.FC = () => {
                                 color="secondary"
                                 onClick={() => {
                                   setEditingId(null);
-                                  setEditForm({ name: '', description: '', model: '' });
+                                  setEditForm({ name: '', description: '', device_model: '' });
                                   setError(null);
                                 }}
                                 sx={{ p: 0.5 }}

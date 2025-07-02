@@ -200,7 +200,7 @@ def register_host_with_server():
         
         # Display device information
         for device in host.get_devices():
-            print(f"     - {device.name} ({device.model}) [{device.device_id}]")
+            print(f"     - {device.device_name} ({device.device_model}) [{device.device_id}]")
             capabilities = device.get_capabilities()
             if capabilities:
                 print(f"       Capabilities: {', '.join(capabilities)}")
@@ -498,8 +498,8 @@ def list_available_devices():
     return [
         {
             'device_id': device.device_id,
-            'name': device.name,
-            'model': device.model,
+            'name': device.device_name,
+            'model': device.device_model,
             'capabilities': device.get_capabilities()
         }
         for device in host.get_devices()

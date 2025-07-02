@@ -49,11 +49,11 @@ def execute_task():
                 'error': f'Device {device_id} not found'
             }), 404
         
-        device_model = device.get('device_model', 'unknown')
+        device_model = device.device_model
         print(f"[@route:host_aiagent:execute_task] Device model: {device_model}")
         
         # Get real available actions from device capabilities (same as DeviceDataContext)
-        device_action_types = device.get('device_action_types', {})
+        device_action_types = device.get_available_action_types()
         available_actions = []
         
         # Flatten all action categories into a single list for AI
@@ -71,7 +71,7 @@ def execute_task():
         print(f"[@route:host_aiagent:execute_task] Available actions: {len(available_actions)} actions from device capabilities")
         
         # Get real available verifications from device capabilities (same as DeviceDataContext)
-        device_verification_types = device.get('device_verification_types', {})
+        device_verification_types = device.get_available_verification_types()
         available_verifications = []
         
         # Flatten all verification categories into a single list for AI

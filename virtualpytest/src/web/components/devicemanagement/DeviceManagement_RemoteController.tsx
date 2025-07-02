@@ -13,9 +13,9 @@ interface RemoteControllerProps {
     | 'hdmi_stream'
     | 'unknown';
   device?: {
-    id: string;
-    name: string;
-    model: string;
+    device_id: string;
+    device_name: string;
+    device_model: string;
     controller_configs?: any;
   };
   open: boolean;
@@ -166,7 +166,7 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
           </Typography>
           {device && (
             <Typography variant="subtitle2" color="textSecondary">
-              {device.name} ({device.model})
+              {device.device_name} ({device.device_model})
             </Typography>
           )}
         </Box>
@@ -182,32 +182,35 @@ export function RemoteController({ deviceType, device, open, onClose }: RemoteCo
 
 // Helper function to determine device type from device model/name
 export function getDeviceType(device: {
-  name: string;
-  model: string;
+  device_name: string;
+  device_model: string;
   controller_configs?: any;
 }): RemoteControllerProps['deviceType'] {
-  const deviceName = device.name.toLowerCase();
-  const deviceModel = device.model.toLowerCase();
+  const deviceName = device.device_name.toLowerCase();
+  const deviceModel = device.device_model.toLowerCase();
 
   // Check controller configs first
   if (device.controller_configs) {
-    const remoteKey = Object.keys(device.controller_configs).find(key => key.startsWith('remote_'));
+    const remoteKey = Object.keys(device.controller_configs).find((key) =>
+      key.startsWith('remote_'),
+    );
     if (remoteKey) {
       const remoteType = device.controller_configs[remoteKey].implementation;
-    if (remoteType === 'android_mobile' || remoteType === 'android_mobile') {
-      return 'android_mobile';
-    }
-    if (remoteType === 'android_tv') {
-      return 'android_tv';
-    }
-    if (remoteType === 'ir_remote') {
-      return 'ir_remote';
-    }
-    if (remoteType === 'bluetooth_remote') {
-      return 'bluetooth_remote';
-    }
-    if (remoteType === 'hdmi_stream') {
-      return 'hdmi_stream';
+      if (remoteType === 'android_mobile') {
+        return 'android_mobile';
+      }
+      if (remoteType === 'android_tv') {
+        return 'android_tv';
+      }
+      if (remoteType === 'ir_remote') {
+        return 'ir_remote';
+      }
+      if (remoteType === 'bluetooth_remote') {
+        return 'bluetooth_remote';
+      }
+      if (remoteType === 'hdmi_stream') {
+        return 'hdmi_stream';
+      }
     }
   }
 
