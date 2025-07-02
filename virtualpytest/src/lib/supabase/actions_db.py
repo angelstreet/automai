@@ -270,6 +270,107 @@ def delete_action(team_id: str, action_id: str = None, name: str = None, device_
             'error': str(e)
         }
 
+def get_edges_using_action(team_id: str, action_id: str) -> Dict:
+    """
+    Get all edges that use a specific action.
+    
+    Args:
+        team_id: Team ID for RLS
+        action_id: Action ID to search for
+        
+    Returns:
+        Dict: {'success': bool, 'edges': List[Dict], 'error': str}
+    """
+    try:
+        supabase = get_supabase()
+        
+        print(f"[@db:actions:get_edges_using_action] Searching for edges using action: {action_id}")
+        
+        # Query navigation trees to find edges that reference this action
+        result = supabase.table('navigation_trees').select('id, name, tree_data').eq('team_id', team_id).execute()
+        
+        edges_using_action = []
+        
+        for tree in result.data:
+            tree_data = tree.get('tree_data', {})
+            edges = tree_data.get('edges', [])
+            
+            for edge in edges:
+                edge_data = edge.get('data', {})
+                action_ids = edge_data.get('action_ids', [])
+                retry_action_ids = edge_data.get('retry_action_ids', [])
+                
+                # Check if this action is used in main actions or retry actions
+                if action_id in action_ids or action_id in retry_action_ids:
+                    edge_info = {
+                        'tree_id': tree['id'],
+                        'tree_name': tree['name'],
+                        'edge_id': edge.get('id'),
+                        'edge_description': edge_data.get('description', ''),
+                        'from_node': edge.get('source', ''),
+                        'to_node': edge.get('target', ''),
+                        'is_retry_action': action_id in retry_action_ids
+                    }
+                    edges_using_action.append(edge_info)
+        
+        print(f"[@db:actions:get_edges_using_action] Found {len(edges_using_action)} edges using action {action_id}")
+        return {
+            'success': True,
+            'edges': edges_using_action
+        }
+        
+    except Exception as e:
+        print(f"[@db:actions:get_edges_using_action] Error: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'edges': []
+        }
+
+def update_action(team_id: str, action_id: str, updates: Dict) -> Dict:
+    """
+    Update an action.
+    
+    Args:
+        team_id: Team ID for RLS
+        action_id: Action ID to update
+        updates: Dictionary of fields to update
+        
+    Returns:
+        Dict: {'success': bool, 'updated_action': Dict, 'error': str}
+    """
+    try:
+        supabase = get_supabase()
+        
+        # Add updated_at timestamp
+        update_data = {
+            **updates,
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        print(f"[@db:actions:update_action] Updating action {action_id}")
+        
+        result = supabase.table('actions').update(update_data).eq('id', action_id).eq('team_id', team_id).execute()
+        
+        if result.data and len(result.data) > 0:
+            print(f"[@db:actions:update_action] Successfully updated action {action_id}")
+            return {
+                'success': True,
+                'updated_action': result.data[0]
+            }
+        else:
+            return {
+                'success': False,
+                'error': 'Action not found or update failed'
+            }
+            
+    except Exception as e:
+        print(f"[@db:actions:update_action] Error: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
 
 
  

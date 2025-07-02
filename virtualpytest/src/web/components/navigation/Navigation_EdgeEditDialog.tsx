@@ -10,12 +10,13 @@ import {
   Typography,
   IconButton,
 } from '@mui/material';
-import React from 'react';
+import React, { useState } from 'react';
 
 import { useEdgeEdit } from '../../hooks/navigation/useEdgeEdit';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
 import { ActionsList } from '../actions';
+import { ActionDependencyDialog } from '../actions/ActionDependencyDialog';
 
 interface EdgeEditDialogProps {
   isOpen: boolean;
@@ -34,16 +35,15 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   setEdgeForm,
   onSubmit,
   onClose,
-  selectedEdge,
+  selectedEdge: _selectedEdge,
   isControlActive = false,
   selectedHost,
 }) => {
-  // Early return if edgeForm is null or undefined
-  if (!edgeForm) {
-    return null;
-  }
+  // State for dependency dialog
+  const [dependencyDialogOpen, setDependencyDialogOpen] = useState(false);
+  const [dependencyEdges, setDependencyEdges] = useState<any[]>([]);
+  const [pendingSubmit, setPendingSubmit] = useState<any>(null);
 
-  // Use the focused edge edit hook
   const edgeEdit = useEdgeEdit({
     isOpen,
     edgeForm,
@@ -52,46 +52,101 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     isControlActive,
   });
 
-  const handleRunActions = async () => {
-    await edgeEdit.executeLocalActions(edgeForm);
+  // Enhanced submit handler with dependency checking
+  const handleSubmitWithDependencyCheck = async () => {
+    if (!edgeEdit.isFormValid()) return;
+
+    // Check for existing actions that might have dependencies
+    const actionsToCheck = [...edgeEdit.localActions, ...edgeEdit.localRetryActions].filter(
+      (action) => action.id && action.id.length > 10,
+    ); // Only check real DB IDs
+
+    if (actionsToCheck.length > 0) {
+      let hasSharedActions = false;
+      const allAffectedEdges: any[] = [];
+
+      // Check dependencies for all actions
+      for (const action of actionsToCheck) {
+        try {
+          const response = await fetch('/server/action/checkDependencies', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              action_id: action.id,
+            }),
+          });
+
+          const result = await response.json();
+          if (result.success && result.count > 1) {
+            hasSharedActions = true;
+            allAffectedEdges.push(...result.edges);
+          }
+        } catch (error) {
+          console.warn('Failed to check dependencies for action:', action.id, error);
+        }
+      }
+
+      if (hasSharedActions) {
+        // Show dependency dialog
+        setDependencyEdges(allAffectedEdges);
+        setPendingSubmit(edgeForm);
+        setDependencyDialogOpen(true);
+        return;
+      }
+    }
+
+    // No dependencies or no shared actions, proceed directly
+    onSubmit(edgeForm);
   };
 
-  return (
-    <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Edit Navigation Actions
-          <IconButton size="small" onClick={onClose} sx={{ p: 0.25 }}>
-            <CloseIcon fontSize="small" />
-          </IconButton>
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <TextField
-              label="From"
-              value={selectedEdge?.data?.from || ''}
-              InputProps={{ readOnly: true }}
-              fullWidth
-              variant="outlined"
-              size="small"
-            />
-            <TextField
-              label="To"
-              value={selectedEdge?.data?.to || ''}
-              InputProps={{ readOnly: true }}
-              fullWidth
-              variant="outlined"
-              size="small"
-            />
-          </Box>
+  const handleDependencyConfirm = () => {
+    setDependencyDialogOpen(false);
+    if (pendingSubmit) {
+      onSubmit(pendingSubmit);
+    }
+    setPendingSubmit(null);
+    setDependencyEdges([]);
+  };
 
+  const handleDependencyCancel = () => {
+    setDependencyDialogOpen(false);
+    setPendingSubmit(null);
+    setDependencyEdges([]);
+  };
+
+  const handleRunActions = () => {
+    edgeEdit.executeLocalActions(edgeForm);
+  };
+
+  if (!edgeForm) return null;
+
+  return (
+    <>
+      <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Edit Edge</Typography>
+            <IconButton onClick={onClose} size="small">
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+
+        <DialogContent>
+          {/* Description */}
           <TextField
-            label="Edge Description"
-            value={edgeForm?.description || ''}
-            onChange={(e) => setEdgeForm({ ...edgeForm, description: e.target.value })}
+            label="Description"
+            value={edgeForm.description || ''}
+            onChange={(e) =>
+              setEdgeForm({
+                ...edgeForm,
+                description: e.target.value,
+              })
+            }
             fullWidth
+            margin="normal"
             size="small"
           />
 
@@ -193,64 +248,75 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             )}
           </Box>
 
-          {/* Separator */}
-          <Box sx={{ borderTop: '1px solid', borderColor: 'divider', pt: 2, mt: 1 }}>
-            {/* Final Wait Time */}
-            <TextField
-              label="Final Wait Time (ms)"
-              type="number"
-              value={edgeForm?.finalWaitTime || 0}
-              onChange={(e) =>
-                setEdgeForm({ ...edgeForm, finalWaitTime: parseInt(e.target.value) || 0 })
-              }
-              fullWidth
-              size="small"
-              helperText="Time to wait after all actions complete"
-            />
-          </Box>
+          {/* Final Wait Time */}
+          <TextField
+            label="Final Wait Time (ms)"
+            type="number"
+            value={edgeForm.finalWaitTime || 2000}
+            onChange={(e) =>
+              setEdgeForm({
+                ...edgeForm,
+                finalWaitTime: parseInt(e.target.value) || 2000,
+              })
+            }
+            fullWidth
+            margin="normal"
+            size="small"
+            inputProps={{ min: 0, step: 100 }}
+          />
 
+          {/* Action Result Display */}
           {edgeEdit.actionResult && (
             <Box
               sx={{
+                mt: 2,
                 p: 2,
-                bgcolor: edgeEdit.actionResult.includes('❌ OVERALL RESULT: FAILED')
-                  ? 'error.light'
-                  : edgeEdit.actionResult.includes('✅ OVERALL RESULT: SUCCESS')
-                    ? 'success.light'
-                    : edgeEdit.actionResult.includes('❌') && !edgeEdit.actionResult.includes('✅')
-                      ? 'error.light'
-                      : edgeEdit.actionResult.includes('⚠️')
-                        ? 'warning.light'
-                        : 'success.light',
+                border: '1px solid',
+                borderColor: 'divider',
                 borderRadius: 1,
-                maxHeight: 200,
-                overflow: 'auto',
+                backgroundColor: 'background.default',
               }}
             >
-              <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Action Result:
+              </Typography>
+              <Typography
+                variant="body2"
+                component="pre"
+                sx={{ fontSize: '0.75rem', whiteSpace: 'pre-wrap' }}
+              >
                 {edgeEdit.actionResult}
               </Typography>
             </Box>
           )}
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button
-          onClick={() => onSubmit(edgeForm)}
-          variant="contained"
-          disabled={!edgeEdit.isFormValid()}
-        >
-          Save
-        </Button>
-        <Button
-          onClick={handleRunActions}
-          variant="contained"
-          disabled={!edgeEdit.canRunLocalActions()}
-          sx={{ opacity: !edgeEdit.canRunLocalActions() ? 0.5 : 1 }}
-        >
-          {edgeEdit.actionHook.loading ? 'Running...' : 'Run'}
-        </Button>
-      </DialogActions>
-    </Dialog>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            onClick={handleSubmitWithDependencyCheck}
+            variant="contained"
+            disabled={!edgeEdit.isFormValid()}
+          >
+            Save
+          </Button>
+          <Button
+            onClick={handleRunActions}
+            variant="contained"
+            disabled={!edgeEdit.canRunLocalActions()}
+            sx={{ opacity: !edgeEdit.canRunLocalActions() ? 0.5 : 1 }}
+          >
+            {edgeEdit.actionHook.loading ? 'Running...' : 'Run'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dependency Warning Dialog */}
+      <ActionDependencyDialog
+        isOpen={dependencyDialogOpen}
+        edges={dependencyEdges}
+        onConfirm={handleDependencyConfirm}
+        onCancel={handleDependencyCancel}
+      />
+    </>
   );
 };

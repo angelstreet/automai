@@ -12,7 +12,7 @@ import sys
 # Add the parent directory to the path so we can import from src
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 
-from src.lib.supabase.actions_db import save_action, get_actions as db_get_actions, delete_action, get_all_actions
+from src.lib.supabase.actions_db import save_action, get_actions as db_get_actions, delete_action, get_all_actions, get_edges_using_action, update_action
 
 # Import default team ID from app utils (same as verifications)
 from src.utils.app_utils import DEFAULT_TEAM_ID
@@ -496,6 +496,98 @@ def delete_action_endpoint():
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'
+        }), 500
+
+@server_actions_bp.route('/checkDependencies', methods=['POST'])
+def check_action_dependencies():
+    """
+    Check which edges use a specific action.
+    
+    Expected JSON payload:
+    {
+        "action_id": "uuid"
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if 'action_id' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required field: action_id'
+            }), 400
+        
+        # Use default team ID
+        team_id = DEFAULT_TEAM_ID
+        action_id = data['action_id']
+        
+        # Get edges using this action
+        result = get_edges_using_action(team_id, action_id)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'edges': result['edges'],
+                'count': len(result['edges'])
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@server_actions_bp.route('/update', methods=['PUT'])
+def update_action_endpoint():
+    """
+    Update an action (called after user confirms dependency warning).
+    
+    Expected JSON payload:
+    {
+        "action_id": "uuid",
+        "updates": {
+            "command": "new_command",
+            "params": {...}
+        }
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if 'action_id' not in data or 'updates' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'Missing required fields: action_id, updates'
+            }), 400
+        
+        # Use default team ID
+        team_id = DEFAULT_TEAM_ID
+        action_id = data['action_id']
+        updates = data['updates']
+        
+        # Update the action
+        result = update_action(team_id, action_id, updates)
+        
+        if result['success']:
+            return jsonify({
+                'success': True,
+                'updated_action': result['updated_action']
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
         }), 500
 
 
