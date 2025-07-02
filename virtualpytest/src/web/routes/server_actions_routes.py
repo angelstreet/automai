@@ -223,11 +223,11 @@ def save_action_endpoint():
         "device_model": "android_mobile",
         "action_type": "remote" | "av" | "power" | "ui",
         "command": "action_command",
-        "parameters": {
+        "params": {
             "key": "value",        // Action-specific parameters
+            "wait_time": 500,      // Wait time in ms (now inside params)
             // ... other action-specific parameters
         },
-        "wait_time": 500,          // Optional wait time in ms
         "requires_input": false    // Optional requires input flag
     }
     """
@@ -261,8 +261,7 @@ def save_action_endpoint():
             action_type=data['action_type'],
             command=data['command'],
             team_id=team_id,
-            parameters=data.get('parameters', {}),
-            wait_time=data.get('wait_time', 500),
+            params=data.get('params', {}),
             requires_input=data.get('requires_input', False)
         )
         

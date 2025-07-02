@@ -132,8 +132,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
                       if (params.text) paramParts.push(`"${params.text}"`);
                       break;
                     case 'click_element':
-                      if (params.element_identifier)
-                        paramParts.push(`"${params.element_identifier}"`);
+                      if (params.element_id) paramParts.push(`"${params.element_id}"`);
                       break;
                     case 'tap_coordinates':
                       if (params.x !== undefined && params.y !== undefined) {
@@ -156,9 +155,9 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
                       break;
                   }
 
-                  // Add delay if specified and not default
-                  if (params.delay && params.delay !== 0.5) {
-                    paramParts.push(`delay: ${params.delay}s`);
+                  // Add timeout if specified and not default
+                  if (params.timeout && params.timeout !== 0.5) {
+                    paramParts.push(`timeout: ${params.timeout}s`);
                   }
 
                   const paramDisplay = paramParts.length > 0 ? ` → ${paramParts.join(', ')}` : '';

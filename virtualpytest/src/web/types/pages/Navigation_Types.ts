@@ -48,7 +48,7 @@ export interface EdgeAction {
   command: string;
   params: {
     // Common parameters for all actions
-    delay?: number; // Wait time after execution (in seconds)
+    timeout?: number; // Wait time after execution (in seconds)
 
     // Remote action parameters
     key?: string; // For press_key commands (UP, DOWN, LEFT, RIGHT, etc.)
@@ -56,7 +56,7 @@ export interface EdgeAction {
     package?: string; // For launch_app/close_app commands
     x?: number; // For coordinate tap commands
     y?: number; // For coordinate tap commands
-    element_identifier?: string; // For click_element commands
+    element_id?: string; // For click_element commands
     input?: string; // Generic input field for requiresInput actions
 
     // Legacy compatibility

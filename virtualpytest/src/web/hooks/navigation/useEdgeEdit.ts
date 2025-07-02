@@ -132,7 +132,7 @@ export const useEdgeEdit = ({
       }
       if (
         action.command === 'click_element' &&
-        (!action.params?.element_identifier || action.params.element_identifier.trim() === '')
+        (!action.params?.element_id || action.params.element_id.trim() === '')
       ) {
         return false;
       }

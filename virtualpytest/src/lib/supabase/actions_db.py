@@ -34,9 +34,9 @@ def find_existing_action(team_id: str, device_model: str, action_type: str, comm
         # Build query conditions
         query = supabase.table('actions').select('*').eq('team_id', team_id).eq('device_model', device_model).eq('action_type', action_type).eq('command', command)
         
-        # Add parameters filter if provided
+        # Add params filter if provided
         if parameters:
-            query = query.eq('parameters', json.dumps(parameters, sort_keys=True))
+            query = query.eq('params', json.dumps(parameters, sort_keys=True))
         
         result = query.execute()
         
@@ -63,7 +63,7 @@ def find_existing_action(team_id: str, device_model: str, action_type: str, comm
             'error': str(e)
         }
 
-def save_action(name: str, device_model: str, action_type: str, command: str, team_id: str, parameters: Dict = None, wait_time: int = 500, requires_input: bool = False) -> Dict:
+def save_action(name: str, device_model: str, action_type: str, command: str, team_id: str, params: Dict = None, requires_input: bool = False) -> Dict:
     """
     Save action definition to database.
     
@@ -73,8 +73,7 @@ def save_action(name: str, device_model: str, action_type: str, command: str, te
         action_type: Action type ('remote', 'av', 'power', etc.)
         command: The action command
         team_id: Team ID for RLS
-        parameters: JSONB parameters (optional)
-        wait_time: Wait time after execution in ms
+        params: JSONB parameters including wait_time, etc. (optional)
         requires_input: Whether action requires user input
         
     Returns:
@@ -87,7 +86,7 @@ def save_action(name: str, device_model: str, action_type: str, command: str, te
             device_model=device_model,
             action_type=action_type,
             command=command,
-            parameters=parameters
+            parameters=params
         )
         
         if not existing_result['success']:
@@ -114,8 +113,7 @@ def save_action(name: str, device_model: str, action_type: str, command: str, te
             'action_type': action_type,
             'command': command,
             'team_id': team_id,
-            'parameters': parameters or {},  # Store as JSONB directly
-            'wait_time': wait_time,
+            'params': params or {},  # Store as JSONB directly (includes wait_time, etc.)
             'requires_input': requires_input,
             'updated_at': datetime.now().isoformat()
         }

@@ -56,15 +56,15 @@ export const ActionItem: React.FC<ActionItemProps> = ({
 
     const fields = [];
 
-    // Common delay field for all actions
+    // Common timeout field for all actions
     fields.push(
       <TextField
-        key="delay"
-        label="Delay (s)"
+        key="timeout"
+        label="Timeout (s)"
         type="number"
         size="small"
-        value={action.params?.delay || 0.5}
-        onChange={(e) => handleParamChange('delay', parseFloat(e.target.value) || 0)}
+        value={action.params?.timeout || 0.5}
+        onChange={(e) => handleParamChange('timeout', parseFloat(e.target.value) || 0)}
         inputProps={{ min: 0, max: 60, step: 0.1 }}
         sx={{
           width: 120,
@@ -121,11 +121,11 @@ export const ActionItem: React.FC<ActionItemProps> = ({
       case 'click_element':
         fields.push(
           <TextField
-            key="element_identifier"
-            label="Element Identifier"
+            key="element_id"
+            label="Element ID"
             size="small"
-            value={action.params?.element_identifier || ''}
-            onChange={(e) => handleParamChange('element_identifier', e.target.value)}
+            value={action.params?.element_id || ''}
+            onChange={(e) => handleParamChange('element_id', e.target.value)}
             placeholder="e.g., Home Button, Menu Icon"
             sx={{
               width: 250,
