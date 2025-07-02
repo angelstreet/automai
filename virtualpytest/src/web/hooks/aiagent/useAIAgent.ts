@@ -3,11 +3,11 @@ import { useState, useCallback } from 'react';
 import { Host, Device } from '../../types/common/Host_Types';
 
 interface ExecutionLogEntry {
-  timestamp: number;
+  timestamp: string;
   type: string;
   action_type: string;
+  value: any;
   description: string;
-  success: boolean;
 }
 
 interface UseAIAgentProps {
@@ -23,9 +23,8 @@ interface UseAIAgentReturn {
   taskInput: string;
   errorMessage: string | null;
 
-  // Suggested actions/verifications from AI
-  suggestedAction: any;
-  suggestedVerification: any;
+  // AI plan from backend
+  aiPlan: any;
 
   // Actions
   setTaskInput: (input: string) => void;
@@ -41,9 +40,8 @@ export const useAIAgent = ({ host, device }: UseAIAgentProps): UseAIAgentReturn 
   const [taskInput, setTaskInput] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // AI suggestions
-  const [suggestedAction, setSuggestedAction] = useState<any>(null);
-  const [suggestedVerification, setSuggestedVerification] = useState<any>(null);
+  // AI plan response
+  const [aiPlan, setAiPlan] = useState<any>(null);
 
   const executeTask = useCallback(async () => {
     if (!taskInput.trim() || isExecuting) return;
@@ -51,10 +49,9 @@ export const useAIAgent = ({ host, device }: UseAIAgentProps): UseAIAgentReturn 
     try {
       setIsExecuting(true);
       setErrorMessage(null);
-      setCurrentStep('Starting task execution...');
+      setCurrentStep('Asking AI for execution plan...');
       setExecutionLog([]);
-      setSuggestedAction(null);
-      setSuggestedVerification(null);
+      setAiPlan(null);
 
       console.log('[useAIAgent] Executing task:', taskInput);
 
@@ -74,18 +71,17 @@ export const useAIAgent = ({ host, device }: UseAIAgentProps): UseAIAgentReturn 
       console.log('[useAIAgent] Task execution result:', result);
 
       if (result.success) {
-        setCurrentStep(result.current_step || 'Task completed');
+        setCurrentStep(result.current_step || 'Plan generated');
         setExecutionLog(result.execution_log || []);
-        setSuggestedAction(result.suggested_action);
-        setSuggestedVerification(result.suggested_verification);
+        setAiPlan(result.ai_plan);
       } else {
-        setErrorMessage(result.error || 'Task execution failed');
-        setCurrentStep('Task failed');
+        setErrorMessage(result.error || 'Failed to generate plan');
+        setCurrentStep('Plan generation failed');
         setExecutionLog(result.execution_log || []);
       }
     } catch (error) {
       console.error('[useAIAgent] Task execution error:', error);
-      setErrorMessage('Network error during task execution');
+      setErrorMessage('Network error during plan generation');
       setCurrentStep('Error');
     } finally {
       setIsExecuting(false);
@@ -127,8 +123,7 @@ export const useAIAgent = ({ host, device }: UseAIAgentProps): UseAIAgentReturn 
     setExecutionLog([]);
     setErrorMessage(null);
     setCurrentStep('');
-    setSuggestedAction(null);
-    setSuggestedVerification(null);
+    setAiPlan(null);
   }, []);
 
   return {
@@ -138,8 +133,7 @@ export const useAIAgent = ({ host, device }: UseAIAgentProps): UseAIAgentReturn 
     executionLog,
     taskInput,
     errorMessage,
-    suggestedAction,
-    suggestedVerification,
+    aiPlan,
 
     // Actions
     setTaskInput,

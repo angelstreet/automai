@@ -1,4 +1,5 @@
-import { SmartToy, Send, Stop, Clear } from '@mui/icons-material';
+import { SmartToy, Send, Stop, Clear, CheckCircle, PlayArrow, Warning } from '@mui/icons-material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   Box,
   Typography,
@@ -14,6 +15,9 @@ import {
   Card,
   CardContent,
   Divider,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import React from 'react';
 
@@ -32,8 +36,7 @@ export const AIAgentPlayer: React.FC<AIAgentPlayerProps> = ({ host, device }) =>
     executionLog,
     taskInput,
     errorMessage,
-    suggestedAction,
-    suggestedVerification,
+    aiPlan,
     setTaskInput,
     executeTask,
     stopExecution,
@@ -42,6 +45,8 @@ export const AIAgentPlayer: React.FC<AIAgentPlayerProps> = ({ host, device }) =>
 
   const getLogEntryIcon = (type: string) => {
     switch (type) {
+      case 'ai_plan':
+        return '🤖';
       case 'action':
         return '🔧';
       case 'verification':
@@ -57,10 +62,43 @@ export const AIAgentPlayer: React.FC<AIAgentPlayerProps> = ({ host, device }) =>
     }
   };
 
-  const getLogEntryColor = (success: boolean, type: string) => {
-    if (type === 'error') return 'error';
-    if (type === 'stopped') return 'warning';
-    return success ? 'success' : 'error';
+  const getLogEntryColor = (type: string) => {
+    switch (type) {
+      case 'error':
+        return 'error';
+      case 'stopped':
+        return 'warning';
+      case 'ai_plan':
+        return 'info';
+      case 'completed':
+        return 'success';
+      default:
+        return 'default';
+    }
+  };
+
+  const getPlanStepIcon = (type: string) => {
+    switch (type) {
+      case 'action':
+        return <PlayArrow fontSize="small" />;
+      case 'verification':
+        return <CheckCircle fontSize="small" />;
+      default:
+        return <Warning fontSize="small" />;
+    }
+  };
+
+  const getRiskLevelColor = (risk: string) => {
+    switch (risk?.toLowerCase()) {
+      case 'low':
+        return 'success';
+      case 'medium':
+        return 'warning';
+      case 'high':
+        return 'error';
+      default:
+        return 'default';
+    }
   };
 
   return (
@@ -91,7 +129,7 @@ export const AIAgentPlayer: React.FC<AIAgentPlayerProps> = ({ host, device }) =>
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
             <TextField
               size="small"
-              placeholder="Enter task (e.g., 'click Home tab and verify home displayed')"
+              placeholder="Enter task (e.g., 'go to live and zap 10 times')"
               value={taskInput}
               onChange={(e) => setTaskInput(e.target.value)}
               onKeyDown={(e) => {
@@ -130,7 +168,7 @@ export const AIAgentPlayer: React.FC<AIAgentPlayerProps> = ({ host, device }) =>
                 },
               }}
             >
-              {isExecuting ? 'Executing...' : 'Execute'}
+              {isExecuting ? 'Generating...' : 'Generate Plan'}
             </Button>
             {isExecuting && (
               <Button
@@ -168,38 +206,95 @@ export const AIAgentPlayer: React.FC<AIAgentPlayerProps> = ({ host, device }) =>
         </Alert>
       )}
 
-      {/* AI Suggestions */}
-      {(suggestedAction || suggestedVerification) && (
+      {/* AI Plan Display */}
+      {aiPlan && (
         <Card sx={{ mb: 2, backgroundColor: 'rgba(0,150,255,0.1)' }}>
           <CardContent sx={{ p: 2 }}>
-            <Typography variant="subtitle2" sx={{ color: '#ffffff', mb: 1 }}>
-              AI Suggestions:
+            <Typography variant="subtitle2" sx={{ color: '#ffffff', mb: 2 }}>
+              AI Execution Plan:
             </Typography>
-            {suggestedAction && (
-              <Box sx={{ mb: 1 }}>
+
+            {/* Plan Summary */}
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" sx={{ color: '#cccccc', mb: 1 }}>
+                {aiPlan.analysis}
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Chip
-                  label={`Action: ${suggestedAction.command}`}
+                  label={aiPlan.feasible ? 'Feasible' : 'Not Feasible'}
+                  color={aiPlan.feasible ? 'success' : 'error'}
                   size="small"
-                  color="primary"
-                  sx={{ mr: 1 }}
                 />
-                <Typography variant="caption" sx={{ color: '#cccccc' }}>
-                  {suggestedAction.description}
-                </Typography>
+                {aiPlan.estimated_time && (
+                  <Chip label={`Time: ${aiPlan.estimated_time}`} size="small" />
+                )}
+                {aiPlan.risk_level && (
+                  <Chip
+                    label={`Risk: ${aiPlan.risk_level}`}
+                    color={getRiskLevelColor(aiPlan.risk_level)}
+                    size="small"
+                  />
+                )}
               </Box>
+            </Box>
+
+            {/* Execution Steps */}
+            {aiPlan.plan && aiPlan.plan.length > 0 && (
+              <Accordion defaultExpanded>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="subtitle2" sx={{ color: '#ffffff' }}>
+                    Execution Steps ({aiPlan.plan.length})
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <List dense>
+                    {aiPlan.plan.map((step: any, index: number) => (
+                      <ListItem
+                        key={index}
+                        sx={{ py: 0.5, flexDirection: 'column', alignItems: 'flex-start' }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                          <ListItemIcon sx={{ minWidth: 32 }}>
+                            {getPlanStepIcon(step.type)}
+                          </ListItemIcon>
+                          <Chip
+                            label={`Step ${step.step}`}
+                            size="small"
+                            variant="outlined"
+                            sx={{ mr: 1 }}
+                          />
+                          <Chip
+                            label={step.type}
+                            color={step.type === 'action' ? 'primary' : 'secondary'}
+                            size="small"
+                            sx={{ mr: 1 }}
+                          />
+                          <Typography variant="body2" sx={{ color: '#ffffff', flex: 1 }}>
+                            {step.description}
+                          </Typography>
+                        </Box>
+
+                        {/* Step Details */}
+                        <Box sx={{ ml: 4, mt: 0.5, width: '100%' }}>
+                          <Typography variant="caption" sx={{ color: '#aaa' }}>
+                            Command: {step.command}
+                            {step.params && Object.keys(step.params).length > 0 && (
+                              <span> | Params: {JSON.stringify(step.params)}</span>
+                            )}
+                            {step.repeat && <span> | Repeat: {step.repeat}x</span>}
+                          </Typography>
+                        </Box>
+                      </ListItem>
+                    ))}
+                  </List>
+                </AccordionDetails>
+              </Accordion>
             )}
-            {suggestedVerification && (
-              <Box>
-                <Chip
-                  label={`Verify: ${suggestedVerification.verification_type}`}
-                  size="small"
-                  color="secondary"
-                  sx={{ mr: 1 }}
-                />
-                <Typography variant="caption" sx={{ color: '#cccccc' }}>
-                  {suggestedVerification.description}
-                </Typography>
-              </Box>
+
+            {aiPlan.note && (
+              <Alert severity="info" sx={{ mt: 2 }}>
+                {aiPlan.note}
+              </Alert>
             )}
           </CardContent>
         </Card>
@@ -255,7 +350,7 @@ export const AIAgentPlayer: React.FC<AIAgentPlayerProps> = ({ host, device }) =>
                           <Chip
                             label={entry.type}
                             size="small"
-                            color={getLogEntryColor(entry.success, entry.type)}
+                            color={getLogEntryColor(entry.type)}
                             sx={{ fontSize: '0.7rem', height: 20 }}
                           />
                           <Typography variant="body2" sx={{ color: '#ffffff' }}>
@@ -265,7 +360,7 @@ export const AIAgentPlayer: React.FC<AIAgentPlayerProps> = ({ host, device }) =>
                       }
                       secondary={
                         <Typography variant="caption" sx={{ color: '#888' }}>
-                          {new Date(entry.timestamp * 1000).toLocaleTimeString()}
+                          {entry.timestamp}
                         </Typography>
                       }
                     />

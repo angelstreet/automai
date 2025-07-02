@@ -41,20 +41,59 @@ def execute_task():
         
         print(f"[@route:host_aiagent:execute_task] Using AI controller: {type(ai_controller).__name__}")
         
-        # Get available actions and verifications (simple demo)
-        available_actions = [
-            {'command': 'press_key', 'description': 'Press device key'},
-            {'command': 'tap_coordinates', 'description': 'Tap screen coordinates'},
-            {'command': 'input_text', 'description': 'Input text'}
-        ]
+        # Get device info and model
+        device = get_device_by_id(device_id)
+        if not device:
+            return jsonify({
+                'success': False,
+                'error': f'Device {device_id} not found'
+            }), 404
         
-        available_verifications = [
-            {'verification_type': 'text', 'description': 'Verify text appears'},
-            {'verification_type': 'image', 'description': 'Verify image appears'}
-        ]
+        device_model = device.get('device_model', 'unknown')
+        print(f"[@route:host_aiagent:execute_task] Device model: {device_model}")
         
-        # Execute task using AI controller
-        result = ai_controller.execute_task(task_description, available_actions, available_verifications)
+        # Get real available actions from device capabilities (same as DeviceDataContext)
+        device_action_types = device.get('device_action_types', {})
+        available_actions = []
+        
+        # Flatten all action categories into a single list for AI
+        for category, actions in device_action_types.items():
+            if isinstance(actions, list):
+                for action in actions:
+                    available_actions.append({
+                        'command': action.get('command', ''),
+                        'description': action.get('description', f"{action.get('command', '')} action"),
+                        'action_type': action.get('action_type', category),
+                        'params': action.get('params', {}),
+                        'category': category
+                    })
+        
+        print(f"[@route:host_aiagent:execute_task] Available actions: {len(available_actions)} actions from device capabilities")
+        
+        # Get real available verifications from device capabilities (same as DeviceDataContext)
+        device_verification_types = device.get('device_verification_types', {})
+        available_verifications = []
+        
+        # Flatten all verification categories into a single list for AI
+        for category, verifications in device_verification_types.items():
+            if isinstance(verifications, list):
+                for verification in verifications:
+                    available_verifications.append({
+                        'verification_type': verification.get('verification_type', ''),
+                        'description': verification.get('description', f"{verification.get('verification_type', '')} verification"),
+                        'params': verification.get('params', {}),
+                        'category': category
+                    })
+        
+        print(f"[@route:host_aiagent:execute_task] Available verifications: {len(available_verifications)} verifications from device capabilities")
+        
+        # Execute task using AI controller with real device capabilities and model
+        result = ai_controller.execute_task(
+            task_description, 
+            available_actions, 
+            available_verifications,
+            device_model=device_model
+        )
         
         return jsonify({
             'success': result.get('success', False),

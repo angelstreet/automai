@@ -1,61 +1,80 @@
 """
 AI Agent Controller
 
-Simple AI agent that can execute basic tasks using device actions and verifications.
+Simple AI agent that calls real AI API to generate execution plans.
 """
 
 import time
 import json
+import os
+import requests
 from typing import Dict, Any, List
 from ..base_controller import BaseController
 
 
 class AIAgentController(BaseController):
-    """Simple AI agent controller for autonomous task execution."""
+    """Simple AI agent controller that generates real execution plans using AI."""
     
-    def __init__(self, device_config: dict):
+    def __init__(self, **kwargs):
         """Initialize AI agent controller."""
         super().__init__("AI Agent Controller", "AI")
         
-        self.device_config = device_config
         self.is_executing = False
         self.current_step = ""
         self.execution_log = []
         
-        print(f"AI[{self.controller_name}]: Initialized for device config: {device_config}")
+        print(f"AI[{self.controller_name}]: Initialized")
     
-    def execute_task(self, task_description: str, available_actions: List[Dict], available_verifications: List[Dict]) -> Dict[str, Any]:
+    def execute_task(self, task_description: str, available_actions: List[Dict], available_verifications: List[Dict], device_model: str = None) -> Dict[str, Any]:
         """
-        Execute a simple task using available actions and verifications.
+        Execute a task: generate plan with AI, execute it, and summarize results.
         
-        For now, this is a simple demo implementation:
-        - Parse basic tasks like "click Home tab and verify home displayed"
-        - Execute action + verification sequence
+        Args:
+            task_description: User's task description (e.g., "go to live and zap 10 times")
+            available_actions: Real actions from device capabilities
+            available_verifications: Real verifications from device capabilities
+            device_model: Device model for context
         """
         try:
-            print(f"AI[{self.controller_name}]: Starting task execution: {task_description}")
+            print(f"AI[{self.controller_name}]: Starting task: {task_description}")
             
             self.is_executing = True
-            self.current_step = "Analyzing task"
+            self.current_step = "Generating AI plan"
             self.execution_log = []
             
-            # Simple task parsing for demo
-            task_lower = task_description.lower()
+            # Step 1: Generate plan using AI
+            ai_plan = self._generate_plan(task_description, available_actions, available_verifications, device_model)
             
-            if "click" in task_lower and "home" in task_lower:
-                return self._execute_home_click_task(task_description)
-            elif "press" in task_lower and "back" in task_lower:
-                return self._execute_back_press_task(task_description)
-            else:
+            if not ai_plan.get('success'):
                 return {
                     'success': False,
-                    'error': f'Task not recognized. Try: "click Home tab and verify home displayed"',
+                    'error': ai_plan.get('error', 'Failed to generate plan'),
                     'execution_log': self.execution_log
                 }
+            
+            self._add_to_log("ai_plan", "plan_generated", ai_plan['plan'], "AI generated execution plan")
+            
+            # Step 2: Execute the plan (just return True for now)
+            self.current_step = "Executing plan"
+            execute_result = self._execute(ai_plan['plan'])
+            self._add_to_log("execute", "plan_execution", execute_result, f"Plan execution: {execute_result}")
+            
+            # Step 3: Generate result summary (just return True for now)
+            self.current_step = "Generating summary"
+            summary_result = self._result_summary(ai_plan['plan'], execute_result)
+            self._add_to_log("summary", "result_summary", summary_result, f"Result summary: {summary_result}")
+            
+            return {
+                'success': True,
+                'ai_plan': ai_plan['plan'],
+                'execute_result': execute_result,
+                'summary_result': summary_result,
+                'execution_log': self.execution_log,
+                'current_step': 'Task completed'
+            }
                 
         except Exception as e:
             print(f"AI[{self.controller_name}]: Task execution error: {e}")
-            self.is_executing = False
             return {
                 'success': False,
                 'error': f'Task execution failed: {str(e)}',
@@ -64,95 +83,158 @@ class AIAgentController(BaseController):
         finally:
             self.is_executing = False
     
-    def _execute_home_click_task(self, task_description: str) -> Dict[str, Any]:
-        """Execute simple home click + verification task."""
+    def _generate_plan(self, task_description: str, available_actions: List[Dict], available_verifications: List[Dict], device_model: str = None) -> Dict[str, Any]:
+        """
+        Generate execution plan using AI API (like detect_subtitles_ai in video.py).
+        """
         try:
-            # Step 1: Execute HOME key press action
-            self.current_step = "Pressing HOME key"
-            self._add_to_log("action", "press_key", "HOME", "Pressing HOME key to navigate home")
+            # Get API key from environment
+            api_key = os.getenv('OPENROUTER_API_KEY')
+            if not api_key:
+                print(f"AI[{self.controller_name}]: OpenRouter API key not found in environment")
+                return {
+                    'success': False,
+                    'error': 'AI service not available - no API key'
+                }
             
-            action_result = {
-                'action_type': 'press_key',
-                'command': 'press_key',
-                'params': {'key': 'HOME'},
-                'description': 'Press HOME key to navigate to home screen'
+            # Prepare context for AI
+            context = {
+                "task": task_description,
+                "device_model": device_model or "unknown",
+                "available_actions": [action.get('command', 'unknown') for action in available_actions],
+                "available_verifications": [verif.get('verification_type', 'unknown') for verif in available_verifications]
             }
             
-            # Wait a moment for UI to update
-            time.sleep(1)
+            # Create prompt for AI
+            prompt = f"""You are a test automation AI. Generate an execution plan for this task.
+
+Task: "{task_description}"
+Device: {device_model}
+Available actions: {context['available_actions']}
+Available verifications: {context['available_verifications']}
+
+CRITICAL: Respond with ONLY valid JSON. No other text.
+
+Required JSON format:
+{{
+  "analysis": "brief analysis of the task",
+  "feasible": true,
+  "plan": [
+    {{
+      "step": 1,
+      "type": "action",
+      "command": "press_key",
+      "params": {{"key": "HOME"}},
+      "description": "Navigate to home"
+    }},
+    {{
+      "step": 2, 
+      "type": "verification",
+      "verification_type": "text_verification",
+      "params": {{"text": "Home", "timeout": 5.0}},
+      "description": "Verify home screen"
+    }}
+  ],
+  "estimated_time": "10 seconds",
+  "risk_level": "low"
+}}
+
+If not feasible:
+{{
+  "analysis": "why task cannot be completed",
+  "feasible": false,
+  "plan": [],
+  "estimated_time": "0 seconds", 
+  "risk_level": "none"
+}}
+
+JSON ONLY - NO OTHER TEXT"""
             
-            # Step 2: Take screenshot for verification
-            self.current_step = "Taking screenshot for verification"
-            self._add_to_log("verification", "screenshot", None, "Taking screenshot to verify home screen")
+            # Call OpenRouter API (same as video.py detect_subtitles_ai)
+            response = requests.post(
+                'https://openrouter.ai/api/v1/chat/completions',
+                headers={
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': 'https://automai.dev',
+                    'X-Title': 'AutomAI-VirtualPyTest'
+                },
+                json={
+                    'model': 'qwen/qwen-2-vl-7b-instruct',
+                    'messages': [
+                        {
+                            'role': 'user',
+                            'content': [
+                                {'type': 'text', 'text': prompt}
+                            ]
+                        }
+                    ],
+                    'max_tokens': 500,
+                    'temperature': 0.0
+                },
+                timeout=30
+            )
             
-            # Step 3: Suggest text verification
-            self.current_step = "Suggesting verification"
-            verification_result = {
-                'verification_type': 'text',
-                'command': 'waitForTextToAppear',
-                'params': {'text': 'Home', 'timeout': 5.0},
-                'description': 'Verify "Home" text appears on screen'
-            }
-            
-            self._add_to_log("completed", "task", None, f"Task completed: {task_description}")
-            
-            return {
-                'success': True,
-                'message': 'Task completed successfully',
-                'suggested_action': action_result,
-                'suggested_verification': verification_result,
-                'execution_log': self.execution_log,
-                'current_step': 'Task completed'
-            }
-            
+            if response.status_code == 200:
+                result = response.json()
+                content = result['choices'][0]['message']['content']
+                
+                # Parse JSON response
+                try:
+                    ai_plan = json.loads(content)
+                    print(f"AI[{self.controller_name}]: AI plan generated successfully")
+                    return {
+                        'success': True,
+                        'plan': ai_plan
+                    }
+                    
+                except json.JSONDecodeError as e:
+                    print(f"AI[{self.controller_name}]: Failed to parse AI JSON: {e}")
+                    print(f"AI[{self.controller_name}]: Raw AI response: {content[:200]}...")
+                    return {
+                        'success': False,
+                        'error': f'AI returned invalid JSON: {str(e)}'
+                    }
+            else:
+                print(f"AI[{self.controller_name}]: OpenRouter API error: {response.status_code}")
+                return {
+                    'success': False,
+                    'error': f'AI API error: {response.status_code}'
+                }
+                
         except Exception as e:
-            self._add_to_log("error", "execution", None, f"Error: {str(e)}")
+            print(f"AI[{self.controller_name}]: AI plan generation error: {e}")
             return {
                 'success': False,
-                'error': str(e),
-                'execution_log': self.execution_log
+                'error': f'AI plan generation failed: {str(e)}'
             }
     
-    def _execute_back_press_task(self, task_description: str) -> Dict[str, Any]:
-        """Execute simple back press task."""
-        try:
-            self.current_step = "Pressing BACK key"
-            self._add_to_log("action", "press_key", "BACK", "Pressing BACK key to go back")
-            
-            action_result = {
-                'action_type': 'press_key', 
-                'command': 'press_key',
-                'params': {'key': 'BACK'},
-                'description': 'Press BACK key to navigate back'
-            }
-            
-            self._add_to_log("completed", "task", None, f"Task completed: {task_description}")
-            
-            return {
-                'success': True,
-                'message': 'Task completed successfully',
-                'suggested_action': action_result,
-                'execution_log': self.execution_log,
-                'current_step': 'Task completed'
-            }
-            
-        except Exception as e:
-            self._add_to_log("error", "execution", None, f"Error: {str(e)}")
-            return {
-                'success': False,
-                'error': str(e),
-                'execution_log': self.execution_log
-            }
+    def _execute(self, plan: Dict[str, Any]) -> bool:
+        """
+        Execute the AI plan.
+        For now, just return True.
+        """
+        print(f"AI[{self.controller_name}]: Executing plan (mock)")
+        time.sleep(0.5)  # Small delay to simulate execution
+        return True
+    
+    def _result_summary(self, plan: Dict[str, Any], execute_result: bool) -> bool:
+        """
+        Generate result summary.
+        For now, just return True.
+        """
+        print(f"AI[{self.controller_name}]: Generating result summary (mock)")
+        time.sleep(0.2)  # Small delay to simulate summary generation
+        return True
     
     def _add_to_log(self, log_type: str, action_type: str, action_value: Any, description: str):
         """Add entry to execution log."""
         log_entry = {
-            'timestamp': time.time(),
+            'timestamp': time.strftime('%H:%M:%S'),
             'type': log_type,
             'action_type': action_type,
-            'action_value': action_value,
-            'description': description,
-            'success': log_type != 'error'
+            'value': action_value,
+            'description': description
         }
         self.execution_log.append(log_entry)
         print(f"AI[{self.controller_name}]: {description}")
@@ -160,22 +242,13 @@ class AIAgentController(BaseController):
     def get_status(self) -> Dict[str, Any]:
         """Get current execution status."""
         return {
-            'success': True,
             'is_executing': self.is_executing,
             'current_step': self.current_step,
-            'execution_log': self.execution_log,
-            'controller_type': 'ai'
+            'execution_log': self.execution_log
         }
     
     def stop_execution(self) -> Dict[str, Any]:
-        """Stop current task execution."""
-        if self.is_executing:
-            self.is_executing = False
-            self.current_step = "Stopped by user"
-            self._add_to_log("stopped", "user_action", None, "Task execution stopped by user")
-            
-        return {
-            'success': True,
-            'message': 'Execution stopped',
-            'execution_log': self.execution_log
-        } 
+        """Stop current execution."""
+        self.is_executing = False
+        self.current_step = "Stopped"
+        return {'success': True, 'message': 'Execution stopped'} 
