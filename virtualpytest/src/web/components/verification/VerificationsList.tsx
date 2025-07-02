@@ -419,19 +419,19 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
 
     const content = (
       <Box sx={{ overflow: 'visible', position: 'relative' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mb: 0.5 }}>
           <Button
             size="small"
             variant="outlined"
             startIcon={<AddIcon />}
             onClick={addVerification}
-            sx={{ minWidth: 'auto' }}
+            sx={{ minWidth: 'auto', fontSize: '0.75rem', py: 0.25 }}
           >
             Add
           </Button>
         </Box>
 
-        <Box sx={{ mb: 1, overflow: 'visible' }}>
+        <Box sx={{ mb: 0.5, overflow: 'visible' }}>
           {verifications.map((verification, index) => (
             <VerificationItem
               key={index}
@@ -459,7 +459,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
           ))}
         </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 0.5 }}>
           <FormControl size="small" sx={{ minWidth: 100, mr: 1 }}>
             <Select
               value={passCondition}
@@ -467,9 +467,9 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
               size="small"
               sx={{
                 fontSize: '0.75rem',
-                height: '30px',
+                height: '28px',
                 '& .MuiSelect-select': {
-                  padding: '5px 10px',
+                  padding: '4px 8px',
                 },
               }}
             >
@@ -498,6 +498,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
               borderColor: '#444',
               color: 'inherit',
               fontSize: '0.75rem',
+              py: 0.25,
               '&:hover': {
                 borderColor: '#666',
               },
@@ -517,8 +518,8 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
             sx={{
               display: 'flex',
               justifyContent: 'center',
-              mt: 2,
-              p: 1,
+              mt: 1,
+              p: 0.5,
               borderRadius: 1,
               backgroundColor:
                 passCondition === 'all'
@@ -542,6 +543,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
             <Typography
               sx={{
                 fontWeight: 'bold',
+                fontSize: '0.8rem',
                 color:
                   passCondition === 'all'
                     ? testResults.every((result) => result.success)
@@ -599,11 +601,11 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
       return (
         <Box>
           {/* Collapsible toggle button and title */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.25 }}>
             <Button
               size="small"
               onClick={() => setCollapsed(!collapsed)}
-              sx={{ p: 0.25, minWidth: 'auto' }}
+              sx={{ p: 0.125, minWidth: 'auto' }}
             >
               {collapsed ? '▶' : '▼'}
             </Button>

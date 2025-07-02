@@ -46,13 +46,13 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   if (!selectedHost) {
     return (
       <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle>Edit Node</DialogTitle>
-        <DialogContent>
+        <DialogTitle sx={{ pb: 0.5 }}>Edit Node</DialogTitle>
+        <DialogContent sx={{ py: 0.5 }}>
           <Typography color="error">
             No valid host device selected. Please select a host device first.
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ pt: 0.5 }}>
           <Button onClick={onClose}>Close</Button>
         </DialogActions>
       </Dialog>
@@ -79,121 +79,131 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const buttonVisibility = nodeEdit.getButtonVisibility();
 
   return (
-    <Dialog open={isOpen} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
+    <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ pb: 0.5 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Edit Node
-          <IconButton size="small" onClick={onClose} sx={{ p: 0.25 }}>
-            <CloseIcon fontSize="small" />
+          <Typography variant="h6">Edit Node</Typography>
+          <IconButton onClick={onClose} size="small">
+            <CloseIcon />
           </IconButton>
         </Box>
       </DialogTitle>
-      <DialogContent>
-        <Box sx={{ pt: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Node Name and Type in columns */}
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <TextField
-              label="Node Name"
-              value={nodeForm?.label || ''}
-              onChange={(e) => setNodeForm({ ...nodeForm, label: e.target.value })}
-              fullWidth
-              required
-              error={!nodeForm?.label?.trim()}
-              size="small"
-            />
-            <FormControl fullWidth size="small">
-              <InputLabel>Type</InputLabel>
-              <Select
-                value={nodeForm?.type || 'screen'}
-                label="Type"
-                onChange={(e) => setNodeForm({ ...nodeForm, type: e.target.value as any })}
-              >
-                <MenuItem value="menu">Menu</MenuItem>
-                <MenuItem value="screen">Screen</MenuItem>
-                <MenuItem value="action">Action</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
 
-          {/* Depth and Parent below in columns */}
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <TextField
-              label="Depth"
-              value={nodeForm?.depth || 0}
-              fullWidth
-              InputProps={{ readOnly: true }}
-              variant="outlined"
-              size="small"
-            />
-            <TextField
-              label="Parent"
-              value={nodeEdit.getParentNames(nodeForm?.parent || [], nodes)}
-              fullWidth
-              InputProps={{ readOnly: true }}
-              variant="outlined"
-              size="small"
-            />
-          </Box>
-
-          {/* Single line description */}
+      <DialogContent sx={{ py: 0.5 }}>
+        {/* Node Name and Type in columns */}
+        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
           <TextField
-            label="Description"
-            value={nodeForm?.description || ''}
-            onChange={(e) => setNodeForm({ ...nodeForm, description: e.target.value })}
+            label="Node Name"
+            value={nodeForm?.label || ''}
+            onChange={(e) => setNodeForm({ ...nodeForm, label: e.target.value })}
             fullWidth
+            required
+            error={!nodeForm?.label?.trim()}
+            margin="dense"
             size="small"
           />
-
-          {/* Screenshot URL Field - only show for non-entry nodes */}
-          {(nodeForm?.type as string) !== 'entry' && (
-            <TextField
-              label="Screenshot URL"
-              value={nodeForm?.screenshot || ''}
-              onChange={(e) => setNodeForm({ ...nodeForm, screenshot: e.target.value })}
-              fullWidth
-              size="small"
-            />
-          )}
-
-          {/* Verification Section */}
-          <VerificationsList
-            verifications={nodeEdit.verification.verifications}
-            availableVerifications={nodeEdit.verification.availableVerificationTypes}
-            onVerificationsChange={nodeEdit.handleVerificationsChange}
-            loading={nodeEdit.verification.loading}
-            model={model || 'android_mobile'}
-            selectedHost={selectedHost}
-            onTest={nodeEdit.verification.handleTest}
-            testResults={nodeEdit.verification.testResults}
-            onReferenceSelected={() => {}}
-            modelReferences={{}}
-            referencesLoading={false}
-            showCollapsible={false}
-            title="Verifications"
-          />
-
-          {nodeEdit.gotoResult && (
-            <Box
-              sx={{
-                p: 2,
-                bgcolor:
-                  nodeEdit.gotoResult.includes('❌') || nodeEdit.gotoResult.includes('⚠️')
-                    ? 'error.light'
-                    : 'success.light',
-                borderRadius: 1,
-                maxHeight: 300,
-                overflow: 'auto',
-                mb: 1,
-              }}
+          <FormControl fullWidth margin="dense" size="small">
+            <InputLabel>Type</InputLabel>
+            <Select
+              value={nodeForm?.type || 'screen'}
+              label="Type"
+              onChange={(e) => setNodeForm({ ...nodeForm, type: e.target.value as any })}
             >
-              <Typography variant="body2" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line' }}>
-                {nodeEdit.gotoResult}
-              </Typography>
-            </Box>
-          )}
+              <MenuItem value="menu">Menu</MenuItem>
+              <MenuItem value="screen">Screen</MenuItem>
+              <MenuItem value="action">Action</MenuItem>
+            </Select>
+          </FormControl>
         </Box>
+
+        {/* Depth and Parent below in columns */}
+        <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+          <TextField
+            label="Depth"
+            value={nodeForm?.depth || 0}
+            fullWidth
+            InputProps={{ readOnly: true }}
+            variant="outlined"
+            margin="dense"
+            size="small"
+          />
+          <TextField
+            label="Parent"
+            value={nodeEdit.getParentNames(nodeForm?.parent || [], nodes)}
+            fullWidth
+            InputProps={{ readOnly: true }}
+            variant="outlined"
+            margin="dense"
+            size="small"
+          />
+        </Box>
+
+        {/* Single line description */}
+        <TextField
+          label="Description"
+          value={nodeForm?.description || ''}
+          onChange={(e) => setNodeForm({ ...nodeForm, description: e.target.value })}
+          fullWidth
+          margin="dense"
+          size="small"
+          sx={{ mb: 1 }}
+        />
+
+        {/* Screenshot URL Field - only show for non-entry nodes */}
+        {(nodeForm?.type as string) !== 'entry' && (
+          <TextField
+            label="Screenshot URL"
+            value={nodeForm?.screenshot || ''}
+            onChange={(e) => setNodeForm({ ...nodeForm, screenshot: e.target.value })}
+            fullWidth
+            margin="dense"
+            size="small"
+            sx={{ mb: 1 }}
+          />
+        )}
+
+        {/* Verification Section */}
+        <VerificationsList
+          verifications={nodeEdit.verification.verifications}
+          availableVerifications={nodeEdit.verification.availableVerificationTypes}
+          onVerificationsChange={nodeEdit.handleVerificationsChange}
+          loading={nodeEdit.verification.loading}
+          model={model || 'android_mobile'}
+          selectedHost={selectedHost}
+          onTest={nodeEdit.verification.handleTest}
+          testResults={nodeEdit.verification.testResults}
+          onReferenceSelected={() => {}}
+          modelReferences={{}}
+          referencesLoading={false}
+          showCollapsible={false}
+          title="Verifications"
+        />
+
+        {nodeEdit.gotoResult && (
+          <Box
+            sx={{
+              p: 1,
+              bgcolor:
+                nodeEdit.gotoResult.includes('❌') || nodeEdit.gotoResult.includes('⚠️')
+                  ? 'error.light'
+                  : 'success.light',
+              borderRadius: 1,
+              maxHeight: 200,
+              overflow: 'auto',
+              mt: 1,
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{ fontFamily: 'monospace', whiteSpace: 'pre-line', fontSize: '0.75rem' }}
+            >
+              {nodeEdit.gotoResult}
+            </Typography>
+          </Box>
+        )}
       </DialogContent>
-      <DialogActions>
+
+      <DialogActions sx={{ pt: 0.5 }}>
         {onResetNode && (
           <Button onClick={() => onResetNode()} variant="outlined" color="warning">
             Reset Node

@@ -1,11 +1,4 @@
-import {
-  PlayArrow as RunIcon,
-  Schedule as ScheduleIcon,
-  Stop as StopIcon,
-  Terminal as ScriptIcon,
-  CheckCircle as SuccessIcon,
-  Error as ErrorIcon,
-} from '@mui/icons-material';
+import { Terminal as ScriptIcon } from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -13,30 +6,46 @@ import {
   CardContent,
   Button,
   Grid,
-  Alert,
   Chip,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
   CircularProgress,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import React, { useState } from 'react';
 
 import { useScript } from '../hooks/script/useScript';
 import { useHostManager } from '../hooks/useHostManager';
+import { useToast } from '../hooks/useToast';
+
+// Simple execution record interface
+interface ExecutionRecord {
+  id: string;
+  scriptName: string;
+  hostName: string;
+  deviceId: string;
+  startTime: string;
+  endTime?: string;
+  status: 'running' | 'completed' | 'failed';
+}
 
 const RunTests: React.FC = () => {
   const { executeScript, isExecuting, lastResult, error } = useScript();
+  const { showInfo, showSuccess, showError } = useToast();
 
   const [selectedHost, setSelectedHost] = useState<string>('');
   const [selectedDevice, setSelectedDevice] = useState<string>('');
   const [selectedScript, setSelectedScript] = useState<string>('helloworld');
   const [showWizard, setShowWizard] = useState<boolean>(false);
+  const [executions, setExecutions] = useState<ExecutionRecord[]>([]);
 
   // Only fetch host data when wizard is shown
   const { getAllHosts, getDevicesFromHost } = useHostManager();
@@ -47,14 +56,72 @@ const RunTests: React.FC = () => {
 
   const handleExecuteScript = async () => {
     if (!selectedHost || !selectedDevice || !selectedScript) {
-      alert('Please select host, device, and script');
+      showError('Please select host, device, and script');
       return;
     }
 
+    // Create execution record
+    const executionId = `exec_${Date.now()}`;
+    const newExecution: ExecutionRecord = {
+      id: executionId,
+      scriptName: selectedScript,
+      hostName: selectedHost,
+      deviceId: selectedDevice,
+      startTime: new Date().toLocaleTimeString(),
+      status: 'running',
+    };
+
+    setExecutions((prev) => [newExecution, ...prev]);
+    showInfo(`Script "${selectedScript}" started on ${selectedHost}:${selectedDevice}`);
+
     try {
-      await executeScript(selectedScript, selectedHost, selectedDevice);
+      const result = await executeScript(selectedScript, selectedHost, selectedDevice);
+
+      // Update execution record on completion
+      setExecutions((prev) =>
+        prev.map((exec) =>
+          exec.id === executionId
+            ? {
+                ...exec,
+                endTime: new Date().toLocaleTimeString(),
+                status: result?.success === false ? 'failed' : 'completed',
+              }
+            : exec,
+        ),
+      );
+
+      if (result?.success === false) {
+        showError(`Script "${selectedScript}" failed`);
+      } else {
+        showSuccess(`Script "${selectedScript}" completed successfully`);
+      }
     } catch (err) {
-      console.error('Script execution failed:', err);
+      // Update execution record on error
+      setExecutions((prev) =>
+        prev.map((exec) =>
+          exec.id === executionId
+            ? {
+                ...exec,
+                endTime: new Date().toLocaleTimeString(),
+                status: 'failed',
+              }
+            : exec,
+        ),
+      );
+      showError(`Script execution failed: ${err}`);
+    }
+  };
+
+  const getStatusChip = (status: ExecutionRecord['status']) => {
+    switch (status) {
+      case 'running':
+        return <Chip label="Running" color="warning" size="small" />;
+      case 'completed':
+        return <Chip label="Completed" color="success" size="small" />;
+      case 'failed':
+        return <Chip label="Failed" color="error" size="small" />;
+      default:
+        return <Chip label="Unknown" color="default" size="small" />;
     }
   };
 
@@ -71,19 +138,11 @@ const RunTests: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Script Execution */}
-        <Grid item xs={12} md={8}>
+        <Grid item xs={12} md={6}>
           <Card>
             <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                <Typography variant="h6">Execute Script</Typography>
-                <Chip
-                  label={isExecuting ? 'Executing' : 'Ready'}
-                  color={isExecuting ? 'warning' : 'success'}
-                  size="small"
-                />
-              </Box>
-              <Typography variant="body2" color="textSecondary" mb={3}>
-                Select a script and host device to execute immediately.
+              <Typography variant="h6" mb={2}>
+                Execute Script
               </Typography>
 
               {!showWizard ? (
@@ -95,7 +154,7 @@ const RunTests: React.FC = () => {
                     startIcon={<ScriptIcon />}
                     onClick={() => setShowWizard(true)}
                   >
-                    Launch Script Wizard
+                    Launch Script
                   </Button>
                 </Box>
               ) : (
@@ -180,119 +239,15 @@ const RunTests: React.FC = () => {
           </Card>
         </Grid>
 
-        {/* Status & Results */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                <Typography variant="h6">Execution Status</Typography>
-                <Chip
-                  label={error ? 'Error' : lastResult ? 'Completed' : 'Idle'}
-                  color={error ? 'error' : lastResult ? 'success' : 'default'}
-                  size="small"
-                />
-              </Box>
-              <Typography variant="body2" color="textSecondary" mb={2}>
-                Latest script execution status and output.
-              </Typography>
-
-              {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {error}
-                </Alert>
-              )}
-
-              {lastResult && (
-                <Box>
-                  <Typography variant="body2" gutterBottom>
-                    <strong>Exit Code:</strong> {lastResult.exit_code}
-                  </Typography>
-                  {lastResult.stdout && (
-                    <Accordion size="small">
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography variant="body2">
-                          <SuccessIcon sx={{ fontSize: 16, mr: 1, color: 'success.main' }} />
-                          Output
-                        </Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Typography
-                          variant="body2"
-                          component="pre"
-                          sx={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}
-                        >
-                          {lastResult.stdout}
-                        </Typography>
-                      </AccordionDetails>
-                    </Accordion>
-                  )}
-                  {lastResult.stderr && (
-                    <Accordion size="small">
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography variant="body2">
-                          <ErrorIcon sx={{ fontSize: 16, mr: 1, color: 'error.main' }} />
-                          Errors
-                        </Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Typography
-                          variant="body2"
-                          component="pre"
-                          sx={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}
-                        >
-                          {lastResult.stderr}
-                        </Typography>
-                      </AccordionDetails>
-                    </Accordion>
-                  )}
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Active Scripts */}
+        {/* Execution History */}
         <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                <Typography variant="h6">Currently Executing</Typography>
-                <Chip
-                  label={isExecuting ? '1 Running' : '0 Running'}
-                  color={isExecuting ? 'warning' : 'default'}
-                  size="small"
-                />
-              </Box>
-              <Typography variant="body2" color="textSecondary" mb={2}>
-                Currently executing scripts and their status.
+              <Typography variant="h6" mb={2}>
+                Execution History
               </Typography>
 
-              {isExecuting ? (
-                <Box
-                  sx={{
-                    p: 3,
-                    border: '1px dashed',
-                    borderColor: 'warning.main',
-                    borderRadius: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                  }}
-                >
-                  <CircularProgress size={24} />
-                  <Box>
-                    <Typography variant="body2">
-                      <strong>{selectedScript}</strong> executing on{' '}
-                      <strong>
-                        {selectedHost}:{selectedDevice}
-                      </strong>
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary">
-                      Please wait...
-                    </Typography>
-                  </Box>
-                </Box>
-              ) : (
+              {executions.length === 0 ? (
                 <Box
                   sx={{
                     p: 3,
@@ -302,9 +257,36 @@ const RunTests: React.FC = () => {
                   }}
                 >
                   <Typography variant="body2" color="textSecondary">
-                    No scripts currently executing
+                    No script executions yet
                   </Typography>
                 </Box>
+              ) : (
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Script</TableCell>
+                        <TableCell>Host</TableCell>
+                        <TableCell>Device</TableCell>
+                        <TableCell>Start Time</TableCell>
+                        <TableCell>End Time</TableCell>
+                        <TableCell>Status</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {executions.map((execution) => (
+                        <TableRow key={execution.id}>
+                          <TableCell>{execution.scriptName}</TableCell>
+                          <TableCell>{execution.hostName}</TableCell>
+                          <TableCell>{execution.deviceId}</TableCell>
+                          <TableCell>{execution.startTime}</TableCell>
+                          <TableCell>{execution.endTime || '-'}</TableCell>
+                          <TableCell>{getStatusChip(execution.status)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               )}
             </CardContent>
           </Card>

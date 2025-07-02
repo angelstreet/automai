@@ -78,10 +78,17 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
 }) => {
   return (
     <Box
-      sx={{ mb: 1, px: 0.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+      sx={{
+        mb: 0.5,
+        px: 0.5,
+        py: 0.5,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+      }}
     >
       {/* Line 1: Verification dropdown */}
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0.5 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200, maxWidth: 300 }}>
           <InputLabel>Verification</InputLabel>
           <Select
@@ -92,6 +99,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
             sx={{
               '& .MuiSelect-select': {
                 fontSize: '0.8rem',
+                py: 0.5,
               },
             }}
             renderValue={(selected) => {
@@ -122,7 +130,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                 <MenuItem
                   key={`header-${category}`}
                   disabled
-                  sx={{ fontWeight: 'bold', fontSize: '0.65rem', minHeight: '24px' }}
+                  sx={{ fontWeight: 'bold', fontSize: '0.65rem', minHeight: '20px' }}
                 >
                   {category.replace(/_/g, ' ').toUpperCase()}
                 </MenuItem>,
@@ -130,7 +138,7 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
                   <MenuItem
                     key={verification.command}
                     value={verification.command}
-                    sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
+                    sx={{ pl: 3, fontSize: '0.7rem', minHeight: '24px' }}
                   >
                     {verification.command
                       .replace(/_/g, ' ')
@@ -175,69 +183,75 @@ export const VerificationItem: React.FC<VerificationItemProps> = ({
 
       {/* Line 2: Reference dropdowns - conditional based on verification type */}
       {verification.command && verification.verification_type === 'text' && (
-        <FormControl size="small" sx={{ width: 250 }}>
-          <InputLabel>Text Reference</InputLabel>
-          <Select
-            value={verification.params?.reference_name || ''}
-            onChange={(e) => onReferenceSelect(index, e.target.value)}
-            label="Text Reference"
-            size="small"
-            sx={{
-              '& .MuiSelect-select': {
-                fontSize: '0.8rem',
-              },
-            }}
-          >
-            {Object.entries(modelReferences)
-              .filter(([_internalKey, ref]) => ref.type === 'text')
-              .map(([internalKey, ref]) => (
-                <MenuItem key={internalKey} value={internalKey} sx={{ fontSize: '0.75rem' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    📝 <span>{ref.name || internalKey}</span>
-                  </Box>
+        <Box sx={{ mb: 0.5 }}>
+          <FormControl size="small" sx={{ width: 250 }}>
+            <InputLabel>Text Reference</InputLabel>
+            <Select
+              value={verification.params?.reference_name || ''}
+              onChange={(e) => onReferenceSelect(index, e.target.value)}
+              label="Text Reference"
+              size="small"
+              sx={{
+                '& .MuiSelect-select': {
+                  fontSize: '0.8rem',
+                  py: 0.5,
+                },
+              }}
+            >
+              {Object.entries(modelReferences)
+                .filter(([_internalKey, ref]) => ref.type === 'text')
+                .map(([internalKey, ref]) => (
+                  <MenuItem key={internalKey} value={internalKey} sx={{ fontSize: '0.75rem' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      📝 <span>{ref.name || internalKey}</span>
+                    </Box>
+                  </MenuItem>
+                ))}
+              {Object.entries(modelReferences).filter(([_internalKey, ref]) => ref.type === 'text')
+                .length === 0 && (
+                <MenuItem disabled value="" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                  No text references available
                 </MenuItem>
-              ))}
-            {Object.entries(modelReferences).filter(([_internalKey, ref]) => ref.type === 'text')
-              .length === 0 && (
-              <MenuItem disabled value="" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
-                No text references available
-              </MenuItem>
-            )}
-          </Select>
-        </FormControl>
+              )}
+            </Select>
+          </FormControl>
+        </Box>
       )}
 
       {verification.command && verification.verification_type === 'image' && (
-        <FormControl size="small" sx={{ width: 250 }}>
-          <InputLabel>Image Reference</InputLabel>
-          <Select
-            value={verification.params?.image_path || verification.params?.reference_name || ''}
-            onChange={(e) => onReferenceSelect(index, e.target.value)}
-            label="Image Reference"
-            size="small"
-            sx={{
-              '& .MuiSelect-select': {
-                fontSize: '0.8rem',
-              },
-            }}
-          >
-            {Object.entries(modelReferences)
-              .filter(([_internalKey, ref]) => ref.type === 'image')
-              .map(([internalKey, ref]) => (
-                <MenuItem key={internalKey} value={internalKey} sx={{ fontSize: '0.75rem' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    🖼️ <span>{ref.name || internalKey}</span>
-                  </Box>
+        <Box sx={{ mb: 0.5 }}>
+          <FormControl size="small" sx={{ width: 250 }}>
+            <InputLabel>Image Reference</InputLabel>
+            <Select
+              value={verification.params?.image_path || verification.params?.reference_name || ''}
+              onChange={(e) => onReferenceSelect(index, e.target.value)}
+              label="Image Reference"
+              size="small"
+              sx={{
+                '& .MuiSelect-select': {
+                  fontSize: '0.8rem',
+                  py: 0.5,
+                },
+              }}
+            >
+              {Object.entries(modelReferences)
+                .filter(([_internalKey, ref]) => ref.type === 'image')
+                .map(([internalKey, ref]) => (
+                  <MenuItem key={internalKey} value={internalKey} sx={{ fontSize: '0.75rem' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      🖼️ <span>{ref.name || internalKey}</span>
+                    </Box>
+                  </MenuItem>
+                ))}
+              {Object.entries(modelReferences).filter(([_internalKey, ref]) => ref.type === 'image')
+                .length === 0 && (
+                <MenuItem disabled value="" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                  No image references available
                 </MenuItem>
-              ))}
-            {Object.entries(modelReferences).filter(([_internalKey, ref]) => ref.type === 'image')
-              .length === 0 && (
-              <MenuItem disabled value="" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
-                No image references available
-              </MenuItem>
-            )}
-          </Select>
-        </FormControl>
+              )}
+            </Select>
+          </FormControl>
+        </Box>
       )}
 
       {/* Verification Controls */}
