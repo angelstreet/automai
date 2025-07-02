@@ -354,12 +354,10 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           edges: state.edges.map((edge: any) => ({
             ...edge,
             data: {
-              ...edge.data,
-              // Store action_ids for reference
+              // Only save IDs and core properties - strip full action objects
               action_ids: edge.data?.action_ids || [],
-              // Store retry_action_ids for reference (consistent with action_ids pattern)
               retry_action_ids: edge.data?.retry_action_ids || [],
-              // Store final wait time in data for persistence
+              description: edge.data?.description,
               finalWaitTime:
                 edge.finalWaitTime !== undefined ? edge.finalWaitTime : edge.data?.finalWaitTime,
             },
