@@ -485,55 +485,50 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
           transform: 'translateY(-50%)',
           zIndex: 1000020, // Higher than timeline controls
           pointerEvents: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
         }}
       >
         {/* AI Button - always visible */}
-        <Box
+        <IconButton
+          size="medium"
+          onClick={toggleAIPanel}
+          disabled={frames.length === 0}
           sx={{
-            display: 'flex',
-            justifyContent: 'flex-end',
+            color: '#ffffff',
+            backgroundColor: 'rgba(0,150,255,0.2)',
+            border: '1px solid rgba(0,150,255,0.3)',
             mb: isAIQueryVisible ? 1 : 0,
+            '&:hover': {
+              backgroundColor: 'rgba(0,150,255,0.3)',
+              borderColor: 'rgba(0,150,255,0.5)',
+            },
+            '&:disabled': {
+              color: 'rgba(255,255,255,0.3)',
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              borderColor: 'rgba(255,255,255,0.1)',
+            },
           }}
+          title="Ask AI about this image"
         >
-          <IconButton
-            size="medium"
-            onClick={toggleAIPanel}
-            disabled={frames.length === 0}
-            sx={{
-              color: '#ffffff',
-              backgroundColor: 'rgba(0,150,255,0.2)',
-              border: '1px solid rgba(0,150,255,0.3)',
-              '&:hover': {
-                backgroundColor: 'rgba(0,150,255,0.3)',
-                borderColor: 'rgba(0,150,255,0.5)',
-              },
-              '&:disabled': {
-                color: 'rgba(255,255,255,0.3)',
-                backgroundColor: 'rgba(255,255,255,0.05)',
-                borderColor: 'rgba(255,255,255,0.1)',
-              },
-            }}
-            title="Ask AI about this image"
-          >
-            <SmartToy />
-          </IconButton>
-        </Box>
+          <SmartToy />
+        </IconButton>
 
         {/* Sliding Query Panel */}
         <Box
           sx={{
-            position: 'relative',
             width: isAIQueryVisible ? '320px' : '0px',
             height: isAIQueryVisible ? 'auto' : '0px',
             overflow: 'hidden',
             transition: 'width 300ms ease-in-out, height 300ms ease-in-out',
-            backgroundColor: 'rgba(0,0,0,0.85)',
-            borderRadius: 1,
+            backgroundColor: isAIQueryVisible ? 'rgba(0,0,0,0.85)' : 'transparent',
+            borderRadius: isAIQueryVisible ? 1 : 0,
             border: isAIQueryVisible ? '1px solid rgba(255,255,255,0.2)' : 'none',
           }}
         >
           {isAIQueryVisible && (
-            <Box sx={{ p: 2, minWidth: '320px' }}>
+            <Box sx={{ p: 2, width: '320px' }}>
               {/* Input field and send button */}
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                 <TextField

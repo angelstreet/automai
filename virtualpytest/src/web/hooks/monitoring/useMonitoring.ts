@@ -629,7 +629,7 @@ export const useMonitoring = ({
     if (isAIQueryVisible) {
       clearAIQuery();
     }
-  }, [currentIndex]);
+  }, [currentIndex, clearAIQuery]);
 
   // AI Query functions
   const toggleAIPanel = useCallback(() => {
@@ -646,6 +646,13 @@ export const useMonitoring = ({
     setAiResponse('');
     setIsProcessingAIQuery(false);
   }, []);
+
+  // Auto-cleanup AI query when frame changes
+  useEffect(() => {
+    if (isAIQueryVisible) {
+      clearAIQuery();
+    }
+  }, [currentIndex, clearAIQuery, isAIQueryVisible]);
 
   const handleAIQueryChange = useCallback((query: string) => {
     // Limit to 100 characters
