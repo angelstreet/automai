@@ -95,9 +95,39 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             size="small"
           />
 
-          <ActionsList
-            actions={edgeEdit.localActions}
-            onActionsUpdate={edgeEdit.handleActionsChange}
+          {/* Main Actions */}
+          <Box>
+            <Typography variant="h6" sx={{ mb: 1, fontSize: '1rem' }}>
+              Main Actions
+            </Typography>
+            <ActionsList
+              actions={edgeEdit.localActions}
+              onActionsUpdate={edgeEdit.handleActionsChange}
+            />
+          </Box>
+
+          {/* Retry Actions */}
+          <Box>
+            <Typography variant="h6" sx={{ mb: 1, fontSize: '1rem' }}>
+              Retry Actions (executed if main actions fail)
+            </Typography>
+            <ActionsList
+              actions={edgeEdit.localRetryActions}
+              onActionsUpdate={edgeEdit.handleRetryActionsChange}
+            />
+          </Box>
+
+          {/* Final Wait Time */}
+          <TextField
+            label="Final Wait Time (ms)"
+            type="number"
+            value={edgeForm?.finalWaitTime || 2000}
+            onChange={(e) =>
+              setEdgeForm({ ...edgeForm, finalWaitTime: parseInt(e.target.value) || 2000 })
+            }
+            fullWidth
+            size="small"
+            helperText="Time to wait after all actions complete"
           />
 
           {edgeEdit.actionResult && (

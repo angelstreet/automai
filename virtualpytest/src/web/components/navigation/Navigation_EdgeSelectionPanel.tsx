@@ -39,7 +39,9 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
 
     // Get actions and retry actions using hook functions
     const actions = edgeHook.getActionsFromEdge(selectedEdge);
+    const retryActions = edgeHook.getRetryActionsFromEdge(selectedEdge);
     const hasActions = actions.length > 0;
+    const hasRetryActions = retryActions.length > 0;
     const canRunActions = edgeHook.canRunActions(selectedEdge);
 
     // Memoize the clearResults function to avoid recreating it on every render
@@ -110,20 +112,75 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
             </Typography>
           )}
 
-          {/* Show actions list */}
+          {/* Helper function to format action display */}
+          {(() => {
+            const formatActionDisplay = (action: any) => {
+              if (!action.command) return 'No action selected';
+
+              const commandDisplay = action.command.replace(/_/g, ' ').trim();
+              const params = action.params || {};
+
+              // Build parameter display based on action type
+              const paramParts = [];
+
+              switch (action.command) {
+                case 'press_key':
+                  if (params.key) paramParts.push(`"${params.key}"`);
+                  break;
+                case 'input_text':
+                  if (params.text) paramParts.push(`"${params.text}"`);
+                  break;
+                case 'click_element':
+                  if (params.element_id) paramParts.push(`"${params.element_id}"`);
+                  break;
+                case 'tap_coordinates':
+                  if (params.x !== undefined && params.y !== undefined) {
+                    paramParts.push(`(${params.x}, ${params.y})`);
+                  }
+                  break;
+                case 'swipe':
+                  if (params.direction) paramParts.push(`"${params.direction}"`);
+                  break;
+                case 'launch_app':
+                case 'close_app':
+                  if (params.package) paramParts.push(`"${params.package}"`);
+                  break;
+                case 'wait':
+                  if (params.duration) paramParts.push(`${params.duration}s`);
+                  break;
+                case 'scroll':
+                  if (params.direction) paramParts.push(`"${params.direction}"`);
+                  if (params.amount) paramParts.push(`${params.amount}x`);
+                  break;
+              }
+
+              // Add timeout if specified and not default
+              if (params.timeout && params.timeout !== 0.5) {
+                paramParts.push(`timeout: ${params.timeout}s`);
+              }
+
+              const paramDisplay = paramParts.length > 0 ? ` → ${paramParts.join(', ')}` : '';
+              return `${commandDisplay}${paramDisplay}`;
+            };
+
+            return null; // This is just to define the function
+          })()}
+
+          {/* Show main actions list */}
           {actions.length > 0 && (
             <Box sx={{ mb: 1 }}>
+              <Typography
+                variant="caption"
+                sx={{ fontWeight: 'bold', fontSize: '0.7rem', mb: 0.5, display: 'block' }}
+              >
+                Main Actions:
+              </Typography>
               {actions.map((action, index) => {
-                // Format action display with command and parameters
                 const formatActionDisplay = (action: any) => {
                   if (!action.command) return 'No action selected';
-
                   const commandDisplay = action.command.replace(/_/g, ' ').trim();
                   const params = action.params || {};
-
-                  // Build parameter display based on action type
                   const paramParts = [];
-
                   switch (action.command) {
                     case 'press_key':
                       if (params.key) paramParts.push(`"${params.key}"`);
@@ -154,12 +211,9 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
                       if (params.amount) paramParts.push(`${params.amount}x`);
                       break;
                   }
-
-                  // Add timeout if specified and not default
                   if (params.timeout && params.timeout !== 0.5) {
                     paramParts.push(`timeout: ${params.timeout}s`);
                   }
-
                   const paramDisplay = paramParts.length > 0 ? ` → ${paramParts.join(', ')}` : '';
                   return `${commandDisplay}${paramDisplay}`;
                 };
@@ -167,6 +221,77 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
                 return (
                   <Typography key={index} variant="body2" sx={{ fontSize: '0.75rem', mb: 0.3 }}>
                     {index + 1}. {formatActionDisplay(action)}
+                  </Typography>
+                );
+              })}
+            </Box>
+          )}
+
+          {/* Show retry actions list */}
+          {hasRetryActions && (
+            <Box sx={{ mb: 1 }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 'bold',
+                  fontSize: '0.7rem',
+                  mb: 0.5,
+                  display: 'block',
+                  color: 'warning.main',
+                }}
+              >
+                Retry Actions (if main actions fail):
+              </Typography>
+              {retryActions.map((action, index) => {
+                const formatActionDisplay = (action: any) => {
+                  if (!action.command) return 'No action selected';
+                  const commandDisplay = action.command.replace(/_/g, ' ').trim();
+                  const params = action.params || {};
+                  const paramParts = [];
+                  switch (action.command) {
+                    case 'press_key':
+                      if (params.key) paramParts.push(`"${params.key}"`);
+                      break;
+                    case 'input_text':
+                      if (params.text) paramParts.push(`"${params.text}"`);
+                      break;
+                    case 'click_element':
+                      if (params.element_id) paramParts.push(`"${params.element_id}"`);
+                      break;
+                    case 'tap_coordinates':
+                      if (params.x !== undefined && params.y !== undefined) {
+                        paramParts.push(`(${params.x}, ${params.y})`);
+                      }
+                      break;
+                    case 'swipe':
+                      if (params.direction) paramParts.push(`"${params.direction}"`);
+                      break;
+                    case 'launch_app':
+                    case 'close_app':
+                      if (params.package) paramParts.push(`"${params.package}"`);
+                      break;
+                    case 'wait':
+                      if (params.duration) paramParts.push(`${params.duration}s`);
+                      break;
+                    case 'scroll':
+                      if (params.direction) paramParts.push(`"${params.direction}"`);
+                      if (params.amount) paramParts.push(`${params.amount}x`);
+                      break;
+                  }
+                  if (params.timeout && params.timeout !== 0.5) {
+                    paramParts.push(`timeout: ${params.timeout}s`);
+                  }
+                  const paramDisplay = paramParts.length > 0 ? ` → ${paramParts.join(', ')}` : '';
+                  return `${commandDisplay}${paramDisplay}`;
+                };
+
+                return (
+                  <Typography
+                    key={`retry-${index}`}
+                    variant="body2"
+                    sx={{ fontSize: '0.75rem', mb: 0.3, color: 'warning.main' }}
+                  >
+                    R{index + 1}. {formatActionDisplay(action)}
                   </Typography>
                 );
               })}
