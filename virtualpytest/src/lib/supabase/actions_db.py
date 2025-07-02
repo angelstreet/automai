@@ -287,44 +287,55 @@ def get_edges_using_action(team_id: str, action_id: str) -> Dict:
         print(f"[@db:actions:get_edges_using_action] Searching for edges using action: {action_id}")
         
         # Query navigation trees to find edges that reference this action
-        result = supabase.table('navigation_trees').select('id, name, tree_data').eq('team_id', team_id).execute()
+        result = supabase.table('navigation_trees').select('id, name, metadata').eq('team_id', team_id).execute()
         
         edges_using_action = []
         
         for tree in result.data:
-            tree_data = tree.get('tree_data', {})
-            edges = tree_data.get('edges', [])
+            tree_metadata = tree.get('metadata', {})
             
-            for edge in edges:
-                edge_data = edge.get('data', {})
-                action_ids = edge_data.get('action_ids', [])
-                retry_action_ids = edge_data.get('retry_action_ids', [])
+            # Check if metadata contains edge information with action_ids
+            if isinstance(tree_metadata, dict):
+                edges = tree_metadata.get('edges', [])
                 
-                # Check if this action is used in main actions or retry actions
-                if action_id in action_ids or action_id in retry_action_ids:
-                    edge_info = {
-                        'tree_id': tree['id'],
-                        'tree_name': tree['name'],
-                        'edge_id': edge.get('id'),
-                        'edge_description': edge_data.get('description', ''),
-                        'from_node': edge.get('source', ''),
-                        'to_node': edge.get('target', ''),
-                        'is_retry_action': action_id in retry_action_ids
-                    }
-                    edges_using_action.append(edge_info)
+                if isinstance(edges, list):
+                    for edge in edges:
+                        if isinstance(edge, dict):
+                            # Check both action_ids and retry_action_ids
+                            action_ids = edge.get('action_ids', [])
+                            retry_action_ids = edge.get('retry_action_ids', [])
+                            
+                            if action_id in action_ids or action_id in retry_action_ids:
+                                is_retry = action_id in retry_action_ids
+                                
+                                edge_info = {
+                                    'tree_id': tree['id'],
+                                    'tree_name': tree['name'],
+                                    'edge_id': edge.get('id', 'unknown'),
+                                    'edge_description': edge.get('description', 'No description'),
+                                    'from_node': edge.get('from', 'unknown'),
+                                    'to_node': edge.get('to', 'unknown'),
+                                    'is_retry_action': is_retry
+                                }
+                                edges_using_action.append(edge_info)
         
         print(f"[@db:actions:get_edges_using_action] Found {len(edges_using_action)} edges using action {action_id}")
+        
         return {
             'success': True,
-            'edges': edges_using_action
+            'edges': edges_using_action,
+            'count': len(edges_using_action),
+            'error': None
         }
         
     except Exception as e:
-        print(f"[@db:actions:get_edges_using_action] Error: {str(e)}")
+        error_msg = f"Error getting edges using action: {str(e)}"
+        print(f"[@db:actions:get_edges_using_action] {error_msg}")
         return {
             'success': False,
-            'error': str(e),
-            'edges': []
+            'edges': [],
+            'count': 0,
+            'error': error_msg
         }
 
 def update_action(team_id: str, action_id: str, updates: Dict) -> Dict:

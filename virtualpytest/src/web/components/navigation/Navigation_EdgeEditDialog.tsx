@@ -125,7 +125,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   return (
     <>
       <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle>
+        <DialogTitle sx={{ pb: 0.5 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6">Edit Edge</Typography>
             <IconButton onClick={onClose} size="small">
@@ -134,7 +134,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           </Box>
         </DialogTitle>
 
-        <DialogContent>
+        <DialogContent sx={{ py: 0.5 }}>
           {/* Description */}
           <TextField
             label="Description"
@@ -146,8 +146,9 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               })
             }
             fullWidth
-            margin="normal"
+            margin="dense"
             size="small"
+            sx={{ mb: 1 }}
           />
 
           {/* Main Actions */}
@@ -156,12 +157,17 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               border: '1px solid',
               borderColor: 'divider',
               borderRadius: 1,
-              p: 2,
-              mb: 2,
+              p: 1,
+              mb: 1,
             }}
           >
             <Box
-              sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 0.5,
+              }}
             >
               <Typography variant="h6" sx={{ fontSize: '1rem', m: 0 }}>
                 Main Actions
@@ -178,7 +184,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
                   };
                   edgeEdit.handleActionsChange([...edgeEdit.localActions, newAction]);
                 }}
-                sx={{ fontSize: '0.75rem', px: 1 }}
+                sx={{ fontSize: '0.75rem', px: 1, py: 0.25 }}
               >
                 + Add
               </Button>
@@ -192,7 +198,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ fontStyle: 'italic', textAlign: 'center', py: 2 }}
+                sx={{ fontStyle: 'italic', textAlign: 'center', py: 0.5 }}
               >
                 No actions found
               </Typography>
@@ -205,12 +211,17 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               border: '1px solid',
               borderColor: 'divider',
               borderRadius: 1,
-              p: 2,
-              mb: 2,
+              p: 1,
+              mb: 1,
             }}
           >
             <Box
-              sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 0.5,
+              }}
             >
               <Typography variant="h6" sx={{ fontSize: '1rem', m: 0 }}>
                 Retry Actions
@@ -227,7 +238,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
                   };
                   edgeEdit.handleRetryActionsChange([...edgeEdit.localRetryActions, newAction]);
                 }}
-                sx={{ fontSize: '0.75rem', px: 1 }}
+                sx={{ fontSize: '0.75rem', px: 1, py: 0.25 }}
               >
                 + Add
               </Button>
@@ -241,7 +252,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               <Typography
                 variant="body2"
                 color="text.secondary"
-                sx={{ fontStyle: 'italic', textAlign: 'center', py: 2 }}
+                sx={{ fontStyle: 'italic', textAlign: 'center', py: 0.5 }}
               >
                 No retry actions found
               </Typography>
@@ -260,7 +271,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               })
             }
             fullWidth
-            margin="normal"
+            margin="dense"
             size="small"
             inputProps={{ min: 0, step: 100 }}
           />
@@ -269,15 +280,15 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           {edgeEdit.actionResult && (
             <Box
               sx={{
-                mt: 2,
-                p: 2,
+                mt: 1,
+                p: 1,
                 border: '1px solid',
                 borderColor: 'divider',
                 borderRadius: 1,
                 backgroundColor: 'background.default',
               }}
             >
-              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
                 Action Result:
               </Typography>
               <Typography
@@ -291,7 +302,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           )}
         </DialogContent>
 
-        <DialogActions>
+        <DialogActions sx={{ pt: 0.5 }}>
           <Button
             onClick={handleSubmitWithDependencyCheck}
             variant="contained"
