@@ -296,10 +296,17 @@ export const ActionItem: React.FC<ActionItemProps> = ({
 
   return (
     <Box
-      sx={{ mb: 1, px: 0.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}
+      sx={{
+        mb: 0.5,
+        px: 0.5,
+        py: 0.5,
+        border: '1px solid',
+        borderColor: 'divider',
+        borderRadius: 1,
+      }}
     >
       {/* Line 1: Action command dropdown */}
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
+      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0 }}>
         <FormControl size="small" sx={{ flex: 1, minWidth: 200, maxWidth: 300 }}>
           <InputLabel>Action</InputLabel>
           <Select
@@ -313,7 +320,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                 py: 0.5,
               },
               '& .MuiInputBase-root': {
-                minHeight: '32px',
+                minHeight: '24px',
               },
             }}
             renderValue={(selected) => {
@@ -341,7 +348,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                 <MenuItem
                   key={`header-${category}`}
                   disabled
-                  sx={{ fontWeight: 'bold', fontSize: '0.65rem', minHeight: '24px' }}
+                  sx={{ fontWeight: 'bold', fontSize: '0.65rem', minHeight: '20px' }}
                 >
                   {category.replace(/_/g, ' ').toUpperCase()}
                 </MenuItem>,
@@ -349,7 +356,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                   <MenuItem
                     key={`${category}-${actionDef.command}-${actionIndex}`}
                     value={actionDef.command}
-                    sx={{ pl: 3, fontSize: '0.7rem', minHeight: '28px' }}
+                    sx={{ pl: 3, fontSize: '0.7rem', minHeight: '20px' }}
                   >
                     {actionDef.label}
                   </MenuItem>

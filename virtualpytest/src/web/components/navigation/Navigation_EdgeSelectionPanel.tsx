@@ -255,7 +255,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
             </Typography>
           )}
 
-          <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Box sx={{ mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             {/* Edit and Delete buttons */}
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               <Button

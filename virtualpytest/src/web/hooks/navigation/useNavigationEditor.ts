@@ -173,12 +173,35 @@ export const useNavigationEditor = () => {
         // Close dialog and mark changes
         navigation.setIsNodeDialogOpen(false);
         navigation.markUnsavedChanges();
+
+        // Automatically save the tree if userInterface is available
+        if (navigation.userInterface?.id) {
+          console.log(
+            '[@useNavigationEditor:handleNodeFormSubmit] Auto-saving navigation tree after node update',
+          );
+          try {
+            await saveToConfig(navigation.userInterface.id);
+            console.log('[@useNavigationEditor:handleNodeFormSubmit] Tree saved successfully');
+          } catch (saveError) {
+            console.error(
+              '[@useNavigationEditor:handleNodeFormSubmit] Failed to auto-save tree:',
+              saveError,
+            );
+            navigation.setError(
+              'Node saved but failed to save navigation tree. Please save manually.',
+            );
+          }
+        } else {
+          console.warn(
+            '[@useNavigationEditor:handleNodeFormSubmit] userInterface.id not available, cannot auto-save tree',
+          );
+        }
       } catch (error) {
         console.error('Error during node save:', error);
         navigation.setError('Failed to save node changes');
       }
     },
-    [navigation],
+    [navigation, saveToConfig],
   );
 
   const handleEdgeFormSubmit = useCallback(
@@ -251,12 +274,35 @@ export const useNavigationEditor = () => {
         navigation.setSelectedEdge(updatedEdge);
         navigation.setIsEdgeDialogOpen(false);
         navigation.markUnsavedChanges();
+
+        // Automatically save the tree if userInterface is available
+        if (navigation.userInterface?.id) {
+          console.log(
+            '[@useNavigationEditor:handleEdgeFormSubmit] Auto-saving navigation tree after edge update',
+          );
+          try {
+            await saveToConfig(navigation.userInterface.id);
+            console.log('[@useNavigationEditor:handleEdgeFormSubmit] Tree saved successfully');
+          } catch (saveError) {
+            console.error(
+              '[@useNavigationEditor:handleEdgeFormSubmit] Failed to auto-save tree:',
+              saveError,
+            );
+            navigation.setError(
+              'Actions saved but failed to save navigation tree. Please save manually.',
+            );
+          }
+        } else {
+          console.warn(
+            '[@useNavigationEditor:handleEdgeFormSubmit] userInterface.id not available, cannot auto-save tree',
+          );
+        }
       } catch (error) {
         console.error('Error during edge save:', error);
         navigation.setError('Failed to save edge actions');
       }
     },
-    [navigation],
+    [navigation, saveToConfig],
   );
 
   const addNewNode = useCallback(

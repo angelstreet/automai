@@ -255,14 +255,14 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             </Box>
 
             {/* Parent and Depth Info */}
-            <Box sx={{ mb: 1.5, fontSize: '0.75rem', color: 'text.secondary' }}>
+            <Box sx={{ mb: 0.5, fontSize: '0.75rem', color: 'text.secondary' }}>
               <Typography variant="caption" display="block">
                 <strong>Parent:</strong> {parentNames} - <strong>Depth:</strong>{' '}
                 {selectedNode.data.depth || 0}
               </Typography>
             </Box>
 
-            <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+            <Box sx={{ mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
               {/* Edit and Delete buttons */}
               <Box sx={{ display: 'flex', gap: 0.5 }}>
                 <Button

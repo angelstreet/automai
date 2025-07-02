@@ -266,7 +266,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
             fullWidth
             margin="dense"
             size="small"
-            inputProps={{ min: 0, step: 100 }}
+            inputProps={{ step: 100 }}
           />
 
           {/* Action Result Display */}
