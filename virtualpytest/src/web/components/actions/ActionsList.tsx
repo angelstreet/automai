@@ -46,10 +46,8 @@ export const ActionsList: React.FC<ActionsListProps> = ({ actions, onActionsUpda
         return {
           ...action,
           command,
-          // Use the action definition's params or initialize with defaults
-          params: selectedAction
-            ? { ...selectedAction.params, delay: 0.5 }
-            : { ...action.params, delay: action.params?.delay || 0.5 },
+          // Use the action definition's params
+          params: { ...selectedAction.params },
         };
       }
       return action;
