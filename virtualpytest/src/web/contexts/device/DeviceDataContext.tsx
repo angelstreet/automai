@@ -399,7 +399,7 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
         }
 
         const response = await fetch(
-          `/server/actions/getActions?device_model=${encodeURIComponent(deviceModel)}`,
+          `/server/action/getActions?device_model=${encodeURIComponent(deviceModel)}`,
           {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },

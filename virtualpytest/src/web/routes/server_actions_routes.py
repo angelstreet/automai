@@ -22,7 +22,7 @@ import time
 import requests
 
 # Create blueprint
-server_actions_bp = Blueprint('server_actions', __name__, url_prefix='/server/actions')
+server_actions_bp = Blueprint('server_actions', __name__, url_prefix='/server/action')
 
 # =====================================================
 # BATCH ACTION EXECUTION (MIRRORS VERIFICATION WORKFLOW)
