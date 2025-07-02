@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 interface FrameRef {
   timestamp: string;
@@ -51,9 +51,12 @@ export const useMonitoringAI = ({
       setAiResponse('');
       setIsProcessingAIQuery(false);
     } else {
+      // Open panel and pause monitoring to analyze current frame
       setIsAIQueryVisible(true);
+      setIsPlaying(false);
+      setUserSelectedFrame(true);
     }
-  }, [isAIQueryVisible]);
+  }, [isAIQueryVisible, setIsPlaying, setUserSelectedFrame]);
 
   const clearAIQuery = useCallback(() => {
     setIsAIQueryVisible(false);
@@ -123,6 +126,10 @@ export const useMonitoringAI = ({
       setAiResponse('Error processing request. Please try again.');
     } finally {
       setIsProcessingAIQuery(false);
+      // Automatically close the panel after successful submission
+      setTimeout(() => {
+        clearAIQuery();
+      }, 3000); // Close after 3 seconds to let user see the response
     }
   }, [
     aiQuery,
@@ -133,14 +140,8 @@ export const useMonitoringAI = ({
     device?.device_id,
     setIsPlaying,
     setUserSelectedFrame,
+    clearAIQuery,
   ]);
-
-  // Auto-cleanup AI query when frame changes
-  useEffect(() => {
-    if (isAIQueryVisible) {
-      clearAIQuery();
-    }
-  }, [currentIndex]); // Only depend on currentIndex, not clearAIQuery to avoid loops
 
   return {
     isAIQueryVisible,
