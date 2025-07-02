@@ -34,14 +34,7 @@ export const useNodeEdit = ({
   // Initialize verifications when dialog opens or nodeForm changes
   useEffect(() => {
     if (isOpen && nodeForm?.verifications) {
-      console.log('[useNodeEdit] Initializing with verifications:', nodeForm.verifications.length);
       verification.handleVerificationsChange(nodeForm.verifications);
-    } else if (isOpen) {
-      console.log('[useNodeEdit] Dialog opened but no verifications in nodeForm:', {
-        hasNodeForm: !!nodeForm,
-        hasVerifications: !!nodeForm?.verifications,
-        verificationsLength: nodeForm?.verifications?.length || 0,
-      });
     }
   }, [isOpen, nodeForm?.verifications, verification.handleVerificationsChange]);
 

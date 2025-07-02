@@ -58,13 +58,6 @@ export const useNode = (props?: UseNodeProps) => {
     (node: UINavigationNode): NodeForm => {
       const allVerifications = getVerifications();
 
-      console.log('[useNode:getNodeFormWithVerifications]', {
-        nodeId: node.id,
-        nodeLabel: node.data.label,
-        verificationIds: node.data.verification_ids,
-        totalAvailableVerifications: allVerifications.length,
-      });
-
       // Match verification_ids with actual verification objects
       const nodeVerifications = [];
       if (node.data.verification_ids && node.data.verification_ids.length > 0) {
@@ -72,16 +65,9 @@ export const useNode = (props?: UseNodeProps) => {
           const verification = allVerifications.find((v: any) => v.id === verificationId);
           if (verification) {
             nodeVerifications.push(verification);
-          } else {
-            console.warn('[useNode] Verification not found for ID:', verificationId);
           }
         }
       }
-
-      console.log(
-        '[useNode:getNodeFormWithVerifications] Found verifications:',
-        nodeVerifications.length,
-      );
 
       return {
         label: node.data.label,

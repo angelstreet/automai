@@ -54,16 +54,8 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
     const isProtectedEdge = edgeHook.isProtectedEdge(selectedEdge);
 
     const handleEdit = () => {
-      console.log('[EdgeSelectionPanel:handleEdit] Starting edit for edge:', selectedEdge.id);
       // Create edge form using hook function
       const edgeForm = edgeHook.createEdgeForm(selectedEdge);
-      console.log('[EdgeSelectionPanel:handleEdit] Generated edgeForm:', {
-        description: edgeForm.description,
-        actionsCount: edgeForm.actions?.length || 0,
-        retryActionsCount: edgeForm.retryActions?.length || 0,
-        actions: edgeForm.actions,
-        retryActions: edgeForm.retryActions,
-      });
       setEdgeForm(edgeForm);
       setIsEdgeDialogOpen(true);
     };

@@ -33,17 +33,9 @@ export const useEdgeEdit = ({
   // Initialize actions when dialog opens or edgeForm changes
   useEffect(() => {
     if (isOpen && edgeForm?.actions) {
-      console.log('[useEdgeEdit] Initializing with actions:', edgeForm.actions.length);
       setLocalActions(edgeForm.actions);
-    } else if (isOpen) {
-      console.log('[useEdgeEdit] Dialog opened but no actions in edgeForm:', {
-        hasEdgeForm: !!edgeForm,
-        hasActions: !!edgeForm?.actions,
-        actionsLength: edgeForm?.actions?.length || 0,
-      });
     }
     if (isOpen && edgeForm?.retryActions) {
-      console.log('[useEdgeEdit] Initializing with retry actions:', edgeForm.retryActions.length);
       setLocalRetryActions(edgeForm.retryActions);
     }
   }, [isOpen, edgeForm?.actions, edgeForm?.retryActions]);

@@ -11,6 +11,10 @@ This module contains ALL server-side verification endpoints that:
 from flask import Blueprint, request, jsonify
 from src.web.utils.routeUtils import proxy_to_host, get_host_from_request
 
+# Import verification database functions
+from src.lib.supabase.verifications_db import get_verifications, save_verification, delete_verification
+from src.utils.app_utils import DEFAULT_TEAM_ID
+
 # Create blueprint
 server_verification_common_bp = Blueprint('server_verification_common', __name__, url_prefix='/server/verification')
 
@@ -533,7 +537,6 @@ def verification_image_get_references():
         
         # Get image references from database directly
         from src.lib.supabase.verifications_references_db import get_references
-        from src.utils.app_utils import DEFAULT_TEAM_ID
         
         result = get_references(
             team_id=DEFAULT_TEAM_ID,
@@ -566,7 +569,6 @@ def verification_text_get_references():
         
         # Get text references from database directly
         from src.lib.supabase.verifications_references_db import get_references
-        from src.utils.app_utils import DEFAULT_TEAM_ID
         
         result = get_references(
             team_id=DEFAULT_TEAM_ID,
@@ -599,7 +601,6 @@ def verification_get_all_references():
         
         # Get all references from database directly
         from src.lib.supabase.verifications_references_db import get_references
-        from src.utils.app_utils import DEFAULT_TEAM_ID
         
         result = get_references(
             team_id=DEFAULT_TEAM_ID,
@@ -650,11 +651,11 @@ def save_verification():
         
         # Save verification to database
         result = save_verification(
-            team_id=team_id,
             name=data['name'],
             device_model=data['device_model'],
             verification_type=data['verification_type'],
             command=data['command'],
+            team_id=team_id,
             params=data.get('params', {})
         )
         
