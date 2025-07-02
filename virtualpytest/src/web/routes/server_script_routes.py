@@ -26,7 +26,7 @@ def execute_script():
         
         # Get host info from registry
         host_manager = get_host_manager()
-        host_info = host_manager.get_host_by_name(host_name)
+        host_info = host_manager.get_host(host_name)
         
         if not host_info:
             return jsonify({

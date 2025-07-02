@@ -128,7 +128,7 @@ const RunTests: React.FC = () => {
                         >
                           {hosts.map((host) => (
                             <MenuItem key={host.host_name} value={host.host_name}>
-                              {host.host_name} ({host.ip})
+                              {host.host_name}
                             </MenuItem>
                           ))}
                         </Select>
@@ -146,7 +146,7 @@ const RunTests: React.FC = () => {
                         >
                           {availableDevices.map((device) => (
                             <MenuItem key={device.device_id} value={device.device_id}>
-                              {device.device_id} ({device.device_type})
+                              {device.device_id}
                             </MenuItem>
                           ))}
                         </Select>
