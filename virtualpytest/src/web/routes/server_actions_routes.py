@@ -22,13 +22,13 @@ import time
 import requests
 
 # Create blueprint
-server_actions_bp = Blueprint('server_actions', __name__)
+server_actions_bp = Blueprint('server_actions', __name__, url_prefix='/server/actions')
 
 # =====================================================
 # BATCH ACTION EXECUTION (MIRRORS VERIFICATION WORKFLOW)
 # =====================================================
 
-@server_actions_bp.route('/action/executeBatch', methods=['POST'])
+@server_actions_bp.route('/executeBatch', methods=['POST'])
 def action_execute_batch():
     """Execute batch of actions - mirrors verification batch execution"""
     try:
@@ -212,7 +212,7 @@ def record_executions_to_database(execution_records):
 # EXISTING ENDPOINTS
 # =====================================================
 
-@server_actions_bp.route('/actions/save', methods=['POST'])
+@server_actions_bp.route('/save', methods=['POST'])
 def save_action_endpoint():
     """
     Save action definition to database.
@@ -289,7 +289,7 @@ def save_action_endpoint():
 
 
 
-@server_actions_bp.route('/actions/getActions', methods=['GET'])
+@server_actions_bp.route('/getActions', methods=['GET'])
 def get_actions():
     """
     List actions with optional filtering.
@@ -335,7 +335,7 @@ def get_actions():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_actions_bp.route('/actions/delete', methods=['DELETE'])
+@server_actions_bp.route('/delete', methods=['DELETE'])
 def delete_action_endpoint():
     """
     Delete action by ID or by name/model/type combination.

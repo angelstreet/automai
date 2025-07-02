@@ -620,7 +620,7 @@ def verification_get_all_references():
 # VERIFICATION MANAGEMENT ENDPOINTS
 # =====================================================
 
-@server_verification_common_bp.route('/verification/saveVerification', methods=['POST'])
+@server_verification_common_bp.route('/saveVerification', methods=['POST'])
 def save_verification():
     """
     Save or update verification definition.
@@ -679,7 +679,7 @@ def save_verification():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_verification_common_bp.route('/verification/getVerifications', methods=['GET'])
+@server_verification_common_bp.route('/getVerifications', methods=['GET'])
 def get_verifications_endpoint():
     """
     Get saved verifications from database with optional filtering.
@@ -724,7 +724,7 @@ def get_verifications_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_verification_common_bp.route('/verification/deleteVerification', methods=['POST'])
+@server_verification_common_bp.route('/deleteVerification', methods=['POST'])
 def delete_verification():
     """
     Delete verification by ID or by identifiers.
