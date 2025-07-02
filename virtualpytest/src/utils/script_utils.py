@@ -75,8 +75,8 @@ def execute_script(script_name: str, device_id: str) -> Dict[str, Any]:
         # Get hostname for venv activation (following existing patterns)
         hostname = os.getenv('HOST_NAME', 'localhost')
         
-        # Build command with venv activation (like existing infrastructure does)
-        command = f"source /home/{hostname}/myvenv/bin/activate && python {script_path}"
+        # Build command with venv activation using bash explicitly (fixes shell compatibility)
+        command = f"bash -c 'source /home/{hostname}/myvenv/bin/activate && python {script_path}'"
         
         # Execute using the same pattern as existing utilities
         success, stdout, stderr, exit_code = execute_command(command, timeout=60)
