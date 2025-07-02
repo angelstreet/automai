@@ -69,6 +69,7 @@ export const useNavigationEditor = () => {
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: any) => {
       navigation.setSelectedNode(node);
+      navigation.setSelectedEdge(null); // Clear edge selection when node is selected
     },
     [navigation],
   );
@@ -76,6 +77,7 @@ export const useNavigationEditor = () => {
   const onEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: any) => {
       navigation.setSelectedEdge(edge);
+      navigation.setSelectedNode(null); // Clear node selection when edge is selected
     },
     [navigation],
   );

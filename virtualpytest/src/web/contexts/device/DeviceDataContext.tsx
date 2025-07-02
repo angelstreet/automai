@@ -252,7 +252,6 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
       try {
         // Get available actions directly from device data in the host payload
         const categorizedActions: Actions = {};
-        let totalActions = 0;
 
         // Process all devices in the host
         state.currentHost.devices?.forEach((device: any) => {
@@ -278,7 +277,6 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
                   inputLabel: action.inputLabel,
                   inputPlaceholder: action.inputPlaceholder,
                 });
-                totalActions++;
               });
             }
           });
