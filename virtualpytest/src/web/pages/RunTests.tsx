@@ -27,7 +27,8 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import React, { useState } from 'react';
 
-import { useScript, useHostManager } from '../hooks';
+import { useScript } from '../hooks/script/useScript';
+import { useHostManager } from '../hooks/useHostManager';
 
 const RunTests: React.FC = () => {
   const { executeScript, isExecuting, lastResult, error } = useScript();
