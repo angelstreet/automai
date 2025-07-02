@@ -134,7 +134,14 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
 
     // Memoize handlers to prevent unnecessary re-renders of child components
     const handleEdit = useCallback(() => {
+      console.log('[NodeSelectionPanel:handleEdit] Starting edit for node:', selectedNode.id);
       const nodeForm = nodeHook.getNodeFormWithVerifications(selectedNode);
+      console.log('[NodeSelectionPanel:handleEdit] Generated nodeForm:', {
+        label: nodeForm.label,
+        verificationsCount: nodeForm.verifications?.length || 0,
+        verificationIds: nodeForm.verification_ids,
+        verifications: nodeForm.verifications,
+      });
       setNodeForm(nodeForm);
       setIsNodeDialogOpen(true);
     }, [nodeHook, selectedNode, setNodeForm, setIsNodeDialogOpen]);

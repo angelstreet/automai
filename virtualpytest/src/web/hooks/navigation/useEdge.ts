@@ -82,14 +82,26 @@ export const useEdge = (props?: UseEdgeProps) => {
    */
   const getActionsFromEdge = useCallback(
     (edge: UINavigationEdge): EdgeAction[] => {
+      const allActions = getActions();
+      console.log('[useEdge:getActionsFromEdge]', {
+        edgeId: edge.id,
+        totalAvailableActions: allActions.length,
+        edgeData: {
+          actions: edge.data?.actions,
+          action_ids: edge.data?.action_ids,
+          legacyAction: edge.data?.action,
+        },
+      });
+
       // Handle new format (multiple actions)
       if (edge.data?.actions && edge.data.actions.length > 0) {
+        console.log('[useEdge:getActionsFromEdge] Using direct actions format');
         return edge.data.actions;
       }
 
       // Handle action_ids format (similar to verification_ids in nodes)
       if (edge.data?.action_ids && edge.data.action_ids.length > 0) {
-        const allActions = getActions();
+        console.log('[useEdge:getActionsFromEdge] Using action_ids format');
         const edgeActions: EdgeAction[] = [];
 
         for (const actionId of edge.data.action_ids) {
@@ -106,6 +118,7 @@ export const useEdge = (props?: UseEdgeProps) => {
             };
             edgeActions.push(edgeAction);
           } else {
+            console.warn('[useEdge] Action not found for ID:', actionId);
             const placeholderAction: EdgeAction = {
               id: actionId,
               command: '',
@@ -116,11 +129,13 @@ export const useEdge = (props?: UseEdgeProps) => {
           }
         }
 
+        console.log('[useEdge:getActionsFromEdge] Found actions from IDs:', edgeActions.length);
         return edgeActions;
       }
 
       // Handle legacy format (single action) - convert to array
       if (edge.data?.action && typeof edge.data.action === 'object') {
+        console.log('[useEdge:getActionsFromEdge] Using legacy action format');
         const legacyAction = edge.data.action as any;
         return [
           {
@@ -135,6 +150,7 @@ export const useEdge = (props?: UseEdgeProps) => {
         ];
       }
 
+      console.log('[useEdge:getActionsFromEdge] No actions found');
       return [];
     },
     [getActions],
@@ -249,8 +265,22 @@ export const useEdge = (props?: UseEdgeProps) => {
    */
   const createEdgeForm = useCallback(
     (edge: UINavigationEdge): EdgeForm => {
+      console.log('[useEdge:createEdgeForm]', {
+        edgeId: edge.id,
+        actionIds: edge.data?.action_ids,
+        directActions: edge.data?.actions,
+        retryActions: edge.data?.retryActions,
+      });
+
       const actions = getActionsFromEdge(edge);
       const retryActions = getRetryActionsFromEdge(edge);
+
+      console.log('[useEdge:createEdgeForm] Found actions:', {
+        actionsCount: actions.length,
+        retryActionsCount: retryActions.length,
+        actions: actions,
+        retryActions: retryActions,
+      });
 
       return {
         description: edge.data?.description || '',
