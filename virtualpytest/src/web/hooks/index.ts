@@ -12,6 +12,9 @@ export * from './monitoring';
 // Validation Hooks
 export * from './validation';
 
+// Script Hooks
+export * from './script';
+
 // Page Hooks (domain-specific for pages)
 export * from './pages/useScreenEditor';
 

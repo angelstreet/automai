@@ -74,6 +74,7 @@ def _register_server_routes(app):
         ('server_actions_routes', 'server_actions_bp'),  # ✅ Unified actions API
         ('server_navigation_trees_routes', 'server_navigation_trees_bp'),  # ✅ Navigation trees with history
         ('server_execution_results_routes', 'execution_results_bp'),  # ✅ Execution results tracking
+        ('server_script_routes', 'server_script_bp'),  # ✅ Script execution proxy
 
     ]
     
@@ -113,6 +114,7 @@ def _register_host_routes(app):
         ('host_remote_routes', 'remote_bp'),  # ✅ Unified naming
         ('host_av_routes', 'av_bp'),  # ✅ Unified naming
         ('host_navigation_routes', 'navigation_bp'),  # ✅ Navigation screenshots
+        ('host_script_routes', 'host_script_bp'),  # ✅ Script execution
     ]
     
     for module_name, blueprint_name in host_route_modules:

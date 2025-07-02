@@ -175,22 +175,26 @@ export const useNavigationEditor = () => {
         navigation.markUnsavedChanges();
 
         // Automatically save the tree if userInterface is available
+        // Use setTimeout to ensure state update completes before saving
         if (navigation.userInterface?.id) {
           console.log(
             '[@useNavigationEditor:handleNodeFormSubmit] Auto-saving navigation tree after node update',
           );
-          try {
-            await saveToConfig(navigation.userInterface.id);
-            console.log('[@useNavigationEditor:handleNodeFormSubmit] Tree saved successfully');
-          } catch (saveError) {
-            console.error(
-              '[@useNavigationEditor:handleNodeFormSubmit] Failed to auto-save tree:',
-              saveError,
-            );
-            navigation.setError(
-              'Node saved but failed to save navigation tree. Please save manually.',
-            );
-          }
+
+          setTimeout(async () => {
+            try {
+              await saveToConfig(navigation.userInterface.id);
+              console.log('[@useNavigationEditor:handleNodeFormSubmit] Tree saved successfully');
+            } catch (saveError) {
+              console.error(
+                '[@useNavigationEditor:handleNodeFormSubmit] Failed to auto-save tree:',
+                saveError,
+              );
+              navigation.setError(
+                'Node saved but failed to save navigation tree. Please save manually.',
+              );
+            }
+          }, 100); // Small delay to ensure React state update propagates
         } else {
           console.warn(
             '[@useNavigationEditor:handleNodeFormSubmit] userInterface.id not available, cannot auto-save tree',
@@ -278,22 +282,26 @@ export const useNavigationEditor = () => {
         navigation.markUnsavedChanges();
 
         // Automatically save the tree if userInterface is available
+        // Use setTimeout to ensure state update completes before saving
         if (navigation.userInterface?.id) {
           console.log(
             '[@useNavigationEditor:handleEdgeFormSubmit] Auto-saving navigation tree after edge update',
           );
-          try {
-            await saveToConfig(navigation.userInterface.id);
-            console.log('[@useNavigationEditor:handleEdgeFormSubmit] Tree saved successfully');
-          } catch (saveError) {
-            console.error(
-              '[@useNavigationEditor:handleEdgeFormSubmit] Failed to auto-save tree:',
-              saveError,
-            );
-            navigation.setError(
-              'Actions saved but failed to save navigation tree. Please save manually.',
-            );
-          }
+
+          setTimeout(async () => {
+            try {
+              await saveToConfig(navigation.userInterface.id);
+              console.log('[@useNavigationEditor:handleEdgeFormSubmit] Tree saved successfully');
+            } catch (saveError) {
+              console.error(
+                '[@useNavigationEditor:handleEdgeFormSubmit] Failed to auto-save tree:',
+                saveError,
+              );
+              navigation.setError(
+                'Actions saved but failed to save navigation tree. Please save manually.',
+              );
+            }
+          }, 100); // Small delay to ensure React state update propagates
         } else {
           console.warn(
             '[@useNavigationEditor:handleEdgeFormSubmit] userInterface.id not available, cannot auto-save tree',
