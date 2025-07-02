@@ -532,41 +532,47 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
               {/* Input field and send button */}
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                 <TextField
+                  size="small"
+                  placeholder="Ask about the image..."
                   value={aiQuery}
                   onChange={(e) => handleAIQueryChange(e.target.value)}
-                  placeholder="Ask about this image... (max 100 chars)"
-                  variant="outlined"
-                  size="small"
-                  multiline={false}
-                  disabled={isProcessingAIQuery}
-                  inputProps={{
-                    maxLength: 100,
-                  }}
-                  sx={{
-                    flex: 1,
-                    '& .MuiOutlinedInput-root': {
-                      color: '#ffffff',
-                      backgroundColor: 'rgba(255,255,255,0.1)',
-                      '& fieldset': {
-                        borderColor: 'rgba(255,255,255,0.3)',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: 'rgba(255,255,255,0.5)',
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: 'rgba(0,150,255,0.7)',
-                      },
-                    },
-                    '& .MuiInputBase-input::placeholder': {
-                      color: 'rgba(255,255,255,0.5)',
-                      opacity: 1,
-                    },
-                  }}
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
                       submitAIQuery();
                     }
+                  }}
+                  disabled={isProcessingAIQuery}
+                  inputProps={{
+                    maxLength: 100,
+                    autoComplete: 'off',
+                    autoCorrect: 'off',
+                    autoCapitalize: 'off',
+                    spellCheck: false,
+                  }}
+                  sx={{
+                    width: '200px',
+                    mb: 1,
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                      '& fieldset': {
+                        borderColor: '#444',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: '#666',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: '#2196f3',
+                      },
+                    },
+                    '& .MuiInputBase-input': {
+                      color: '#ffffff',
+                      fontSize: '0.875rem',
+                      '&::placeholder': {
+                        color: '#888',
+                        opacity: 1,
+                      },
+                    },
                   }}
                 />
                 <IconButton

@@ -32,14 +32,18 @@ import { useHostManager } from '../hooks/useHostManager';
 
 const RunTests: React.FC = () => {
   const { executeScript, isExecuting, lastResult, error } = useScript();
-  const { hosts, devices, isLoading: isLoadingHosts } = useHostManager();
 
   const [selectedHost, setSelectedHost] = useState<string>('');
   const [selectedDevice, setSelectedDevice] = useState<string>('');
   const [selectedScript, setSelectedScript] = useState<string>('helloworld');
+  const [showWizard, setShowWizard] = useState<boolean>(false);
 
-  // Get available devices for selected host
-  const availableDevices = selectedHost ? devices[selectedHost] || [] : [];
+  // Only fetch host data when wizard is shown
+  const { getAllHosts, getDevicesFromHost } = useHostManager();
+
+  // Get hosts and devices only when needed
+  const hosts = showWizard ? getAllHosts() : [];
+  const availableDevices = showWizard && selectedHost ? getDevicesFromHost(selectedHost) : [];
 
   const handleExecuteScript = async () => {
     if (!selectedHost || !selectedDevice || !selectedScript) {
@@ -82,70 +86,96 @@ const RunTests: React.FC = () => {
                 Select a script and host device to execute immediately.
               </Typography>
 
-              <Grid container spacing={2} mb={3}>
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Script</InputLabel>
-                    <Select
-                      value={selectedScript}
-                      label="Script"
-                      onChange={(e) => setSelectedScript(e.target.value)}
-                    >
-                      <MenuItem value="helloworld">Hello World</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
+              {!showWizard ? (
+                // Show launch button when wizard is not active
+                <Box display="flex" justifyContent="center" py={4}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<ScriptIcon />}
+                    onClick={() => setShowWizard(true)}
+                  >
+                    Launch Script Wizard
+                  </Button>
+                </Box>
+              ) : (
+                // Show wizard form when active
+                <>
+                  <Grid container spacing={2} mb={3}>
+                    <Grid item xs={12} sm={4}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Script</InputLabel>
+                        <Select
+                          value={selectedScript}
+                          label="Script"
+                          onChange={(e) => setSelectedScript(e.target.value)}
+                        >
+                          <MenuItem value="helloworld">Hello World</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
 
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Host</InputLabel>
-                    <Select
-                      value={selectedHost}
-                      label="Host"
-                      onChange={(e) => {
-                        setSelectedHost(e.target.value);
-                        setSelectedDevice(''); // Reset device when host changes
+                    <Grid item xs={12} sm={4}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Host</InputLabel>
+                        <Select
+                          value={selectedHost}
+                          label="Host"
+                          onChange={(e) => {
+                            setSelectedHost(e.target.value);
+                            setSelectedDevice(''); // Reset device when host changes
+                          }}
+                        >
+                          {hosts.map((host) => (
+                            <MenuItem key={host.host_name} value={host.host_name}>
+                              {host.host_name} ({host.ip})
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12} sm={4}>
+                      <FormControl fullWidth size="small">
+                        <InputLabel>Device</InputLabel>
+                        <Select
+                          value={selectedDevice}
+                          label="Device"
+                          onChange={(e) => setSelectedDevice(e.target.value)}
+                          disabled={!selectedHost || availableDevices.length === 0}
+                        >
+                          {availableDevices.map((device) => (
+                            <MenuItem key={device.device_id} value={device.device_id}>
+                              {device.device_id} ({device.device_type})
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+
+                  <Box display="flex" gap={2}>
+                    <Button
+                      variant="contained"
+                      startIcon={isExecuting ? <CircularProgress size={20} /> : <ScriptIcon />}
+                      onClick={handleExecuteScript}
+                      disabled={isExecuting || !selectedHost || !selectedDevice}
+                    >
+                      {isExecuting ? 'Executing...' : 'Execute Script'}
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={() => {
+                        setShowWizard(false);
+                        setSelectedHost('');
+                        setSelectedDevice('');
                       }}
-                      disabled={isLoadingHosts}
                     >
-                      {hosts.map((host) => (
-                        <MenuItem key={host.host_name} value={host.host_name}>
-                          {host.host_name} ({host.ip})
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid item xs={12} sm={4}>
-                  <FormControl fullWidth size="small">
-                    <InputLabel>Device</InputLabel>
-                    <Select
-                      value={selectedDevice}
-                      label="Device"
-                      onChange={(e) => setSelectedDevice(e.target.value)}
-                      disabled={!selectedHost || availableDevices.length === 0}
-                    >
-                      {availableDevices.map((device) => (
-                        <MenuItem key={device.device_id} value={device.device_id}>
-                          {device.device_id} ({device.device_type})
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-              </Grid>
-
-              <Box display="flex" gap={2}>
-                <Button
-                  variant="contained"
-                  startIcon={isExecuting ? <CircularProgress size={20} /> : <ScriptIcon />}
-                  onClick={handleExecuteScript}
-                  disabled={isExecuting || !selectedHost || !selectedDevice}
-                >
-                  {isExecuting ? 'Executing...' : 'Execute Script'}
-                </Button>
-              </Box>
+                      Cancel
+                    </Button>
+                  </Box>
+                </>
+              )}
             </CardContent>
           </Card>
         </Grid>
