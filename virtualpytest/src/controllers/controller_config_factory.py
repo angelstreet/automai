@@ -11,25 +11,29 @@ DEVICE_CONTROLLER_MAP = {
         'av': ['hdmi_stream'], 
         'remote': ['android_mobile'],
         'power': [],
-        'network': []
+        'network': [],
+        'ai': ['ai_agent']
     },
     'android_tv': {
         'av': ['hdmi_stream'], 
         'remote': ['android_tv'],
         'power': [],
-        'network': []
+        'network': [],
+        'ai': ['ai_agent']
     },
     'ios_mobile': {
         'av': ['hdmi_stream'], 
         'remote': ['appium'],
         'power': [],
-        'network': []
+        'network': [],
+        'ai': ['ai_agent']
     },
     'stb': {
         'av': ['hdmi_stream'], 
         'remote': [],
         'power': [],
-        'network': []
+        'network': [],
+        'ai': ['ai_agent']
     }
 }
 
@@ -38,7 +42,8 @@ CONTROLLER_VERIFICATION_MAP = {
     'hdmi_stream': ['image', 'text', 'video'],
     'android_mobile': ['adb'],
     'android_tv': [],  # No verification for android_tv remote
-    'appium': ['appium']
+    'appium': ['appium'],
+    'ai_agent': ['task_execution']
 }
 
 def create_controller_configs_from_device_info(device_config: dict) -> dict:
@@ -76,6 +81,15 @@ def create_controller_configs_from_device_info(device_config: dict) -> dict:
             'params': _get_remote_params(remote_impl, device_config)
         }
         print(f"[@controller_factory:create_controller_configs_from_device_info] Created Remote controller: {remote_impl}")
+    
+    # Create AI controllers
+    for ai_impl in device_mapping['ai']:
+        configs['ai'] = {
+            'type': 'ai',
+            'implementation': ai_impl,
+            'params': {}  # AI agent needs no special parameters
+        }
+        print(f"[@controller_factory:create_controller_configs_from_device_info] Created AI controller: {ai_impl}")
     
     # Create Verification controllers (NEW!)
     verification_types = []
@@ -115,6 +129,7 @@ def get_device_capabilities(device_model: str) -> dict:
     capabilities = {
         'av': mapping['av'][0] if mapping['av'] else None,
         'remote': mapping['remote'][0] if mapping['remote'] else None,
+        'ai': mapping['ai'][0] if mapping['ai'] else None,
         'verification': list(set(verification_types))  # Remove duplicates
     }
     
@@ -176,4 +191,8 @@ def _get_verification_params(implementation: str, device_config: dict) -> dict:
             'appium_device_id': device_config.get('appium_device_id'),
             'appium_server_url': device_config.get('appium_server_url', 'http://localhost:4723')
         }
+    elif implementation == 'task_execution':
+        # AI agent verification capabilities
+        return {}
     return {}
+

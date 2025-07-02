@@ -1,4 +1,9 @@
-import { Close as CloseIcon, Tv as TvIcon, Analytics as AnalyticsIcon } from '@mui/icons-material';
+import {
+  Close as CloseIcon,
+  Tv as TvIcon,
+  Analytics as AnalyticsIcon,
+  SmartToy as AIIcon,
+} from '@mui/icons-material';
 import { Box, IconButton, Typography, Button, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
@@ -8,6 +13,7 @@ import { useRec } from '../../hooks/pages/useRec';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
+import { AIAgentPlayer } from '../aiagent/AIAgentPlayer';
 import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
 import { RemotePanel } from '../controller/remote/RemotePanel';
 import { MonitoringPlayer } from '../monitoring/MonitoringPlayer';
@@ -53,6 +59,7 @@ const RecHostStreamModalContent: React.FC<{
   // Local state
   const [showRemote, setShowRemote] = useState<boolean>(showRemoteByDefault);
   const [monitoringMode, setMonitoringMode] = useState<boolean>(false);
+  const [aiAgentMode, setAiAgentMode] = useState<boolean>(false);
 
   // Set global modal state when component mounts/unmounts
   useEffect(() => {
@@ -137,9 +144,37 @@ const RecHostStreamModalContent: React.FC<{
       const newMode = !prev;
       console.log(`[@component:RecHostStreamModal] Monitoring mode toggled: ${newMode}`);
 
-      // Auto-show remote when enabling monitoring for full control
-      if (newMode && !showRemote) {
-        setShowRemote(true);
+      // Disable AI agent mode when enabling monitoring
+      if (newMode) {
+        setAiAgentMode(false);
+        // Auto-show remote when enabling monitoring for full control
+        if (!showRemote) {
+          setShowRemote(true);
+        }
+      }
+
+      return newMode;
+    });
+  }, [isControlActive, showRemote, showWarning]);
+
+  // Handle AI agent mode toggle
+  const handleToggleAiAgent = useCallback(() => {
+    if (!isControlActive) {
+      showWarning('Please take control of the device first to enable AI agent');
+      return;
+    }
+
+    setAiAgentMode((prev) => {
+      const newMode = !prev;
+      console.log(`[@component:RecHostStreamModal] AI agent mode toggled: ${newMode}`);
+
+      // Disable monitoring mode when enabling AI agent
+      if (newMode) {
+        setMonitoringMode(false);
+        // Auto-show remote when enabling AI agent for full control
+        if (!showRemote) {
+          setShowRemote(true);
+        }
       }
 
       return newMode;
@@ -170,6 +205,7 @@ const RecHostStreamModalContent: React.FC<{
     // Reset state (useDeviceControl handles cleanup automatically)
     setShowRemote(false);
     setMonitoringMode(false);
+    setAiAgentMode(false);
     onClose();
   }, [onClose]);
 
@@ -243,7 +279,7 @@ const RecHostStreamModalContent: React.FC<{
         >
           <Typography variant="h6" component="h2">
             {device?.device_name || host.host_name} -{' '}
-            {monitoringMode ? 'Monitoring' : 'Live Stream'}
+            {monitoringMode ? 'Monitoring' : aiAgentMode ? 'AI Agent' : 'Live Stream'}
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -275,7 +311,7 @@ const RecHostStreamModalContent: React.FC<{
                   : 'Take Control'}
             </Button>
 
-            {/*M onitoring Toggle Button */}
+            {/* Monitoring Toggle Button */}
             <Button
               variant={monitoringMode ? 'contained' : 'outlined'}
               size="small"
@@ -297,6 +333,30 @@ const RecHostStreamModalContent: React.FC<{
               }
             >
               {monitoringMode ? 'Stop Monitoring' : 'Monitoring'}
+            </Button>
+
+            {/* AI Agent Toggle Button */}
+            <Button
+              variant={aiAgentMode ? 'contained' : 'outlined'}
+              size="small"
+              onClick={handleToggleAiAgent}
+              disabled={!isControlActive}
+              startIcon={<AIIcon />}
+              color={aiAgentMode ? 'info' : 'primary'}
+              sx={{
+                fontSize: '0.75rem',
+                minWidth: 120,
+                color: aiAgentMode ? 'white' : 'inherit',
+              }}
+              title={
+                !isControlActive
+                  ? 'Take control first to enable AI agent'
+                  : aiAgentMode
+                    ? 'Disable AI Agent'
+                    : 'Enable AI Agent'
+              }
+            >
+              {aiAgentMode ? 'Stop AI Agent' : 'AI Agent'}
             </Button>
 
             {/* Remote Toggle Button */}
@@ -359,6 +419,8 @@ const RecHostStreamModalContent: React.FC<{
                 device={device!}
                 baseUrlPattern={baseUrlPatterns.get(`${host.host_name}-${device?.device_id}`)}
               />
+            ) : aiAgentMode && isControlActive ? (
+              <AIAgentPlayer host={host} device={device!} />
             ) : streamUrl ? (
               <HLSVideoPlayer
                 streamUrl={streamUrl}

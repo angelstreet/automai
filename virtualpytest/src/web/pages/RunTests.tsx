@@ -38,7 +38,7 @@ interface ExecutionRecord {
 }
 
 const RunTests: React.FC = () => {
-  const { executeScript, isExecuting, lastResult, error } = useScript();
+  const { executeScript, isExecuting } = useScript();
   const { showInfo, showSuccess, showError } = useToast();
 
   const [selectedHost, setSelectedHost] = useState<string>('');
