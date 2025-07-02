@@ -575,60 +575,51 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
                     },
                   }}
                 />
-                <IconButton
+                <Button
+                  variant="contained"
+                  size="small"
                   onClick={submitAIQuery}
                   disabled={!aiQuery.trim() || isProcessingAIQuery}
                   sx={{
+                    backgroundColor: '#2196f3',
                     color: '#ffffff',
-                    backgroundColor: 'rgba(0,150,255,0.2)',
+                    minWidth: '60px',
                     '&:hover': {
-                      backgroundColor: 'rgba(0,150,255,0.3)',
+                      backgroundColor: '#1976d2',
                     },
-                    '&:disabled': {
-                      color: 'rgba(255,255,255,0.3)',
-                      backgroundColor: 'rgba(255,255,255,0.05)',
+                    '&.Mui-disabled': {
+                      backgroundColor: '#444',
+                      color: '#888',
                     },
                   }}
                 >
                   {isProcessingAIQuery ? (
-                    <CircularProgress size={20} sx={{ color: '#ffffff' }} />
+                    <CircularProgress size={16} sx={{ color: '#888' }} />
                   ) : (
-                    <Send />
+                    <Send sx={{ fontSize: 16 }} />
                   )}
-                </IconButton>
+                </Button>
               </Box>
-
-              {/* Character counter */}
-              <Typography
-                variant="caption"
-                sx={{
-                  color: 'rgba(255,255,255,0.6)',
-                  fontSize: '0.7rem',
-                  mt: 0.5,
-                  display: 'block',
-                }}
-              >
-                {aiQuery.length}/100
-              </Typography>
 
               {/* AI Response */}
               {aiResponse && (
                 <Box
                   sx={{
-                    mt: 2,
-                    p: 1.5,
-                    backgroundColor: 'rgba(255,255,255,0.1)',
+                    mt: 1,
+                    p: 1,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                     borderRadius: 1,
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    border: '1px solid #444',
+                    maxWidth: '280px',
                   }}
                 >
                   <Typography
                     variant="body2"
                     sx={{
                       color: '#ffffff',
-                      fontSize: '0.85rem',
-                      lineHeight: 1.4,
-                      whiteSpace: 'pre-line', // Preserve line breaks
+                      fontSize: '0.8rem',
+                      lineHeight: 1.3,
+                      whiteSpace: 'pre-wrap',
                     }}
                   >
                     {aiResponse}
