@@ -186,63 +186,49 @@ export const useNavigationEditor = () => {
       try {
         if (!navigation.selectedEdge) return;
 
-        // Save main actions to database and get their IDs
-        const actionIds: string[] = [];
+        // Batch save all actions to database and get their IDs
+        let actionIds: string[] = [];
+        let retryActionIds: string[] = [];
+
         const actionsToSave = edgeForm.actions || [];
-
-        if (actionsToSave.length > 0) {
-          for (const action of actionsToSave) {
-            try {
-              const response = await fetch('/server/actions/saveAction', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  name: action.description || action.command,
-                  device_model: 'android_mobile',
-                  command: action.command,
-                  params: action.params || {},
-                }),
-              });
-
-              const result = await response.json();
-              if (result.success && result.action_id) {
-                actionIds.push(result.action_id);
-              }
-            } catch (error) {
-              console.error('Error saving action:', error);
-            }
-          }
-        }
-
-        // Save retry actions to database and get their IDs
-        const retryActionIds: string[] = [];
         const retryActionsToSave = edgeForm.retryActions || [];
 
-        if (retryActionsToSave.length > 0) {
-          for (const action of retryActionsToSave) {
-            try {
-              const response = await fetch('/server/actions/saveAction', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+        if (actionsToSave.length > 0 || retryActionsToSave.length > 0) {
+          try {
+            const response = await fetch('/server/action/saveActions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                actions: actionsToSave.map((action: any) => ({
                   name: action.description || action.command,
                   device_model: 'android_mobile',
                   command: action.command,
                   params: action.params || {},
-                }),
-              });
+                })),
+                retry_actions: retryActionsToSave.map((action: any) => ({
+                  name: action.description || action.command,
+                  device_model: 'android_mobile',
+                  command: action.command,
+                  params: action.params || {},
+                })),
+              }),
+            });
 
-              const result = await response.json();
-              if (result.success && result.action_id) {
-                retryActionIds.push(result.action_id);
-              }
-            } catch (error) {
-              console.error('Error saving retry action:', error);
+            const result = await response.json();
+            if (result.success) {
+              actionIds = result.action_ids || [];
+              retryActionIds = result.retry_action_ids || [];
+            } else {
+              console.error('Error saving actions:', result.error);
+              navigation.setError(`Failed to save actions: ${result.error}`);
+              return;
             }
+          } catch (error) {
+            console.error('Error saving actions:', error);
+            navigation.setError('Failed to save actions');
+            return;
           }
         }
 

@@ -286,60 +286,110 @@ def save_action_endpoint():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@server_actions_bp.route('/saveAction', methods=['POST'])
-def save_navigation_action():
+@server_actions_bp.route('/saveActions', methods=['POST'])
+def save_navigation_actions_batch():
     """
-    Save navigation action definition to database.
+    Batch save navigation actions to database.
     
     Expected JSON payload:
     {
-        "name": "action_description",
-        "device_model": "android_mobile",
-        "command": "action_command",
-        "params": {...}
+        "actions": [
+            {
+                "name": "action_description",
+                "device_model": "android_mobile",
+                "command": "action_command",
+                "params": {...}
+            }
+        ],
+        "retry_actions": [
+            {
+                "name": "retry_action_description", 
+                "device_model": "android_mobile",
+                "command": "retry_action_command",
+                "params": {...}
+            }
+        ]
     }
     """
     try:
         data = request.get_json()
         
-        # Validate required fields
-        required_fields = ['name', 'device_model', 'command']
-        for field in required_fields:
-            if field not in data:
-                return jsonify({
-                    'success': False,
-                    'error': f'Missing required field: {field}'
-                }), 400
-        
         # Use default team ID
         team_id = DEFAULT_TEAM_ID
         
-        # Save to database using existing save_action function
-        result = save_action(
-            name=data['name'],
-            device_model=data['device_model'],
-            action_type='remote',  # Navigation actions are remote type
-            command=data['command'],
-            team_id=team_id,
-            params=data.get('params', {}),
-            requires_input=False
-        )
+        # Save main actions
+        action_ids = []
+        actions = data.get('actions', [])
+        for action in actions:
+            # Validate required fields
+            required_fields = ['name', 'device_model', 'command']
+            for field in required_fields:
+                if field not in action:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Missing required field: {field} in action'
+                    }), 400
+            
+            # Save to database
+            result = save_action(
+                name=action['name'],
+                device_model=action['device_model'],
+                action_type='remote',  # Navigation actions are remote type
+                command=action['command'],
+                team_id=team_id,
+                params=action.get('params', {}),
+                requires_input=False
+            )
+            
+            if result['success']:
+                action_ids.append(result['action_id'])
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to save action: {result.get("error", "Unknown error")}'
+                }), 500
         
-        if result['success']:
-            return jsonify({
-                'success': True,
-                'action_id': result['action_id'],
-                'reused': result.get('reused', False),
-                'message': 'Action saved successfully'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Unknown error')
-            }), 500
+        # Save retry actions
+        retry_action_ids = []
+        retry_actions = data.get('retry_actions', [])
+        for action in retry_actions:
+            # Validate required fields
+            required_fields = ['name', 'device_model', 'command']
+            for field in required_fields:
+                if field not in action:
+                    return jsonify({
+                        'success': False,
+                        'error': f'Missing required field: {field} in retry action'
+                    }), 400
+            
+            # Save to database
+            result = save_action(
+                name=action['name'],
+                device_model=action['device_model'],
+                action_type='remote',  # Navigation actions are remote type
+                command=action['command'],
+                team_id=team_id,
+                params=action.get('params', {}),
+                requires_input=False
+            )
+            
+            if result['success']:
+                retry_action_ids.append(result['action_id'])
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to save retry action: {result.get("error", "Unknown error")}'
+                }), 500
+        
+        return jsonify({
+            'success': True,
+            'action_ids': action_ids,
+            'retry_action_ids': retry_action_ids,
+            'message': f'Successfully saved {len(action_ids)} actions and {len(retry_action_ids)} retry actions'
+        })
             
     except Exception as e:
-        print(f"[@server_actions_routes:save_navigation_action] Error: {e}")
+        print(f"[@server_actions_routes:save_navigation_actions_batch] Error: {e}")
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'
