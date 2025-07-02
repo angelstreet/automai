@@ -256,17 +256,18 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           <TextField
             label="Final Wait Time (ms)"
             type="number"
-            value={edgeForm.finalWaitTime || 2000}
-            onChange={(e) =>
+            value={edgeForm.finalWaitTime ?? 0}
+            onChange={(e) => {
+              const value = parseInt(e.target.value);
               setEdgeForm({
                 ...edgeForm,
-                finalWaitTime: parseInt(e.target.value) || 2000,
-              })
-            }
+                finalWaitTime: isNaN(value) ? 0 : value,
+              });
+            }}
             fullWidth
             margin="dense"
             size="small"
-            inputProps={{ step: 100 }}
+            inputProps={{ step: 100, min: 0 }}
           />
 
           {/* Action Result Display */}
