@@ -250,6 +250,53 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   // Interface state
   const [userInterface, setUserInterface] = useState<any>(null);
 
+  const updateCurrentPosition = useCallback(
+    (nodeId: string | null, nodeLabel?: string | null) => {
+      console.log('[@context:NavigationProvider] Updating current position');
+      setCurrentNodeId(nodeId);
+      setCurrentNodeLabel(nodeLabel || null);
+
+      // Update device position if we have the required context
+      if (nodeId && nodeLabel && currentHost && currentDeviceId && treeId && setDevicePosition) {
+        setDevicePosition(currentHost, currentDeviceId, treeId, nodeId, nodeLabel);
+      }
+    },
+    [currentHost, currentDeviceId, treeId, setDevicePosition],
+  );
+
+  // Update nodes with minimap indicators
+  const updateNodesWithMinimapIndicators = useCallback(
+    (navigationSteps?: any[]) => {
+      console.log('[@context:NavigationProvider] Updating nodes with minimap indicators');
+
+      setNodes((currentNodes) => {
+        return currentNodes.map((node) => {
+          const isCurrentPosition = node.id === currentNodeId;
+
+          // Check if node is part of navigation route
+          const isOnNavigationRoute =
+            navigationSteps?.some(
+              (step: any) => step.from_node_id === node.id || step.to_node_id === node.id,
+            ) || false;
+
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              isCurrentPosition,
+              isOnNavigationRoute,
+            },
+          };
+        });
+      });
+    },
+    [currentNodeId, setNodes],
+  );
+
+  // ========================================
+  // EFFECTS
+  // ========================================
+
   // Debug logging for userInterface changes
   useEffect(() => {
     console.log('[@context:NavigationProvider] userInterface changed:', userInterface);
@@ -532,49 +579,6 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       }
     },
     [validateNavigationPath],
-  );
-
-  const updateCurrentPosition = useCallback(
-    (nodeId: string | null, nodeLabel?: string | null) => {
-      console.log('[@context:NavigationProvider] Updating current position');
-      setCurrentNodeId(nodeId);
-      setCurrentNodeLabel(nodeLabel);
-
-      // Update device position if we have the required context
-      if (nodeId && nodeLabel && currentHost && currentDeviceId && treeId && setDevicePosition) {
-        setDevicePosition(currentHost, currentDeviceId, treeId, nodeId, nodeLabel);
-      }
-    },
-    [currentHost, currentDeviceId, treeId, setDevicePosition],
-  );
-
-  // Update nodes with minimap indicators
-  const updateNodesWithMinimapIndicators = useCallback(
-    (navigationSteps?: any[]) => {
-      console.log('[@context:NavigationProvider] Updating nodes with minimap indicators');
-
-      setNodes((currentNodes) => {
-        return currentNodes.map((node) => {
-          const isCurrentPosition = node.id === currentNodeId;
-
-          // Check if node is part of navigation route
-          const isOnNavigationRoute =
-            navigationSteps?.some(
-              (step: any) => step.from_node_id === node.id || step.to_node_id === node.id,
-            ) || false;
-
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              isCurrentPosition,
-              isOnNavigationRoute,
-            },
-          };
-        });
-      });
-    },
-    [currentNodeId, setNodes],
   );
 
   // ========================================
