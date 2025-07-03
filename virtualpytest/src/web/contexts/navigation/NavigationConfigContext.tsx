@@ -362,46 +362,80 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           const rawNodes = treeData.nodes || [];
           const rawEdges = treeData.edges || [];
 
-          // Resolve all edge actions and retry actions
-          const resolvedEdges = await Promise.all(
-            rawEdges.map(async (edge: any) => {
-              const actions = await fetchActionsByIds(edge.data?.action_ids || []);
-              const retryActions = await fetchActionsByIds(edge.data?.retry_action_ids || []);
+          // Extract ALL unique action and verification IDs from the entire tree
+          const allActionIds = new Set<string>();
+          const allVerificationIds = new Set<string>();
 
-              return {
-                ...edge,
-                data: {
-                  ...edge.data,
-                  actions, // Resolved action objects
-                  retryActions, // Resolved retry action objects
-                  action_ids: edge.data?.action_ids || [],
-                  retry_action_ids: edge.data?.retry_action_ids || [],
-                },
-                finalWaitTime:
-                  edge.data?.finalWaitTime !== undefined
-                    ? edge.data.finalWaitTime
-                    : edge.finalWaitTime,
-              };
-            }),
+          // Collect action IDs from all edges
+          rawEdges.forEach((edge: any) => {
+            const actionIds = edge.data?.action_ids || [];
+            const retryActionIds = edge.data?.retry_action_ids || [];
+            actionIds.forEach((id: string) => allActionIds.add(id));
+            retryActionIds.forEach((id: string) => allActionIds.add(id));
+          });
+
+          // Collect verification IDs from all nodes
+          rawNodes.forEach((node: any) => {
+            const verificationIds = node.data?.verification_ids || [];
+            verificationIds.forEach((id: string) => allVerificationIds.add(id));
+          });
+
+          console.log(
+            `[@context:NavigationConfigProvider:loadFromConfig] Tree contains ${allActionIds.size} unique actions and ${allVerificationIds.size} unique verifications`,
           );
 
-          // Resolve all node verifications
-          const resolvedNodes = await Promise.all(
-            rawNodes.map(async (node: any) => {
-              const verifications = await fetchVerificationsByIds(
-                node.data?.verification_ids || [],
-              );
+          // Make 2 batch calls to get all actions and verifications for the tree
+          const [allActions, allVerifications] = await Promise.all([
+            fetchActionsByIds(Array.from(allActionIds)),
+            fetchVerificationsByIds(Array.from(allVerificationIds)),
+          ]);
 
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  verifications, // Resolved verification objects
-                  verification_ids: node.data?.verification_ids || [],
-                },
-              };
-            }),
+          // Create lookup maps for fast resolution
+          const actionMap = new Map(allActions.map((action: any) => [action.id, action]));
+          const verificationMap = new Map(
+            allVerifications.map((verification: any) => [verification.id, verification]),
           );
+
+          // Resolve all edges using the lookup maps
+          const resolvedEdges = rawEdges.map((edge: any) => {
+            const actions = (edge.data?.action_ids || [])
+              .map((id: string) => actionMap.get(id))
+              .filter(Boolean);
+            const retryActions = (edge.data?.retry_action_ids || [])
+              .map((id: string) => actionMap.get(id))
+              .filter(Boolean);
+
+            return {
+              ...edge,
+              data: {
+                ...edge.data,
+                actions, // Resolved action objects
+                retryActions, // Resolved retry action objects
+                action_ids: edge.data?.action_ids || [],
+                retry_action_ids: edge.data?.retry_action_ids || [],
+              },
+              finalWaitTime:
+                edge.data?.finalWaitTime !== undefined
+                  ? edge.data.finalWaitTime
+                  : edge.finalWaitTime,
+            };
+          });
+
+          // Resolve all nodes using the lookup maps
+          const resolvedNodes = rawNodes.map((node: any) => {
+            const verifications = (node.data?.verification_ids || [])
+              .map((id: string) => verificationMap.get(id))
+              .filter(Boolean);
+
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                verifications, // Resolved verification objects
+                verification_ids: node.data?.verification_ids || [],
+              },
+            };
+          });
 
           state.setNodes(resolvedNodes);
           state.setEdges(resolvedEdges);
