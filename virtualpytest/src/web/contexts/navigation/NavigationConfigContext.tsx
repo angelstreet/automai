@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useMemo } from
 
 import { useUserSession } from '../../hooks/useUserSession';
 import { UINavigationNode, UINavigationEdge } from '../../types/pages/Navigation_Types';
+import { loadAndResolveTree } from '../../services/navigationTreeLoader';
 
 // ========================================
 // TYPES
@@ -270,7 +271,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setError(null);
 
         // Use centralized tree loader with full ID resolution
-        const { loadAndResolveTree } = await import('../../services/navigationTreeLoader');
         const result = await loadAndResolveTree(userInterfaceId);
 
         if (result.success) {
@@ -281,10 +281,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           console.log(
             `[@context:NavigationConfigProvider:loadFromConfig] Loaded resolved tree for userInterface: ${userInterfaceId} with ${result.nodes.length} nodes and ${result.edges.length} edges`,
           );
-
-          // Populate navigation cache with resolved data
-          const { populateCache } = await import('../../cache/navigation_cache');
-          populateCache(userInterfaceId, 'default_team', result.nodes, result.edges);
 
           // Set initial state for change tracking
           state.setInitialState({ nodes: [...result.nodes], edges: [...result.edges] });
