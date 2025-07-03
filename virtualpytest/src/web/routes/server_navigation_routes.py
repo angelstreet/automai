@@ -14,7 +14,7 @@ import requests
 import time
 
 # Import proxy utilities
-from src.web.utils.routeUtils import proxy_to_host
+from src.web.utils.routeUtils import proxy_to_host, proxy_to_host_with_params
 
 # Import from specific database modules (direct imports)
 from src.lib.supabase.navigation_trees_db import (
@@ -45,11 +45,27 @@ def save_navigation_screenshot():
     try:
         print("[@route:server_navigation:save_screenshot] Proxying save navigation screenshot request to host")
         
-        # Get request data
+        # Extract request data - following server_av_routes.py pattern
         request_data = request.get_json() or {}
-        
-        # Proxy to host navigation save-screenshot endpoint
-        response_data, status_code = proxy_to_host('/host/navigation/saveScreenshot', 'POST', request_data)
+        host = request_data.get('host')
+        device_id = request_data.get('device_id', 'device1')
+
+        # Validate host - following server_av_routes.py pattern
+        if not host:
+            return jsonify({'success': False, 'error': 'Host required'}), 400
+
+        print(f"[@route:server_navigation:save_screenshot] Host: {host.get('host_name')}, Device: {device_id}")
+
+        # Add device_id to query params for host route - following server_av_routes.py pattern
+        query_params = {'device_id': device_id}
+
+        # Proxy to host navigation save-screenshot endpoint using proxy_to_host_with_params
+        response_data, status_code = proxy_to_host_with_params(
+            '/host/navigation/saveScreenshot',
+            'POST',
+            request_data,
+            query_params
+        )
         
         return jsonify(response_data), status_code
         
