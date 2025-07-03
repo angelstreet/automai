@@ -65,26 +65,8 @@ export const NavigationEditorActionButtons: React.FC<NavigationEditorActionButto
       {/* Save Button */}
       <IconButton
         onClick={() => {
-          console.log('[@component:NavigationEditorActionButtons] Save button clicked');
-          console.log(
-            '[@component:NavigationEditorActionButtons] hasUnsavedChanges:',
-            hasUnsavedChanges,
-          );
-          console.log('[@component:NavigationEditorActionButtons] isLoading:', isLoading);
-          console.log('[@component:NavigationEditorActionButtons] error:', error);
-          console.log('[@component:NavigationEditorActionButtons] isLocked:', isLocked);
-          console.log(
-            '[@component:NavigationEditorActionButtons] onSaveToConfig:',
-            typeof onSaveToConfig,
-          );
-
           if (onSaveToConfig) {
-            console.log('[@component:NavigationEditorActionButtons] Calling onSaveToConfig...');
             onSaveToConfig();
-          } else {
-            console.error(
-              '[@component:NavigationEditorActionButtons] onSaveToConfig is not defined!',
-            );
           }
         }}
         size="small"

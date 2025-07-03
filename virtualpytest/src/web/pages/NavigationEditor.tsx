@@ -484,25 +484,8 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           onAddNewNode={handleAddNewNodeWrapper}
           onFitView={fitView}
           onSaveToConfig={() => {
-            console.log('[@component:NavigationEditor] onSaveToConfig called');
-            console.log(
-              '[@component:NavigationEditor] actualUserInterfaceId:',
-              actualUserInterfaceId,
-            );
-            console.log('[@component:NavigationEditor] saveToConfig:', typeof saveToConfig);
-            console.log('[@component:NavigationEditor] hasUnsavedChanges:', hasUnsavedChanges);
-
             if (actualUserInterfaceId && saveToConfig) {
-              console.log(
-                '[@component:NavigationEditor] Calling saveToConfig with ID:',
-                actualUserInterfaceId,
-              );
               saveToConfig(actualUserInterfaceId);
-            } else {
-              console.error('[@component:NavigationEditor] Missing requirements for save:', {
-                actualUserInterfaceId,
-                saveToConfig: !!saveToConfig,
-              });
             }
           }}
           onDiscardChanges={discardChanges}
@@ -767,7 +750,7 @@ const NavigationEditor: React.FC = () => {
     <ReactFlowProvider>
       <NavigationConfigProvider>
         <NavigationEditorProvider>
-          <NavigationEditorContent />
+          <NavigationEditorContent userInterfaceId={userInterfaceId} />
         </NavigationEditorProvider>
       </NavigationConfigProvider>
     </ReactFlowProvider>
