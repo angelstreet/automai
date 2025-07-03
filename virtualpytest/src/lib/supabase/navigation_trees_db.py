@@ -357,6 +357,10 @@ def get_navigation_tree(tree_id: str, team_id: str, supabase_client=None) -> Tup
         
         tree = result.data[0]
         print(f'[@db:navigation_trees:get_navigation_tree] Successfully fetched tree: {tree["name"]}')
+        
+        # Automatically populate cache for navigation operations
+        _populate_navigation_cache(tree, team_id)
+        
         return True, "Success", tree
         
     except Exception as e:
@@ -384,6 +388,11 @@ def get_navigation_trees(team_id: str, userinterface_id: str = None, supabase_cl
         
         trees = result.data or []
         print(f'[@db:navigation_trees:get_navigation_trees] Successfully fetched {len(trees)} trees')
+        
+        # Automatically populate cache for all loaded trees
+        for tree in trees:
+            _populate_navigation_cache(tree, team_id)
+        
         return True, "Success", trees
         
     except Exception as e:
@@ -534,3 +543,35 @@ def delete_navigation_tree(tree_id: str, team_id: str, deleted_by: str = None, s
         error_msg = f"Failed to delete navigation tree: {str(e)}"
         print(f'[@db:navigation_trees:delete_navigation_tree] ERROR: {error_msg}')
         return False, error_msg 
+
+def _populate_navigation_cache(tree: Dict, team_id: str):
+    """
+    Helper function to automatically populate navigation cache when tree is loaded
+    This ensures cache is always available for navigation operations
+    """
+    try:
+        # Import cache function (lazy import to avoid circular dependencies)
+        from src.web.cache.navigation_cache import populate_cache
+        
+        tree_metadata = tree.get('metadata', {})
+        nodes = tree_metadata.get('nodes', [])
+        edges = tree_metadata.get('edges', [])
+        
+        if nodes:
+            # Cache with both tree ID and tree name as keys for maximum compatibility
+            tree_id = tree['id']
+            tree_name = tree['name']
+            
+            # Populate cache with tree ID
+            populate_cache(tree_id, team_id, nodes, edges)
+            
+            # Populate cache with tree name for navigation requests
+            populate_cache(tree_name, team_id, nodes, edges)
+            
+            print(f'[@db:navigation_trees:_populate_navigation_cache] Auto-cached tree data for navigation - ID: {tree_id}, Name: {tree_name}')
+        else:
+            print(f'[@db:navigation_trees:_populate_navigation_cache] No nodes to cache for tree: {tree["id"]}')
+            
+    except Exception as cache_error:
+        print(f'[@db:navigation_trees:_populate_navigation_cache] Cache population failed: {cache_error}')
+        # Don't fail the tree loading if caching fails 

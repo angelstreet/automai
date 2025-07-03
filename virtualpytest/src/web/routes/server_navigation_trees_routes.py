@@ -225,32 +225,7 @@ def get_tree_by_userinterface_id(userinterface_id):
             tree = trees[0]
             print(f'[@route:navigation_trees:get_tree_by_userinterface_id] Found tree: {tree["id"]} for userinterface_id: {userinterface_id}')
             
-            # Populate cache for navigation operations - NO MORE DB CALLS NEEDED
-            try:
-                from src.web.cache.navigation_cache import populate_cache
-                
-                tree_metadata = tree.get('metadata', {})
-                nodes = tree_metadata.get('nodes', [])
-                edges = tree_metadata.get('edges', [])
-                
-                if nodes:
-                    # Cache with both tree ID and tree name as keys
-                    tree_id = tree['id']
-                    tree_name = tree['name']
-                    
-                    # Populate cache with tree ID
-                    populate_cache(tree_id, team_id, nodes, edges)
-                    
-                    # Populate cache with tree name for navigation requests
-                    populate_cache(tree_name, team_id, nodes, edges)
-                    
-                    print(f'[@route:navigation_trees:get_tree_by_userinterface_id] Cached tree data for navigation - ID: {tree_id}, Name: {tree_name}')
-                else:
-                    print(f'[@route:navigation_trees:get_tree_by_userinterface_id] No nodes to cache for tree: {tree["id"]}')
-                    
-            except Exception as cache_error:
-                print(f'[@route:navigation_trees:get_tree_by_userinterface_id] Cache population failed: {cache_error}')
-                # Don't fail the request if caching fails
+            # Cache is now automatically populated by the database layer
             
             return jsonify({
                 'success': True,
