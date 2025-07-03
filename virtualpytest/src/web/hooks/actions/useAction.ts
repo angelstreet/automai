@@ -182,14 +182,25 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
     }
 
     const lines: string[] = [];
+    let mainActionIndex = 1;
+    let retryActionIndex = 1;
 
-    result.results.forEach((actionResult: any, index: number) => {
-      if (actionResult.success) {
-        lines.push(`✅ Action ${index + 1}: ${actionResult.message || 'Success'}`);
+    result.results.forEach((actionResult: any) => {
+      const isRetryAction = actionResult.action_category === 'retry';
+      let actionLabel: string;
+
+      if (isRetryAction) {
+        actionLabel = `Retry Action ${retryActionIndex}`;
+        retryActionIndex++;
       } else {
-        lines.push(
-          `❌ Action ${index + 1}: ${actionResult.error || actionResult.message || 'Failed'}`,
-        );
+        actionLabel = `Action ${mainActionIndex}`;
+        mainActionIndex++;
+      }
+
+      if (actionResult.success) {
+        lines.push(`✅ ${actionLabel}: ${actionResult.message || 'Success'}`);
+      } else {
+        lines.push(`❌ ${actionLabel}: ${actionResult.error || actionResult.message || 'Failed'}`);
       }
     });
 
@@ -201,7 +212,19 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
       lines.push(`❌ OVERALL RESULT: FAILED`);
     }
 
-    lines.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
+    // Count main actions vs retry actions for better reporting
+    const mainActions = result.results.filter((r: any) => r.action_category !== 'retry');
+    const retryActions = result.results.filter((r: any) => r.action_category === 'retry');
+    const mainActionsPassed = mainActions.filter((r: any) => r.success).length;
+    const retryActionsPassed = retryActions.filter((r: any) => r.success).length;
+
+    if (retryActions.length > 0) {
+      lines.push(
+        `📊 ${mainActionsPassed}/${mainActions.length} main actions passed, ${retryActionsPassed}/${retryActions.length} retry actions passed`,
+      );
+    } else {
+      lines.push(`📊 ${result.passed_count}/${result.total_count} actions passed`);
+    }
 
     return lines.join('\n');
   }, []);

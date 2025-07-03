@@ -66,9 +66,9 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           height: '40px',
           borderRadius: '50%',
           background: entryColors.background,
-          border: isCurrentPosition ? '3px solid #4caf50' : `3px solid ${entryColors.border}`,
+          border: isCurrentPosition ? '3px solid #2196f3' : `3px solid ${entryColors.border}`,
           boxShadow: isCurrentPosition
-            ? '0 0 15px rgba(76, 175, 80, 0.6), 0 0 25px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(76, 175, 80, 0.3)'
+            ? '0 0 15px rgba(33, 150, 243, 0.6), 0 0 25px rgba(33, 150, 243, 0.4), 0 2px 8px rgba(33, 150, 243, 0.3)'
             : selected
               ? '0 4px 12px rgba(211, 47, 47, 0.6)'
               : '0 2px 8px rgba(211, 47, 47, 0.4)',
@@ -120,12 +120,12 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
     boxShadow: selected ? '0 4px 12px rgba(211, 47, 47, 0.4)' : '0 2px 8px rgba(211, 47, 47, 0.3)',
   };
 
-  // Current position styling - animated border and glow
+  // Current position styling - blue theme
   const currentPositionStyle = {
-    border: '3px solid #4caf50',
+    border: '3px solid #2196f3',
     boxShadow: selected
-      ? '0 0 20px rgba(76, 175, 80, 0.8), 0 0 30px rgba(76, 175, 80, 0.6), 0 4px 12px rgba(76, 175, 80, 0.4)'
-      : '0 0 15px rgba(76, 175, 80, 0.6), 0 0 25px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(76, 175, 80, 0.3)',
+      ? '0 0 20px rgba(33, 150, 243, 0.8), 0 0 30px rgba(33, 150, 243, 0.6), 0 4px 12px rgba(33, 150, 243, 0.4)'
+      : '0 0 15px rgba(33, 150, 243, 0.6), 0 0 25px rgba(33, 150, 243, 0.4), 0 2px 8px rgba(33, 150, 243, 0.3)',
     animation: 'currentPositionPulse 2s ease-in-out infinite',
   };
 
@@ -216,21 +216,22 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           style={{
             position: 'absolute',
             top: '4px',
-            left: '4px',
-            backgroundColor: '#4caf50',
+            [isRootNode ? 'right' : 'left']: isRootNode ? '50px' : '4px', // Position to right of ROOT badge for root nodes
+            backgroundColor: '#2196f3',
             color: 'white',
-            fontSize: '10px',
+            fontSize: '14px',
             fontWeight: 'bold',
-            padding: '2px 6px',
+            padding: '4px 6px',
             borderRadius: '4px',
             zIndex: 15,
             display: 'flex',
             alignItems: 'center',
-            gap: '2px',
+            justifyContent: 'center',
+            minWidth: '24px',
+            minHeight: '24px',
           }}
         >
-          <span style={{ fontSize: '8px' }}>📍</span>
-          HERE
+          ↓
         </div>
       )}
 

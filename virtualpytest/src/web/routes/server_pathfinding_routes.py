@@ -217,48 +217,10 @@ def get_navigation_stats(tree_id):
 # =====================================================
 
 def execute_navigation_with_verification(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None):
-    """Execute navigation with verification - simplified version"""
-    try:
-        from src.navigation.navigation_pathfinding import find_shortest_path
-        
-        # Find path from current to target node
-        transitions = find_shortest_path(tree_id, target_node_id, team_id, current_node_id)
-        
-        if not transitions:
-            return {
-                'success': False,
-                'error': 'Failed to find navigation path',
-                'error_code': 'PATHFINDING_FAILED',
-                'steps_executed': 0,
-                'total_steps': 0,
-                'execution_time': 0,
-                'target_node_id': target_node_id,
-                'current_node_id': current_node_id
-            }
-        
-        # For now, return successful execution simulation
-        # In full implementation, this would execute actual device actions
-        return {
-            'success': True,
-            'steps_executed': len(transitions),  # Frontend expects steps_executed
-            'total_steps': len(transitions),     # Frontend expects total_steps
-            'execution_time': 1.0,  # Simulated
-            'target_node_id': target_node_id,
-            'current_node_id': current_node_id,
-            'message': f'Navigation completed successfully to {target_node_id}'
-        }
-        
-    except Exception as e:
-        return {
-            'success': False,
-            'error': str(e),
-            'error_code': 'EXECUTION_ERROR',
-            'steps_executed': 0,
-            'total_steps': 0,
-            'execution_time': 0,
-            'target_node_id': target_node_id,
-            'current_node_id': current_node_id
-        }
+    """Execute navigation with verification using the real navigation executor"""
+    from src.navigation.navigation_executor import execute_navigation_with_verification as real_executor
+    
+    return real_executor(tree_id, target_node_id, team_id, current_node_id)
 
 def get_navigation_preview_internal(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None):
     """Get navigation preview - returns rich transition data directly"""

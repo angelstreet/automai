@@ -84,7 +84,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
     <div
       style={{
         background: nodeColors.background,
-        border: isCurrentPosition ? '3px solid #4caf50' : `1px solid ${nodeColors.border}`,
+        border: isCurrentPosition ? '3px solid #2196f3' : `1px solid ${nodeColors.border}`,
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -93,7 +93,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         fontSize: '12px',
         color: '#333',
         boxShadow: isCurrentPosition
-          ? '0 0 15px rgba(76, 175, 80, 0.6), 0 0 25px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(76, 175, 80, 0.3)'
+          ? '0 0 15px rgba(33, 150, 243, 0.6), 0 0 25px rgba(33, 150, 243, 0.4), 0 2px 8px rgba(33, 150, 243, 0.3)'
           : nodeColors.boxShadow,
         position: 'relative',
         display: 'flex',
@@ -109,21 +109,22 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           style={{
             position: 'absolute',
             top: '4px',
-            left: '4px',
-            backgroundColor: '#4caf50',
+            [data.is_root ? 'right' : 'left']: data.is_root ? '50px' : '4px', // Position to right of ROOT badge for root nodes
+            backgroundColor: '#2196f3',
             color: 'white',
-            fontSize: '10px',
+            fontSize: '14px',
             fontWeight: 'bold',
-            padding: '2px 6px',
+            padding: '4px 6px',
             borderRadius: '4px',
             zIndex: 15,
             display: 'flex',
             alignItems: 'center',
-            gap: '2px',
+            justifyContent: 'center',
+            minWidth: '24px',
+            minHeight: '24px',
           }}
         >
-          <span style={{ fontSize: '8px' }}>📍</span>
-          HERE
+          ↓
         </div>
       )}
 

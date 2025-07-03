@@ -261,7 +261,7 @@ export const AndroidMobileOverlay = React.memo(
             top: `${panelInfo.position.y}px`,
             width: `${actualContentWidth}px`,
             height: `${panelInfo.size.height}px`,
-            zIndex: 999998, // Lower z-index than elements
+            zIndex: 1000, // Lower z-index than elements
             contain: 'layout style size',
             willChange: 'transform',
             pointerEvents: 'auto', // Allow tapping on base layer
@@ -280,7 +280,7 @@ export const AndroidMobileOverlay = React.memo(
               top: `${panelInfo.position.y}px`,
               width: `${panelInfo.size.width}px`,
               height: `${panelInfo.size.height}px`,
-              zIndex: 999999, // Higher z-index than base layer
+              zIndex: 1400, // Higher z-index than base layer, but below navigation panels (1500) and dialogs (1600)
               contain: 'layout style size',
               willChange: 'transform',
               pointerEvents: 'none', // Allow clicks to pass through to individual elements
@@ -338,7 +338,7 @@ export const AndroidMobileOverlay = React.memo(
               borderRadius: '50%',
               backgroundColor: 'rgba(255, 255, 255, 0.8)',
               border: '2px solid rgba(0, 123, 255, 0.8)',
-              zIndex: 1000000, // Highest z-index
+              zIndex: 1450, // Highest z-index for overlay, but below navigation panels (1500) and dialogs (1600)
               pointerEvents: 'none',
               animation: 'clickPulse 0.3s ease-out forwards',
             }}

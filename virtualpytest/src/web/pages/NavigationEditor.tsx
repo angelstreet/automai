@@ -87,9 +87,9 @@ const miniMapNodeColor = (node: any) => {
   // Check if this is part of navigation route
   const isOnNavigationRoute = node.data?.isOnNavigationRoute;
 
-  // Current position gets bright green
+  // Current position gets bright blue
   if (isCurrentPosition) {
-    return '#4caf50'; // Bright green for current position
+    return '#2196f3'; // Bright blue for current position
   }
 
   // Navigation route nodes get orange/amber
