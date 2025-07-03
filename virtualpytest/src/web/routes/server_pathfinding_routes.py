@@ -65,14 +65,6 @@ def navigate_to_node(tree_id, node_id):
         current_node_id = data.get('current_node_id')
         execute = data.get('execute', True)
         
-        # Check if take control is active for execution
-        if execute and not is_take_control_active(tree_id, team_id):
-            return jsonify({
-                'success': False,
-                'error': 'Take control mode is not active',
-                'error_code': 'TAKE_CONTROL_INACTIVE'
-            }), 403
-        
         if execute:
             # Import navigation execution modules
             try:

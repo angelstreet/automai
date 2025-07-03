@@ -20,7 +20,7 @@ from src.web.cache.navigation_cache import get_cached_graph
 from src.web.cache.navigation_graph import get_node_info
 
 # Import centralized URL building from routes utils
-from src.utils.app_utils import buildServerUrl
+from src.utils.build_url_utils import buildServerUrl
 
 def execute_navigation_to_node(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> bool:
     """
