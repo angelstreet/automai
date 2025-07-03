@@ -262,48 +262,69 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   // HELPER FUNCTIONS FOR ID RESOLUTION
   // ========================================
 
-  // Fetch actions by their IDs
+  // Fetch actions by their IDs using batch endpoint
   const fetchActionsByIds = useCallback(async (actionIds: string[]) => {
     if (!actionIds || actionIds.length === 0) return [];
 
-    const actions = [];
-    for (const actionId of actionIds) {
-      try {
-        const response = await fetch(`/server/actions/getAction/${actionId}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.action) {
-            actions.push(data.action);
-          }
+    try {
+      const response = await fetch('/server/action/getActionsByIds', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action_ids: actionIds }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          console.log(
+            `[@context:NavigationConfigProvider] Batch fetched ${data.count}/${data.requested_count} actions`,
+          );
+          return data.actions || [];
         }
-      } catch {
-        console.warn(`[@context:NavigationConfigProvider] Failed to fetch action: ${actionId}`);
       }
+
+      console.warn(`[@context:NavigationConfigProvider] Failed to batch fetch actions`);
+      return [];
+    } catch (error) {
+      console.warn(`[@context:NavigationConfigProvider] Error batch fetching actions:`, error);
+      return [];
     }
-    return actions;
   }, []);
 
-  // Fetch verifications by their IDs
+  // Fetch verifications by their IDs using batch endpoint
   const fetchVerificationsByIds = useCallback(async (verificationIds: string[]) => {
     if (!verificationIds || verificationIds.length === 0) return [];
 
-    const verifications = [];
-    for (const verificationId of verificationIds) {
-      try {
-        const response = await fetch(`/server/verification/getVerification/${verificationId}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.verification) {
-            verifications.push(data.verification);
-          }
+    try {
+      const response = await fetch('/server/verification/getVerificationsByIds', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ verification_ids: verificationIds }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          console.log(
+            `[@context:NavigationConfigProvider] Batch fetched ${data.count}/${data.requested_count} verifications`,
+          );
+          return data.verifications || [];
         }
-      } catch {
-        console.warn(
-          `[@context:NavigationConfigProvider] Failed to fetch verification: ${verificationId}`,
-        );
       }
+
+      console.warn(`[@context:NavigationConfigProvider] Failed to batch fetch verifications`);
+      return [];
+    } catch (error) {
+      console.warn(
+        `[@context:NavigationConfigProvider] Error batch fetching verifications:`,
+        error,
+      );
+      return [];
     }
-    return verifications;
   }, []);
 
   // ========================================

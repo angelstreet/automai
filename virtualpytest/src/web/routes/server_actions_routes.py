@@ -646,5 +646,77 @@ def update_action_endpoint():
             'error': str(e)
         }), 500
 
+@server_actions_bp.route('/getActionsByIds', methods=['POST'])
+def get_actions_by_ids():
+    """
+    Get multiple actions by their IDs in a single batch request.
+    
+    Expected JSON payload:
+    {
+        "action_ids": ["uuid1", "uuid2", "uuid3"]
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if 'action_ids' not in data or not isinstance(data['action_ids'], list):
+            return jsonify({
+                'success': False,
+                'error': 'Missing required field: action_ids (array)'
+            }), 400
+        
+        if not data['action_ids']:
+            return jsonify({
+                'success': True,
+                'actions': [],
+                'count': 0
+            })
+        
+        # Use default team ID
+        team_id = DEFAULT_TEAM_ID
+        action_ids = data['action_ids']
+        
+        # Get all actions first
+        all_actions_result = db_get_actions(team_id=team_id)
+        
+        if not all_actions_result['success']:
+            return jsonify({
+                'success': False,
+                'error': all_actions_result.get('error', 'Failed to retrieve actions')
+            }), 500
+        
+        all_actions = all_actions_result['actions']
+        
+        # Filter actions by requested IDs
+        requested_actions = []
+        found_ids = set()
+        
+        for action in all_actions:
+            if action.get('id') in action_ids:
+                requested_actions.append(action)
+                found_ids.add(action.get('id'))
+        
+        # Log any missing IDs
+        missing_ids = set(action_ids) - found_ids
+        if missing_ids:
+            print(f"[@server_actions_routes:get_actions_by_ids] Warning: {len(missing_ids)} action IDs not found: {missing_ids}")
+        
+        print(f"[@server_actions_routes:get_actions_by_ids] Found {len(requested_actions)}/{len(action_ids)} requested actions")
+        
+        return jsonify({
+            'success': True,
+            'actions': requested_actions,
+            'count': len(requested_actions),
+            'requested_count': len(action_ids),
+            'missing_ids': list(missing_ids)
+        })
+        
+    except Exception as e:
+        print(f"[@server_actions_routes:get_actions_by_ids] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
+
 
  

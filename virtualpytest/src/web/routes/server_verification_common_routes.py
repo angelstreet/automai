@@ -798,3 +798,75 @@ def delete_verification():
             'success': False,
             'error': f'Server error: {str(e)}'
         }), 500
+
+@server_verification_common_bp.route('/getVerificationsByIds', methods=['POST'])
+def get_verifications_by_ids():
+    """
+    Get multiple verifications by their IDs in a single batch request.
+    
+    Expected JSON payload:
+    {
+        "verification_ids": ["uuid1", "uuid2", "uuid3"]
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if 'verification_ids' not in data or not isinstance(data['verification_ids'], list):
+            return jsonify({
+                'success': False,
+                'error': 'Missing required field: verification_ids (array)'
+            }), 400
+        
+        if not data['verification_ids']:
+            return jsonify({
+                'success': True,
+                'verifications': [],
+                'count': 0
+            })
+        
+        # Use default team ID
+        team_id = DEFAULT_TEAM_ID
+        verification_ids = data['verification_ids']
+        
+        # Get all verifications first
+        all_verifications_result = get_verifications(team_id=team_id)
+        
+        if not all_verifications_result['success']:
+            return jsonify({
+                'success': False,
+                'error': all_verifications_result.get('error', 'Failed to retrieve verifications')
+            }), 500
+        
+        all_verifications = all_verifications_result['verifications']
+        
+        # Filter verifications by requested IDs
+        requested_verifications = []
+        found_ids = set()
+        
+        for verification in all_verifications:
+            if verification.get('id') in verification_ids:
+                requested_verifications.append(verification)
+                found_ids.add(verification.get('id'))
+        
+        # Log any missing IDs
+        missing_ids = set(verification_ids) - found_ids
+        if missing_ids:
+            print(f"[@server_verification_common_routes:get_verifications_by_ids] Warning: {len(missing_ids)} verification IDs not found: {missing_ids}")
+        
+        print(f"[@server_verification_common_routes:get_verifications_by_ids] Found {len(requested_verifications)}/{len(verification_ids)} requested verifications")
+        
+        return jsonify({
+            'success': True,
+            'verifications': requested_verifications,
+            'count': len(requested_verifications),
+            'requested_count': len(verification_ids),
+            'missing_ids': list(missing_ids)
+        })
+        
+    except Exception as e:
+        print(f"[@server_verification_common_routes:get_verifications_by_ids] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': f'Server error: {str(e)}'
+        }), 500
