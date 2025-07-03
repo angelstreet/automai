@@ -133,12 +133,17 @@ export interface EdgeForm {
 // =====================================================
 
 export interface NavigationStep {
-  step_number: number;
-  action: string;
-  from_node_label: string;
-  to_node_label: string;
+  transition_number: number;
   from_node_id: string;
   to_node_id: string;
+  from_node_label: string;
+  to_node_label: string;
+  actions: EdgeAction[];
+  retryActions?: EdgeAction[];
+  total_actions: number;
+  total_retry_actions?: number;
+  finalWaitTime?: number;
+  description: string;
 }
 
 export interface NavigationPreviewResponse {

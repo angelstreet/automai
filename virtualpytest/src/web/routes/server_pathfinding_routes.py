@@ -261,27 +261,17 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
         }
 
 def get_navigation_preview_internal(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None):
-    """Get navigation preview - simplified version"""
+    """Get navigation preview - returns rich transition data directly"""
     try:
         from src.navigation.navigation_pathfinding import find_shortest_path
         
-        # Find path from current to target node
+        # Find path from current to target node - returns rich transition data
         transitions = find_shortest_path(tree_id, target_node_id, team_id, current_node_id)
         
         if transitions:
-            # Convert transitions to steps format expected by frontend
-            steps = []
-            for i, transition in enumerate(transitions):
-                step = {
-                    'step_number': i + 1,
-                    'action': f"Navigate from {transition.get('from_node_label', 'Unknown')} to {transition.get('to_node_label', 'Unknown')}",
-                    'from_node_label': transition.get('from_node_label', 'Unknown'),
-                    'to_node_label': transition.get('to_node_label', 'Unknown'),
-                    'from_node_id': transition.get('from_node_id', ''),
-                    'to_node_id': transition.get('to_node_id', '')
-                }
-                steps.append(step)
-            return steps
+            # Return transitions directly - no conversion needed
+            print(f"[@pathfinding:preview_internal] Found {len(transitions)} transitions")
+            return transitions
         else:
             print(f"[@pathfinding:preview_internal] Pathfinding failed: No path found")
             return []
