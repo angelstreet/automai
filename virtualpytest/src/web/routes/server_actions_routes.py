@@ -193,7 +193,9 @@ def record_executions_to_database(execution_records):
     try:
         print(f"[@route:server_actions:record_executions_to_database] Recording {len(execution_records)} executions")
         
-        response = requests.post('http://localhost:5009/server/execution-results/record-batch', 
+        from src.utils.build_url_utils import buildServerUrl
+        url = buildServerUrl('server/execution-results/record-batch')
+        response = requests.post(url, 
                                json={'executions': execution_records},
                                timeout=10)
         

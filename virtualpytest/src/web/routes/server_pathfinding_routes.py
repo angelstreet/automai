@@ -14,7 +14,7 @@ from flask import Blueprint, request, jsonify
 from src.utils.app_utils import check_supabase, get_team_id
 
 # Create blueprint
-pathfinding_bp = Blueprint('pathfinding', __name__, url_prefix='/server/navigation')
+pathfinding_bp = Blueprint('pathfinding', __name__, url_prefix='/server/pathfinding')
 
 # In-memory session tracking for take control mode
 take_control_sessions = {}
@@ -228,18 +228,23 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
             return {
                 'success': False,
                 'error': 'Failed to find navigation path',
-                'error_code': 'PATHFINDING_FAILED'
+                'error_code': 'PATHFINDING_FAILED',
+                'steps_executed': 0,
+                'total_steps': 0,
+                'execution_time': 0,
+                'target_node_id': target_node_id,
+                'current_node_id': current_node_id
             }
         
         # For now, return successful execution simulation
         # In full implementation, this would execute actual device actions
         return {
             'success': True,
-            'transitions_executed': len(transitions),
-            'total_transitions': len(transitions),
+            'steps_executed': len(transitions),  # Frontend expects steps_executed
+            'total_steps': len(transitions),     # Frontend expects total_steps
             'execution_time': 1.0,  # Simulated
-            'actions_executed': sum(len(t.get('actions', [])) for t in transitions),
-            'total_actions': sum(len(t.get('actions', [])) for t in transitions),
+            'target_node_id': target_node_id,
+            'current_node_id': current_node_id,
             'message': f'Navigation completed successfully to {target_node_id}'
         }
         
@@ -247,7 +252,12 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
         return {
             'success': False,
             'error': str(e),
-            'error_code': 'EXECUTION_ERROR'
+            'error_code': 'EXECUTION_ERROR',
+            'steps_executed': 0,
+            'total_steps': 0,
+            'execution_time': 0,
+            'target_node_id': target_node_id,
+            'current_node_id': current_node_id
         }
 
 def get_navigation_preview_internal(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None):
@@ -259,7 +269,19 @@ def get_navigation_preview_internal(tree_id: str, target_node_id: str, team_id: 
         transitions = find_shortest_path(tree_id, target_node_id, team_id, current_node_id)
         
         if transitions:
-            return transitions
+            # Convert transitions to steps format expected by frontend
+            steps = []
+            for i, transition in enumerate(transitions):
+                step = {
+                    'step_number': i + 1,
+                    'action': f"Navigate from {transition.get('from_node_label', 'Unknown')} to {transition.get('to_node_label', 'Unknown')}",
+                    'from_node_label': transition.get('from_node_label', 'Unknown'),
+                    'to_node_label': transition.get('to_node_label', 'Unknown'),
+                    'from_node_id': transition.get('from_node_id', ''),
+                    'to_node_id': transition.get('to_node_id', '')
+                }
+                steps.append(step)
+            return steps
         else:
             print(f"[@pathfinding:preview_internal] Pathfinding failed: No path found")
             return []

@@ -204,7 +204,7 @@ export const useNode = (props?: UseNodeProps) => {
 
       try {
         const url = new URL(
-          `/server/navigation/preview/${props.treeId}/${selectedNode.id}`,
+          `/server/pathfinding/preview/${props.treeId}/${selectedNode.id}`,
           window.location.origin,
         );
         if (props.currentNodeId) {
@@ -248,7 +248,7 @@ export const useNode = (props?: UseNodeProps) => {
 
       try {
         const response = await fetch(
-          `/server/navigation/navigate/${props.treeId}/${selectedNode.id}`,
+          `/server/pathfinding/navigate/${props.treeId}/${selectedNode.id}`,
           {
             method: 'POST',
             headers: {

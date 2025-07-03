@@ -395,7 +395,7 @@ class ValidationService:
 
     def _test_navigation_path(self, tree_id: str, from_node: str, to_node: str, graph) -> Dict[str, Any]:
         """
-        Test a specific navigation path by calling navigation routes directly (no HTTP self-calls)
+        Test a specific navigation path by calling pathfinding routes via HTTP
         """
         try:
             # Get node names for display
@@ -404,30 +404,38 @@ class ValidationService:
             from_name = from_info.get('label', from_node) if from_info else from_node
             to_name = to_info.get('label', to_node) if to_info else to_node
             
-            # Import navigation functions directly instead of HTTP calls
-            from server_navigation_routes import execute_navigation_direct
+            # Call pathfinding route via HTTP instead of direct function calls
+            import requests
+            import json
             
-            # Execute navigation directly
-            navigation_result = execute_navigation_direct(tree_id, to_node, from_node, execute=True)
+            # Get team_id for the request
+            team_id = get_team_id()
+            
+            # Make HTTP request to pathfinding navigation endpoint
+            from src.utils.build_url_utils import buildServerUrl
+            pathfinding_url = buildServerUrl(f'server/pathfinding/navigate/{tree_id}/{to_node}')
+            payload = {
+                'current_node_id': from_node,
+                'execute': True
+            }
+            
+            response = requests.post(
+                pathfinding_url,
+                json=payload,
+                headers={
+                    'Content-Type': 'application/json',
+                    'X-Team-ID': team_id
+                },
+                timeout=30
+            )
+            
+            navigation_result = response.json() if response.status_code == 200 else {'success': False, 'error': f'HTTP {response.status_code}'}
             navigation_success = navigation_result.get('success', False)
             
-            # Extract action results from transitions_details
+            # Extract action results if available in response
             action_results = []
-            if 'transitions_details' in navigation_result:
-                for i, transition in enumerate(navigation_result['transitions_details']):
-                    for j, action in enumerate(transition.get('actions', [])):
-                        action_results.append({
-                            'actionIndex': len(action_results),
-                            'transitionIndex': i,
-                            'actionInTransition': j,
-                            'actionId': action.get('id', f'action_{len(action_results)}'),
-                            'actionLabel': action.get('label', f'Action {len(action_results) + 1}'),
-                            'actionCommand': action.get('command', 'unknown'),
-                            'inputValue': action.get('inputValue', ''),
-                            'success': transition.get('success', False),
-                            'error': None if transition.get('success', False) else transition.get('error', 'Action failed'),
-                            'executionTime': transition.get('execution_time', 0) / len(transition.get('actions', [1])) if transition.get('actions') else 0
-                        })
+            if 'action_results' in navigation_result:
+                action_results = navigation_result['action_results']
             
             # If navigation succeeded, execute target node verifications
             verification_results = []
@@ -455,7 +463,7 @@ class ValidationService:
                 'action_results': action_results,
                 'verification_results': verification_results,
                 'error': None if combined_success else (
-                    navigation_result.get('error_message', navigation_result.get('error', 'Navigation failed')) if not navigation_success
+                    navigation_result.get('error', 'Navigation failed') if not navigation_success
                     else 'Target node verifications failed'
                 )
             }
