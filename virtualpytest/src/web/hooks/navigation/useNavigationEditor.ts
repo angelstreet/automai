@@ -41,6 +41,24 @@ export const useNavigationEditor = () => {
 
   const saveToConfig = useCallback(
     (userInterfaceId: string, overrideState?: { nodes?: any[]; edges?: any[] }) => {
+      console.log(
+        '[@useNavigationEditor:saveToConfig] Called with userInterfaceId:',
+        userInterfaceId,
+      );
+      console.log('[@useNavigationEditor:saveToConfig] overrideState:', overrideState);
+      console.log(
+        '[@useNavigationEditor:saveToConfig] navigationConfig.saveToConfig:',
+        !!navigationConfig.saveToConfig,
+      );
+      console.log(
+        '[@useNavigationEditor:saveToConfig] navigation.nodes.length:',
+        navigation.nodes.length,
+      );
+      console.log(
+        '[@useNavigationEditor:saveToConfig] navigation.edges.length:',
+        navigation.edges.length,
+      );
+
       if (navigationConfig.saveToConfig) {
         const state = {
           nodes: overrideState?.nodes || navigation.nodes,
@@ -55,6 +73,12 @@ export const useNavigationEditor = () => {
           setError: navigation.setError,
         };
 
+        console.log('[@useNavigationEditor:saveToConfig] Final state to save:', {
+          nodesCount: state.nodes.length,
+          edgesCount: state.edges.length,
+          userInterfaceId: state.userInterface?.id,
+        });
+
         // Debug log to verify retry_action_ids are included
         console.log(
           '[@useNavigationEditor:saveToConfig] Saving tree with edges:',
@@ -67,6 +91,10 @@ export const useNavigationEditor = () => {
         );
 
         return navigationConfig.saveToConfig(userInterfaceId, state);
+      } else {
+        console.error(
+          '[@useNavigationEditor:saveToConfig] navigationConfig.saveToConfig is not available!',
+        );
       }
     },
     [navigationConfig, navigation],
@@ -362,17 +390,49 @@ export const useNavigationEditor = () => {
   }, [navigation]);
 
   const deleteSelected = useCallback(() => {
+    console.log('[@useNavigationEditor:deleteSelected] Called');
+
     if (navigation.selectedNode) {
+      console.log(
+        '[@useNavigationEditor:deleteSelected] Deleting node:',
+        navigation.selectedNode.id,
+      );
+      console.log(
+        '[@useNavigationEditor:deleteSelected] Nodes before delete:',
+        navigation.nodes.length,
+      );
+
       const filteredNodes = navigation.nodes.filter((n) => n.id !== navigation.selectedNode?.id);
       navigation.setNodes(filteredNodes);
       navigation.setSelectedNode(null);
       navigation.markUnsavedChanges();
+
+      console.log(
+        '[@useNavigationEditor:deleteSelected] Nodes after delete:',
+        filteredNodes.length,
+      );
+      console.log('[@useNavigationEditor:deleteSelected] markUnsavedChanges called');
     }
     if (navigation.selectedEdge) {
+      console.log(
+        '[@useNavigationEditor:deleteSelected] Deleting edge:',
+        navigation.selectedEdge.id,
+      );
+      console.log(
+        '[@useNavigationEditor:deleteSelected] Edges before delete:',
+        navigation.edges.length,
+      );
+
       const filteredEdges = navigation.edges.filter((e) => e.id !== navigation.selectedEdge?.id);
       navigation.setEdges(filteredEdges);
       navigation.setSelectedEdge(null);
       navigation.markUnsavedChanges();
+
+      console.log(
+        '[@useNavigationEditor:deleteSelected] Edges after delete:',
+        filteredEdges.length,
+      );
+      console.log('[@useNavigationEditor:deleteSelected] markUnsavedChanges called');
     }
   }, [navigation]);
 

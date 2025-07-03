@@ -558,17 +558,41 @@ def _populate_navigation_cache(tree: Dict, team_id: str):
         edges = tree_metadata.get('edges', [])
         
         if nodes:
-            # Cache with both tree ID and tree name as keys for maximum compatibility
+            # Cache with tree ID, tree name, AND userinterface_name for maximum compatibility
             tree_id = tree['id']
             tree_name = tree['name']
+            userinterface_id = tree.get('userinterface_id')
             
             # Populate cache with tree ID
             populate_cache(tree_id, team_id, nodes, edges)
             
-            # Populate cache with tree name for navigation requests
+            # Populate cache with tree name (always "root")
             populate_cache(tree_name, team_id, nodes, edges)
             
-            print(f'[@db:navigation_trees:_populate_navigation_cache] Auto-cached tree data for navigation - ID: {tree_id}, Name: {tree_name}')
+            # CRITICAL: Get userinterface name and populate cache for navigation requests
+            if userinterface_id:
+                try:
+                    # Import userinterface database function
+                    from src.lib.supabase.userinterface_db import get_userinterface
+                    
+                    # Get userinterface data to retrieve the name
+                    userinterface = get_userinterface(userinterface_id, team_id)
+                    if userinterface and userinterface.get('name'):
+                        userinterface_name = userinterface['name']
+                        
+                        # Populate cache with userinterface name (this is what navigation uses!)
+                        populate_cache(userinterface_name, team_id, nodes, edges)
+                        
+                        print(f'[@db:navigation_trees:_populate_navigation_cache] Auto-cached tree data for navigation - ID: {tree_id}, Name: {tree_name}, UserInterface: {userinterface_name}')
+                    else:
+                        print(f'[@db:navigation_trees:_populate_navigation_cache] Warning: Could not fetch userinterface name for ID: {userinterface_id}')
+                        print(f'[@db:navigation_trees:_populate_navigation_cache] Auto-cached tree data for navigation - ID: {tree_id}, Name: {tree_name}')
+                except Exception as ui_error:
+                    print(f'[@db:navigation_trees:_populate_navigation_cache] Error fetching userinterface name: {ui_error}')
+                    print(f'[@db:navigation_trees:_populate_navigation_cache] Auto-cached tree data for navigation - ID: {tree_id}, Name: {tree_name}')
+            else:
+                print(f'[@db:navigation_trees:_populate_navigation_cache] Warning: No userinterface_id found for tree: {tree_id}')
+                print(f'[@db:navigation_trees:_populate_navigation_cache] Auto-cached tree data for navigation - ID: {tree_id}, Name: {tree_name}')
         else:
             print(f'[@db:navigation_trees:_populate_navigation_cache] No nodes to cache for tree: {tree["id"]}')
             
