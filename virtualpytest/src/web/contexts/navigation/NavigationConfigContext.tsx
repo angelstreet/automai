@@ -297,7 +297,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
             verifications.push(data.verification);
           }
         }
-      } catch (error) {
+      } catch {
         console.warn(
           `[@context:NavigationConfigProvider] Failed to fetch verification: ${verificationId}`,
         );
@@ -310,7 +310,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   // CONFIG OPERATIONS
   // ========================================
 
-  // Load tree from database
+  // Load tree from database with full resolution
   const loadFromConfig = useCallback(
     async (userInterfaceId: string, state: NavigationConfigState) => {
       try {
@@ -392,16 +392,13 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           // Set initial state for change tracking
           state.setInitialState({ nodes: [...resolvedNodes], edges: [...resolvedEdges] });
           state.setHasUnsavedChanges(false);
-
-          // Don't reset lock state here - preserve existing lock status
         } else {
           // Create empty tree structure
           state.setNodes([]);
           state.setEdges([]);
           state.setInitialState({ nodes: [], edges: [] });
           state.setHasUnsavedChanges(false);
-
-          // Don't reset lock state here - preserve existing lock status
+          state.setError(data.error || 'Failed to load tree');
         }
       } catch (error) {
         console.error(
@@ -409,6 +406,11 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           error,
         );
         state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
+        // Create empty tree structure on error
+        state.setNodes([]);
+        state.setEdges([]);
+        state.setInitialState({ nodes: [], edges: [] });
+        state.setHasUnsavedChanges(false);
       } finally {
         state.setIsLoading(false);
       }

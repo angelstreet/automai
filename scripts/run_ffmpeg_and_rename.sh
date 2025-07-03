@@ -66,7 +66,7 @@ start_grabber() {
       -f hls -hls_time 0.5 -hls_list_size 2 -hls_flags delete_segments+discont_start+split_by_time+independent_segments -hls_segment_type mpegts -hls_init_time 0.5 \
       -hls_allow_cache 0 -hls_segment_filename $capture_dir/segment_%03d.ts \
       $capture_dir/output.m3u8 \
-    -map [captureout] -c:v mjpeg -q:v 4 -r 2 -f image2 \
+    -map [captureout] -c:v mjpeg -q:v 4 -r 1 -f image2 \
       $capture_dir/captures/test_capture_%06d.jpg"
 
   # Start ffmpeg (same as older script)
