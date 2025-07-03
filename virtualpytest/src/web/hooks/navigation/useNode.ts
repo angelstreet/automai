@@ -115,7 +115,10 @@ export const useNode = (props?: UseNodeProps) => {
 
         if (result.success) {
           if (onUpdateNode) {
-            onUpdateNode(nodeId, { screenshot: result.screenshot_url });
+            onUpdateNode(nodeId, {
+              screenshot: result.screenshot_url,
+              screenshot_timestamp: Date.now(), // ✅ Force cache bust on same URL
+            });
           }
           return { success: true, screenshot_url: result.screenshot_url };
         } else {
