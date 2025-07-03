@@ -632,7 +632,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                         selectedHost={selectedHost || undefined}
                         selectedDeviceId={selectedDeviceId || undefined}
                         treeId={treeId || ''}
-                        currentNodeId={selectedNode.id}
+                        currentNodeId={currentNodeId}
                       />
                     </>
                   ) : selectedEdge ? (
