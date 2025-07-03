@@ -98,7 +98,7 @@ export const useNode = (props?: UseNodeProps) => {
       }
 
       try {
-        const response = await fetch('/server/navigation/saveNavigationScreenshot', {
+        const response = await fetch('/server/av/saveScreenshot', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -106,8 +106,8 @@ export const useNode = (props?: UseNodeProps) => {
           body: JSON.stringify({
             host: props.selectedHost,
             device_id: props.selectedDeviceId,
-            node_id: nodeId,
-            label: label,
+            filename: label,
+            device_model: 'android_mobile',
           }),
         });
 
