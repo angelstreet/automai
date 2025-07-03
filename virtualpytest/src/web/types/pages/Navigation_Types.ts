@@ -1,10 +1,7 @@
 import { Node, Edge } from 'reactflow';
 
+import { EdgeAction } from '../controller/Action_Types';
 import { Verification } from '../verification/Verification_Types';
-
-// Re-export centralized navigation types for convenience
-export * from './NavigationConfig_Types';
-export * from './NavigationContext_Types';
 
 // =====================================================
 // CORE NAVIGATION TYPES
@@ -39,38 +36,8 @@ export interface UINavigationNodeData {
 export type UINavigationNode = Node<UINavigationNodeData>;
 
 // =====================================================
-// NAVIGATION EDGE ACTION TYPES
+// NAVIGATION EDGE DATA TYPES
 // =====================================================
-
-// Edge action for navigation workflows
-export interface EdgeAction {
-  id: string;
-  command: string;
-  params: {
-    // Common parameters for all actions
-    wait_time?: number; // Wait time after execution (in milliseconds)
-
-    // Remote action parameters
-    key?: string; // For press_key commands (UP, DOWN, LEFT, RIGHT, etc.)
-    text?: string; // For input_text commands
-    package?: string; // For launch_app/close_app commands
-    x?: number; // For coordinate tap commands
-    y?: number; // For coordinate tap commands
-    element_id?: string; // For click_element commands
-    input?: string; // Generic input field for requiresInput actions
-
-    [key: string]: any;
-  };
-  description?: string;
-
-  // Execution results (populated after execution)
-  success?: boolean;
-  message?: string;
-  error?: string;
-  executedAt?: string;
-  resultType?: 'SUCCESS' | 'FAIL' | 'ERROR';
-  executionTime?: number;
-}
 
 // Define the data type for navigation edges
 export interface UINavigationEdgeData {
@@ -295,13 +262,13 @@ export interface NodeEditDialogProps {
   nodeForm: NodeForm | null;
   nodes: UINavigationNode[];
   setNodeForm: (form: NodeForm | null) => void;
-  onSubmit: () => void;
+  onSubmit: (formData: any) => void;
   onClose: () => void;
-  onResetNode?: () => void;
-  selectedHost?: any; // Host object for verification/navigation
-  selectedDeviceId?: string; // Device ID for getting model references
+  onResetNode?: (nodeId?: string) => void;
+  selectedHost?: any | null;
   isControlActive?: boolean;
   model?: string;
+  selectedDeviceId?: string;
 }
 
 export interface EdgeEditDialogProps {
@@ -321,18 +288,14 @@ export interface NodeSelectionPanelProps {
   selectedNode: UINavigationNode;
   nodes: UINavigationNode[];
   onClose: () => void;
-  onEdit: () => void;
   onDelete: () => void;
-  onAddChildren: () => void;
-  setNodeForm: React.Dispatch<React.SetStateAction<NodeForm>>;
+  setNodeForm: (form: NodeForm | null) => void;
   setIsNodeDialogOpen: (open: boolean) => void;
-  onReset?: (id: string) => void;
+  onReset?: (nodeId: string) => void;
   onUpdateNode?: (nodeId: string, updatedData: any) => void;
-  // Device control props
   isControlActive?: boolean;
-  selectedHost?: any; // Full host object for API calls
-  onSaveScreenshot?: () => void;
-  // Navigation props
+  selectedHost?: any;
+  selectedDeviceId?: string | null;
   treeId?: string;
   currentNodeId?: string;
 }
@@ -348,6 +311,7 @@ export interface EdgeSelectionPanelProps {
   selectedDevice?: string | null;
   controllerTypes?: string[];
   onUpdateEdge?: (edgeId: string, updatedData: any) => void;
+  selectedHost?: any;
 }
 
 export interface NodeGotoPanelProps {
@@ -444,6 +408,8 @@ export interface NodeVerificationsListProps {
   selectedHost: import('../common/Host_Types').Host | null;
   modelReferences: import('../verification/Verification_Types').ModelReferences;
   referencesLoading: boolean;
+  showCollapsible?: boolean;
+  title?: string;
 }
 
 // =====================================================

@@ -19,7 +19,7 @@ export interface UseNodeProps {
 }
 
 export const useNode = (props?: UseNodeProps) => {
-  const { getVerifications, getModelReferences, referencesLoading } = useDeviceData();
+  const { getModelReferences, referencesLoading } = useDeviceData();
 
   // Get the selected device from the host's devices array
   const selectedDevice = useMemo(() => {
@@ -52,37 +52,22 @@ export const useNode = (props?: UseNodeProps) => {
   const [executionMessage, setExecutionMessage] = useState<string | null>(null);
 
   /**
-   * Get node form data with properly formatted verifications
+   * Get node form data with verifications (already resolved by navigationTreeLoader)
    */
-  const getNodeFormWithVerifications = useCallback(
-    (node: UINavigationNode): NodeForm => {
-      const allVerifications = getVerifications();
-
-      // Match verification_ids with actual verification objects
-      const nodeVerifications = [];
-      if (node.data.verification_ids && node.data.verification_ids.length > 0) {
-        for (const verificationId of node.data.verification_ids) {
-          const verification = allVerifications.find((v: any) => v.id === verificationId);
-          if (verification) {
-            nodeVerifications.push(verification);
-          }
-        }
-      }
-
-      return {
-        label: node.data.label,
-        type: node.data.type,
-        description: node.data.description || '',
-        screenshot: node.data.screenshot,
-        depth: node.data.depth || 0,
-        parent: node.data.parent || [],
-        menu_type: node.data.menu_type,
-        verifications: nodeVerifications,
-        verification_ids: node.data.verification_ids || [],
-      };
-    },
-    [getVerifications],
-  );
+  const getNodeFormWithVerifications = useCallback((node: UINavigationNode): NodeForm => {
+    // Verifications should already be resolved by navigationTreeLoader
+    return {
+      label: node.data.label,
+      type: node.data.type,
+      description: node.data.description || '',
+      screenshot: node.data.screenshot,
+      depth: node.data.depth || 0,
+      parent: node.data.parent || [],
+      menu_type: node.data.menu_type,
+      verifications: node.data.verifications || [],
+      verification_ids: node.data.verification_ids || [],
+    };
+  }, []);
 
   /**
    * Take and save screenshot for a node

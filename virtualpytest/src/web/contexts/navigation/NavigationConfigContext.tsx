@@ -262,64 +262,40 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   // CONFIG OPERATIONS
   // ========================================
 
-  // Load tree from database
+  // Load tree from database with full resolution
   const loadFromConfig = useCallback(
     async (userInterfaceId: string, state: NavigationConfigState) => {
       try {
         state.setIsLoading(true);
         state.setError(null);
 
-        // Get trees for this userInterface directly by ID
-        const response = await fetch(
-          `/server/navigationTrees/getTreeByUserInterfaceId/${userInterfaceId}`,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          },
-        );
+        // Use centralized tree loader with full ID resolution
+        const { loadAndResolveTree } = await import('../../services/navigationTreeLoader');
+        const result = await loadAndResolveTree(userInterfaceId);
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        if (data.success && data.tree) {
-          // Get the tree data
-          const tree = data.tree;
-          const treeData = tree.metadata || {};
-
-          // Update state with loaded data
-          let nodes = treeData.nodes || [];
-          let edges = (treeData.edges || []).map((edge: any) => ({
-            ...edge,
-            // Extract final wait time from data to top level for UI compatibility
-            // Note: retryActions will be loaded from retry_action_ids by useEdge hook
-            finalWaitTime:
-              edge.data?.finalWaitTime !== undefined ? edge.data.finalWaitTime : edge.finalWaitTime,
-          }));
-
-          state.setNodes(nodes);
-          state.setEdges(edges);
+        if (result.success) {
+          // Update state with fully resolved tree data
+          state.setNodes(result.nodes);
+          state.setEdges(result.edges);
 
           console.log(
-            `[@context:NavigationConfigProvider:loadFromConfig] Loaded tree for userInterface: ${userInterfaceId} with ${nodes.length} nodes and ${edges.length} edges`,
+            `[@context:NavigationConfigProvider:loadFromConfig] Loaded resolved tree for userInterface: ${userInterfaceId} with ${result.nodes.length} nodes and ${result.edges.length} edges`,
           );
 
-          // Set initial state for change tracking
-          state.setInitialState({ nodes: [...nodes], edges: [...edges] });
-          state.setHasUnsavedChanges(false);
+          // Populate navigation cache with resolved data
+          const { populateCache } = await import('../../cache/navigation_cache');
+          populateCache(userInterfaceId, 'default_team', result.nodes, result.edges);
 
-          // Don't reset lock state here - preserve existing lock status
+          // Set initial state for change tracking
+          state.setInitialState({ nodes: [...result.nodes], edges: [...result.edges] });
+          state.setHasUnsavedChanges(false);
         } else {
           // Create empty tree structure
           state.setNodes([]);
           state.setEdges([]);
           state.setInitialState({ nodes: [], edges: [] });
           state.setHasUnsavedChanges(false);
-
-          // Don't reset lock state here - preserve existing lock status
+          state.setError(result.error || 'Failed to load tree');
         }
       } catch (error) {
         console.error(
@@ -327,6 +303,11 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           error,
         );
         state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
+        // Create empty tree structure on error
+        state.setNodes([]);
+        state.setEdges([]);
+        state.setInitialState({ nodes: [], edges: [] });
+        state.setHasUnsavedChanges(false);
       } finally {
         state.setIsLoading(false);
       }

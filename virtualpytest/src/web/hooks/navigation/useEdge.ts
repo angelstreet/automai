@@ -21,8 +21,7 @@ export const useEdge = (props?: UseEdgeProps) => {
     deviceId: props?.selectedDeviceId,
   });
 
-  // Device data hook for getting saved actions
-  const { getActions } = useDeviceData();
+  // Device data hook (no longer needed for individual resolution)
 
   // Validation colors hook for edge styling
   const { getEdgeColors } = useValidationColors([]);
@@ -80,101 +79,20 @@ export const useEdge = (props?: UseEdgeProps) => {
   }, []);
 
   /**
-   * Get actions from edge data in consistent format
+   * Get actions from edge data (already resolved by navigationTreeLoader)
    */
-  const getActionsFromEdge = useCallback(
-    (edge: UINavigationEdge): EdgeAction[] => {
-      const allActions = getActions();
-
-      // Handle new format (multiple actions)
-      if (edge.data?.actions && edge.data.actions.length > 0) {
-        return edge.data.actions;
-      }
-
-      // Handle action_ids format (similar to verification_ids in nodes)
-      if (edge.data?.action_ids && edge.data.action_ids.length > 0) {
-        const edgeActions: EdgeAction[] = [];
-
-        for (const actionId of edge.data.action_ids) {
-          const action = allActions.find((a: any) => a.id === actionId);
-          if (action) {
-            const edgeAction: EdgeAction = {
-              id: action.id,
-              command: action.command,
-              params: {
-                ...action.params,
-                wait_time: action.params?.wait_time || 500,
-              },
-              description: action.description || action.label || action.command || 'Unnamed Action',
-            };
-            edgeActions.push(edgeAction);
-          } else {
-            const placeholderAction: EdgeAction = {
-              id: actionId,
-              command: '',
-              params: { timeout: 0.5 },
-              description: `Missing Action (ID: ${actionId.substring(0, 8)}...)`,
-            };
-            edgeActions.push(placeholderAction);
-          }
-        }
-
-        return edgeActions;
-      }
-
-      return [];
-    },
-    [getActions],
-  );
+  const getActionsFromEdge = useCallback((edge: UINavigationEdge): EdgeAction[] => {
+    // Actions should already be resolved by navigationTreeLoader
+    return edge.data?.actions || [];
+  }, []);
 
   /**
-   * Get retry actions from edge data (follows same ID pattern as regular actions)
+   * Get retry actions from edge data (already resolved by navigationTreeLoader)
    */
-  const getRetryActionsFromEdge = useCallback(
-    (edge: UINavigationEdge): EdgeAction[] => {
-      const allActions = getActions();
-
-      // Handle new format (multiple retry actions stored as full objects)
-      if (edge.data?.retryActions && edge.data.retryActions.length > 0) {
-        return edge.data.retryActions;
-      }
-
-      // Handle retry_action_ids format (same pattern as action_ids)
-      if (edge.data?.retry_action_ids && edge.data.retry_action_ids.length > 0) {
-        const retryActions: EdgeAction[] = [];
-
-        for (const actionId of edge.data.retry_action_ids) {
-          const action = allActions.find((a: any) => a.id === actionId);
-          if (action) {
-            const retryAction: EdgeAction = {
-              id: action.id,
-              command: action.command,
-              params: {
-                ...action.params,
-                wait_time: action.params?.wait_time || 500,
-              },
-              description:
-                action.description || action.label || action.command || 'Unnamed Retry Action',
-            };
-            retryActions.push(retryAction);
-          } else {
-            const placeholderAction: EdgeAction = {
-              id: actionId,
-              command: '',
-              params: { timeout: 0.5 },
-              description: `Missing Retry Action (ID: ${actionId.substring(0, 8)}...)`,
-            };
-            retryActions.push(placeholderAction);
-          }
-        }
-
-        return retryActions;
-      }
-
-      return [];
-    },
-    [getActions],
-  );
+  const getRetryActionsFromEdge = useCallback((edge: UINavigationEdge): EdgeAction[] => {
+    // Retry actions should already be resolved by navigationTreeLoader
+    return edge.data?.retryActions || [];
+  }, []);
 
   /**
    * Check if edge can run actions
