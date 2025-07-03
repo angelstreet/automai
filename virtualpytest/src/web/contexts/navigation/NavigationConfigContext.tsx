@@ -259,6 +259,54 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   );
 
   // ========================================
+  // HELPER FUNCTIONS FOR ID RESOLUTION
+  // ========================================
+
+  // Fetch actions by their IDs
+  const fetchActionsByIds = useCallback(async (actionIds: string[]) => {
+    if (!actionIds || actionIds.length === 0) return [];
+
+    const actions = [];
+    for (const actionId of actionIds) {
+      try {
+        const response = await fetch(`/server/actions/getAction/${actionId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.action) {
+            actions.push(data.action);
+          }
+        }
+      } catch {
+        console.warn(`[@context:NavigationConfigProvider] Failed to fetch action: ${actionId}`);
+      }
+    }
+    return actions;
+  }, []);
+
+  // Fetch verifications by their IDs
+  const fetchVerificationsByIds = useCallback(async (verificationIds: string[]) => {
+    if (!verificationIds || verificationIds.length === 0) return [];
+
+    const verifications = [];
+    for (const verificationId of verificationIds) {
+      try {
+        const response = await fetch(`/server/verification/getVerification/${verificationId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.verification) {
+            verifications.push(data.verification);
+          }
+        }
+      } catch (error) {
+        console.warn(
+          `[@context:NavigationConfigProvider] Failed to fetch verification: ${verificationId}`,
+        );
+      }
+    }
+    return verifications;
+  }, []);
+
+  // ========================================
   // CONFIG OPERATIONS
   // ========================================
 
@@ -290,25 +338,59 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           const tree = data.tree;
           const treeData = tree.metadata || {};
 
-          // Update state with loaded data
-          let nodes = treeData.nodes || [];
-          let edges = (treeData.edges || []).map((edge: any) => ({
-            ...edge,
-            // Extract final wait time from data to top level for UI compatibility
-            // Note: retryActions will be loaded from retry_action_ids by useEdge hook
-            finalWaitTime:
-              edge.data?.finalWaitTime !== undefined ? edge.data.finalWaitTime : edge.finalWaitTime,
-          }));
+          const rawNodes = treeData.nodes || [];
+          const rawEdges = treeData.edges || [];
 
-          state.setNodes(nodes);
-          state.setEdges(edges);
+          // Resolve all edge actions and retry actions
+          const resolvedEdges = await Promise.all(
+            rawEdges.map(async (edge: any) => {
+              const actions = await fetchActionsByIds(edge.data?.action_ids || []);
+              const retryActions = await fetchActionsByIds(edge.data?.retry_action_ids || []);
+
+              return {
+                ...edge,
+                data: {
+                  ...edge.data,
+                  actions, // Resolved action objects
+                  retryActions, // Resolved retry action objects
+                  action_ids: edge.data?.action_ids || [],
+                  retry_action_ids: edge.data?.retry_action_ids || [],
+                },
+                finalWaitTime:
+                  edge.data?.finalWaitTime !== undefined
+                    ? edge.data.finalWaitTime
+                    : edge.finalWaitTime,
+              };
+            }),
+          );
+
+          // Resolve all node verifications
+          const resolvedNodes = await Promise.all(
+            rawNodes.map(async (node: any) => {
+              const verifications = await fetchVerificationsByIds(
+                node.data?.verification_ids || [],
+              );
+
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  verifications, // Resolved verification objects
+                  verification_ids: node.data?.verification_ids || [],
+                },
+              };
+            }),
+          );
+
+          state.setNodes(resolvedNodes);
+          state.setEdges(resolvedEdges);
 
           console.log(
-            `[@context:NavigationConfigProvider:loadFromConfig] Loaded tree for userInterface: ${userInterfaceId} with ${nodes.length} nodes and ${edges.length} edges`,
+            `[@context:NavigationConfigProvider:loadFromConfig] Loaded and resolved tree for userInterface: ${userInterfaceId} with ${resolvedNodes.length} nodes and ${resolvedEdges.length} edges`,
           );
 
           // Set initial state for change tracking
-          state.setInitialState({ nodes: [...nodes], edges: [...edges] });
+          state.setInitialState({ nodes: [...resolvedNodes], edges: [...resolvedEdges] });
           state.setHasUnsavedChanges(false);
 
           // Don't reset lock state here - preserve existing lock status
@@ -331,7 +413,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(false);
       }
     },
-    [],
+    [fetchActionsByIds, fetchVerificationsByIds],
   );
 
   // Save tree to database
