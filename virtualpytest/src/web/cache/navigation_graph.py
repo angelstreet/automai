@@ -81,68 +81,19 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
             edges_skipped += 1
             continue
         
-        # Get actions from edge data - handle both multiple actions and single action formats
+        # Get resolved actions from cache - cache provides fully resolved objects
         edge_data = edge.get('data', {})
+        actions_list = edge_data.get('actions', [])
+        retry_actions_list = edge_data.get('retryActions', [])
         
-        # Handle multiple actions format (new format)
-        actions_list = []
-        if edge_data.get('actions') and isinstance(edge_data['actions'], list) and len(edge_data['actions']) > 0:
-            # New format: multiple actions
-            for action in edge_data['actions']:
-                if action and action.get('id'):  # Only include actions that have an ID
-                    action_info = {
-                        'id': action.get('id'),
-                        'label': action.get('label', action.get('id', 'Unknown Action')),
-                        'command': action.get('command', action.get('id')),
-                        'params': action.get('params', {}),
-                        'requiresInput': action.get('requiresInput', False),
-                        'inputValue': action.get('inputValue', ''),
-                        'waitTime': action.get('waitTime', 1000)
-                    }
-                    actions_list.append(action_info)
-        
-        # Handle retry actions format (both full objects and ID references)
-        retry_actions_list = []
-        
-        # Handle full retry action objects (legacy format)
-        if edge_data.get('retryActions') and isinstance(edge_data['retryActions'], list) and len(edge_data['retryActions']) > 0:
-            for action in edge_data['retryActions']:
-                if action and action.get('id'):  # Only include actions that have an ID
-                    action_info = {
-                        'id': action.get('id'),
-                        'label': action.get('label', action.get('id', 'Unknown Action')),
-                        'command': action.get('command', action.get('id')),
-                        'params': action.get('params', {}),
-                        'requiresInput': action.get('requiresInput', False),
-                        'inputValue': action.get('inputValue', ''),
-                        'waitTime': action.get('waitTime', 1000)
-                    }
-                    retry_actions_list.append(action_info)
-        
-        # Handle retry action IDs (new format) - just store the IDs for now
-        # Resolution of IDs to full actions should be done by the UI layer
-        elif edge_data.get('retry_action_ids') and isinstance(edge_data['retry_action_ids'], list) and len(edge_data['retry_action_ids']) > 0:
-            for action_id in edge_data['retry_action_ids']:
-                if action_id:  # Only include non-empty IDs
-                    action_info = {
-                        'id': action_id,
-                        'label': f'Retry Action {action_id[:8]}...',  # Placeholder label
-                        'command': 'resolve_from_id',  # Placeholder command indicating ID needs resolution
-                        'params': {},
-                        'requiresInput': False,
-                        'inputValue': '',
-                        'waitTime': 1000
-                    }
-                    retry_actions_list.append(action_info)
-        
-        # Get the primary action for pathfinding (first action or fallback)
+        # Get the primary action for pathfinding
         primary_action = actions_list[0]['command'] if actions_list else None
         
-        # Add edge with navigation actions and metadata
+        # Add edge with resolved actions
         G.add_edge(source_id, target_id, **{
-            'go_action': primary_action,  # Primary action for pathfinding
-            'actions': actions_list,      # Full list of actions to execute
-            'retryActions': retry_actions_list,  # Full list of retry actions to execute on failure
+            'go_action': primary_action,
+            'actions': actions_list,
+            'retryActions': retry_actions_list,
             'comeback_action': edge_data.get('comeback_action'),
             'edge_type': edge_data.get('edge_type', 'navigation'),
             'description': edge_data.get('description', ''),
@@ -150,7 +101,7 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
             'conditions': edge_data.get('conditions', {}),
             'metadata': edge_data.get('metadata', {}),
             'finalWaitTime': edge_data.get('finalWaitTime', 2000),
-            'weight': 1  # Default weight for pathfinding
+            'weight': 1
         })
         
         # Add reverse edge if bidirectional

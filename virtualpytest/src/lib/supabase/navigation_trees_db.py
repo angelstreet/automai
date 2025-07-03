@@ -591,7 +591,7 @@ def _populate_navigation_cache(tree: Dict, team_id: str):
         all_action_ids = set()
         all_verification_ids = set()
         
-        # Collect action IDs from all edges
+        # Collect action IDs from all edges - only from action_ids field
         for edge in raw_edges:
             edge_data = edge.get('data', {})
             action_ids = edge_data.get('action_ids', [])
@@ -655,15 +655,17 @@ def _populate_navigation_cache(tree: Dict, team_id: str):
         for edge in raw_edges:
             edge_data = edge.get('data', {})
             
-            # Resolve actions
+            # Resolve actions from action_ids
             actions = []
-            for action_id in edge_data.get('action_ids', []):
+            action_ids = edge_data.get('action_ids', [])
+            for action_id in action_ids:
                 if action_id in action_map:
                     actions.append(action_map[action_id])
             
-            # Resolve retry actions
+            # Resolve retry actions from retry_action_ids
             retry_actions = []
-            for action_id in edge_data.get('retry_action_ids', []):
+            retry_action_ids = edge_data.get('retry_action_ids', [])
+            for action_id in retry_action_ids:
                 if action_id in action_map:
                     retry_actions.append(action_map[action_id])
             
@@ -673,8 +675,8 @@ def _populate_navigation_cache(tree: Dict, team_id: str):
                     **edge_data,
                     'actions': actions,  # Resolved action objects
                     'retryActions': retry_actions,  # Resolved retry action objects
-                    'action_ids': edge_data.get('action_ids', []),  # Keep IDs for reference
-                    'retry_action_ids': edge_data.get('retry_action_ids', []),  # Keep IDs for reference
+                    'action_ids': action_ids,  # Keep IDs for reference
+                    'retry_action_ids': retry_action_ids,  # Keep IDs for reference
                 }
             }
             resolved_edges.append(resolved_edge)

@@ -272,10 +272,10 @@ def get_tree_by_userinterface_id(userinterface_id):
             except Exception as cache_error:
                 print(f'[@route:navigation_trees:get_tree_by_userinterface_id] ⚠️ Cache error: {cache_error} - returning raw tree data')
                 # Fallback to raw tree if cache fails
-                return jsonify({
-                    'success': True,
+            return jsonify({
+                'success': True,
                     'tree': raw_tree
-                })
+            })
         else:
             print(f'[@route:navigation_trees:get_tree_by_userinterface_id] Tree not found for userinterface_id: {userinterface_id}')
             return jsonify({

@@ -77,20 +77,6 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             from_node_info = get_node_info(G, from_node)
             actions_list = edge_data.get('actions', [])
             
-            # If no actions in the new format, try to get from legacy format
-            if not actions_list:
-                primary_action = edge_data.get('go_action')
-                if primary_action:
-                    actions_list = [{
-                        'id': primary_action,
-                        'label': primary_action.replace('_', ' ').title(),
-                        'command': primary_action,
-                        'params': {},
-                        'requiresInput': False,
-                        'inputValue': '',
-                        'waitTime': 1000
-                    }]
-            
             # Get retry actions
             retry_actions_list = edge_data.get('retryActions', [])
             
@@ -135,20 +121,6 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             # Get edge data with actions
             edge_data = G.edges[from_node, to_node] if G.has_edge(from_node, to_node) else {}
             actions_list = edge_data.get('actions', [])
-            
-            # If no actions in the new format, try to get from legacy format
-            if not actions_list:
-                primary_action = edge_data.get('go_action')
-                if primary_action:
-                    actions_list = [{
-                        'id': primary_action,
-                        'label': primary_action.replace('_', ' ').title(),
-                        'command': primary_action,
-                        'params': {},
-                        'requiresInput': False,
-                        'inputValue': '',
-                        'waitTime': 1000
-                    }]
             
             # Get retry actions
             retry_actions_list = edge_data.get('retryActions', [])
