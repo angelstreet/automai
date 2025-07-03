@@ -36,6 +36,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useDeviceData } from '../contexts/device/DeviceDataContext';
 import { useHostManager } from '../contexts/index';
 import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
+import { useNavigation } from '../contexts/navigation/NavigationContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { useNavigationEditor } from '../hooks/navigation/useNavigationEditor';
 import { NodeForm, EdgeForm } from '../types/pages/Navigation_Types';
@@ -123,6 +124,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
 
     // Get theme context for dynamic styling
     const { actualMode } = useTheme();
+
+    // Get current node ID from NavigationContext
+    const { currentNodeId } = useNavigation();
 
     // Dynamic miniMapStyle based on theme - black background in dark mode, white in light mode
     const miniMapStyle = useMemo(
@@ -632,7 +636,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                         selectedHost={selectedHost || undefined}
                         selectedDeviceId={selectedDeviceId || undefined}
                         treeId={treeId || ''}
-                        currentNodeId={currentNodeId}
+                        currentNodeId={currentNodeId || undefined}
                       />
                     </>
                   ) : selectedEdge ? (
@@ -693,8 +697,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
             selectedEdge={selectedEdge}
             isControlActive={isControlActive}
             selectedHost={selectedHost}
-            selectedDeviceId={selectedDeviceId}
-            availableActions={availableActions}
           />
         )}
 
