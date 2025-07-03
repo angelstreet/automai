@@ -56,7 +56,7 @@ start_grabber() {
   kill_existing_processes "$capture_dir" "$video_device"
 
   # FFMPEG command (identical to older script, adapted for multi-grabber)
-  FFMPEG_CMD="/usr/bin/ffmpeg -y -f v4l2 -input_format mjpeg -framerate 10 -video_size 1920x1080 -i $video_device \
+  FFMPEG_CMD="/usr/bin/ffmpeg -y -f v4l2 -input_format mjpeg -framerate 10 -video_size 1920x1080 -timeout 5000000 -i $video_device \
     -fflags nobuffer+flush_packets \
     -avioflags direct \
     -probesize 32 \

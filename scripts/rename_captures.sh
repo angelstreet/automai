@@ -40,6 +40,7 @@ process_file() {
   local filepath="$1"
   if [[ "$filepath" =~ test_capture_[0-9]+\.jpg$ ]]; then
     if [ -f "$filepath" ]; then
+      sleep 0.1
       start_time=$(date +%s.%N)
       # Use current system time for timestamp
       timestamp=$(TZ="Europe/Zurich" date +%Y%m%d%H%M%S)
