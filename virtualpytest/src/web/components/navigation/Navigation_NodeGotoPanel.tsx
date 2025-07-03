@@ -225,24 +225,46 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
 
                     {transitionData.actions && transitionData.actions.length > 0 ? (
                       <Box sx={{ ml: 1.5 }}>
-                        {transitionData.actions.map((action: any, actionIndex: number) => (
-                          <Typography
-                            key={actionIndex}
-                            variant="body2"
-                            sx={{
-                              fontSize: '0.8rem',
-                              color: 'text.secondary',
-                              mb: 0,
-                              '&:before': {
-                                content: '"- "',
-                                fontWeight: 'bold',
-                              },
-                            }}
-                          >
-                            {action.label || action.command || 'Unknown Action'}
-                            {action.inputValue && ` - ${action.inputValue}`}
-                          </Typography>
-                        ))}
+                        {transitionData.actions.map((action: any, actionIndex: number) => {
+                          // Generic display: command and first parameter
+                          const getActionDisplayText = (action: any) => {
+                            const command = action.command || 'unknown_action';
+                            const params = action.params || {};
+
+                            // If there are parameters, show the first one
+                            if (params && Object.keys(params).length > 0) {
+                              const firstParam = Object.values(params)[0];
+                              const paramStr =
+                                typeof firstParam === 'string'
+                                  ? firstParam
+                                  : JSON.stringify(firstParam);
+                              const truncatedParam =
+                                paramStr.length > 30 ? `${paramStr.substring(0, 30)}...` : paramStr;
+                              return `${command}(${truncatedParam})`;
+                            } else {
+                              return command;
+                            }
+                          };
+
+                          return (
+                            <Typography
+                              key={actionIndex}
+                              variant="body2"
+                              sx={{
+                                fontSize: '0.8rem',
+                                color: 'text.secondary',
+                                mb: 0,
+                                fontFamily: 'monospace',
+                                '&:before': {
+                                  content: '"- "',
+                                  fontWeight: 'bold',
+                                },
+                              }}
+                            >
+                              {getActionDisplayText(action)}
+                            </Typography>
+                          );
+                        })}
                       </Box>
                     ) : (
                       <Typography

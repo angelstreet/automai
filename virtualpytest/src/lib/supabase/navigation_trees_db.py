@@ -632,7 +632,7 @@ def _populate_navigation_cache(tree: Dict, team_id: str):
         resolved_verifications = []
         if all_verification_ids:
             try:
-                from src.lib.supabase.verification_db import get_verifications as db_get_verifications
+                from src.lib.supabase.verifications_db import get_verifications as db_get_verifications
                 all_verifications_result = db_get_verifications(team_id=team_id)
                 if all_verifications_result['success']:
                     all_verifications = all_verifications_result['verifications']
