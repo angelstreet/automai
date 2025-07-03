@@ -46,6 +46,11 @@ interface DeviceDataState {
   currentHost: Host | null;
   currentDeviceId: string | null;
   isControlActive: boolean;
+
+  // Device position tracking
+  devicePositions: {
+    [deviceKey: string]: { nodeId: string; nodeLabel: string; treeId: string; timestamp: number };
+  };
 }
 
 interface DeviceDataActions {
@@ -68,6 +73,27 @@ interface DeviceDataActions {
   setControlState: (host: Host | null, deviceId: string | null, isActive: boolean) => void;
   clearData: () => void;
   reloadData: () => Promise<void>;
+
+  // Device position management
+  getDevicePosition: (
+    host: Host,
+    deviceId: string,
+    treeId: string,
+  ) => { nodeId: string; nodeLabel: string } | null;
+  setDevicePosition: (
+    host: Host,
+    deviceId: string,
+    treeId: string,
+    nodeId: string,
+    nodeLabel: string,
+  ) => void;
+  initializeDevicePosition: (
+    host: Host,
+    deviceId: string,
+    treeId: string,
+    rootNodeId: string,
+    rootNodeLabel: string,
+  ) => { nodeId: string; nodeLabel: string };
 }
 
 type DeviceDataContextType = DeviceDataState & DeviceDataActions;
@@ -118,6 +144,7 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
     currentHost: null,
     currentDeviceId: null,
     isControlActive: false,
+    devicePositions: {},
   });
 
   // Track what's been loaded to prevent duplicate fetches
@@ -580,6 +607,7 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
           actionsError: null,
           availableVerificationTypesError: null,
           verificationsError: null,
+          devicePositions: {},
         }));
       } else {
         // Same host, just update control state
@@ -607,6 +635,7 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
       actionsError: null,
       availableVerificationTypesError: null,
       verificationsError: null,
+      devicePositions: {},
     }));
 
     loadedDataRef.current = {
@@ -658,6 +687,56 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
       setControlState,
       clearData,
       reloadData,
+
+      // Device position management
+      getDevicePosition: (host: Host, deviceId: string, treeId: string) => {
+        const devicePosition =
+          state.devicePositions[`${host.host_name}_${host.host_url}_${deviceId}_${treeId}`];
+        return devicePosition
+          ? { nodeId: devicePosition.nodeId, nodeLabel: devicePosition.nodeLabel }
+          : null;
+      },
+      setDevicePosition: (
+        host: Host,
+        deviceId: string,
+        treeId: string,
+        nodeId: string,
+        nodeLabel: string,
+      ) => {
+        setState((prev) => ({
+          ...prev,
+          devicePositions: {
+            ...prev.devicePositions,
+            [`${host.host_name}_${host.host_url}_${deviceId}_${treeId}`]: {
+              nodeId,
+              nodeLabel,
+              treeId,
+              timestamp: Date.now(),
+            },
+          },
+        }));
+      },
+      initializeDevicePosition: (
+        host: Host,
+        deviceId: string,
+        treeId: string,
+        rootNodeId: string,
+        rootNodeLabel: string,
+      ) => {
+        setState((prev) => ({
+          ...prev,
+          devicePositions: {
+            ...prev.devicePositions,
+            [`${host.host_name}_${host.host_url}_${deviceId}_${treeId}`]: {
+              nodeId: rootNodeId,
+              nodeLabel: rootNodeLabel,
+              treeId,
+              timestamp: Date.now(),
+            },
+          },
+        }));
+        return { nodeId: rootNodeId, nodeLabel: rootNodeLabel };
+      },
     }),
     [
       state,

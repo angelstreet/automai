@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect, useMemo } from 'react';
 
 import { useDeviceData } from '../../contexts/device/DeviceDataContext';
+import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import { Host } from '../../types/common/Host_Types';
 import {
   UINavigationNode,
@@ -20,6 +21,8 @@ export interface UseNodeProps {
 
 export const useNode = (props?: UseNodeProps) => {
   const { getModelReferences, referencesLoading } = useDeviceData();
+  const { currentNodeId, updateCurrentPosition, updateNodesWithMinimapIndicators } =
+    useNavigation();
 
   // Get the selected device from the host's devices array
   const selectedDevice = useMemo(() => {
@@ -177,22 +180,55 @@ export const useNode = (props?: UseNodeProps) => {
   );
 
   /**
+   * Find the home root node (entry point) from the tree
+   */
+  const findHomeRootNode = useCallback((nodes: UINavigationNode[]): string | undefined => {
+    // First, try to find a node marked as isRoot
+    const rootNode = nodes.find((node) => node.data.is_root === true);
+    if (rootNode) {
+      return rootNode.id;
+    }
+
+    // Fallback: find a node with label "home" (case insensitive)
+    const homeNode = nodes.find((node) => node.data.label?.toLowerCase() === 'home');
+    if (homeNode) {
+      return homeNode.id;
+    }
+
+    // Last fallback: find the first non-entry node
+    const nonEntryNode = nodes.find((node) => node.data.type !== 'entry');
+    if (nonEntryNode) {
+      return nonEntryNode.id;
+    }
+
+    return undefined;
+  }, []);
+
+  /**
    * Load navigation preview for NodeGotoPanel
    */
   const loadNavigationPreview = useCallback(
-    async (selectedNode: UINavigationNode) => {
+    async (selectedNode: UINavigationNode, allNodes?: UINavigationNode[]) => {
       if (!props?.treeId) return;
 
       setIsLoadingPreview(true);
       setNavigationError(null);
 
       try {
+        // Determine starting node: use context currentNodeId, then props currentNodeId, then find home root node
+        let startingNodeId = currentNodeId || props.currentNodeId;
+        if (!startingNodeId && allNodes) {
+          startingNodeId = findHomeRootNode(allNodes);
+        }
+
         const url = new URL(
           `/server/pathfinding/preview/${props.treeId}/${selectedNode.id}`,
           window.location.origin,
         );
-        if (props.currentNodeId) {
-          url.searchParams.append('current_node_id', props.currentNodeId);
+
+        // Only add current_node_id if we have a valid starting node
+        if (startingNodeId) {
+          url.searchParams.append('current_node_id', startingNodeId);
         }
 
         const response = await fetch(url.toString(), {
@@ -206,6 +242,7 @@ export const useNode = (props?: UseNodeProps) => {
 
         if (result.success) {
           setNavigationSteps(result.steps);
+          updateNodesWithMinimapIndicators(result.steps);
         } else {
           setNavigationError(result.error || 'Failed to load navigation preview');
         }
@@ -217,20 +254,41 @@ export const useNode = (props?: UseNodeProps) => {
         setIsLoadingPreview(false);
       }
     },
-    [props?.treeId, props?.currentNodeId],
+    [
+      props?.treeId,
+      currentNodeId,
+      props?.currentNodeId,
+      findHomeRootNode,
+      updateNodesWithMinimapIndicators,
+    ],
   );
 
   /**
    * Execute navigation for NodeGotoPanel
    */
   const executeNavigation = useCallback(
-    async (selectedNode: UINavigationNode) => {
+    async (selectedNode: UINavigationNode, allNodes?: UINavigationNode[]) => {
       if (!props?.treeId) return;
 
       setIsExecuting(true);
       setNavigationError(null);
 
       try {
+        // Determine starting node: use context currentNodeId, then props currentNodeId, then find home root node
+        let startingNodeId = currentNodeId || props.currentNodeId;
+        if (!startingNodeId && allNodes) {
+          startingNodeId = findHomeRootNode(allNodes);
+        }
+
+        const requestBody: any = {
+          execute: true,
+        };
+
+        // Only add current_node_id if we have a valid starting node
+        if (startingNodeId) {
+          requestBody.current_node_id = startingNodeId;
+        }
+
         const response = await fetch(
           `/server/pathfinding/navigate/${props.treeId}/${selectedNode.id}`,
           {
@@ -238,10 +296,7 @@ export const useNode = (props?: UseNodeProps) => {
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              current_node_id: props.currentNodeId,
-              execute: true,
-            }),
+            body: JSON.stringify(requestBody),
           },
         );
 
@@ -254,7 +309,11 @@ export const useNode = (props?: UseNodeProps) => {
           }
           setExecutionMessage(successMessage);
           setIsExecuting(false);
-          await loadNavigationPreview(selectedNode);
+
+          // Update current position after successful navigation
+          updateCurrentPosition(selectedNode.id, selectedNode.data.label);
+
+          await loadNavigationPreview(selectedNode, allNodes);
         } else {
           const errorMessage = result.error || 'Navigation failed';
           setExecutionMessage(`Navigation failed: ${errorMessage}`);
@@ -276,7 +335,14 @@ export const useNode = (props?: UseNodeProps) => {
         setNavigationError(errorMessage);
       }
     },
-    [props?.treeId, props?.currentNodeId, loadNavigationPreview],
+    [
+      props?.treeId,
+      currentNodeId,
+      props?.currentNodeId,
+      findHomeRootNode,
+      loadNavigationPreview,
+      updateCurrentPosition,
+    ],
   );
 
   /**
@@ -285,7 +351,9 @@ export const useNode = (props?: UseNodeProps) => {
   const clearNavigationState = useCallback(() => {
     setNavigationError(null);
     setExecutionMessage(null);
-  }, []);
+    // Clear navigation route indicators
+    updateNodesWithMinimapIndicators([]);
+  }, [updateNodesWithMinimapIndicators]);
 
   /**
    * Check if node is an entry node
@@ -353,6 +421,11 @@ export const useNode = (props?: UseNodeProps) => {
     executeNavigation,
     clearNavigationState,
     getFullPath,
+
+    // Current position information
+    currentNodeId,
+    updateCurrentPosition,
+    updateNodesWithMinimapIndicators,
 
     // Additional helper functions
     isEntryNode,

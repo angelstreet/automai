@@ -56,7 +56,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
   useEffect(() => {
     // Clear any previous execution messages when loading for a new node
     clearNavigationState();
-    loadNavigationPreview(selectedNode);
+    loadNavigationPreview(selectedNode, nodes);
   }, [
     treeId,
     selectedNode.id,
@@ -64,6 +64,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     selectedNode,
     clearNavigationState,
     loadNavigationPreview,
+    nodes,
   ]);
 
   return (
@@ -391,7 +392,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
               <PlayArrowIcon />
             )
           }
-          onClick={() => nodeHook.executeNavigation(selectedNode)}
+          onClick={() => nodeHook.executeNavigation(selectedNode, nodes)}
           disabled={nodeHook.isExecuting}
           fullWidth
           sx={{ fontSize: '0.875rem' }}

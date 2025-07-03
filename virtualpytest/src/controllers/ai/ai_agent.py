@@ -143,7 +143,7 @@ If not feasible:
 
 JSON ONLY - NO OTHER TEXT"""
             else:
-                prompt = f"""You are a test automation AI. Generate an execution plan for this task.
+            prompt = f"""You are a test automation AI. Generate an execution plan for this task.
 
 Task: "{task_description}"
 Device: {device_model}

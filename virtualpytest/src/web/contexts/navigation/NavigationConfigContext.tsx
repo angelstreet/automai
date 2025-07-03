@@ -41,6 +41,7 @@ interface NavigationConfigState {
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  updateCurrentPosition?: (nodeId: string, label: string) => void;
 }
 
 interface NavigationConfigProviderProps {
@@ -309,6 +310,12 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           // Set initial state for change tracking
           state.setInitialState({ nodes: [...nodes], edges: [...edges] });
           state.setHasUnsavedChanges(false);
+
+          // Find and set the home/root node as initial current position
+          const homeNode = nodes.find((node: any) => node.data?.is_root === true);
+          if (homeNode && state.updateCurrentPosition) {
+            state.updateCurrentPosition(homeNode.id, homeNode.data?.label);
+          }
         } else {
           // Create empty tree structure
           state.setNodes([]);

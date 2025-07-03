@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 
+import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import { NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../../config/validationColors';
 import type { UINavigationNode as UINavigationNodeType } from '../../types/pages/Navigation_Types';
 
@@ -9,6 +10,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   selected,
   id,
 }) => {
+  const { currentNodeId } = useNavigation();
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
   const [imageKey, setImageKey] = useState<string | number>(0); // Key to force image refresh
 
@@ -51,6 +53,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   const isRootNode = data.is_root === true;
   // Check if this is an entry point node
   const isEntryNode = data.type === 'entry';
+  // Check if this is the current position
+  const isCurrentPosition = currentNodeId === id;
 
   // Entry node styling - small circular point
   if (isEntryNode) {
@@ -62,10 +66,12 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           height: '40px',
           borderRadius: '50%',
           background: entryColors.background,
-          border: `3px solid ${entryColors.border}`,
-          boxShadow: selected
-            ? '0 4px 12px rgba(211, 47, 47, 0.6)'
-            : '0 2px 8px rgba(211, 47, 47, 0.4)',
+          border: isCurrentPosition ? '3px solid #4caf50' : `3px solid ${entryColors.border}`,
+          boxShadow: isCurrentPosition
+            ? '0 0 15px rgba(76, 175, 80, 0.6), 0 0 25px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(76, 175, 80, 0.3)'
+            : selected
+              ? '0 4px 12px rgba(211, 47, 47, 0.6)'
+              : '0 2px 8px rgba(211, 47, 47, 0.4)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -74,8 +80,13 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           fontWeight: 'bold',
           position: 'relative',
           cursor: 'pointer',
+          animation: isCurrentPosition ? 'currentPositionPulse 2s ease-in-out infinite' : 'none',
         }}
-        title="Entry Point - Click to edit entry method"
+        title={
+          isCurrentPosition
+            ? 'Entry Point - Current Position'
+            : 'Entry Point - Click to edit entry method'
+        }
       >
         ⚡{/* Single source handle for outgoing connections */}
         <Handle
@@ -107,6 +118,15 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
     background: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)',
     border: '2px solid #d32f2f',
     boxShadow: selected ? '0 4px 12px rgba(211, 47, 47, 0.4)' : '0 2px 8px rgba(211, 47, 47, 0.3)',
+  };
+
+  // Current position styling - animated border and glow
+  const currentPositionStyle = {
+    border: '3px solid #4caf50',
+    boxShadow: selected
+      ? '0 0 20px rgba(76, 175, 80, 0.8), 0 0 30px rgba(76, 175, 80, 0.6), 0 4px 12px rgba(76, 175, 80, 0.4)'
+      : '0 0 15px rgba(76, 175, 80, 0.6), 0 0 25px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(76, 175, 80, 0.3)',
+    animation: 'currentPositionPulse 2s ease-in-out infinite',
   };
 
   // Normal node styling - based on node type
@@ -164,7 +184,11 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
     <div
       style={{
         background: isRootNode ? rootNodeStyle.background : getNodeColor(data.type),
-        border: isRootNode ? rootNodeStyle.border : `1px solid ${getNodeBorderColor(data.type)}`,
+        border: isCurrentPosition
+          ? currentPositionStyle.border
+          : isRootNode
+            ? rootNodeStyle.border
+            : `1px solid ${getNodeBorderColor(data.type)}`,
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -172,17 +196,44 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         minHeight: '180px',
         fontSize: '12px',
         color: '#333',
-        boxShadow: isRootNode
-          ? rootNodeStyle.boxShadow
-          : selected
-            ? '0 4px 12px rgba(0,0,0,0.2)'
-            : '0 2px 4px rgba(0,0,0,0.1)',
+        boxShadow: isCurrentPosition
+          ? currentPositionStyle.boxShadow
+          : isRootNode
+            ? rootNodeStyle.boxShadow
+            : selected
+              ? '0 4px 12px rgba(0,0,0,0.2)'
+              : '0 2px 4px rgba(0,0,0,0.1)',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        animation: isCurrentPosition ? currentPositionStyle.animation : 'none',
       }}
     >
+      {/* Current Position Indicator */}
+      {isCurrentPosition && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '4px',
+            left: '4px',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            zIndex: 15,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2px',
+          }}
+        >
+          <span style={{ fontSize: '8px' }}>📍</span>
+          HERE
+        </div>
+      )}
+
       {/* Root Node Indicator */}
       {isRootNode && (
         <div

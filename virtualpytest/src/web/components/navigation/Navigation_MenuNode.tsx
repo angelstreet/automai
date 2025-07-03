@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 
+import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import { UI_BADGE_COLORS } from '../../config/validationColors';
 import { useValidationColors } from '../../hooks/validation';
 import { UINavigationNode } from '../../types/pages/Navigation_Types';
@@ -10,6 +11,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   selected: _selected,
   id,
 }) => {
+  const { currentNodeId } = useNavigation();
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
   const [imageKey, setImageKey] = useState<string | number>(0); // Key to force image refresh
   const { getEdges } = useReactFlow();
@@ -75,11 +77,14 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
     setIsScreenshotModalOpen(false);
   };
 
+  // Check if this is the current position
+  const isCurrentPosition = currentNodeId === id;
+
   return (
     <div
       style={{
         background: nodeColors.background,
-        border: `1px solid ${nodeColors.border}`,
+        border: isCurrentPosition ? '3px solid #4caf50' : `1px solid ${nodeColors.border}`,
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -87,14 +92,41 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         minHeight: '180px',
         fontSize: '12px',
         color: '#333',
-        boxShadow: nodeColors.boxShadow,
+        boxShadow: isCurrentPosition
+          ? '0 0 15px rgba(76, 175, 80, 0.6), 0 0 25px rgba(76, 175, 80, 0.4), 0 2px 8px rgba(76, 175, 80, 0.3)'
+          : nodeColors.boxShadow,
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        animation: isCurrentPosition ? 'currentPositionPulse 2s ease-in-out infinite' : 'none',
       }}
       className={nodeColors.className || ''}
     >
+      {/* Current Position Indicator */}
+      {isCurrentPosition && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '4px',
+            left: '4px',
+            backgroundColor: '#4caf50',
+            color: 'white',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            zIndex: 15,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '2px',
+          }}
+        >
+          <span style={{ fontSize: '8px' }}>📍</span>
+          HERE
+        </div>
+      )}
+
       {/* Menu Type Indicator */}
       <div
         style={{
@@ -119,7 +151,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           style={{
             position: 'absolute',
             top: '4px',
-            left: '4px',
+            left: isCurrentPosition ? '60px' : '4px', // Adjust position if current position indicator is shown
             backgroundColor: UI_BADGE_COLORS.root.background,
             color: UI_BADGE_COLORS.root.textColor,
             fontSize: '10px',

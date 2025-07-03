@@ -1,4 +1,12 @@
-import React, { createContext, useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import React, {
+  createContext,
+  useState,
+  useRef,
+  useCallback,
+  useMemo,
+  useEffect,
+  useContext,
+} from 'react';
 import { useParams } from 'react-router-dom';
 import { useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
 
@@ -28,6 +36,12 @@ export interface NavigationContextType {
   setNavigationPath: (path: string[]) => void;
   navigationNamePath: string[];
   setNavigationNamePath: (path: string[]) => void;
+
+  // Current position tracking
+  currentNodeId: string | null;
+  setCurrentNodeId: (id: string | null) => void;
+  currentNodeLabel: string | null;
+  setCurrentNodeLabel: (label: string | null) => void;
 
   // React Flow state
   nodes: UINavigationNode[];
@@ -129,6 +143,8 @@ export interface NavigationContextType {
   fitViewToNodes: () => void;
   validateNavigationPath: (path: string[]) => boolean;
   updateNavigationPath: (newPath: string[], newNamePath: string[]) => void;
+  updateCurrentPosition: (nodeId: string | null, nodeLabel?: string | null) => void;
+  updateNodesWithMinimapIndicators: (navigationSteps?: any[]) => void;
 
   // Lock methods
   lockNavigationTree: (treeId: string) => Promise<boolean>;
@@ -172,6 +188,10 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   const [currentTreeName, setCurrentTreeName] = useState<string>(treeName || 'home');
   const [navigationPath, setNavigationPath] = useState<string[]>([treeName || treeId || 'home']);
   const [navigationNamePath, setNavigationNamePath] = useState<string[]>([treeName || 'home']);
+
+  // Current position tracking
+  const [currentNodeId, setCurrentNodeId] = useState<string | null>(null);
+  const [currentNodeLabel, setCurrentNodeLabel] = useState<string | null>(null);
 
   // React Flow state
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -223,6 +243,14 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   useEffect(() => {
     console.log('[@context:NavigationProvider] userInterface changed:', userInterface);
   }, [userInterface]);
+
+  // Update minimap indicators when current position changes
+  useEffect(() => {
+    if (nodes.length > 0) {
+      updateNodesWithMinimapIndicators();
+    }
+  }, [currentNodeId, nodes.length, updateNodesWithMinimapIndicators]);
+
   const [rootTree, setRootTree] = useState<any>(null);
   const [isLoadingInterface, setIsLoadingInterface] = useState<boolean>(!!interfaceId);
 
@@ -445,6 +473,41 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
     [validateNavigationPath],
   );
 
+  const updateCurrentPosition = useCallback((nodeId: string | null, nodeLabel?: string | null) => {
+    console.log('[@context:NavigationProvider] Updating current position');
+    setCurrentNodeId(nodeId);
+    setCurrentNodeLabel(nodeLabel);
+  }, []);
+
+  // Update nodes with minimap indicators
+  const updateNodesWithMinimapIndicators = useCallback(
+    (navigationSteps?: any[]) => {
+      console.log('[@context:NavigationProvider] Updating nodes with minimap indicators');
+
+      setNodes((currentNodes) => {
+        return currentNodes.map((node) => {
+          const isCurrentPosition = node.id === currentNodeId;
+
+          // Check if node is part of navigation route
+          const isOnNavigationRoute =
+            navigationSteps?.some(
+              (step: any) => step.from_node_id === node.id || step.to_node_id === node.id,
+            ) || false;
+
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              isCurrentPosition,
+              isOnNavigationRoute,
+            },
+          };
+        });
+      });
+    },
+    [currentNodeId, setNodes],
+  );
+
   // ========================================
   // MEMOIZED VALUES
   // ========================================
@@ -479,6 +542,12 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       setNavigationPath,
       navigationNamePath: stableNavigationNamePath,
       setNavigationNamePath,
+
+      // Current position tracking
+      currentNodeId,
+      setCurrentNodeId,
+      currentNodeLabel,
+      setCurrentNodeLabel,
 
       // React Flow state
       nodes: stableNodes,
@@ -580,6 +649,8 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       fitViewToNodes,
       validateNavigationPath,
       updateNavigationPath,
+      updateCurrentPosition,
+      updateNodesWithMinimapIndicators,
 
       // Lock methods
       lockNavigationTree,
@@ -623,6 +694,9 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
     stableAvailableFocusNodes,
     initialState,
     reactFlowInstance,
+    currentNodeId,
+    currentNodeLabel,
+    updateNodesWithMinimapIndicators,
   ]);
 
   return <NavigationContext.Provider value={contextValue}>{children}</NavigationContext.Provider>;
@@ -631,3 +705,15 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
 NavigationProvider.displayName = 'NavigationProvider';
 
 export default NavigationContext;
+
+// ========================================
+// HOOK
+// ========================================
+
+export const useNavigation = (): NavigationContextType => {
+  const context = useContext(NavigationContext);
+  if (!context) {
+    throw new Error('useNavigation must be used within a NavigationProvider');
+  }
+  return context;
+};

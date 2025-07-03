@@ -81,6 +81,23 @@ const proOptions = { hideAttribution: true };
 
 // MiniMap nodeColor function - defined outside component to prevent recreation
 const miniMapNodeColor = (node: any) => {
+  // Check if this is the current position node
+  const isCurrentPosition = node.data?.isCurrentPosition;
+
+  // Check if this is part of navigation route
+  const isOnNavigationRoute = node.data?.isOnNavigationRoute;
+
+  // Current position gets bright green
+  if (isCurrentPosition) {
+    return '#4caf50'; // Bright green for current position
+  }
+
+  // Navigation route nodes get orange/amber
+  if (isOnNavigationRoute) {
+    return '#ff9800'; // Orange for navigation route
+  }
+
+  // Default colors based on node type
   switch (node.data?.type) {
     case 'screen':
       return '#3b82f6';
@@ -92,6 +109,8 @@ const miniMapNodeColor = (node: any) => {
       return '#10b981';
     case 'menu':
       return '#ffc107';
+    case 'entry':
+      return '#ef4444'; // Red for entry points
     default:
       return '#6b7280';
   }

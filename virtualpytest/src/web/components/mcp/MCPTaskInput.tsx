@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, IconButton, TextField, Button, Typography, CircularProgress } from '@mui/material';
 import { SmartToy, Send, CheckCircle, Error } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
 
 import { useMCPTask } from '../../hooks/mcp/useMCPTask';
 
 export const MCPTaskInput: React.FC = () => {
+  const navigate = useNavigate();
+
   const {
     // Panel state
     isPanelVisible,
@@ -22,6 +25,19 @@ export const MCPTaskInput: React.FC = () => {
     executeTask,
     clearResponse,
   } = useMCPTask();
+
+  // Handle navigation based on response
+  useEffect(() => {
+    if (lastResponse?.success && lastResponse.tool_result?.redirect_url) {
+      const redirectUrl = lastResponse.tool_result.redirect_url;
+      console.log(`[MCPTaskInput] Navigating to: ${redirectUrl}`);
+
+      // Navigate after a short delay to show the success message
+      setTimeout(() => {
+        navigate(redirectUrl);
+      }, 1000);
+    }
+  }, [lastResponse, navigate]);
 
   // Handle Enter key press
   const handleKeyDown = (event: React.KeyboardEvent) => {

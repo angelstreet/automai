@@ -340,6 +340,19 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
         transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
         
         if not transitions:
+            # Check if this means "already at target" vs "no path found"
+            # If current_node_id == target_node_id, this is success (already there)
+            if current_node_id == target_node_id:
+                result['success'] = True
+                result['execution_time'] = time.time() - start_time
+                result['transitions_executed'] = 0
+                result['total_transitions'] = 0
+                result['actions_executed'] = 0
+                result['total_actions'] = 0
+                result['final_message'] = f"Already at target node '{target_node_id}'"
+                print(f"[@navigation:executor:execute_navigation_with_verification] ✅ Already at target node {target_node_id}")
+                return result
+            else:
             result['error_message'] = "No navigation path found"
             return result
         
