@@ -5,7 +5,7 @@ Manages in-memory cache of NetworkX graphs for performance
 
 import networkx as nx
 from datetime import datetime, timedelta
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 import sys
 import os
 
@@ -15,60 +15,64 @@ _cache_timestamps: Dict[str, datetime] = {}
 
 def get_cached_graph(tree_id: str, team_id: str, force_rebuild: bool = False) -> Optional[nx.DiGraph]:
     """
-    Get or build cached NetworkX graph for a navigation tree
+    Get cached NetworkX graph for a navigation tree
     
     Args:
-        tree_id: Navigation tree ID
+        tree_id: Navigation tree ID (name or UUID)
         team_id: Team ID for security
         force_rebuild: Force rebuild even if cached
+        
+    Returns:
+        NetworkX directed graph or None if not cached
+    """
+    cache_key = f"{tree_id}_{team_id}"
+    
+    # Return cached graph if available
+    if cache_key in _navigation_graphs_cache and not force_rebuild:
+        print(f"[@navigation:cache:get_cached_graph] Using cached NetworkX graph for tree: {tree_id}")
+        return _navigation_graphs_cache[cache_key]
+    
+    # If not cached, return None - no database calls during navigation
+    print(f"[@navigation:cache:get_cached_graph] No cached graph found for tree: {tree_id}")
+    return None
+
+def populate_cache(tree_id: str, team_id: str, nodes: List[Dict], edges: List[Dict]) -> Optional[nx.DiGraph]:
+    """
+    Populate cache with tree data (called when tree is first loaded)
+    
+    Args:
+        tree_id: Navigation tree ID (name or UUID)
+        team_id: Team ID for security
+        nodes: Tree nodes data
+        edges: Tree edges data
         
     Returns:
         NetworkX directed graph or None if failed
     """
     cache_key = f"{tree_id}_{team_id}"
     
-    # TEMPORARY: Force rebuild to debug the issue
-    force_rebuild = True
-    
-    # Check if we need to rebuild
-    if force_rebuild or cache_key not in _navigation_graphs_cache:
-        print(f"[@navigation:cache:get_cached_graph] Building NetworkX graph for tree: {tree_id}")
+    try:
+        print(f"[@navigation:cache:populate_cache] Building NetworkX graph for tree: {tree_id}")
         
-        # Import from database layer and graph builder
-        from src.lib.supabase.navigation_trees_db import get_navigation_tree
-        from src.utils.app_utils import DEFAULT_TEAM_ID
         from src.web.cache.navigation_graph import create_networkx_graph
         
-        # Get fresh data from database using new API
-        success, message, tree_data = get_navigation_tree(tree_id, team_id or DEFAULT_TEAM_ID)
-        if not success or not tree_data:
-            print(f"[@navigation:cache:get_cached_graph] No tree data found for tree: {tree_id} - {message}")
-            return None
-            
-        nodes = tree_data.get('metadata', {}).get('nodes', [])
-        edges = tree_data.get('metadata', {}).get('edges', [])
-        
         if not nodes:
-            print(f"[@navigation:cache:get_cached_graph] No nodes found for tree: {tree_id}")
+            print(f"[@navigation:cache:populate_cache] No nodes found for tree: {tree_id}")
             return None
             
         # Build NetworkX graph
-        try:
-            G = create_networkx_graph(nodes, edges)
-            
-            # Cache it
-            _navigation_graphs_cache[cache_key] = G
-            _cache_timestamps[cache_key] = datetime.now()
-            
-            print(f"[@navigation:cache:get_cached_graph] Successfully cached graph with {len(G.nodes)} nodes and {len(G.edges)} edges")
-            return G
-            
-        except Exception as e:
-            print(f"[@navigation:cache:get_cached_graph] Error building graph: {e}")
-            return None
-    
-    print(f"[@navigation:cache:get_cached_graph] Using cached NetworkX graph for tree: {tree_id}")
-    return _navigation_graphs_cache[cache_key]
+        G = create_networkx_graph(nodes, edges)
+        
+        # Cache it
+        _navigation_graphs_cache[cache_key] = G
+        _cache_timestamps[cache_key] = datetime.now()
+        
+        print(f"[@navigation:cache:populate_cache] Successfully cached graph with {len(G.nodes)} nodes and {len(G.edges)} edges")
+        return G
+        
+    except Exception as e:
+        print(f"[@navigation:cache:populate_cache] Error building graph: {e}")
+        return None
 
 def invalidate_cache(tree_id: str, team_id: str = None):
     """
