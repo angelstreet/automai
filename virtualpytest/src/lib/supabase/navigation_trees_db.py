@@ -615,7 +615,7 @@ def _populate_navigation_cache(tree: Dict, team_id: str):
         if all_action_ids:
             try:
                 from src.lib.supabase.actions_db import get_actions as db_get_actions
-                all_actions_result = db_get_actions(team_id=team_id)
+                all_actions_result = db_get_actions(team_id)
                 if all_actions_result['success']:
                     all_actions = all_actions_result['actions']
                     # Filter to requested IDs
@@ -633,7 +633,7 @@ def _populate_navigation_cache(tree: Dict, team_id: str):
         if all_verification_ids:
             try:
                 from src.lib.supabase.verifications_db import get_verifications as db_get_verifications
-                all_verifications_result = db_get_verifications(team_id=team_id)
+                all_verifications_result = db_get_verifications(team_id)
                 if all_verifications_result['success']:
                     all_verifications = all_verifications_result['verifications']
                     # Filter to requested IDs

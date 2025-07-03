@@ -1,0 +1,82 @@
+{
+  "name": "virtualpytest-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for VirtualPyTest device automation and web app control",
+  "categories": {
+    "frontend_navigation": {
+      "description": "Navigate to different pages in the web application",
+      "tools": [
+        {
+          "name": "navigate_to_page",
+          "description": "Navigate to a specific page (dashboard, rec, userinterface, runTests)",
+          "endpoint": "/server/frontend/navigate",
+          "method": "POST",
+          "parameters": {
+            "page": {
+              "type": "string",
+              "description": "Page to navigate to",
+              "enum": ["dashboard", "rec", "userinterface", "runTests"],
+              "required": true
+            }
+          }
+        }
+      ]
+    },
+    "device_navigation": {
+      "description": "Navigate through device UI using predefined navigation trees",
+      "tools": [
+        {
+          "name": "execute_navigation_to_node",
+          "description": "Execute navigation to a specific node in a navigation tree",
+          "endpoint": "/internal/navigation/execute",
+          "method": "POST",
+          "parameters": {
+            "tree_id": {
+              "type": "string",
+              "description": "Navigation tree ID",
+              "required": true
+            },
+            "target_node_id": {
+              "type": "string",
+              "description": "Target node to navigate to",
+              "required": true
+            },
+            "team_id": {
+              "type": "string",
+              "description": "Team ID for security",
+              "required": true
+            },
+            "current_node_id": {
+              "type": "string",
+              "description": "Current position (optional, starts from entry point if not provided)",
+              "required": false
+            }
+          }
+        }
+      ]
+    },
+    "remote_control": {
+      "description": "Execute remote commands on connected devices",
+      "tools": [
+        {
+          "name": "remote_execute_command",
+          "description": "Execute a remote command on a device",
+          "endpoint": "/server/remote/execute",
+          "method": "POST",
+          "parameters": {
+            "command": {
+              "type": "string",
+              "description": "Command to execute",
+              "required": true
+            },
+            "device_id": {
+              "type": "string",
+              "description": "Target device ID",
+              "required": false
+            }
+          }
+        }
+      ]
+    }
+  }
+}

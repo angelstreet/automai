@@ -221,16 +221,61 @@ def get_tree_by_userinterface_id(userinterface_id):
         success, message, trees = get_navigation_trees(team_id, userinterface_id)
         
         if success and trees:
-            # Return the first tree (should be only one per userinterface_id)
-            tree = trees[0]
-            print(f'[@route:navigation_trees:get_tree_by_userinterface_id] Found tree: {tree["id"]} for userinterface_id: {userinterface_id}')
+            # Get the raw tree from database (this also populates the cache with resolved objects)
+            raw_tree = trees[0]
+            tree_id = raw_tree['id']
+            tree_name = raw_tree['name']
             
-            # Cache is now automatically populated by the database layer
+            print(f'[@route:navigation_trees:get_tree_by_userinterface_id] Found tree: {tree_id} for userinterface_id: {userinterface_id}')
             
-            return jsonify({
-                'success': True,
-                'tree': tree
-            })
+            # Now get the RESOLVED tree data from cache (with resolved verification objects)
+            try:
+                from src.web.cache.navigation_cache import get_cached_tree_data
+                
+                # Try to get resolved tree data from cache
+                resolved_tree_data = get_cached_tree_data(tree_id, team_id)
+                if not resolved_tree_data:
+                    # Fallback: try by tree name
+                    resolved_tree_data = get_cached_tree_data(tree_name, team_id)
+                if not resolved_tree_data:
+                    # Fallback: try by userinterface_id name
+                    from src.lib.supabase.userinterface_db import get_userinterface
+                    userinterface = get_userinterface(userinterface_id, team_id)
+                    if userinterface and userinterface.get('name'):
+                        userinterface_name = userinterface['name']
+                        resolved_tree_data = get_cached_tree_data(userinterface_name, team_id)
+                
+                if resolved_tree_data:
+                    # Return tree with resolved data (verification objects, action objects)
+                    resolved_tree = {
+                        **raw_tree,  # Keep database metadata (id, name, created_at, etc.)
+                        'metadata': {
+                            'nodes': resolved_tree_data['nodes'],  # Resolved nodes with verification objects
+                            'edges': resolved_tree_data['edges']   # Resolved edges with action objects
+                        }
+                    }
+                    
+                    print(f'[@route:navigation_trees:get_tree_by_userinterface_id] ✅ Returning RESOLVED tree data with {len(resolved_tree_data["nodes"])} nodes and {len(resolved_tree_data["edges"])} edges')
+                    
+                    return jsonify({
+                        'success': True,
+                        'tree': resolved_tree
+                    })
+                else:
+                    print(f'[@route:navigation_trees:get_tree_by_userinterface_id] ⚠️ Cache miss - returning raw tree data')
+                    # Fallback to raw tree if cache is not available
+                    return jsonify({
+                        'success': True,
+                        'tree': raw_tree
+                    })
+                    
+            except Exception as cache_error:
+                print(f'[@route:navigation_trees:get_tree_by_userinterface_id] ⚠️ Cache error: {cache_error} - returning raw tree data')
+                # Fallback to raw tree if cache fails
+                return jsonify({
+                    'success': True,
+                    'tree': raw_tree
+                })
         else:
             print(f'[@route:navigation_trees:get_tree_by_userinterface_id] Tree not found for userinterface_id: {userinterface_id}')
             return jsonify({
