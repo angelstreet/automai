@@ -353,8 +353,8 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
                 print(f"[@navigation:executor:execute_navigation_with_verification] ✅ Already at target node {target_node_id}")
                 return result
             else:
-            result['error_message'] = "No navigation path found"
-            return result
+                result['error_message'] = "No navigation path found"
+                return result
         
         result['total_transitions'] = len(transitions)
         result['total_actions'] = sum(len(t.get('actions', [])) for t in transitions)
