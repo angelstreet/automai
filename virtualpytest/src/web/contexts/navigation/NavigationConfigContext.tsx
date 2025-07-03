@@ -259,75 +259,6 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   );
 
   // ========================================
-  // HELPER FUNCTIONS FOR ID RESOLUTION
-  // ========================================
-
-  // Fetch actions by their IDs using batch endpoint
-  const fetchActionsByIds = useCallback(async (actionIds: string[]) => {
-    if (!actionIds || actionIds.length === 0) return [];
-
-    try {
-      const response = await fetch('/server/action/getActionsByIds', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ action_ids: actionIds }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          console.log(
-            `[@context:NavigationConfigProvider] Batch fetched ${data.count}/${data.requested_count} actions`,
-          );
-          return data.actions || [];
-        }
-      }
-
-      console.warn(`[@context:NavigationConfigProvider] Failed to batch fetch actions`);
-      return [];
-    } catch (error) {
-      console.warn(`[@context:NavigationConfigProvider] Error batch fetching actions:`, error);
-      return [];
-    }
-  }, []);
-
-  // Fetch verifications by their IDs using batch endpoint
-  const fetchVerificationsByIds = useCallback(async (verificationIds: string[]) => {
-    if (!verificationIds || verificationIds.length === 0) return [];
-
-    try {
-      const response = await fetch('/server/verification/getVerificationsByIds', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ verification_ids: verificationIds }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          console.log(
-            `[@context:NavigationConfigProvider] Batch fetched ${data.count}/${data.requested_count} verifications`,
-          );
-          return data.verifications || [];
-        }
-      }
-
-      console.warn(`[@context:NavigationConfigProvider] Failed to batch fetch verifications`);
-      return [];
-    } catch (error) {
-      console.warn(
-        `[@context:NavigationConfigProvider] Error batch fetching verifications:`,
-        error,
-      );
-      return [];
-    }
-  }, []);
-
-  // ========================================
   // CONFIG OPERATIONS
   // ========================================
 
@@ -359,93 +290,24 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           const tree = data.tree;
           const treeData = tree.metadata || {};
 
-          const rawNodes = treeData.nodes || [];
-          const rawEdges = treeData.edges || [];
-
-          // Extract ALL unique action and verification IDs from the entire tree
-          const allActionIds = new Set<string>();
-          const allVerificationIds = new Set<string>();
-
-          // Collect action IDs from all edges
-          rawEdges.forEach((edge: any) => {
-            const actionIds = edge.data?.action_ids || [];
-            const retryActionIds = edge.data?.retry_action_ids || [];
-            actionIds.forEach((id: string) => allActionIds.add(id));
-            retryActionIds.forEach((id: string) => allActionIds.add(id));
-          });
-
-          // Collect verification IDs from all nodes
-          rawNodes.forEach((node: any) => {
-            const verificationIds = node.data?.verification_ids || [];
-            verificationIds.forEach((id: string) => allVerificationIds.add(id));
-          });
+          const nodes = treeData.nodes || [];
+          const edges = treeData.edges || [];
 
           console.log(
-            `[@context:NavigationConfigProvider:loadFromConfig] Tree contains ${allActionIds.size} unique actions and ${allVerificationIds.size} unique verifications`,
+            `[@context:NavigationConfigProvider:loadFromConfig] Loaded tree for userInterface: ${userInterfaceId} with ${nodes.length} nodes and ${edges.length} edges`,
           );
 
-          // Make 2 batch calls to get all actions and verifications for the tree
-          const [allActions, allVerifications] = await Promise.all([
-            fetchActionsByIds(Array.from(allActionIds)),
-            fetchVerificationsByIds(Array.from(allVerificationIds)),
-          ]);
-
-          // Create lookup maps for fast resolution
-          const actionMap = new Map(allActions.map((action: any) => [action.id, action]));
-          const verificationMap = new Map(
-            allVerifications.map((verification: any) => [verification.id, verification]),
-          );
-
-          // Resolve all edges using the lookup maps
-          const resolvedEdges = rawEdges.map((edge: any) => {
-            const actions = (edge.data?.action_ids || [])
-              .map((id: string) => actionMap.get(id))
-              .filter(Boolean);
-            const retryActions = (edge.data?.retry_action_ids || [])
-              .map((id: string) => actionMap.get(id))
-              .filter(Boolean);
-
-            return {
-              ...edge,
-              data: {
-                ...edge.data,
-                actions, // Resolved action objects
-                retryActions, // Resolved retry action objects
-                action_ids: edge.data?.action_ids || [],
-                retry_action_ids: edge.data?.retry_action_ids || [],
-              },
-              finalWaitTime:
-                edge.data?.finalWaitTime !== undefined
-                  ? edge.data.finalWaitTime
-                  : edge.finalWaitTime,
-            };
-          });
-
-          // Resolve all nodes using the lookup maps
-          const resolvedNodes = rawNodes.map((node: any) => {
-            const verifications = (node.data?.verification_ids || [])
-              .map((id: string) => verificationMap.get(id))
-              .filter(Boolean);
-
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                verifications, // Resolved verification objects
-                verification_ids: node.data?.verification_ids || [],
-              },
-            };
-          });
-
-          state.setNodes(resolvedNodes);
-          state.setEdges(resolvedEdges);
+          // The backend cache now provides resolved objects, so we can use them directly
+          // No need for additional ID resolution here
+          state.setNodes(nodes);
+          state.setEdges(edges);
 
           console.log(
-            `[@context:NavigationConfigProvider:loadFromConfig] Loaded and resolved tree for userInterface: ${userInterfaceId} with ${resolvedNodes.length} nodes and ${resolvedEdges.length} edges`,
+            `[@context:NavigationConfigProvider:loadFromConfig] Set resolved tree data with ${nodes.length} nodes and ${edges.length} edges`,
           );
 
           // Set initial state for change tracking
-          state.setInitialState({ nodes: [...resolvedNodes], edges: [...resolvedEdges] });
+          state.setInitialState({ nodes: [...nodes], edges: [...edges] });
           state.setHasUnsavedChanges(false);
         } else {
           // Create empty tree structure
@@ -470,7 +332,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(false);
       }
     },
-    [fetchActionsByIds, fetchVerificationsByIds],
+    [],
   );
 
   // Save tree to database

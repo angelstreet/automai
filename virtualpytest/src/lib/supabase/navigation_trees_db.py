@@ -547,55 +547,185 @@ def delete_navigation_tree(tree_id: str, team_id: str, deleted_by: str = None, s
 def _populate_navigation_cache(tree: Dict, team_id: str):
     """
     Helper function to automatically populate navigation cache when tree is loaded
-    This ensures cache is always available for navigation operations
+    This ensures cache is always available for navigation operations with resolved actions and verifications
     """
     try:
+        # Clear existing cache to ensure we start fresh with resolved objects
+        from src.web.cache.navigation_cache import invalidate_cache
+        tree_id = tree['id']
+        tree_name = tree['name']
+        userinterface_id = tree.get('userinterface_id')
+        
+        # Invalidate all cache entries for this tree
+        invalidate_cache(tree_id, team_id)
+        invalidate_cache(tree_name, team_id)
+        
+        # Also invalidate userinterface cache if we can get the name
+        if userinterface_id:
+            try:
+                from src.lib.supabase.userinterface_db import get_userinterface
+                userinterface = get_userinterface(userinterface_id, team_id)
+                if userinterface and userinterface.get('name'):
+                    userinterface_name = userinterface['name']
+                    invalidate_cache(userinterface_name, team_id)
+            except Exception:
+                pass  # Continue if we can't get userinterface name
+        
+        print(f'[@db:navigation_trees:_populate_navigation_cache] Cleared existing cache for tree: {tree_id}')
+        
         # Import cache function (lazy import to avoid circular dependencies)
         from src.web.cache.navigation_cache import populate_cache
         
         tree_metadata = tree.get('metadata', {})
-        nodes = tree_metadata.get('nodes', [])
-        edges = tree_metadata.get('edges', [])
+        raw_nodes = tree_metadata.get('nodes', [])
+        raw_edges = tree_metadata.get('edges', [])
         
-        if nodes:
-            # Cache with tree ID, tree name, AND userinterface_name for maximum compatibility
-            tree_id = tree['id']
-            tree_name = tree['name']
-            userinterface_id = tree.get('userinterface_id')
+        if not raw_nodes:
+            print(f'[@db:navigation_trees:_populate_navigation_cache] No nodes found for tree: {tree["id"]}')
+            return
+        
+        # RESOLVE ALL IDs TO OBJECTS BEFORE CREATING CACHE
+        print(f'[@db:navigation_trees:_populate_navigation_cache] Resolving IDs to objects for tree cache')
+        
+        # Extract ALL unique action and verification IDs from the entire tree
+        all_action_ids = set()
+        all_verification_ids = set()
+        
+        # Collect action IDs from all edges
+        for edge in raw_edges:
+            edge_data = edge.get('data', {})
+            action_ids = edge_data.get('action_ids', [])
+            retry_action_ids = edge_data.get('retry_action_ids', [])
+            for action_id in action_ids:
+                all_action_ids.add(action_id)
+            for action_id in retry_action_ids:
+                all_action_ids.add(action_id)
+        
+        # Collect verification IDs from all nodes
+        for node in raw_nodes:
+            node_data = node.get('data', {})
+            verification_ids = node_data.get('verification_ids', [])
+            for verification_id in verification_ids:
+                all_verification_ids.add(verification_id)
+        
+        print(f'[@db:navigation_trees:_populate_navigation_cache] Found {len(all_action_ids)} unique actions and {len(all_verification_ids)} unique verifications to resolve')
+        
+        # Resolve action IDs to action objects using batch endpoints
+        resolved_actions = []
+        if all_action_ids:
+            try:
+                from src.lib.supabase.actions_db import get_actions as db_get_actions
+                all_actions_result = db_get_actions(team_id=team_id)
+                if all_actions_result['success']:
+                    all_actions = all_actions_result['actions']
+                    # Filter to requested IDs
+                    for action in all_actions:
+                        if action.get('id') in all_action_ids:
+                            resolved_actions.append(action)
+                    print(f'[@db:navigation_trees:_populate_navigation_cache] Resolved {len(resolved_actions)}/{len(all_action_ids)} actions')
+                else:
+                    print(f'[@db:navigation_trees:_populate_navigation_cache] Failed to get actions: {all_actions_result.get("error")}')
+            except Exception as e:
+                print(f'[@db:navigation_trees:_populate_navigation_cache] Error resolving actions: {e}')
+        
+        # Resolve verification IDs to verification objects
+        resolved_verifications = []
+        if all_verification_ids:
+            try:
+                from src.lib.supabase.verification_db import get_verifications as db_get_verifications
+                all_verifications_result = db_get_verifications(team_id=team_id)
+                if all_verifications_result['success']:
+                    all_verifications = all_verifications_result['verifications']
+                    # Filter to requested IDs
+                    for verification in all_verifications:
+                        if verification.get('id') in all_verification_ids:
+                            resolved_verifications.append(verification)
+                    print(f'[@db:navigation_trees:_populate_navigation_cache] Resolved {len(resolved_verifications)}/{len(all_verification_ids)} verifications')
+                else:
+                    print(f'[@db:navigation_trees:_populate_navigation_cache] Failed to get verifications: {all_verifications_result.get("error")}')
+            except Exception as e:
+                print(f'[@db:navigation_trees:_populate_navigation_cache] Error resolving verifications: {e}')
+        
+        # Create lookup maps for fast resolution
+        action_map = {action['id']: action for action in resolved_actions}
+        verification_map = {verification['id']: verification for verification in resolved_verifications}
+        
+        # Resolve all edges using the lookup maps
+        resolved_edges = []
+        for edge in raw_edges:
+            edge_data = edge.get('data', {})
             
-            # Populate cache with tree ID
-            populate_cache(tree_id, team_id, nodes, edges)
+            # Resolve actions
+            actions = []
+            for action_id in edge_data.get('action_ids', []):
+                if action_id in action_map:
+                    actions.append(action_map[action_id])
             
-            # Populate cache with tree name (always "root")
-            populate_cache(tree_name, team_id, nodes, edges)
+            # Resolve retry actions
+            retry_actions = []
+            for action_id in edge_data.get('retry_action_ids', []):
+                if action_id in action_map:
+                    retry_actions.append(action_map[action_id])
             
-            # CRITICAL: Get userinterface name and populate cache for navigation requests
-            if userinterface_id:
-                try:
-                    # Import userinterface database function
-                    from src.lib.supabase.userinterface_db import get_userinterface
-                    
-                    # Get userinterface data to retrieve the name
-                    userinterface = get_userinterface(userinterface_id, team_id)
-                    if userinterface and userinterface.get('name'):
-                        userinterface_name = userinterface['name']
-                        
-                        # Populate cache with userinterface name (this is what navigation uses!)
-                        populate_cache(userinterface_name, team_id, nodes, edges)
-                        
-                        print(f'[@db:navigation_trees:_populate_navigation_cache] Auto-cached tree data for navigation - ID: {tree_id}, Name: {tree_name}, UserInterface: {userinterface_name}')
-                    else:
-                        print(f'[@db:navigation_trees:_populate_navigation_cache] Warning: Could not fetch userinterface name for ID: {userinterface_id}')
-                        print(f'[@db:navigation_trees:_populate_navigation_cache] Auto-cached tree data for navigation - ID: {tree_id}, Name: {tree_name}')
-                except Exception as ui_error:
-                    print(f'[@db:navigation_trees:_populate_navigation_cache] Error fetching userinterface name: {ui_error}')
-                    print(f'[@db:navigation_trees:_populate_navigation_cache] Auto-cached tree data for navigation - ID: {tree_id}, Name: {tree_name}')
-            else:
-                print(f'[@db:navigation_trees:_populate_navigation_cache] Warning: No userinterface_id found for tree: {tree_id}')
-                print(f'[@db:navigation_trees:_populate_navigation_cache] Auto-cached tree data for navigation - ID: {tree_id}, Name: {tree_name}')
+            resolved_edge = {
+                **edge,
+                'data': {
+                    **edge_data,
+                    'actions': actions,  # Resolved action objects
+                    'retryActions': retry_actions,  # Resolved retry action objects
+                    'action_ids': edge_data.get('action_ids', []),  # Keep IDs for reference
+                    'retry_action_ids': edge_data.get('retry_action_ids', []),  # Keep IDs for reference
+                }
+            }
+            resolved_edges.append(resolved_edge)
+        
+        # Resolve all nodes using the lookup maps
+        resolved_nodes = []
+        for node in raw_nodes:
+            node_data = node.get('data', {})
+            
+            # Resolve verifications
+            verifications = []
+            for verification_id in node_data.get('verification_ids', []):
+                if verification_id in verification_map:
+                    verifications.append(verification_map[verification_id])
+            
+            resolved_node = {
+                **node,
+                'data': {
+                    **node_data,
+                    'verifications': verifications,  # Resolved verification objects
+                    'verification_ids': node_data.get('verification_ids', []),  # Keep IDs for reference
+                }
+            }
+            resolved_nodes.append(resolved_node)
+        
+        print(f'[@db:navigation_trees:_populate_navigation_cache] Resolved tree: {len(resolved_nodes)} nodes, {len(resolved_edges)} edges with resolved objects')
+        
+        # Populate cache with resolved data
+        populate_cache(tree_id, team_id, resolved_nodes, resolved_edges)
+        populate_cache(tree_name, team_id, resolved_nodes, resolved_edges)
+        
+        # CRITICAL: Get userinterface name and populate cache for navigation requests
+        if userinterface_id:
+            try:
+                from src.lib.supabase.userinterface_db import get_userinterface
+                userinterface = get_userinterface(userinterface_id, team_id)
+                if userinterface and userinterface.get('name'):
+                    userinterface_name = userinterface['name']
+                    populate_cache(userinterface_name, team_id, resolved_nodes, resolved_edges)
+                    print(f'[@db:navigation_trees:_populate_navigation_cache] ✅ Auto-cached RESOLVED tree data - ID: {tree_id}, Name: {tree_name}, UserInterface: {userinterface_name}')
+                else:
+                    print(f'[@db:navigation_trees:_populate_navigation_cache] Warning: Could not fetch userinterface name for ID: {userinterface_id}')
+                    print(f'[@db:navigation_trees:_populate_navigation_cache] ✅ Auto-cached RESOLVED tree data - ID: {tree_id}, Name: {tree_name}')
+            except Exception as ui_error:
+                print(f'[@db:navigation_trees:_populate_navigation_cache] Error fetching userinterface name: {ui_error}')
+                print(f'[@db:navigation_trees:_populate_navigation_cache] ✅ Auto-cached RESOLVED tree data - ID: {tree_id}, Name: {tree_name}')
         else:
-            print(f'[@db:navigation_trees:_populate_navigation_cache] No nodes to cache for tree: {tree["id"]}')
+            print(f'[@db:navigation_trees:_populate_navigation_cache] Warning: No userinterface_id found for tree: {tree_id}')
+            print(f'[@db:navigation_trees:_populate_navigation_cache] ✅ Auto-cached RESOLVED tree data - ID: {tree_id}, Name: {tree_name}')
             
-    except Exception as cache_error:
-        print(f'[@db:navigation_trees:_populate_navigation_cache] Cache population failed: {cache_error}')
-        # Don't fail the tree loading if caching fails 
+    except Exception as e:
+        print(f'[@db:navigation_trees:_populate_navigation_cache] Error populating cache: {e}')
+        import traceback
+        traceback.print_exc() 

@@ -137,4 +137,37 @@ def clear_all_cache():
     count = len(_navigation_graphs_cache)
     _navigation_graphs_cache.clear()
     _cache_timestamps.clear()
-    print(f"[@navigation:cache:clear_all_cache] Cleared {count} cached graphs") 
+    print(f"[@navigation:cache:clear_all_cache] Cleared {count} cached graphs")
+
+def force_refresh_cache(tree_id: str, team_id: str) -> bool:
+    """
+    Force refresh cache for a specific tree by invalidating and reloading
+    
+    Args:
+        tree_id: Navigation tree ID
+        team_id: Team ID for security
+        
+    Returns:
+        True if cache was refreshed successfully
+    """
+    try:
+        # Invalidate existing cache
+        invalidate_cache(tree_id, team_id)
+        
+        # Try to reload tree data to populate cache
+        try:
+            from src.lib.supabase.navigation_trees_db import get_navigation_tree
+            tree = get_navigation_tree(tree_id, team_id)
+            if tree and tree.get('success'):
+                print(f"[@navigation:cache:force_refresh_cache] Successfully refreshed cache for tree: {tree_id}")
+                return True
+            else:
+                print(f"[@navigation:cache:force_refresh_cache] Failed to reload tree: {tree_id}")
+                return False
+        except Exception as e:
+            print(f"[@navigation:cache:force_refresh_cache] Error reloading tree: {e}")
+            return False
+            
+    except Exception as e:
+        print(f"[@navigation:cache:force_refresh_cache] Error refreshing cache: {e}")
+        return False 
