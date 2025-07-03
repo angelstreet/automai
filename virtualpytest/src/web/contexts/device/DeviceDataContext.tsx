@@ -653,6 +653,76 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
   }, [fetchAllData]);
 
   // ========================================
+  // DEVICE POSITION MANAGEMENT
+  // ========================================
+
+  const getDevicePosition = useCallback(
+    (host: Host, deviceId: string, treeId: string) => {
+      const deviceKey = `${host.host_name}_${host.host_url}_${deviceId}_${treeId}`;
+      const position = state.devicePositions[deviceKey];
+      return position ? { nodeId: position.nodeId, nodeLabel: position.nodeLabel } : null;
+    },
+    [state.devicePositions],
+  );
+
+  const setDevicePosition = useCallback(
+    (host: Host, deviceId: string, treeId: string, nodeId: string, nodeLabel: string) => {
+      const deviceKey = `${host.host_name}_${host.host_url}_${deviceId}_${treeId}`;
+      console.log(
+        `[DeviceDataContext] Setting device position for ${deviceKey}: ${nodeId} (${nodeLabel})`,
+      );
+
+      setState((prev) => ({
+        ...prev,
+        devicePositions: {
+          ...prev.devicePositions,
+          [deviceKey]: {
+            nodeId,
+            nodeLabel,
+            treeId,
+            timestamp: Date.now(),
+          },
+        },
+      }));
+    },
+    [],
+  );
+
+  const initializeDevicePosition = useCallback(
+    (host: Host, deviceId: string, treeId: string, rootNodeId: string, rootNodeLabel: string) => {
+      const deviceKey = `${host.host_name}_${host.host_url}_${deviceId}_${treeId}`;
+      const existingPosition = state.devicePositions[deviceKey];
+
+      if (existingPosition) {
+        console.log(
+          `[DeviceDataContext] Device position already exists for ${deviceKey}: ${existingPosition.nodeId} (${existingPosition.nodeLabel})`,
+        );
+        return { nodeId: existingPosition.nodeId, nodeLabel: existingPosition.nodeLabel };
+      }
+
+      console.log(
+        `[DeviceDataContext] Initializing device position for ${deviceKey}: ${rootNodeId} (${rootNodeLabel})`,
+      );
+
+      setState((prev) => ({
+        ...prev,
+        devicePositions: {
+          ...prev.devicePositions,
+          [deviceKey]: {
+            nodeId: rootNodeId,
+            nodeLabel: rootNodeLabel,
+            treeId,
+            timestamp: Date.now(),
+          },
+        },
+      }));
+
+      return { nodeId: rootNodeId, nodeLabel: rootNodeLabel };
+    },
+    [state.devicePositions],
+  );
+
+  // ========================================
   // EFFECTS
   // ========================================
 
@@ -689,54 +759,9 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
       reloadData,
 
       // Device position management
-      getDevicePosition: (host: Host, deviceId: string, treeId: string) => {
-        const devicePosition =
-          state.devicePositions[`${host.host_name}_${host.host_url}_${deviceId}_${treeId}`];
-        return devicePosition
-          ? { nodeId: devicePosition.nodeId, nodeLabel: devicePosition.nodeLabel }
-          : null;
-      },
-      setDevicePosition: (
-        host: Host,
-        deviceId: string,
-        treeId: string,
-        nodeId: string,
-        nodeLabel: string,
-      ) => {
-        setState((prev) => ({
-          ...prev,
-          devicePositions: {
-            ...prev.devicePositions,
-            [`${host.host_name}_${host.host_url}_${deviceId}_${treeId}`]: {
-              nodeId,
-              nodeLabel,
-              treeId,
-              timestamp: Date.now(),
-            },
-          },
-        }));
-      },
-      initializeDevicePosition: (
-        host: Host,
-        deviceId: string,
-        treeId: string,
-        rootNodeId: string,
-        rootNodeLabel: string,
-      ) => {
-        setState((prev) => ({
-          ...prev,
-          devicePositions: {
-            ...prev.devicePositions,
-            [`${host.host_name}_${host.host_url}_${deviceId}_${treeId}`]: {
-              nodeId: rootNodeId,
-              nodeLabel: rootNodeLabel,
-              treeId,
-              timestamp: Date.now(),
-            },
-          },
-        }));
-        return { nodeId: rootNodeId, nodeLabel: rootNodeLabel };
-      },
+      getDevicePosition,
+      setDevicePosition,
+      initializeDevicePosition,
     }),
     [
       state,
@@ -754,6 +779,9 @@ export const DeviceDataProvider: React.FC<DeviceDataProviderProps> = ({ children
       setControlState,
       clearData,
       reloadData,
+      getDevicePosition,
+      setDevicePosition,
+      initializeDevicePosition,
     ],
   );
 

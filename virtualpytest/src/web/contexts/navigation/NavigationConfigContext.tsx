@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useCallback, useState, useMemo } from 'react';
 
 import { useUserSession } from '../../hooks/useUserSession';
 import { UINavigationNode, UINavigationEdge } from '../../types/pages/Navigation_Types';
@@ -41,7 +41,6 @@ interface NavigationConfigState {
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  updateCurrentPosition?: (nodeId: string, label: string) => void;
 }
 
 interface NavigationConfigProviderProps {
@@ -55,12 +54,7 @@ interface NavigationConfigProviderProps {
 const NavigationConfigContext = createContext<NavigationConfigContextType | null>(null);
 
 export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> = ({ children }) => {
-  // ========================================
-  // USER SESSION
-  // ========================================
-
-  // Get user session info (session ID and user ID)
-  const { sessionId, userId } = useUserSession();
+  const { userId, sessionId } = useUserSession();
 
   // ========================================
   // STATE
@@ -311,11 +305,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           state.setInitialState({ nodes: [...nodes], edges: [...edges] });
           state.setHasUnsavedChanges(false);
 
-          // Find and set the home/root node as initial current position
-          const homeNode = nodes.find((node: any) => node.data?.is_root === true);
-          if (homeNode && state.updateCurrentPosition) {
-            state.updateCurrentPosition(homeNode.id, homeNode.data?.label);
-          }
+          // Device position initialization is now handled in NavigationContext
         } else {
           // Create empty tree structure
           state.setNodes([]);

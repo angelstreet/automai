@@ -32,7 +32,6 @@ export const useNavigationEditor = () => {
           setHasUnsavedChanges: navigation.setHasUnsavedChanges,
           setIsLoading: navigation.setIsLoading,
           setError: navigation.setError,
-          updateCurrentPosition: navigation.updateCurrentPosition,
         };
         return navigationConfig.loadFromConfig(userInterfaceId, state);
       }

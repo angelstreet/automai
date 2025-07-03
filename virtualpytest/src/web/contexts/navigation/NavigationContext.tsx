@@ -9,7 +9,9 @@ import React, {
 } from 'react';
 import { useParams } from 'react-router-dom';
 import { useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
+import { useReactFlow, Node, Edge } from 'reactflow';
 
+import { useDeviceData } from '../device/DeviceDataContext';
 import {
   UINavigationNode,
   UINavigationEdge,
@@ -162,6 +164,15 @@ interface NavigationProviderProps {
 const NavigationContext = createContext<NavigationContextType | null>(null);
 
 export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children }) => {
+  const { treeId, interfaceId } = useParams<{ treeId: string; interfaceId: string }>();
+  const {
+    currentHost,
+    currentDeviceId,
+    getDevicePosition,
+    setDevicePosition,
+    initializeDevicePosition,
+  } = useDeviceData();
+
   // console.log('[@context:NavigationProvider] Initializing unified navigation context');
 
   // ========================================
@@ -174,7 +185,7 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
     interfaceId?: string;
   }>();
 
-  const { treeId, treeName, interfaceId } = useMemo(
+  const { treeName } = useMemo(
     () => routeParams,
     [routeParams.treeId, routeParams.treeName, routeParams.interfaceId],
   );
@@ -250,6 +261,56 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       updateNodesWithMinimapIndicators();
     }
   }, [currentNodeId, nodes.length, updateNodesWithMinimapIndicators]);
+
+  // Initialize current position from device position when tree and device context are available
+  useEffect(() => {
+    if (
+      nodes.length > 0 &&
+      currentHost &&
+      currentDeviceId &&
+      treeId &&
+      getDevicePosition &&
+      initializeDevicePosition
+    ) {
+      // Check if we already have a position for this device/tree combination
+      const existingPosition = getDevicePosition(currentHost, currentDeviceId, treeId);
+
+      if (existingPosition) {
+        // Use existing position
+        console.log(
+          '[@context:NavigationProvider] Using existing device position:',
+          existingPosition,
+        );
+        setCurrentNodeId(existingPosition.nodeId);
+        setCurrentNodeLabel(existingPosition.nodeLabel);
+      } else {
+        // Initialize to root node
+        const homeNode = nodes.find((node: any) => node.data?.is_root === true);
+        if (homeNode) {
+          console.log(
+            '[@context:NavigationProvider] Initializing device position to root node:',
+            homeNode.id,
+          );
+          const position = initializeDevicePosition(
+            currentHost,
+            currentDeviceId,
+            treeId,
+            homeNode.id,
+            homeNode.data?.label || 'Root',
+          );
+          setCurrentNodeId(position.nodeId);
+          setCurrentNodeLabel(position.nodeLabel);
+        }
+      }
+    }
+  }, [
+    nodes.length,
+    currentHost,
+    currentDeviceId,
+    treeId,
+    getDevicePosition,
+    initializeDevicePosition,
+  ]);
 
   const [rootTree, setRootTree] = useState<any>(null);
   const [isLoadingInterface, setIsLoadingInterface] = useState<boolean>(!!interfaceId);
@@ -473,11 +534,19 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
     [validateNavigationPath],
   );
 
-  const updateCurrentPosition = useCallback((nodeId: string | null, nodeLabel?: string | null) => {
-    console.log('[@context:NavigationProvider] Updating current position');
-    setCurrentNodeId(nodeId);
-    setCurrentNodeLabel(nodeLabel);
-  }, []);
+  const updateCurrentPosition = useCallback(
+    (nodeId: string | null, nodeLabel?: string | null) => {
+      console.log('[@context:NavigationProvider] Updating current position');
+      setCurrentNodeId(nodeId);
+      setCurrentNodeLabel(nodeLabel);
+
+      // Update device position if we have the required context
+      if (nodeId && nodeLabel && currentHost && currentDeviceId && treeId && setDevicePosition) {
+        setDevicePosition(currentHost, currentDeviceId, treeId, nodeId, nodeLabel);
+      }
+    },
+    [currentHost, currentDeviceId, treeId, setDevicePosition],
+  );
 
   // Update nodes with minimap indicators
   const updateNodesWithMinimapIndicators = useCallback(
