@@ -1,82 +1,112 @@
 {
-  "name": "virtualpytest-mcp-server",
-  "version": "1.0.0",
-  "description": "MCP server for VirtualPyTest device automation and web app control",
-  "categories": {
-    "frontend_navigation": {
-      "description": "Navigate to different pages in the web application",
-      "tools": [
-        {
-          "name": "navigate_to_page",
-          "description": "Navigate to a specific page (dashboard, rec, userinterface, runTests)",
-          "endpoint": "/server/frontend/navigate",
-          "method": "POST",
-          "parameters": {
-            "page": {
-              "type": "string",
-              "description": "Page to navigate to",
-              "enum": ["dashboard", "rec", "userinterface", "runTests"],
-              "required": true
+  "mcp_tools": {
+    "frontend_navigation": [
+      {
+        "command": "navigate_to_page",
+        "description": "Navigate to a specific page in the web interface",
+        "parameters": {
+          "page": {
+            "type": "string",
+            "description": "Target page name",
+            "enum": ["dashboard", "rec", "userinterface", "runTests"],
+            "required": true
+          }
+        },
+        "examples": [
+          {
+            "task": "Go to rec page",
+            "usage": {
+              "command": "navigate_to_page",
+              "params": { "page": "rec" }
+            }
+          },
+          {
+            "task": "Go to dashboard",
+            "usage": {
+              "command": "navigate_to_page",
+              "params": { "page": "dashboard" }
             }
           }
-        }
-      ]
-    },
-    "device_navigation": {
-      "description": "Navigate through device UI using predefined navigation trees",
-      "tools": [
-        {
-          "name": "execute_navigation_to_node",
-          "description": "Execute navigation to a specific node in a navigation tree",
-          "endpoint": "/internal/navigation/execute",
-          "method": "POST",
-          "parameters": {
-            "tree_id": {
-              "type": "string",
-              "description": "Navigation tree ID",
-              "required": true
-            },
-            "target_node_id": {
-              "type": "string",
-              "description": "Target node to navigate to",
-              "required": true
-            },
-            "team_id": {
-              "type": "string",
-              "description": "Team ID for security",
-              "required": true
-            },
-            "current_node_id": {
-              "type": "string",
-              "description": "Current position (optional, starts from entry point if not provided)",
-              "required": false
+        ]
+      }
+    ],
+    "device_navigation": [
+      {
+        "command": "execute_navigation_to_node",
+        "description": "Execute navigation to a specific node in a navigation tree",
+        "parameters": {
+          "tree_id": {
+            "type": "string",
+            "description": "Navigation tree identifier",
+            "required": true
+          },
+          "target_node_id": {
+            "type": "string",
+            "description": "Target node identifier",
+            "required": true
+          },
+          "team_id": {
+            "type": "string",
+            "description": "Team identifier",
+            "required": false,
+            "default": "default_team"
+          },
+          "current_node_id": {
+            "type": "string",
+            "description": "Current node identifier",
+            "required": false
+          }
+        },
+        "examples": [
+          {
+            "task": "Navigate to home node",
+            "usage": {
+              "command": "execute_navigation_to_node",
+              "params": {
+                "tree_id": "main_tree",
+                "target_node_id": "home"
+              }
             }
           }
-        }
-      ]
-    },
-    "remote_control": {
-      "description": "Execute remote commands on connected devices",
-      "tools": [
-        {
-          "name": "remote_execute_command",
-          "description": "Execute a remote command on a device",
-          "endpoint": "/server/remote/execute",
-          "method": "POST",
-          "parameters": {
-            "command": {
-              "type": "string",
-              "description": "Command to execute",
-              "required": true
-            },
-            "device_id": {
-              "type": "string",
-              "description": "Target device ID",
-              "required": false
+        ]
+      }
+    ],
+    "remote_control": [
+      {
+        "command": "remote_execute_command",
+        "description": "Execute a remote command on a device",
+        "parameters": {
+          "command": {
+            "type": "string",
+            "description": "Command to execute",
+            "required": true
+          },
+          "device_id": {
+            "type": "string",
+            "description": "Target device identifier",
+            "required": false,
+            "default": "default_device"
+          }
+        },
+        "examples": [
+          {
+            "task": "Execute remote command",
+            "usage": {
+              "command": "remote_execute_command",
+              "params": {
+                "command": "restart_service",
+                "device_id": "device_01"
+              }
             }
           }
-        }
-      ]
-    }
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "description": "MCP tools configuration for VirtualPyTest",
+    "created": "2024-01-01",
+    "categories": ["frontend_navigation", "device_navigation", "remote_control"]
   }
 }

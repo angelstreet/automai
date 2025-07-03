@@ -105,8 +105,45 @@ class AIAgentController(BaseController):
                 "available_verifications": [verif.get('verification_type', 'unknown') for verif in available_verifications]
             }
             
-            # Create prompt for AI
-            prompt = f"""You are a test automation AI. Generate an execution plan for this task.
+            # Create MCP-aware prompt for AI
+            if device_model == "MCP_Interface":
+                prompt = f"""You are an MCP (Model Context Protocol) task automation AI. Generate an execution plan for web interface tasks.
+
+Task: "{task_description}"
+Available MCP tools: {context['available_actions']}
+
+MCP Tool Guidelines:
+- navigate_to_page: Use for "go to [page]" requests (pages: dashboard, rec, userinterface, runTests)
+- execute_navigation_to_node: Use for navigation tree operations
+- remote_execute_command: Use for device command execution
+
+CRITICAL: Respond with ONLY valid JSON. No other text.
+
+Required JSON format:
+{{
+  "analysis": "brief analysis of the task",
+  "feasible": true,
+  "plan": [
+    {{
+      "step": 1,
+      "type": "action",
+      "command": "navigate_to_page",
+      "params": {{"page": "rec"}},
+      "description": "Navigate to rec page"
+    }}
+  ]
+}}
+
+If not feasible:
+{{
+  "analysis": "why task cannot be completed",
+  "feasible": false,
+  "plan": []
+}}
+
+JSON ONLY - NO OTHER TEXT"""
+            else:
+                prompt = f"""You are a test automation AI. Generate an execution plan for this task.
 
 Task: "{task_description}"
 Device: {device_model}

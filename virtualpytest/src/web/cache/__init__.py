@@ -4,6 +4,7 @@ Navigation cache module
 
 from .navigation_cache import (
     get_cached_graph,
+    get_cached_tree_data,
     invalidate_cache,
     cleanup_old_caches,
     get_cache_stats,
@@ -23,6 +24,7 @@ from .navigation_graph import (
 
 __all__ = [
     'get_cached_graph',
+    'get_cached_tree_data',
     'invalidate_cache',
     'cleanup_old_caches',
     'get_cache_stats',

@@ -9,6 +9,7 @@ import NavigationBar from './components/common/Navigation_Bar';
 import ThemeToggle from './components/common/ThemeToggle';
 import { HostManagerProvider } from './contexts/HostManagerProvider';
 import { ToastProvider } from './contexts/ToastContext';
+import { MCPTaskInput } from './components/mcp/MCPTaskInput';
 
 // Lazy load all pages for better performance and to avoid loading everything at once
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -194,6 +195,10 @@ const App: React.FC = () => {
                 </Routes>
               </Suspense>
             </Container>
+
+            {/* MCP Task Input - Global overlay component */}
+            <MCPTaskInput />
+
             <Footer />
           </Router>
         </Box>
