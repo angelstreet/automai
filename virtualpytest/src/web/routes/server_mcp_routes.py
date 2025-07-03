@@ -8,6 +8,9 @@ Handles task execution using AI agent with MCP tool awareness.
 from flask import Blueprint, request, jsonify
 import logging
 
+# Import AI agent controller directly
+from src.controllers.ai.ai_agent import AIAgentController
+
 # Create blueprint
 mcp_bp = Blueprint('server_mcp', __name__, url_prefix='/server/mcp')
 
@@ -77,21 +80,16 @@ def execute_task():
             }
         ]
         
-        # Call existing AI agent with MCP context
-        try:
-            from src.controllers.ai.ai_agent import AIAgentController
-            
-            ai_agent = AIAgentController()
-            ai_result = ai_agent.execute_task(
-                task_description=task,
-                available_actions=mcp_tools,
-                available_verifications=mcp_verifications,
-                device_model="MCP_Interface"
-            )
-        except Exception as ai_error:
-            logger.error(f"[@server_mcp_routes:execute_task] AI Agent error: {ai_error}")
-            # Fallback: try to parse task directly without AI
-            return _handle_task_without_ai(task, mcp_tools)
+        # Instantiate AI agent controller
+        ai_agent = AIAgentController()
+        
+        # Execute task with MCP context
+        ai_result = ai_agent.execute_task(
+            task_description=task,
+            available_actions=mcp_tools,
+            available_verifications=mcp_verifications,
+            device_model="MCP_Interface"
+        )
         
         if ai_result.get('success'):
             # Extract MCP tool execution from AI plan
@@ -110,13 +108,11 @@ def execute_task():
                 "execution_log": ai_result.get('execution_log', [])
             })
         else:
-            # AI failed, try fallback
-            logger.warning(f"[@server_mcp_routes:execute_task] AI failed: {ai_result.get('error')}, trying fallback")
-            fallback_result = _handle_task_without_ai(task, mcp_tools)
-            if fallback_result.get('success'):
-                return jsonify(fallback_result)
-            else:
-                return jsonify(fallback_result), 500
+            return jsonify({
+                "success": False,
+                "error": ai_result.get('error', 'AI agent failed to process task'),
+                "execution_log": ai_result.get('execution_log', [])
+            }), 500
         
     except Exception as e:
         logger.error(f"[@server_mcp_routes:execute_task] Error: {e}")
@@ -172,12 +168,6 @@ def _execute_mcp_tool_from_plan(plan_steps):
 def _execute_navigate_to_page(params):
     """Execute navigate_to_page MCP tool"""
     try:
-        # Import the frontend navigation function
-        from .server_frontend_routes import navigate_to_page
-        
-        # Call the navigation function directly with proper parameters
-        from flask import jsonify
-        
         page = params.get("page", params.get("key", "dashboard"))
         
         # Define valid pages
@@ -249,13 +239,13 @@ def _execute_navigation_to_node(params):
 def _execute_remote_command(params):
     """Execute remote_execute_command MCP tool"""
     try:
-        # This would typically call your remote controller
-        # For now, return a mock success response
         command = params.get("command", "unknown")
         device_id = params.get("device_id", "default")
         
-        logger.info(f"[@server_mcp_routes:_execute_remote_command] Mock execution: {command} on {device_id}")
+        logger.info(f"[@server_mcp_routes:_execute_remote_command] Remote command: {command} on device {device_id}")
         
+        # This would integrate with actual remote controller
+        # For now, return success for demonstration
         return {
             'tool_name': 'remote_execute_command',
             'result': {
@@ -269,50 +259,6 @@ def _execute_remote_command(params):
         return {
             'tool_name': 'remote_execute_command',
             'result': {'success': False, 'error': str(e)}
-        }
-
-def _handle_task_without_ai(task: str, mcp_tools: list) -> dict:
-    """
-    Fallback function to handle tasks without AI when AI agent fails
-    Simple pattern matching for common tasks
-    """
-    try:
-        task_lower = task.lower()
-        
-        # Simple pattern matching for navigation tasks
-        if "go to" in task_lower or "navigate to" in task_lower:
-            if "rec" in task_lower:
-                mcp_result = _execute_navigate_to_page({"page": "rec"})
-            elif "dashboard" in task_lower:
-                mcp_result = _execute_navigate_to_page({"page": "dashboard"})
-            elif "userinterface" in task_lower or "user interface" in task_lower:
-                mcp_result = _execute_navigate_to_page({"page": "userinterface"})
-            elif "runtest" in task_lower or "run test" in task_lower:
-                mcp_result = _execute_navigate_to_page({"page": "runTests"})
-            else:
-                mcp_result = _execute_navigate_to_page({"page": "dashboard"})
-            
-            return {
-                "success": True,
-                "result": "Task completed using fallback logic",
-                "tool_executed": mcp_result.get('tool_name'),
-                "tool_result": mcp_result.get('result'),
-                "ai_analysis": "AI agent unavailable, used simple pattern matching",
-                "execution_log": [{"type": "fallback", "message": "Used fallback logic due to AI agent error"}]
-            }
-        
-        # Default fallback
-        return {
-            "success": False,
-            "error": "AI agent unavailable and task not recognized by fallback logic",
-            "execution_log": [{"type": "error", "message": "No AI agent and no fallback pattern matched"}]
-        }
-        
-    except Exception as e:
-        logger.error(f"[@server_mcp_routes:_handle_task_without_ai] Fallback error: {e}")
-        return {
-            "success": False,
-            "error": f"Fallback handling failed: {str(e)}"
         }
 
 @mcp_bp.route('/health', methods=['GET'])
