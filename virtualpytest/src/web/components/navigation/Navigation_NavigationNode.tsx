@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 
-import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import { NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../../config/validationColors';
+import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import type { UINavigationNode as UINavigationNodeType } from '../../types/pages/Navigation_Types';
 
 export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
@@ -255,14 +255,13 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         </div>
       )}
 
-      {/* Left Handles */}
-      {/* Top-left: TARGET for receiving connections from right-side nodes */}
+      {/* Left Handle - Smart handle that can be both source and target */}
       <Handle
-        type="target"
+        type="source"
         position={Position.Left}
-        id="left-top-target"
+        id="left"
         isConnectable={true}
-        isConnectableStart={false}
+        isConnectableStart={true}
         isConnectableEnd={true}
         style={{
           background: 'transparent',
@@ -270,81 +269,26 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           width: '20px',
           height: '20px',
           left: -10,
-          top: '30%',
+          top: '50%',
+          transform: 'translateY(-50%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '16px',
           color: '#1976d2',
-          opacity: 0.8,
           cursor: 'crosshair',
         }}
       >
         ←
       </Handle>
 
-      {/* Bottom-left: SOURCE for sending connections to left-side nodes */}
-      <Handle
-        type="source"
-        position={Position.Left}
-        id="left-bottom-source"
-        isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={false}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          width: '20px',
-          height: '20px',
-          left: -10,
-          top: '70%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '16px',
-          color: '#ff5722',
-          fontWeight: 'bold',
-          cursor: 'crosshair',
-        }}
-      >
-        ←
-      </Handle>
-
-      {/* Right Handles */}
-      {/* Top-right: SOURCE for sending connections to right-side nodes */}
+      {/* Right Handle - Smart handle that can be both source and target */}
       <Handle
         type="source"
         position={Position.Right}
-        id="right-top-source"
+        id="right"
         isConnectable={true}
         isConnectableStart={true}
-        isConnectableEnd={false}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          width: '20px',
-          height: '20px',
-          right: -10,
-          top: '30%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '16px',
-          color: '#1976d2',
-          fontWeight: 'bold',
-          cursor: 'crosshair',
-        }}
-      >
-        →
-      </Handle>
-
-      {/* Bottom-right: TARGET for receiving connections from left-side nodes */}
-      <Handle
-        type="target"
-        position={Position.Right}
-        id="right-bottom-target"
-        isConnectable={true}
-        isConnectableStart={false}
         isConnectableEnd={true}
         style={{
           background: 'transparent',
@@ -352,13 +296,13 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           width: '20px',
           height: '20px',
           right: -10,
-          top: '70%',
+          top: '50%',
+          transform: 'translateY(-50%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '16px',
-          color: '#ff5722',
-          opacity: 0.8,
+          color: '#1976d2',
           cursor: 'crosshair',
         }}
       >
@@ -366,110 +310,54 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       </Handle>
 
       {/* NEW MENU NAVIGATION HANDLES */}
-      {/* Top Handles for Menu Navigation */}
-      {/* Top-left: Purple - SOURCE for menu connections */}
+      {/* Top Handle - Smart handle for menu connections */}
       <Handle
         type="source"
         position={Position.Top}
-        id="top-left-menu-source"
+        id="top"
         isConnectable={true}
         isConnectableStart={true}
-        isConnectableEnd={false}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          width: '20px',
-          height: '20px',
-          left: '30%',
-          top: -10,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '16px',
-          color: '#9c27b0',
-          fontWeight: 'bold',
-          cursor: 'crosshair',
-        }}
-      >
-        ↑
-      </Handle>
-
-      {/* Top-right: Green - TARGET for menu connections */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="top-right-menu-target"
-        isConnectable={true}
-        isConnectableStart={false}
         isConnectableEnd={true}
         style={{
           background: 'transparent',
           border: 'none',
           width: '20px',
           height: '20px',
-          left: '70%',
+          left: '50%',
           top: -10,
+          transform: 'translateX(-50%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '16px',
-          color: '#4caf50',
-          opacity: 0.8,
+          color: '#9c27b0',
           cursor: 'crosshair',
         }}
       >
         ↑
       </Handle>
 
-      {/* Bottom Handles for Menu Navigation */}
-      {/* Bottom-left: Purple - TARGET for menu connections */}
+      {/* Bottom Handle - Smart handle for menu connections */}
       <Handle
-        type="target"
+        type="source"
         position={Position.Bottom}
-        id="bottom-left-menu-target"
+        id="bottom"
         isConnectable={true}
-        isConnectableStart={false}
+        isConnectableStart={true}
         isConnectableEnd={true}
         style={{
           background: 'transparent',
           border: 'none',
           width: '20px',
           height: '20px',
-          left: '30%',
+          left: '50%',
           bottom: -10,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '16px',
-          color: '#9c27b0',
-          opacity: 0.8,
-          cursor: 'crosshair',
-        }}
-      >
-        ↓
-      </Handle>
-
-      {/* Bottom-right: Green - SOURCE for menu connections */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="bottom-right-menu-source"
-        isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={false}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          width: '20px',
-          height: '20px',
-          left: '70%',
-          bottom: -10,
+          transform: 'translateX(-50%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '16px',
           color: '#4caf50',
-          fontWeight: 'bold',
           cursor: 'crosshair',
         }}
       >

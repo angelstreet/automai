@@ -166,73 +166,43 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         </div>
       )}
 
-      {/* Top Handles for Menu Navigation - Only show for non-root nodes */}
+      {/* Top Handle - Only show for non-root nodes */}
       {!data.is_root && (
-        <>
-          {/* Top-left: SOURCE for menu connections */}
-          <Handle
-            type="source"
-            position={Position.Top}
-            id="top-left-menu-source"
-            isConnectable={true}
-            isConnectableStart={true}
-            isConnectableEnd={false}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              width: '20px',
-              height: '20px',
-              left: '30%',
-              top: -10,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '16px',
-              color: '#9c27b0',
-              fontWeight: 'bold',
-              cursor: 'crosshair',
-            }}
-          >
-            ↑
-          </Handle>
-
-          {/* Top-right: TARGET for menu connections */}
-          <Handle
-            type="target"
-            position={Position.Top}
-            id="top-right-menu-target"
-            isConnectable={true}
-            isConnectableStart={false}
-            isConnectableEnd={true}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              width: '20px',
-              height: '20px',
-              left: '70%',
-              top: -10,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '16px',
-              color: '#4caf50',
-              opacity: 0.8,
-              cursor: 'crosshair',
-            }}
-          >
-            ↑
-          </Handle>
-        </>
+        <Handle
+          type="source"
+          position={Position.Top}
+          id="top"
+          isConnectable={true}
+          isConnectableStart={true}
+          isConnectableEnd={true}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            width: '20px',
+            height: '20px',
+            left: '50%',
+            top: -10,
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px',
+            color: '#9c27b0',
+            cursor: 'crosshair',
+          }}
+        >
+          ↑
+        </Handle>
       )}
 
       {/* Left Handle - Only for root nodes */}
       {data.is_root && (
         <Handle
-          type="target"
+          type="source"
           position={Position.Left}
-          id="left-target"
+          id="left"
           isConnectable={true}
-          isConnectableStart={false}
+          isConnectableStart={true}
           isConnectableEnd={true}
           style={{
             background: 'transparent',
@@ -247,7 +217,6 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
             justifyContent: 'center',
             fontSize: '16px',
             color: '#ffc107',
-            opacity: 1,
             cursor: 'crosshair',
           }}
         >
@@ -255,55 +224,27 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         </Handle>
       )}
 
-      {/* Bottom Handles for Menu Navigation */}
-      {/* Bottom-left: TARGET for menu connections */}
+      {/* Bottom Handle - Smart handle for menu connections */}
       <Handle
-        type="target"
+        type="source"
         position={Position.Bottom}
-        id="bottom-left-menu-target"
+        id="bottom"
         isConnectable={true}
-        isConnectableStart={false}
+        isConnectableStart={true}
         isConnectableEnd={true}
         style={{
           background: 'transparent',
           border: 'none',
           width: '20px',
           height: '20px',
-          left: '30%',
+          left: '50%',
           bottom: -10,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '16px',
-          color: '#9c27b0',
-          opacity: 0.8,
-          cursor: 'crosshair',
-        }}
-      >
-        ↓
-      </Handle>
-
-      {/* Bottom-right: SOURCE for menu connections */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="bottom-right-menu-source"
-        isConnectable={true}
-        isConnectableStart={true}
-        isConnectableEnd={false}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          width: '20px',
-          height: '20px',
-          left: '70%',
-          bottom: -10,
+          transform: 'translateX(-50%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '16px',
           color: '#4caf50',
-          fontWeight: 'bold',
           cursor: 'crosshair',
         }}
       >
