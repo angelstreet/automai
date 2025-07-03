@@ -98,7 +98,7 @@ export const useNode = (props?: UseNodeProps) => {
       }
 
       try {
-        const response = await fetch('/server/navigation/takeNodeScreenshot', {
+        const response = await fetch('/server/navigation/saveNavigationScreenshot', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

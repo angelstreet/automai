@@ -36,34 +36,6 @@ from src.utils.app_utils import check_supabase, get_team_id
 navigation_bp = Blueprint('navigation', __name__, url_prefix='/server/navigation')
 
 # =====================================================
-# NAVIGATION TREES ENDPOINTS
-# =====================================================
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# =====================================================
-# HELPER ENDPOINTS
-# =====================================================
-
-
-
-# =====================================================
 # NAVIGATION SCREENSHOT ENDPOINTS (HOST)
 # =====================================================
 
