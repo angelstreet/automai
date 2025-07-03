@@ -178,19 +178,23 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
             isConnectableStart={true}
             isConnectableEnd={false}
             style={{
-              background: topLeftHandle.background,
-              width: '14px',
-              height: '14px',
-              border: '2px solid #fff',
-              borderRadius: '50%',
+              background: 'transparent',
+              border: 'none',
+              width: '20px',
+              height: '20px',
               left: '30%',
-              top: -5,
-              boxShadow:
-                topLeftHandle.boxShadow ||
-                '0 3px 8px rgba(156, 39, 176, 0.4), 0 0 12px rgba(156, 39, 176, 0.3)',
+              top: -10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+              color: '#9c27b0',
+              fontWeight: 'bold',
+              cursor: 'crosshair',
             }}
-            className={topLeftHandle.className}
-          />
+          >
+            ↑
+          </Handle>
 
           {/* Top-right: TARGET for menu connections */}
           <Handle
@@ -201,18 +205,23 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
             isConnectableStart={false}
             isConnectableEnd={true}
             style={{
-              background: topRightHandle.background,
-              width: '14px',
-              height: '14px',
-              border: '2px solid #fff',
-              borderRadius: '50%',
+              background: 'transparent',
+              border: 'none',
+              width: '20px',
+              height: '20px',
               left: '70%',
-              top: -5,
-              boxShadow: topRightHandle.boxShadow || '0 1px 2px rgba(0,0,0,0.3)',
+              top: -10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '16px',
+              color: '#4caf50',
               opacity: 0.8,
+              cursor: 'crosshair',
             }}
-            className={topRightHandle.className}
-          />
+          >
+            ↑
+          </Handle>
         </>
       )}
 
@@ -226,19 +235,24 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           isConnectableStart={false}
           isConnectableEnd={true}
           style={{
-            background: leftHandle.background,
-            width: '14px',
-            height: '14px',
-            border: '2px solid #fff',
-            borderRadius: '50%',
-            left: -7,
+            background: 'transparent',
+            border: 'none',
+            width: '20px',
+            height: '20px',
+            left: -10,
             top: '50%',
             transform: 'translateY(-50%)',
-            boxShadow: leftHandle.boxShadow || '0 2px 8px rgba(255, 193, 7, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '16px',
+            color: '#ffc107',
             opacity: 1,
+            cursor: 'crosshair',
           }}
-          className={leftHandle.className}
-        />
+        >
+          ←
+        </Handle>
       )}
 
       {/* Bottom Handles for Menu Navigation */}
@@ -251,18 +265,23 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: bottomLeftHandle.background,
-          width: '14px',
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
+          background: 'transparent',
+          border: 'none',
+          width: '20px',
+          height: '20px',
           left: '30%',
-          bottom: -5,
-          boxShadow: bottomLeftHandle.boxShadow || '0 1px 2px rgba(0,0,0,0.3)',
+          bottom: -10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#9c27b0',
           opacity: 0.8,
+          cursor: 'crosshair',
         }}
-        className={bottomLeftHandle.className}
-      />
+      >
+        ↓
+      </Handle>
 
       {/* Bottom-right: SOURCE for menu connections */}
       <Handle
@@ -273,19 +292,23 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: bottomRightHandle.background,
-          width: '14px',
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
+          background: 'transparent',
+          border: 'none',
+          width: '20px',
+          height: '20px',
           left: '70%',
-          bottom: -5,
-          boxShadow:
-            bottomRightHandle.boxShadow ||
-            '0 3px 8px rgba(76, 175, 80, 0.4), 0 0 12px rgba(76, 175, 80, 0.3)',
+          bottom: -10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#4caf50',
+          fontWeight: 'bold',
+          cursor: 'crosshair',
         }}
-        className={bottomRightHandle.className}
-      />
+      >
+        ↓
+      </Handle>
 
       {/* Header with menu name */}
       <div

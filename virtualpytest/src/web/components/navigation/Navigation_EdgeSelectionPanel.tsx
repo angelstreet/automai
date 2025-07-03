@@ -101,16 +101,60 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
           </Box>
 
           {/* Show From/To information */}
-          {selectedEdge.data?.from && (
-            <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-              From: {selectedEdge.data.from}
+          <Box sx={{ mb: 1, p: 1, bgcolor: 'grey.50', borderRadius: 1 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 'bold',
+                fontSize: '0.7rem',
+                mb: 0.5,
+                display: 'block',
+                color: 'primary.main',
+              }}
+            >
+              Navigation Direction:
             </Typography>
-          )}
-          {selectedEdge.data?.to && (
-            <Typography variant="body2" gutterBottom sx={{ mb: 0.5 }}>
-              To: {selectedEdge.data.to}
-            </Typography>
-          )}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '0.8rem',
+                  fontWeight: 'medium',
+                  color: 'text.primary',
+                  bgcolor: 'info.light',
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 0.5,
+                }}
+              >
+                {selectedEdge.data?.from || 'Unknown'}
+              </Typography>
+              <Typography
+                variant="body1"
+                sx={{
+                  fontSize: '1.2rem',
+                  fontWeight: 'bold',
+                  color: 'primary.main',
+                }}
+              >
+                →
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '0.8rem',
+                  fontWeight: 'medium',
+                  color: 'text.primary',
+                  bgcolor: 'success.light',
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: 0.5,
+                }}
+              >
+                {selectedEdge.data?.to || 'Unknown'}
+              </Typography>
+            </Box>
+          </Box>
 
           {/* Show main actions list */}
           {actions.length > 0 && (

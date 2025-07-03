@@ -265,17 +265,23 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: 'linear-gradient(135deg, #90caf9, #64b5f6)', // Muted blue gradient
-          width: '14px',
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
-          left: -5,
+          background: 'transparent',
+          border: 'none',
+          width: '20px',
+          height: '20px',
+          left: -10,
           top: '30%',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#1976d2',
           opacity: 0.8,
+          cursor: 'crosshair',
         }}
-      />
+      >
+        ←
+      </Handle>
 
       {/* Bottom-left: SOURCE for sending connections to left-side nodes */}
       <Handle
@@ -286,16 +292,23 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: 'linear-gradient(135deg, #ff5722, #ff8a65)', // Bright red gradient
-          width: '14px',
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
-          left: -5,
+          background: 'transparent',
+          border: 'none',
+          width: '20px',
+          height: '20px',
+          left: -10,
           top: '70%',
-          boxShadow: '0 3px 8px rgba(255, 87, 34, 0.4), 0 0 12px rgba(255, 87, 34, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#ff5722',
+          fontWeight: 'bold',
+          cursor: 'crosshair',
         }}
-      />
+      >
+        ←
+      </Handle>
 
       {/* Right Handles */}
       {/* Top-right: SOURCE for sending connections to right-side nodes */}
@@ -307,16 +320,23 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: 'linear-gradient(135deg, #1976d2, #42a5f5)', // Bright blue gradient
-          width: '14px',
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
-          right: -5,
+          background: 'transparent',
+          border: 'none',
+          width: '20px',
+          height: '20px',
+          right: -10,
           top: '30%',
-          boxShadow: '0 3px 8px rgba(25, 118, 210, 0.4), 0 0 12px rgba(25, 118, 210, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#1976d2',
+          fontWeight: 'bold',
+          cursor: 'crosshair',
         }}
-      />
+      >
+        →
+      </Handle>
 
       {/* Bottom-right: TARGET for receiving connections from left-side nodes */}
       <Handle
@@ -327,17 +347,23 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: 'linear-gradient(135deg, #ef9a9a, #e57373)', // Muted red gradient
-          width: '14px',
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
-          right: -5,
+          background: 'transparent',
+          border: 'none',
+          width: '20px',
+          height: '20px',
+          right: -10,
           top: '70%',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#ff5722',
           opacity: 0.8,
+          cursor: 'crosshair',
         }}
-      />
+      >
+        →
+      </Handle>
 
       {/* NEW MENU NAVIGATION HANDLES */}
       {/* Top Handles for Menu Navigation */}
@@ -350,16 +376,23 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: 'linear-gradient(135deg, #9c27b0, #ba68c8)', // Bright purple gradient
-          width: '14px',
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
+          background: 'transparent',
+          border: 'none',
+          width: '20px',
+          height: '20px',
           left: '30%',
-          top: -5,
-          boxShadow: '0 3px 8px rgba(156, 39, 176, 0.4), 0 0 12px rgba(156, 39, 176, 0.3)',
+          top: -10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#9c27b0',
+          fontWeight: 'bold',
+          cursor: 'crosshair',
         }}
-      />
+      >
+        ↑
+      </Handle>
 
       {/* Top-right: Green - TARGET for menu connections */}
       <Handle
@@ -370,17 +403,23 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: 'linear-gradient(135deg, #a5d6a7, #81c784)', // Muted green gradient
-          width: '14px',
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
+          background: 'transparent',
+          border: 'none',
+          width: '20px',
+          height: '20px',
           left: '70%',
-          top: -5,
-          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+          top: -10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#4caf50',
           opacity: 0.8,
+          cursor: 'crosshair',
         }}
-      />
+      >
+        ↑
+      </Handle>
 
       {/* Bottom Handles for Menu Navigation */}
       {/* Bottom-left: Purple - TARGET for menu connections */}
@@ -392,17 +431,23 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: 'linear-gradient(135deg, #ce93d8, #ba68c8)', // Muted purple gradient
-          width: '14px',
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
+          background: 'transparent',
+          border: 'none',
+          width: '20px',
+          height: '20px',
           left: '30%',
-          bottom: -5,
-          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+          bottom: -10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#9c27b0',
           opacity: 0.8,
+          cursor: 'crosshair',
         }}
-      />
+      >
+        ↓
+      </Handle>
 
       {/* Bottom-right: Green - SOURCE for menu connections */}
       <Handle
@@ -413,16 +458,23 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: 'linear-gradient(135deg, #4caf50, #66bb6a)', // Bright green gradient
-          width: '14px',
-          height: '14px',
-          border: '2px solid #fff',
-          borderRadius: '50%',
+          background: 'transparent',
+          border: 'none',
+          width: '20px',
+          height: '20px',
           left: '70%',
-          bottom: -5,
-          boxShadow: '0 3px 8px rgba(76, 175, 80, 0.4), 0 0 12px rgba(76, 175, 80, 0.3)',
+          bottom: -10,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#4caf50',
+          fontWeight: 'bold',
+          cursor: 'crosshair',
         }}
-      />
+      >
+        ↓
+      </Handle>
 
       {/* Header with node name and type */}
       <div
