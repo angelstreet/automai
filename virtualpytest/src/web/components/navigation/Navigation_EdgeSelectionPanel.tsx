@@ -75,7 +75,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
           right: 16,
           width: 360,
           p: 1.5,
-          zIndex: 1000,
+          zIndex: 1500,
         }}
         onClick={(e) => e.stopPropagation()}
       >

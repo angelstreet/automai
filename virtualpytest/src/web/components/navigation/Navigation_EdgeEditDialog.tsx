@@ -118,7 +118,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
 
   return (
     <>
-      <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth>
+      <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1600 }}>
         <DialogTitle sx={{ pb: 0.5 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6">Edit Edge</Typography>

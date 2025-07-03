@@ -216,7 +216,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             right: 16,
             width: 340,
             p: 1.5,
-            zIndex: 1000,
+            zIndex: 1500,
           }}
           onClick={handlePaperClick}
         >
@@ -359,7 +359,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         )}
 
         {/* Reset Node Confirmation Dialog */}
-        <Dialog open={showResetConfirm} onClose={handleResetConfirmClose}>
+        <Dialog open={showResetConfirm} onClose={handleResetConfirmClose} sx={{ zIndex: 1600 }}>
           <DialogTitle>Reset Node</DialogTitle>
           <DialogContent>
             <Typography>Are you sure you want to reset this node ?</Typography>
@@ -373,7 +373,11 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         </Dialog>
 
         {/* Screenshot Confirmation Dialog */}
-        <Dialog open={showScreenshotConfirm} onClose={handleScreenshotConfirmClose}>
+        <Dialog
+          open={showScreenshotConfirm}
+          onClose={handleScreenshotConfirmClose}
+          sx={{ zIndex: 1600 }}
+        >
           <DialogTitle>Take Screenshot</DialogTitle>
           <DialogContent>
             <Typography>

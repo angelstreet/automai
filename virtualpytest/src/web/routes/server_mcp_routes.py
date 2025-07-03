@@ -78,15 +78,20 @@ def execute_task():
         ]
         
         # Call existing AI agent with MCP context
-        from src.controllers.ai.ai_agent import AIAgentController
-        
-        ai_agent = AIAgentController()
-        ai_result = ai_agent.execute_task(
-            task_description=task,
-            available_actions=mcp_tools,
-            available_verifications=mcp_verifications,
-            device_model="MCP_Interface"
-        )
+        try:
+            from src.controllers.ai.ai_agent import AIAgentController
+            
+            ai_agent = AIAgentController()
+            ai_result = ai_agent.execute_task(
+                task_description=task,
+                available_actions=mcp_tools,
+                available_verifications=mcp_verifications,
+                device_model="MCP_Interface"
+            )
+        except Exception as ai_error:
+            logger.error(f"[@server_mcp_routes:execute_task] AI Agent error: {ai_error}")
+            # Fallback: try to parse task directly without AI
+            return _handle_task_without_ai(task, mcp_tools)
         
         if ai_result.get('success'):
             # Extract MCP tool execution from AI plan
@@ -105,11 +110,13 @@ def execute_task():
                 "execution_log": ai_result.get('execution_log', [])
             })
         else:
-            return jsonify({
-                "success": False,
-                "error": ai_result.get('error', 'AI agent failed to process task'),
-                "execution_log": ai_result.get('execution_log', [])
-            }), 500
+            # AI failed, try fallback
+            logger.warning(f"[@server_mcp_routes:execute_task] AI failed: {ai_result.get('error')}, trying fallback")
+            fallback_result = _handle_task_without_ai(task, mcp_tools)
+            if fallback_result.get('success'):
+                return jsonify(fallback_result)
+            else:
+                return jsonify(fallback_result), 500
         
     except Exception as e:
         logger.error(f"[@server_mcp_routes:execute_task] Error: {e}")
@@ -166,23 +173,34 @@ def _execute_navigate_to_page(params):
     """Execute navigate_to_page MCP tool"""
     try:
         # Import the frontend navigation function
-        from ..routes.server_frontend_routes import navigate_to_page
+        from .server_frontend_routes import navigate_to_page
         
-        # Create a mock request object with the page parameter
-        class MockRequest:
-            def get_json(self):
-                return {"page": params.get("page", params.get("key", "dashboard"))}
+        # Call the navigation function directly with proper parameters
+        from flask import jsonify
         
-        # Temporarily override request object
-        import flask
-        original_request = flask.request
-        flask.request = MockRequest()
+        page = params.get("page", params.get("key", "dashboard"))
         
-        try:
-            response = navigate_to_page()
-            result = response.get_json() if hasattr(response, 'get_json') else response
-        finally:
-            flask.request = original_request
+        # Define valid pages
+        valid_pages = ["dashboard", "rec", "userinterface", "runTests"]
+        
+        if page not in valid_pages:
+            return {
+                'tool_name': 'navigate_to_page',
+                'result': {
+                    'success': False, 
+                    'error': f"Invalid page '{page}'. Valid pages: {valid_pages}"
+                }
+            }
+        
+        # Generate redirect URL
+        redirect_url = f"/{page}"
+        
+        result = {
+            "success": True,
+            "redirect_url": redirect_url,
+            "page": page,
+            "message": f"Navigate to {page} page"
+        }
         
         return {
             'tool_name': 'navigate_to_page',
@@ -251,6 +269,50 @@ def _execute_remote_command(params):
         return {
             'tool_name': 'remote_execute_command',
             'result': {'success': False, 'error': str(e)}
+        }
+
+def _handle_task_without_ai(task: str, mcp_tools: list) -> dict:
+    """
+    Fallback function to handle tasks without AI when AI agent fails
+    Simple pattern matching for common tasks
+    """
+    try:
+        task_lower = task.lower()
+        
+        # Simple pattern matching for navigation tasks
+        if "go to" in task_lower or "navigate to" in task_lower:
+            if "rec" in task_lower:
+                mcp_result = _execute_navigate_to_page({"page": "rec"})
+            elif "dashboard" in task_lower:
+                mcp_result = _execute_navigate_to_page({"page": "dashboard"})
+            elif "userinterface" in task_lower or "user interface" in task_lower:
+                mcp_result = _execute_navigate_to_page({"page": "userinterface"})
+            elif "runtest" in task_lower or "run test" in task_lower:
+                mcp_result = _execute_navigate_to_page({"page": "runTests"})
+            else:
+                mcp_result = _execute_navigate_to_page({"page": "dashboard"})
+            
+            return {
+                "success": True,
+                "result": "Task completed using fallback logic",
+                "tool_executed": mcp_result.get('tool_name'),
+                "tool_result": mcp_result.get('result'),
+                "ai_analysis": "AI agent unavailable, used simple pattern matching",
+                "execution_log": [{"type": "fallback", "message": "Used fallback logic due to AI agent error"}]
+            }
+        
+        # Default fallback
+        return {
+            "success": False,
+            "error": "AI agent unavailable and task not recognized by fallback logic",
+            "execution_log": [{"type": "error", "message": "No AI agent and no fallback pattern matched"}]
+        }
+        
+    except Exception as e:
+        logger.error(f"[@server_mcp_routes:_handle_task_without_ai] Fallback error: {e}")
+        return {
+            "success": False,
+            "error": f"Fallback handling failed: {str(e)}"
         }
 
 @mcp_bp.route('/health', methods=['GET'])

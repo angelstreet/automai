@@ -680,7 +680,11 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         )}
 
         {/* Discard Changes Confirmation Dialog */}
-        <Dialog open={isDiscardDialogOpen} onClose={() => setIsDiscardDialogOpen(false)}>
+        <Dialog
+          open={isDiscardDialogOpen}
+          onClose={() => setIsDiscardDialogOpen(false)}
+          sx={{ zIndex: 1600 }}
+        >
           <DialogTitle>Discard Changes?</DialogTitle>
           <DialogContent>
             <Typography>

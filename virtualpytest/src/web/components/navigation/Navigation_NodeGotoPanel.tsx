@@ -76,7 +76,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         height: 'calc(100vh - 180px)',
         display: 'flex',
         flexDirection: 'column',
-        zIndex: 1000,
+        zIndex: 1500,
         overflow: 'hidden',
       }}
       onClick={(e) => e.stopPropagation()}
