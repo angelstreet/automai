@@ -641,7 +641,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                     </>
                   ) : selectedEdge ? (
                     <>
-                      {/* Edge Selection Panel */}
+                      {/* Edge Selection Panel(s) */}
                       <EdgeSelectionPanel
                         selectedEdge={selectedEdge}
                         onClose={closeSelectionPanel}
@@ -652,6 +652,23 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                         isControlActive={isControlActive}
                         selectedHost={selectedHost || undefined}
                       />
+
+                      {/* Second panel for bidirectional edge if it exists */}
+                      {(selectedEdge as any).bidirectionalEdge && (
+                        <EdgeSelectionPanel
+                          selectedEdge={(selectedEdge as any).bidirectionalEdge}
+                          onClose={closeSelectionPanel}
+                          onEdit={() => {}}
+                          onDelete={deleteSelected}
+                          setEdgeForm={
+                            setEdgeForm as React.Dispatch<React.SetStateAction<EdgeForm>>
+                          }
+                          setIsEdgeDialogOpen={setIsEdgeDialogOpen}
+                          isControlActive={isControlActive}
+                          selectedHost={selectedHost || undefined}
+                          panelIndex={1}
+                        />
+                      )}
                     </>
                   ) : null}
                 </>

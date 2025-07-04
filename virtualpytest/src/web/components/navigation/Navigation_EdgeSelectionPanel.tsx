@@ -17,6 +17,9 @@ interface EdgeSelectionPanelProps {
   // Device control props
   isControlActive?: boolean;
   selectedHost?: Host; // Make optional to fix regression
+
+  // Positioning for multiple panels
+  panelIndex?: number;
 }
 
 export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
@@ -30,6 +33,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
 
     isControlActive = false,
     selectedHost,
+    panelIndex = 0,
   }) => {
     // Use the consolidated edge hook
     const edgeHook = useEdge({
@@ -71,7 +75,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
       <Paper
         sx={{
           position: 'absolute',
-          top: 16,
+          top: 16 + panelIndex * 400, // Stack panels vertically
           right: 16,
           width: 360,
           p: 1.5,

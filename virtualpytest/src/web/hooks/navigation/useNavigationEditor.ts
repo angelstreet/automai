@@ -77,7 +77,21 @@ export const useNavigationEditor = () => {
 
   const onEdgeClick = useCallback(
     (_event: React.MouseEvent, edge: any) => {
-      navigation.setSelectedEdge(edge);
+      // Find bidirectional edge (opposite direction)
+      const oppositeEdge = navigation.edges.find(
+        (e) => e.source === edge.target && e.target === edge.source && e.id !== edge.id,
+      );
+
+      if (oppositeEdge) {
+        // If bidirectional edges exist, set both edges for the panel to handle
+        navigation.setSelectedEdge({
+          ...edge,
+          bidirectionalEdge: oppositeEdge,
+        });
+      } else {
+        navigation.setSelectedEdge(edge);
+      }
+
       navigation.setSelectedNode(null); // Clear node selection when edge is selected
     },
     [navigation],

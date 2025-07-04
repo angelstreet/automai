@@ -255,8 +255,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         </div>
       )}
 
-      {/* Left Handles - Bidirectional */}
-      {/* Left: TARGET for receiving connections - positioned slightly above */}
+      {/* Left Handles - Overlapping for Bidirectional Effect */}
+      {/* Left: TARGET for receiving connections */}
       <Handle
         type="target"
         position={Position.Left}
@@ -265,27 +265,20 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: 'rgba(25, 118, 210, 0.1)',
-          border: '2px solid #1976d2',
+          background: '#1976d2',
+          border: '2px solid #fff',
           width: '16px',
           height: '16px',
           borderRadius: '50%',
           left: -8,
-          top: 'calc(50% - 6px)', // Slightly above center
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          color: '#1976d2',
-          fontWeight: 'bold',
+          top: '50%',
+          transform: 'translateY(-50%)',
           cursor: 'crosshair',
-          zIndex: 10,
+          zIndex: 11,
         }}
-      >
-        ←
-      </Handle>
+      />
 
-      {/* Left: SOURCE for sending connections - positioned slightly below */}
+      {/* Left: SOURCE for sending connections - same position, lower z-index */}
       <Handle
         type="source"
         position={Position.Left}
@@ -294,28 +287,21 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: 'rgba(255, 87, 34, 0.1)',
-          border: '2px solid #ff5722',
+          background: '#ff5722',
+          border: '2px solid #fff',
           width: '16px',
           height: '16px',
           borderRadius: '50%',
           left: -8,
-          top: 'calc(50% + 6px)', // Slightly below center
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          color: '#ff5722',
-          fontWeight: 'bold',
+          top: '50%',
+          transform: 'translateY(-50%)',
           cursor: 'crosshair',
           zIndex: 10,
         }}
-      >
-        ←
-      </Handle>
+      />
 
-      {/* Right Handles - Bidirectional */}
-      {/* Right: SOURCE for sending connections - positioned slightly above */}
+      {/* Right Handles - Overlapping for Bidirectional Effect */}
+      {/* Right: SOURCE for sending connections */}
       <Handle
         type="source"
         position={Position.Right}
@@ -324,27 +310,20 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: 'rgba(25, 118, 210, 0.1)',
-          border: '2px solid #1976d2',
+          background: '#1976d2',
+          border: '2px solid #fff',
           width: '16px',
           height: '16px',
           borderRadius: '50%',
           right: -8,
-          top: 'calc(50% - 6px)', // Slightly above center
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          color: '#1976d2',
-          fontWeight: 'bold',
+          top: '50%',
+          transform: 'translateY(-50%)',
           cursor: 'crosshair',
-          zIndex: 10,
+          zIndex: 11,
         }}
-      >
-        →
-      </Handle>
+      />
 
-      {/* Right: TARGET for receiving connections - positioned slightly below */}
+      {/* Right: TARGET for receiving connections - same position, lower z-index */}
       <Handle
         type="target"
         position={Position.Right}
@@ -353,29 +332,22 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: 'rgba(255, 87, 34, 0.1)',
-          border: '2px solid #ff5722',
+          background: '#ff5722',
+          border: '2px solid #fff',
           width: '16px',
           height: '16px',
           borderRadius: '50%',
           right: -8,
-          top: 'calc(50% + 6px)', // Slightly below center
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          color: '#ff5722',
-          fontWeight: 'bold',
+          top: '50%',
+          transform: 'translateY(-50%)',
           cursor: 'crosshair',
           zIndex: 10,
         }}
-      >
-        →
-      </Handle>
+      />
 
-      {/* MENU NAVIGATION HANDLES - Bidirectional */}
-      {/* Top Handles - Bidirectional */}
-      {/* Top: SOURCE for menu connections - positioned slightly left */}
+      {/* MENU NAVIGATION HANDLES - Overlapping for Bidirectional Effect */}
+      {/* Top Handles - Overlapping */}
+      {/* Top: SOURCE for menu connections */}
       <Handle
         type="source"
         position={Position.Top}
@@ -384,27 +356,20 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: 'rgba(156, 39, 176, 0.1)',
-          border: '2px solid #9c27b0',
+          background: '#9c27b0',
+          border: '2px solid #fff',
           width: '16px',
           height: '16px',
           borderRadius: '50%',
-          left: 'calc(50% - 6px)', // Slightly left of center
+          left: '50%',
+          transform: 'translateX(-50%)',
           top: -8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          color: '#9c27b0',
-          fontWeight: 'bold',
           cursor: 'crosshair',
-          zIndex: 10,
+          zIndex: 11,
         }}
-      >
-        ↑
-      </Handle>
+      />
 
-      {/* Top: TARGET for menu connections - positioned slightly right */}
+      {/* Top: TARGET for menu connections - same position, lower z-index */}
       <Handle
         type="target"
         position={Position.Top}
@@ -413,28 +378,21 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: 'rgba(76, 175, 80, 0.1)',
-          border: '2px solid #4caf50',
+          background: '#4caf50',
+          border: '2px solid #fff',
           width: '16px',
           height: '16px',
           borderRadius: '50%',
-          left: 'calc(50% + 6px)', // Slightly right of center
+          left: '50%',
+          transform: 'translateX(-50%)',
           top: -8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          color: '#4caf50',
-          fontWeight: 'bold',
           cursor: 'crosshair',
           zIndex: 10,
         }}
-      >
-        ↑
-      </Handle>
+      />
 
-      {/* Bottom Handles - Bidirectional */}
-      {/* Bottom: TARGET for menu connections - positioned slightly left */}
+      {/* Bottom Handles - Overlapping */}
+      {/* Bottom: TARGET for menu connections */}
       <Handle
         type="target"
         position={Position.Bottom}
@@ -443,27 +401,20 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: 'rgba(156, 39, 176, 0.1)',
-          border: '2px solid #9c27b0',
+          background: '#9c27b0',
+          border: '2px solid #fff',
           width: '16px',
           height: '16px',
           borderRadius: '50%',
-          left: 'calc(50% - 6px)', // Slightly left of center
+          left: '50%',
+          transform: 'translateX(-50%)',
           bottom: -8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          color: '#9c27b0',
-          fontWeight: 'bold',
           cursor: 'crosshair',
-          zIndex: 10,
+          zIndex: 11,
         }}
-      >
-        ↓
-      </Handle>
+      />
 
-      {/* Bottom: SOURCE for menu connections - positioned slightly right */}
+      {/* Bottom: SOURCE for menu connections - same position, lower z-index */}
       <Handle
         type="source"
         position={Position.Bottom}
@@ -472,25 +423,18 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: 'rgba(76, 175, 80, 0.1)',
-          border: '2px solid #4caf50',
+          background: '#4caf50',
+          border: '2px solid #fff',
           width: '16px',
           height: '16px',
           borderRadius: '50%',
-          left: 'calc(50% + 6px)', // Slightly right of center
+          left: '50%',
+          transform: 'translateX(-50%)',
           bottom: -8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          color: '#4caf50',
-          fontWeight: 'bold',
           cursor: 'crosshair',
           zIndex: 10,
         }}
-      >
-        ↓
-      </Handle>
+      />
 
       {/* Header with node name and type */}
       <div

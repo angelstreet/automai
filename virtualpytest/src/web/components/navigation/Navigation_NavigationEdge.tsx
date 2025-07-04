@@ -1,5 +1,5 @@
 import React from 'react';
-import { EdgeProps, getBezierPath, useReactFlow } from 'reactflow';
+import { EdgeProps, getBezierPath, useReactFlow, MarkerType } from 'reactflow';
 
 import { useEdge } from '../../hooks/navigation/useEdge';
 import { UINavigationEdge as UINavigationEdgeType } from '../../types/pages/Navigation_Types';
@@ -59,8 +59,37 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
     targetPosition,
   });
 
+  // Define arrow marker
+  const markerEnd = {
+    type: MarkerType.ArrowClosed,
+    width: 20,
+    height: 20,
+    color: edgeColors.stroke,
+  };
+
   return (
     <g className={edgeColors.className} data-edge-type={data?.edgeType}>
+      {/* Arrow marker definition */}
+      <defs>
+        <marker
+          id={`${id}-arrow`}
+          markerWidth="20"
+          markerHeight="20"
+          refX="18"
+          refY="3"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path
+            d="M0,0 L0,6 L9,3 z"
+            style={{
+              fill: edgeColors.stroke,
+              stroke: edgeColors.stroke,
+            }}
+          />
+        </marker>
+      </defs>
+
       {/* Invisible thick overlay for better selectability */}
       <path
         id={`${id}-selectable`}
@@ -89,6 +118,7 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
         }}
         className="react-flow__edge-path"
         d={edgePath}
+        markerEnd={`url(#${id}-arrow)`}
       />
 
       {/* Selection indicator */}

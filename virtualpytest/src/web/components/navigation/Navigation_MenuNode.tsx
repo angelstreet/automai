@@ -169,7 +169,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
       {/* Top Handles for Menu Navigation - Only show for non-root nodes */}
       {!data.is_root && (
         <>
-          {/* Top: SOURCE for menu connections - positioned slightly left */}
+          {/* Top: SOURCE for menu connections */}
           <Handle
             type="source"
             position={Position.Top}
@@ -178,27 +178,20 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
             isConnectableStart={true}
             isConnectableEnd={false}
             style={{
-              background: 'rgba(156, 39, 176, 0.1)',
-              border: '2px solid #9c27b0',
+              background: '#9c27b0',
+              border: '2px solid #fff',
               width: '16px',
               height: '16px',
               borderRadius: '50%',
-              left: 'calc(50% - 6px)', // Slightly left of center
+              left: '50%',
+              transform: 'translateX(-50%)',
               top: -8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '10px',
-              color: '#9c27b0',
-              fontWeight: 'bold',
               cursor: 'crosshair',
-              zIndex: 10,
+              zIndex: 11,
             }}
-          >
-            ↑
-          </Handle>
+          />
 
-          {/* Top: TARGET for menu connections - positioned slightly right */}
+          {/* Top: TARGET for menu connections - same position, lower z-index */}
           <Handle
             type="target"
             position={Position.Top}
@@ -207,25 +200,18 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
             isConnectableStart={false}
             isConnectableEnd={true}
             style={{
-              background: 'rgba(76, 175, 80, 0.1)',
-              border: '2px solid #4caf50',
+              background: '#4caf50',
+              border: '2px solid #fff',
               width: '16px',
               height: '16px',
               borderRadius: '50%',
-              left: 'calc(50% + 6px)', // Slightly right of center
+              left: '50%',
+              transform: 'translateX(-50%)',
               top: -8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '10px',
-              color: '#4caf50',
-              fontWeight: 'bold',
               cursor: 'crosshair',
               zIndex: 10,
             }}
-          >
-            ↑
-          </Handle>
+          />
         </>
       )}
 
@@ -239,30 +225,22 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           isConnectableStart={false}
           isConnectableEnd={true}
           style={{
-            background: 'rgba(255, 193, 7, 0.1)',
-            border: '2px solid #ffc107',
+            background: '#ffc107',
+            border: '2px solid #fff',
             width: '16px',
             height: '16px',
             borderRadius: '50%',
             left: -8,
             top: '50%',
             transform: 'translateY(-50%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '10px',
-            color: '#ffc107',
-            fontWeight: 'bold',
             cursor: 'crosshair',
             zIndex: 10,
           }}
-        >
-          ←
-        </Handle>
+        />
       )}
 
-      {/* Bottom Handles for Menu Navigation - Bidirectional */}
-      {/* Bottom: TARGET for menu connections - positioned slightly left */}
+      {/* Bottom Handles for Menu Navigation - Overlapping */}
+      {/* Bottom: TARGET for menu connections */}
       <Handle
         type="target"
         position={Position.Bottom}
@@ -271,27 +249,20 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: 'rgba(156, 39, 176, 0.1)',
-          border: '2px solid #9c27b0',
+          background: '#9c27b0',
+          border: '2px solid #fff',
           width: '16px',
           height: '16px',
           borderRadius: '50%',
-          left: 'calc(50% - 6px)', // Slightly left of center
+          left: '50%',
+          transform: 'translateX(-50%)',
           bottom: -8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          color: '#9c27b0',
-          fontWeight: 'bold',
           cursor: 'crosshair',
-          zIndex: 10,
+          zIndex: 11,
         }}
-      >
-        ↓
-      </Handle>
+      />
 
-      {/* Bottom: SOURCE for menu connections - positioned slightly right */}
+      {/* Bottom: SOURCE for menu connections - same position, lower z-index */}
       <Handle
         type="source"
         position={Position.Bottom}
@@ -300,25 +271,18 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: 'rgba(76, 175, 80, 0.1)',
-          border: '2px solid #4caf50',
+          background: '#4caf50',
+          border: '2px solid #fff',
           width: '16px',
           height: '16px',
           borderRadius: '50%',
-          left: 'calc(50% + 6px)', // Slightly right of center
+          left: '50%',
+          transform: 'translateX(-50%)',
           bottom: -8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '10px',
-          color: '#4caf50',
-          fontWeight: 'bold',
           cursor: 'crosshair',
           zIndex: 10,
         }}
-      >
-        ↓
-      </Handle>
+      />
 
       {/* Header with menu name */}
       <div
