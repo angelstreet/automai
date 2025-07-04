@@ -496,6 +496,12 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     // 7. RENDER
     // ========================================
 
+    // State for edge labels
+    const [edgeLabels, setEdgeLabels] = useState<{ fromLabel: string; toLabel: string }>({
+      fromLabel: '',
+      toLabel: '',
+    });
+
     return (
       <Box
         sx={{
@@ -672,6 +678,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                         setIsEdgeDialogOpen={setIsEdgeDialogOpen}
                         isControlActive={isControlActive}
                         selectedHost={selectedHost || undefined}
+                        onEditWithLabels={(fromLabel, toLabel) =>
+                          setEdgeLabels({ fromLabel, toLabel })
+                        }
                       />
 
                       {/* Second panel for bidirectional edge if it exists */}
@@ -688,6 +697,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                           isControlActive={isControlActive}
                           selectedHost={selectedHost || undefined}
                           panelIndex={1}
+                          onEditWithLabels={(fromLabel, toLabel) =>
+                            setEdgeLabels({ fromLabel, toLabel })
+                          }
                         />
                       )}
                     </>
@@ -749,8 +761,8 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
             selectedEdge={selectedEdge}
             isControlActive={isControlActive}
             selectedHost={selectedHost}
-            fromLabel={selectedEdge ? getNodeLabelById(selectedEdge.source, nodes) : ''}
-            toLabel={selectedEdge ? getNodeLabelById(selectedEdge.target, nodes) : ''}
+            fromLabel={edgeLabels.fromLabel}
+            toLabel={edgeLabels.toLabel}
           />
         )}
 

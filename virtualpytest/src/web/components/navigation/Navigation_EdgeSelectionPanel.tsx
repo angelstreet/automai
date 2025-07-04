@@ -22,6 +22,9 @@ interface EdgeSelectionPanelProps {
 
   // Positioning for multiple panels
   panelIndex?: number;
+
+  // Add props for passing labels to the edit dialog
+  onEditWithLabels?: (fromLabel: string, toLabel: string) => void;
 }
 
 export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
@@ -36,6 +39,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
     isControlActive = false,
     selectedHost,
     panelIndex = 0,
+    onEditWithLabels,
   }) => {
     const { getNodes } = useReactFlow();
 
@@ -83,6 +87,9 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
       onClose(); // Close the selection panel when opening the edit dialog
       // Note: Dependency check happens in EdgeEditDialog when saving
       // If no dependencies are found, the edge will be saved directly
+      if (onEditWithLabels) {
+        onEditWithLabels(fromLabel, toLabel);
+      }
     };
 
     // Execute all edge actions using hook function
