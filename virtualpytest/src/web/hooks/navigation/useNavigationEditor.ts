@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useContext } from 'react';
+import { MarkerType } from 'reactflow';
 
 import { useNavigationConfig } from '../../contexts/navigation/NavigationConfigContext';
 import NavigationContext from '../../contexts/navigation/NavigationContext';
@@ -550,6 +551,12 @@ export const useNavigationEditor = () => {
         type: 'uiNavigation',
         animated: false,
         style: { strokeWidth: 2, stroke: '#b1b1b7' },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: 20,
+          height: 20,
+          color: '#b1b1b7',
+        },
       },
 
       // Connection rules
