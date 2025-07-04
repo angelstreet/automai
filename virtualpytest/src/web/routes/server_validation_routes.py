@@ -611,7 +611,10 @@ def get_validation_preview(tree_id):
     try:
         team_id = get_team_id()
         result = validation_service.get_validation_preview(tree_id, team_id)
-        return jsonify(result), 200
+        return jsonify({
+            'success': True,
+            'preview': result
+        }), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -624,6 +627,9 @@ def run_comprehensive_validation(tree_id):
         skipped_edges = data.get('skippedEdges', [])
         
         result = validation_service.run_comprehensive_validation(tree_id, team_id, skipped_edges)
-        return jsonify(result), 200
+        return jsonify({
+            'success': True,
+            'results': result
+        }), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
