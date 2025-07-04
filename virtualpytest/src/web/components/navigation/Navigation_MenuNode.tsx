@@ -54,12 +54,10 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   // Get dynamic colors based on validation status
   const nodeColors = getNodeColors(id, 'menu', false);
 
-  // Get handle colors for different positions
-  const topLeftHandle = getHandleColors(id, 'topLeft', 'top-left-menu-source', 'menu');
-  const topRightHandle = getHandleColors(id, 'topRight', 'top-right-menu-target', 'menu');
-  const bottomLeftHandle = getHandleColors(id, 'bottomLeft', 'bottom-left-menu-target', 'menu');
-  const bottomRightHandle = getHandleColors(id, 'bottomRight', 'bottom-right-menu-source', 'menu');
-  const leftHandle = getHandleColors(id, 'leftTop', 'left-target', 'menu');
+  // Get handle colors for different positions (updated to match simplified handle IDs)
+  const topHandle = getHandleColors(id, 'topLeft', 'top', 'menu');
+  const leftHandle = getHandleColors(id, 'leftTop', 'left', 'menu');
+  const bottomHandle = getHandleColors(id, 'bottomRight', 'bottom', 'menu');
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent node double-click from triggering

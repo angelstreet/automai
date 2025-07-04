@@ -225,7 +225,7 @@ export const useValidationColors = (edges?: UINavigationEdge[]) => {
       }
 
       // For root menu nodes' left handles, use yellow like entry nodes
-      if (nodeType === 'menu' && handleId === 'left-target') {
+      if (nodeType === 'menu' && handleId === 'left') {
         // Check if this is a root node by looking at the edges to see if it has incoming connections
         const hasIncomingEdges = edges?.some((edge) => edge.target === nodeId);
         if (!hasIncomingEdges) {
@@ -262,8 +262,9 @@ export const useValidationColors = (edges?: UINavigationEdge[]) => {
             isConnectedToEntryEdge = true;
           }
 
-          // For source handles, check if this node is the source and handle matches
-          if (handleId.includes('source') && edgeData.source === nodeId) {
+          // Check if this edge connects to this node and handle
+          // For source nodes, check if this node is the source and handle matches
+          if (edgeData.source === nodeId) {
             // If edge has sourceHandle, match exactly, otherwise assume it matches
             if (edgeData.sourceHandle) {
               return edgeData.sourceHandle === handleId;
@@ -273,8 +274,8 @@ export const useValidationColors = (edges?: UINavigationEdge[]) => {
             }
           }
 
-          // For target handles, check if this node is the target and handle matches
-          if (handleId.includes('target') && edgeData.target === nodeId) {
+          // For target nodes, check if this node is the target and handle matches
+          if (edgeData.target === nodeId) {
             // If edge has targetHandle, match exactly, otherwise assume it matches
             if (edgeData.targetHandle) {
               return edgeData.targetHandle === handleId;
