@@ -303,11 +303,17 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
 
   // Update minimap indicators when current position changes
   const prevCurrentNodeIdRef = useRef<string | null>(null);
+  const nodesLengthRef = useRef<number>(0);
+
   useEffect(() => {
     // Only update if currentNodeId actually changed and we have nodes
-    if (nodes.length > 0 && prevCurrentNodeIdRef.current !== currentNodeId) {
+    if (
+      nodes.length > 0 &&
+      (prevCurrentNodeIdRef.current !== currentNodeId || nodesLengthRef.current !== nodes.length)
+    ) {
       console.log('[@context:NavigationProvider] Updating nodes with minimap indicators');
       prevCurrentNodeIdRef.current = currentNodeId;
+      nodesLengthRef.current = nodes.length;
 
       setNodes((currentNodes) => {
         return currentNodes.map((node) => {
@@ -334,7 +340,7 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
         });
       });
     }
-  }, [currentNodeId, nodes.length, setNodes]);
+  }, [currentNodeId, nodes.length]); // Removed setNodes dependency
 
   // Initialize current position from device position when tree and device context are available
   useEffect(() => {

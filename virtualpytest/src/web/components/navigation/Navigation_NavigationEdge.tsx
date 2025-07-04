@@ -1,5 +1,5 @@
 import React from 'react';
-import { EdgeProps, getStraightPath } from 'reactflow';
+import { EdgeProps, getSmoothStepPath } from 'reactflow';
 
 import { useEdge } from '../../hooks/navigation/useEdge';
 import { UINavigationEdge as UINavigationEdgeType } from '../../types/pages/Navigation_Types';
@@ -15,8 +15,8 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
   // Get edge colors based on validation status
   const edgeColors = edgeHook.getEdgeColorsForEdge(id, false);
 
-  // Get the straight path for the edge
-  const [edgePath] = getStraightPath({
+  // Get the smooth step path for the edge
+  const [edgePath] = getSmoothStepPath({
     sourceX,
     sourceY,
     targetX,
