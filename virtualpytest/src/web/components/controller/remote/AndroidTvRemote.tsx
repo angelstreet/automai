@@ -115,25 +115,8 @@ export const AndroidTvRemote = React.memo(
         // Apply the reduction ratio to the base scale
         const collapsedScale = baseScale * panelReductionRatio;
 
-        console.log(`[@component:AndroidTvRemote] Collapsed scale calculation:`, {
-          context: streamContainerDimensions ? 'modal' : 'floating',
-          availableHeight,
-          baseScale,
-          panelReductionRatio,
-          collapsedScale,
-          collapsedDimensions: { width: collapsedWidth, height: collapsedHeight },
-          expandedDimensions: { width: expandedWidth, height: expandedHeight },
-        });
-
         return collapsedScale;
       }
-
-      // For expanded state, use the base scale calculated from available height
-      console.log(`[@component:AndroidTvRemote] Expanded scale calculation:`, {
-        context: streamContainerDimensions ? 'modal' : 'floating',
-        availableHeight,
-        baseScale,
-      });
 
       return baseScale;
     };
