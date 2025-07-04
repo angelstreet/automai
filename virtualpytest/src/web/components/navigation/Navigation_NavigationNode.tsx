@@ -270,7 +270,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50%',
+          borderRadius: '50% 0 0 50%',
           left: -2,
           top: '50%',
           transform: 'translateY(-50%)',
@@ -292,12 +292,13 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50%',
+          borderRadius: '50% 0 0 50%',
           left: -2,
           top: '50%',
           transform: 'translateY(-50%)',
           cursor: 'crosshair',
           zIndex: 10,
+          opacity: 0,
         }}
       />
 
@@ -315,7 +316,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50%',
+          borderRadius: '0 50% 50% 0',
           right: -2,
           top: '50%',
           transform: 'translateY(-50%)',
@@ -337,12 +338,13 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50%',
+          borderRadius: '0 50% 50% 0',
           right: -2,
           top: '50%',
           transform: 'translateY(-50%)',
           cursor: 'crosshair',
           zIndex: 10,
+          opacity: 0,
         }}
       />
 
@@ -361,7 +363,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50%',
+          borderRadius: '50% 50% 0 0',
           left: '50%',
           transform: 'translateX(-50%)',
           top: -2,
@@ -383,7 +385,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50%',
+          borderRadius: '50% 50% 0 0',
           left: '50%',
           transform: 'translateX(-50%)',
           top: -2,
@@ -406,12 +408,13 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50%',
+          borderRadius: '0 0 50% 50%',
           left: '50%',
           transform: 'translateX(-50%)',
           bottom: -2,
           cursor: 'crosshair',
           zIndex: 11,
+          opacity: 0,
         }}
       />
 
@@ -428,12 +431,13 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50%',
+          borderRadius: '0 0 50% 50%',
           left: '50%',
           transform: 'translateX(-50%)',
           bottom: -2,
           cursor: 'crosshair',
           zIndex: 10,
+          opacity: 0,
         }}
       />
 

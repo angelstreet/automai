@@ -70,9 +70,18 @@ def navigate_to_node(tree_id, node_id):
             try:
                 from src.navigation.navigation_pathfinding import find_shortest_path
                 from src.web.cache.navigation_cache import get_cached_graph
+                from src.web.utils.routeUtils import get_host_from_request
                 
-                # Execute navigation with verification
-                result = execute_navigation_with_verification(tree_id, node_id, team_id, current_node_id)
+                # Extract host information from request
+                host_info, error = get_host_from_request()
+                if not host_info:
+                    return jsonify({
+                        'success': False,
+                        'error': error or 'Host information required for navigation execution'
+                    }), 400
+                
+                # Execute navigation with verification (now includes host info)
+                result = execute_navigation_with_verification(tree_id, node_id, team_id, current_node_id, host_info)
                 
                 # Add navigation metadata
                 result.update({
@@ -208,11 +217,11 @@ def get_navigation_stats(tree_id):
 # INTERNAL HELPER FUNCTIONS
 # =====================================================
 
-def execute_navigation_with_verification(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None):
+def execute_navigation_with_verification(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None, host_info: dict = None):
     """Execute navigation with verification using the real navigation executor"""
     from src.navigation.navigation_executor import execute_navigation_with_verification as real_executor
     
-    return real_executor(tree_id, target_node_id, team_id, current_node_id)
+    return real_executor(tree_id, target_node_id, team_id, current_node_id, host_info)
 
 def get_navigation_preview_internal(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None):
     """Get navigation preview - returns rich transition data directly"""

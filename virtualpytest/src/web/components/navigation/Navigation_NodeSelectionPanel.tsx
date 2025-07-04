@@ -190,7 +190,8 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
 
     const handleGoToButtonClick = useCallback(() => {
       setShowGotoPanel(true);
-    }, []);
+      onClose(); // Close the node selection panel when goto panel opens
+    }, [onClose]);
 
     const handleGotoPanelClose = useCallback(() => {
       setShowGotoPanel(false);

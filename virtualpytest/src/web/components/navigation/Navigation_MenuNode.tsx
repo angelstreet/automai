@@ -17,7 +17,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   const [imageKey, setImageKey] = useState<string | number>(0); // Key to force image refresh
   const { getEdges } = useReactFlow();
   const currentEdges = getEdges();
-  const { getNodeColors, getHandleColors } = useValidationColors(currentEdges);
+  const { getNodeColors } = useValidationColors(currentEdges);
 
   // Use screenshot URL with aggressive cache-busting
   const screenshotUrl = React.useMemo(() => {
@@ -54,13 +54,6 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
 
   // Get dynamic colors based on validation status
   const nodeColors = getNodeColors(id, 'menu', false);
-
-  // Get handle colors for different positions
-  const topLeftHandle = getHandleColors(id, 'topLeft', 'top-left-menu-source', 'menu');
-  const topRightHandle = getHandleColors(id, 'topRight', 'top-right-menu-target', 'menu');
-  const bottomLeftHandle = getHandleColors(id, 'bottomLeft', 'bottom-left-menu-target', 'menu');
-  const bottomRightHandle = getHandleColors(id, 'bottomRight', 'bottom-right-menu-source', 'menu');
-  const leftHandle = getHandleColors(id, 'leftTop', 'left-target', 'menu');
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent node double-click from triggering
@@ -183,7 +176,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
               border: '2px solid #fff',
               width: '16px',
               height: '16px',
-              borderRadius: '50%',
+              borderRadius: '50% 50% 0 0',
               left: '50%',
               transform: 'translateX(-50%)',
               top: -8,
@@ -205,7 +198,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
               border: '2px solid #fff',
               width: '16px',
               height: '16px',
-              borderRadius: '50%',
+              borderRadius: '50% 50% 0 0',
               left: '50%',
               transform: 'translateX(-50%)',
               top: -2,
@@ -230,7 +223,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
             border: '2px solid #fff',
             width: '16px',
             height: '16px',
-            borderRadius: '50%',
+            borderRadius: '50% 0 0 50%',
             left: -2,
             top: '50%',
             transform: 'translateY(-50%)',
@@ -254,12 +247,13 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50%',
+          borderRadius: '0 0 50% 50%',
           left: '50%',
           transform: 'translateX(-50%)',
           bottom: -2,
           cursor: 'crosshair',
           zIndex: 11,
+          opacity: 0,
         }}
       />
 
@@ -276,12 +270,13 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50%',
+          borderRadius: '0 0 50% 50%',
           left: '50%',
           transform: 'translateX(-50%)',
           bottom: -2,
           cursor: 'crosshair',
           zIndex: 10,
+          opacity: 0,
         }}
       />
 

@@ -20,7 +20,7 @@ from src.web.cache.navigation_cache import get_cached_graph
 from src.web.cache.navigation_graph import get_node_info
 
 # Import centralized URL building from routes utils
-from src.utils.build_url_utils import buildServerUrl
+# Note: buildServerUrl removed - now using direct host communication via buildHostUrl
 
 # NOTE: execute_navigation_to_node function removed - now using batch execution via execute_navigation_with_verification
 
@@ -186,7 +186,7 @@ def verify_node_reached(tree_id: str, expected_node_id: str, team_id: str) -> bo
     print(f"[@navigation:executor:verify_node_reached] PLACEHOLDER: Assuming we reached {expected_node_id}")
     return True
 
-def execute_navigation_with_verification(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> Dict:
+def execute_navigation_with_verification(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None, host_info: dict = None) -> Dict:
     """
     Execute navigation with batch execution - sends all transitions to host at once
     
@@ -195,11 +195,22 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
         target_node_id: Target node to navigate to
         team_id: Team ID for security
         current_node_id: Current position (if None, starts from entry point)
+        host_info: Host information for proxying to correct device
         
     Returns:
         Dictionary with execution results and detailed transition progress
     """
     print(f"[@navigation:executor:execute_navigation_with_verification] Starting batch navigation to {target_node_id}")
+    
+    # Validate host information
+    if not host_info:
+        return {
+            'success': False,
+            'error_message': 'Host information required for navigation execution',
+            'target_node_id': target_node_id,
+            'current_node_id': current_node_id,
+            'execution_time': 0
+        }
     
     result = {
         'success': False,
@@ -248,48 +259,73 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
             'team_id': team_id
         }
         
-        # Send all transitions to host for batch execution
-        api_url = buildServerUrl('/server/control/navigation/execute')
+        # Use proxy pattern to send navigation data to host (following established pattern)
+        from src.utils.build_url_utils import buildHostUrl
+        import requests
         
-        print(f"[@navigation:executor:execute_navigation_with_verification] Calling batch navigation API: {api_url}")
+        print(f"[@navigation:executor:execute_navigation_with_verification] Proxying batch navigation to host: {host_info.get('host_name')}")
         
-        response = requests.post(api_url, 
-                               headers={'Content-Type': 'application/json'},
-                               json={'navigation_data': navigation_data},
-                               timeout=120)  # Longer timeout for batch execution
+        # Build host URL for navigation execution
+        host_url = buildHostUrl(host_info, '/host/navigation/execute')
+        if not host_url:
+            result['error_message'] = 'Failed to build host URL for navigation execution'
+            result['execution_time'] = time.time() - start_time
+            return result
         
-        execution_time = time.time() - start_time
-        result['execution_time'] = execution_time
+        print(f"[@navigation:executor:execute_navigation_with_verification] Calling host navigation API: {host_url}")
         
-        if response.status_code == 200:
-            batch_result = response.json()
-            print(f"[@navigation:executor:execute_navigation_with_verification] Batch execution response: {batch_result}")
+        try:
+            response = requests.post(
+                host_url,
+                json={'navigation_data': navigation_data},
+                timeout=120,  # Longer timeout for batch execution
+                verify=False,
+                headers={'Content-Type': 'application/json'}
+            )
             
-            if batch_result.get('success'):
-                result['success'] = True
-                result['transitions_executed'] = batch_result.get('transitions_executed', len(transitions))
-                result['actions_executed'] = batch_result.get('actions_executed', result['total_actions'])
-                result['transitions_details'] = batch_result.get('transitions_details', [])
-                result['action_results'] = batch_result.get('action_results', [])
-                result['final_message'] = f"Successfully navigated to '{target_node_id}' via batch execution"
+            execution_time = time.time() - start_time
+            result['execution_time'] = execution_time
+            
+            if response.status_code == 200:
+                batch_result = response.json()
+                print(f"[@navigation:executor:execute_navigation_with_verification] Batch execution response: {batch_result}")
                 
-                print(f"[@navigation:executor:execute_navigation_with_verification] ✅ Batch navigation completed successfully")
-                print(f"[@navigation:executor:execute_navigation_with_verification] Executed {result['transitions_executed']}/{result['total_transitions']} transitions")
-                print(f"[@navigation:executor:execute_navigation_with_verification] Executed {result['actions_executed']}/{result['total_actions']} actions")
-                
-                return result
+                if batch_result.get('success'):
+                    result['success'] = True
+                    result['transitions_executed'] = batch_result.get('transitions_executed', len(transitions))
+                    result['actions_executed'] = batch_result.get('actions_executed', result['total_actions'])
+                    result['transitions_details'] = batch_result.get('transitions_details', [])
+                    result['action_results'] = batch_result.get('action_results', [])
+                    result['final_message'] = f"Successfully navigated to '{target_node_id}' via batch execution"
+                    
+                    print(f"[@navigation:executor:execute_navigation_with_verification] ✅ Batch navigation completed successfully")
+                    print(f"[@navigation:executor:execute_navigation_with_verification] Executed {result['transitions_executed']}/{result['total_transitions']} transitions")
+                    print(f"[@navigation:executor:execute_navigation_with_verification] Executed {result['actions_executed']}/{result['total_actions']} actions")
+                    
+                    return result
+                else:
+                    result['error_message'] = batch_result.get('error', 'Batch navigation failed')
+                    result['transitions_executed'] = batch_result.get('transitions_executed', 0)
+                    result['actions_executed'] = batch_result.get('actions_executed', 0)
+                    result['transitions_details'] = batch_result.get('transitions_details', [])
+                    result['action_results'] = batch_result.get('action_results', [])
+                    
+                    print(f"[@navigation:executor:execute_navigation_with_verification] ❌ Batch navigation failed: {result['error_message']}")
+                    return result
             else:
-                result['error_message'] = batch_result.get('error', 'Batch navigation failed')
-                result['transitions_executed'] = batch_result.get('transitions_executed', 0)
-                result['actions_executed'] = batch_result.get('actions_executed', 0)
-                result['transitions_details'] = batch_result.get('transitions_details', [])
-                result['action_results'] = batch_result.get('action_results', [])
-                
-                print(f"[@navigation:executor:execute_navigation_with_verification] ❌ Batch navigation failed: {result['error_message']}")
+                result['error_message'] = f"Host navigation API call failed with status {response.status_code}: {response.text}"
+                print(f"[@navigation:executor:execute_navigation_with_verification] ❌ {result['error_message']}")
                 return result
-        else:
-            result['error_message'] = f"Navigation API call failed with status {response.status_code}: {response.text}"
-            print(f"[@navigation:executor:execute_navigation_with_verification] ❌ {result['error_message']}")
+                
+        except requests.exceptions.Timeout:
+            result['error_message'] = 'Navigation request timed out'
+            result['execution_time'] = time.time() - start_time
+            print(f"[@navigation:executor:execute_navigation_with_verification] ❌ Navigation request timed out")
+            return result
+        except requests.exceptions.RequestException as e:
+            result['error_message'] = f'Network error: {str(e)}'
+            result['execution_time'] = time.time() - start_time
+            print(f"[@navigation:executor:execute_navigation_with_verification] ❌ Network error: {e}")
             return result
         
     except Exception as e:
