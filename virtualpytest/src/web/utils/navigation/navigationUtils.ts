@@ -197,7 +197,7 @@ function sanitizeEdge(edge: any): any {
     id: edge.id || generateUniqueId('edge'),
     source: edge.source,
     target: edge.target,
-    type: edge.type || 'default',
+    type: edge.type || 'uiNavigation', // Use our custom edge type instead of 'default'
     data: {
       ...edge.data,
       // Ensure final wait time is in data for persistence
