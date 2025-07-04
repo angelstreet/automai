@@ -204,6 +204,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
               top: -2,
               cursor: 'crosshair',
               zIndex: 10,
+              opacity: 0,
             }}
           />
         </>
@@ -253,7 +254,6 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           bottom: -2,
           cursor: 'crosshair',
           zIndex: 11,
-          opacity: 0,
         }}
       />
 

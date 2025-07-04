@@ -302,49 +302,45 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         }}
       />
 
-      {/* Right Handles - Overlapping for Bidirectional Effect */}
-      {/* Right: SOURCE for sending connections */}
+      {/* Right Handles */}
+      {/* Top-right: SOURCE for sending connections to right-side nodes */}
       <Handle
         type="source"
         position={Position.Right}
-        id="right-source"
+        id="right-top-source"
         isConnectable={true}
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: '#1976d2',
+          background: 'linear-gradient(135deg, #1976d2, #42a5f5)', // Bright blue gradient
+          width: '14px',
+          height: '14px',
           border: '2px solid #fff',
-          width: '16px',
-          height: '16px',
-          borderRadius: '0 50% 50% 0',
-          right: -2,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          cursor: 'crosshair',
-          zIndex: 11,
+          borderRadius: '50%',
+          right: -5,
+          top: '30%',
+          boxShadow: '0 3px 8px rgba(25, 118, 210, 0.4), 0 0 12px rgba(25, 118, 210, 0.3)',
         }}
       />
 
-      {/* Right: TARGET for receiving connections - same position, lower z-index */}
+      {/* Bottom-right: TARGET for receiving connections from left-side nodes */}
       <Handle
         type="target"
         position={Position.Right}
-        id="right-target"
+        id="right-bottom-target"
         isConnectable={true}
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: '#ff5722',
+          background: 'linear-gradient(135deg, #ef9a9a, #e57373)', // Muted red gradient
+          width: '14px',
+          height: '14px',
           border: '2px solid #fff',
-          width: '16px',
-          height: '16px',
-          borderRadius: '0 50% 50% 0',
-          right: -2,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          cursor: 'crosshair',
-          zIndex: 10,
-          opacity: 0,
+          borderRadius: '50%',
+          right: -5,
+          top: '70%',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+          opacity: 0.8,
         }}
       />
 
@@ -391,6 +387,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           top: -2,
           cursor: 'crosshair',
           zIndex: 10,
+          opacity: 0,
         }}
       />
 
@@ -414,7 +411,6 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           bottom: -2,
           cursor: 'crosshair',
           zIndex: 11,
-          opacity: 0,
         }}
       />
 
