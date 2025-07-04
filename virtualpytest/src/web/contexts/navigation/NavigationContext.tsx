@@ -9,15 +9,14 @@ import React, {
 } from 'react';
 import { useParams } from 'react-router-dom';
 import { useNodesState, useEdgesState, ReactFlowInstance } from 'reactflow';
-import { useReactFlow, Node, Edge } from 'reactflow';
 
-import { useDeviceData } from '../device/DeviceDataContext';
 import {
   UINavigationNode,
   UINavigationEdge,
   NodeForm,
   EdgeForm,
 } from '../../types/pages/Navigation_Types';
+import { useDeviceData } from '../device/DeviceDataContext';
 
 // ========================================
 // TYPES
@@ -303,11 +302,39 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   }, [userInterface]);
 
   // Update minimap indicators when current position changes
+  const prevCurrentNodeIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (nodes.length > 0) {
-      updateNodesWithMinimapIndicators();
+    // Only update if currentNodeId actually changed and we have nodes
+    if (nodes.length > 0 && prevCurrentNodeIdRef.current !== currentNodeId) {
+      console.log('[@context:NavigationProvider] Updating nodes with minimap indicators');
+      prevCurrentNodeIdRef.current = currentNodeId;
+
+      setNodes((currentNodes) => {
+        return currentNodes.map((node) => {
+          const isCurrentPosition = node.id === currentNodeId;
+
+          // Check if node is part of navigation route (no navigationSteps in this context)
+          const isOnNavigationRoute = false;
+
+          // Only update if the flags actually changed to prevent unnecessary re-renders
+          if (
+            node.data.isCurrentPosition !== isCurrentPosition ||
+            node.data.isOnNavigationRoute !== isOnNavigationRoute
+          ) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                isCurrentPosition,
+                isOnNavigationRoute,
+              },
+            };
+          }
+          return node;
+        });
+      });
     }
-  }, [currentNodeId, nodes.length, updateNodesWithMinimapIndicators]);
+  }, [currentNodeId, nodes.length, setNodes]);
 
   // Initialize current position from device position when tree and device context are available
   useEffect(() => {

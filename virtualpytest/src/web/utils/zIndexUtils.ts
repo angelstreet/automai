@@ -5,50 +5,32 @@
  * Each component gets a z-index based on its position in the list.
  */
 
-// Define component order from bottom (0) to top
+// Z-index order from bottom to top
+// Each position gets 10 z-index points (index + 1) * 10
 const Z_INDEX_ORDER = [
-  // Base content
-  'CONTENT',
-
-  // Navigation nodes and basic UI
-  'NAVIGATION_NODES',
-  'UI_ELEMENTS',
-
-  // Overlays and indicators
-  'READ_ONLY_INDICATOR',
-  'TOOLTIPS',
-
-  // Navigation panels
-  'NAVIGATION_PANELS',
-  'NAVIGATION_GOTO_PANEL',
-  'NAVIGATION_SELECTION_PANEL',
-  'NAVIGATION_EDGE_PANEL',
-
-  // Navigation dialogs
-  'NAVIGATION_DIALOGS',
-  'NAVIGATION_CONFIRMATION',
-
-  // Header (must be above navigation)
-  'HEADER',
-  'HEADER_DROPDOWN',
-
-  // Modals and streams
-  'MODAL_BACKDROP',
-  'MODAL_CONTENT',
-  'STREAM_VIEWER',
-  'VERIFICATION_EDITOR',
-  'HDMI_STREAM',
-
-  // Remote control panels - ON TOP of modals and streams
-  'REMOTE_PANELS',
-  'ANDROID_MOBILE_OVERLAY',
-  'APPIUM_OVERLAY',
-
-  // Screenshot and debug overlays - highest priority
-  'SCREENSHOT_MODAL',
-
-  // Emergency/Debug
-  'DEBUG_OVERLAY',
+  'CONTENT', // 10
+  'NAVIGATION_NODES', // 20
+  'UI_ELEMENTS', // 30
+  'READ_ONLY_INDICATOR', // 40
+  'TOOLTIPS', // 50
+  'NAVIGATION_PANELS', // 60
+  'NAVIGATION_DIALOGS', // 70
+  'NAVIGATION_CONFIRMATION', // 80
+  'HEADER', // 90
+  'HEADER_DROPDOWN', // 100
+  'MODAL_BACKDROP', // 110
+  'MODAL_CONTENT', // 120
+  'STREAM_VIEWER', // 130
+  'VERIFICATION_EDITOR', // 140
+  'HDMI_STREAM', // 150
+  'REMOTE_PANELS', // 160
+  'ANDROID_MOBILE_OVERLAY', // 170
+  'APPIUM_OVERLAY', // 180
+  'NAVIGATION_GOTO_PANEL', // 190
+  'NAVIGATION_SELECTION_PANEL', // 200
+  'NAVIGATION_EDGE_PANEL', // 210
+  'SCREENSHOT_MODAL', // 220
+  'DEBUG_OVERLAY', // 230
 ] as const;
 
 type ZIndexComponent = (typeof Z_INDEX_ORDER)[number];
