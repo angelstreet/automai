@@ -250,7 +250,7 @@ export const androidTvRemoteConfig = {
     home: {
       key: 'HOME',
       label: '🏠',
-      position: { x: 278, y: 750 },
+      position: { x: 273, y: 750 },
       size: { width: 26, height: 26 },
       shape: 'circle' as const,
       comment: 'Home button',
@@ -274,7 +274,7 @@ export const androidTvRemoteConfig = {
     play_pause: {
       key: 'PLAY_PAUSE',
       label: '⏯',
-      position: { x: 278, y: 890 },
+      position: { x: 273, y: 890 },
       size: { width: 26, height: 26 },
       shape: 'circle' as const,
       comment: 'Play/pause button',
@@ -282,7 +282,7 @@ export const androidTvRemoteConfig = {
     fast_forward: {
       key: 'FAST_FORWARD',
       label: '>>',
-      position: { x: 420, y: 890 },
+      position: { x: 415, y: 890 },
       size: { width: 26, height: 26 },
       shape: 'circle' as const,
       comment: 'Fast forward button',
@@ -290,7 +290,7 @@ export const androidTvRemoteConfig = {
     volume_up: {
       key: 'VOLUME_UP',
       label: 'V+',
-      position: { x: 278, y: 1030 },
+      position: { x: 273, y: 1032 },
       size: { width: 26, height: 26 },
       shape: 'circle' as const,
       comment: 'Volume up button',
@@ -298,7 +298,7 @@ export const androidTvRemoteConfig = {
     volume_down: {
       key: 'VOLUME_DOWN',
       label: 'V-',
-      position: { x: 278, y: 1180 },
+      position: { x: 273, y: 1170 },
       size: { width: 26, height: 26 },
       shape: 'circle' as const,
       comment: 'Volume down button',
@@ -306,7 +306,7 @@ export const androidTvRemoteConfig = {
     mute: {
       key: 'VOLUME_MUTE',
       label: 'MUTE',
-      position: { x: 278, y: 1320 },
+      position: { x: 273, y: 1310 },
       size: { width: 26, height: 26 },
       shape: 'circle' as const,
       comment: 'Mute button',
