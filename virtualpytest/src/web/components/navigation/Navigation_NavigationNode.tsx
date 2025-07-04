@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 
 import { NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../../config/validationColors';
 import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import type { UINavigationNode as UINavigationNodeType } from '../../types/pages/Navigation_Types';
+import { getZIndex } from '../../utils/zIndexUtils';
 
 export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>> = ({
   data,
@@ -27,7 +28,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   }, [data.screenshot, data.screenshot_timestamp, imageKey]);
 
   // Listen for screenshot update events and force immediate refresh
-  React.useEffect(() => {
+  useEffect(() => {
     const handleScreenshotUpdate = (event: CustomEvent) => {
       if (event.detail.nodeId === id) {
         console.log(
@@ -522,7 +523,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'center',
-            zIndex: 10000,
+            zIndex: getZIndex('SCREENSHOT_MODAL'),
             cursor: 'pointer',
             paddingTop: '0px',
           }}

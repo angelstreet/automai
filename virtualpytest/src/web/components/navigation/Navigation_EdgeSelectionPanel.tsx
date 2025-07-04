@@ -6,6 +6,7 @@ import { useReactFlow } from 'reactflow';
 import { useEdge } from '../../hooks/navigation/useEdge';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
+import { getZIndex } from '../../utils/zIndexUtils';
 
 interface EdgeSelectionPanelProps {
   selectedEdge: UINavigationEdge;
@@ -94,7 +95,7 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
           right: 16 + panelIndex * 380, // Position panels side by side horizontally
           width: 360,
           p: 1.5,
-          zIndex: 1500,
+          zIndex: getZIndex('NAVIGATION_EDGE_PANEL'),
         }}
         onClick={(e) => e.stopPropagation()}
       >

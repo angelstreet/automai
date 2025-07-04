@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { PanelInfo } from '../../../types/controller/Panel_Types';
 import { AndroidElement } from '../../../types/controller/Remote_Types';
+import { getZIndex } from '../../../utils/zIndexUtils';
 
 interface ScaledElement {
   id: string;
@@ -261,7 +262,7 @@ export const AndroidMobileOverlay = React.memo(
             top: `${panelInfo.position.y}px`,
             width: `${actualContentWidth}px`,
             height: `${panelInfo.size.height}px`,
-            zIndex: 1000, // Lower z-index than elements
+            zIndex: getZIndex('ANDROID_MOBILE_OVERLAY'), // Lower z-index than elements
             contain: 'layout style size',
             willChange: 'transform',
             pointerEvents: 'auto', // Allow tapping on base layer
@@ -280,7 +281,7 @@ export const AndroidMobileOverlay = React.memo(
               top: `${panelInfo.position.y}px`,
               width: `${panelInfo.size.width}px`,
               height: `${panelInfo.size.height}px`,
-              zIndex: 1400, // Higher z-index than base layer, but below navigation panels (1500) and dialogs (1600)
+              zIndex: getZIndex('ANDROID_MOBILE_OVERLAY', 50), // Higher z-index than base layer, but below navigation panels
               contain: 'layout style size',
               willChange: 'transform',
               pointerEvents: 'none', // Allow clicks to pass through to individual elements
@@ -338,7 +339,7 @@ export const AndroidMobileOverlay = React.memo(
               borderRadius: '50%',
               backgroundColor: 'rgba(255, 255, 255, 0.8)',
               border: '2px solid rgba(0, 123, 255, 0.8)',
-              zIndex: 1450, // Highest z-index for overlay, but below navigation panels (1500) and dialogs (1600)
+              zIndex: getZIndex('ANDROID_MOBILE_OVERLAY', 100), // Highest z-index for overlay, but below navigation panels
               pointerEvents: 'none',
               animation: 'clickPulse 0.3s ease-out forwards',
             }}

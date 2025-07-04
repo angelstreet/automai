@@ -21,6 +21,7 @@ import ReactFlow, {
   MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { Add as AddIcon, Error as ErrorIcon, Save as SaveIcon } from '@mui/icons-material';
 
 // Import extracted components and hooks
 import { HDMIStream } from '../components/controller/av/HDMIStream';
@@ -41,6 +42,7 @@ import { useNavigation } from '../contexts/navigation/NavigationContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { useNavigationEditor } from '../hooks/navigation/useNavigationEditor';
 import { NodeForm, EdgeForm } from '../types/pages/Navigation_Types';
+import { getZIndex } from '../utils/zIndexUtils';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
 const nodeTypes = {
@@ -566,7 +568,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                       position: 'absolute',
                       top: 10,
                       right: 10,
-                      zIndex: 1000,
+                      zIndex: getZIndex('READ_ONLY_INDICATOR'),
                       backgroundColor: 'warning.light',
                       color: 'warning.contrastText',
                       px: 1,
@@ -728,7 +730,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         <Dialog
           open={isDiscardDialogOpen}
           onClose={() => setIsDiscardDialogOpen(false)}
-          sx={{ zIndex: 1600 }}
+          sx={{ zIndex: getZIndex('NAVIGATION_CONFIRMATION') }}
         >
           <DialogTitle>Discard Changes?</DialogTitle>
           <DialogContent>

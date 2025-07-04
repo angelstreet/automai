@@ -20,6 +20,7 @@ import React, { useEffect, useMemo } from 'react';
 
 import { useNode } from '../../hooks/navigation/useNode';
 import { UINavigationNode } from '../../types/pages/Navigation_Types';
+import { getZIndex } from '../../utils/zIndexUtils';
 
 interface NodeGotoPanelProps {
   selectedNode: UINavigationNode;
@@ -77,7 +78,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
         height: 'calc(100vh - 180px)',
         display: 'flex',
         flexDirection: 'column',
-        zIndex: 1500,
+        zIndex: getZIndex('NAVIGATION_GOTO_PANEL'),
         overflow: 'hidden',
       }}
       onClick={(e) => e.stopPropagation()}

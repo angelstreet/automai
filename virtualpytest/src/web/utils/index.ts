@@ -1,6 +1,6 @@
 // Export all web utilities from organized structure
 
-// Navigation utilities  
+// Navigation utilities
 export * from './navigation';
 
 // Device utilities
@@ -16,4 +16,7 @@ export * from './validation';
 export * from './infrastructure';
 
 // Capture utilities
-export * from './capture'; 
+export * from './capture';
+
+// ZIndex utilities
+export * from './zIndexUtils';

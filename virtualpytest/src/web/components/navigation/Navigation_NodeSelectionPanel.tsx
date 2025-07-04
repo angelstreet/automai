@@ -20,6 +20,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNode } from '../../hooks/navigation/useNode';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
+import { getZIndex } from '../../utils/zIndexUtils';
 
 import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
 
@@ -216,7 +217,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             right: 16,
             width: 340,
             p: 1.5,
-            zIndex: 1500,
+            zIndex: getZIndex('NAVIGATION_SELECTION_PANEL'),
           }}
           onClick={handlePaperClick}
         >
@@ -359,7 +360,11 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         )}
 
         {/* Reset Node Confirmation Dialog */}
-        <Dialog open={showResetConfirm} onClose={handleResetConfirmClose} sx={{ zIndex: 1600 }}>
+        <Dialog
+          open={showResetConfirm}
+          onClose={handleResetConfirmClose}
+          sx={{ zIndex: getZIndex('NAVIGATION_CONFIRMATION') }}
+        >
           <DialogTitle>Reset Node</DialogTitle>
           <DialogContent>
             <Typography>Are you sure you want to reset this node ?</Typography>
@@ -376,7 +381,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
         <Dialog
           open={showScreenshotConfirm}
           onClose={handleScreenshotConfirmClose}
-          sx={{ zIndex: 1600 }}
+          sx={{ zIndex: getZIndex('NAVIGATION_CONFIRMATION') }}
         >
           <DialogTitle>Take Screenshot</DialogTitle>
           <DialogContent>

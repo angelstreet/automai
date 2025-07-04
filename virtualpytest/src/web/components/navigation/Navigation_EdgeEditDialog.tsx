@@ -17,6 +17,7 @@ import { Host } from '../../types/common/Host_Types';
 import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
 import { ActionsList } from '../actions';
 import { ActionDependencyDialog } from '../actions/ActionDependencyDialog';
+import { getZIndex } from '../../utils/zIndexUtils';
 
 interface EdgeEditDialogProps {
   isOpen: boolean;
@@ -118,7 +119,13 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
 
   return (
     <>
-      <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1600 }}>
+      <Dialog
+        open={isOpen}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+        sx={{ zIndex: getZIndex('NAVIGATION_DIALOGS') }}
+      >
         <DialogTitle sx={{ pb: 0.5 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="h6">Edit Edge</Typography>

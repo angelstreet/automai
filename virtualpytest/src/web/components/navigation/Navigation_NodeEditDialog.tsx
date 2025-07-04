@@ -18,6 +18,7 @@ import React from 'react';
 
 import { useNodeEdit } from '../../hooks/navigation/useNodeEdit';
 import { NodeEditDialogProps } from '../../types/pages/Navigation_Types';
+import { getZIndex } from '../../utils/zIndexUtils';
 import { VerificationsList } from '../verification/VerificationsList';
 
 export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
@@ -79,7 +80,13 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
   const buttonVisibility = nodeEdit.getButtonVisibility();
 
   return (
-    <Dialog open={isOpen} onClose={onClose} maxWidth="md" fullWidth sx={{ zIndex: 1600 }}>
+    <Dialog
+      open={isOpen}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      sx={{ zIndex: getZIndex('NAVIGATION_DIALOGS') }}
+    >
       <DialogTitle sx={{ pb: 0.5 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6">Edit Node</Typography>
