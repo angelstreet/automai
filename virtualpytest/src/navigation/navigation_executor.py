@@ -112,7 +112,7 @@ def execute_navigation_step(action: str, from_node: str, to_node: str) -> bool:
         print(f"[@navigation:executor:execute_navigation_step] Parsed action: {action_object}")
         
         # Use centralized server URL building
-        api_url = buildServerUrl('/server/navigation/execute-step')
+        api_url = buildServerUrl('/server/a-step')
         
         # Call the abstract remote controller API endpoint
         print(f"[@navigation_executor:execute_action] Calling abstract remote controller API")

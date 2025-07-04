@@ -3,6 +3,7 @@
  * Handles all AV panel positioning, sizing, and layout logic
  */
 
+import { getZIndex } from '../../utils/zIndexUtils';
 import { hdmiStreamConfig, hdmiStreamMobileConfig } from './hdmiStream';
 
 // AV panel layout configuration from device config
@@ -70,7 +71,7 @@ export const getConfigurableAVPanelLayout = (
         left: '20px',
       },
     },
-    zIndex: 1000,
+    zIndex: getZIndex('UI_ELEMENTS'),
     showControlsInCollapsed: false,
     showControlsInExpanded: true,
   };
@@ -111,7 +112,7 @@ export const getConfigurableAVPanelLayout = (
         ...panelLayout.expanded?.position,
       },
     },
-    zIndex: panelLayout.zIndex || defaultLayout.zIndex,
+    zIndex: getZIndex('UI_ELEMENTS'),
     showControlsInCollapsed:
       panelLayout.showControlsInCollapsed ?? defaultLayout.showControlsInCollapsed,
     showControlsInExpanded:

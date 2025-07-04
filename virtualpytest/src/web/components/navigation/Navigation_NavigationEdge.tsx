@@ -1,5 +1,5 @@
 import React from 'react';
-import { EdgeProps, getBezierPath, useReactFlow } from 'reactflow';
+import { EdgeProps, getBezierPath } from 'reactflow';
 
 import { useEdge } from '../../hooks/navigation/useEdge';
 import { UINavigationEdge as UINavigationEdgeType } from '../../types/pages/Navigation_Types';
@@ -7,25 +7,8 @@ import { UINavigationEdge as UINavigationEdgeType } from '../../types/pages/Navi
 export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['data']>> = (
   props,
 ) => {
-  const {
-    id,
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    data,
-    selected,
-    source,
-    target,
-  } = props;
-
-  // Access sourceHandle from props directly
-  const sourceHandle = (props as any).sourceHandle;
-
-  const { getNodes } = useReactFlow();
-  const currentNodes = getNodes();
+  const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected } =
+    props;
 
   // Use the consolidated edge hook
   const edgeHook = useEdge();

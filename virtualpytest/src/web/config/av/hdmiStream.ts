@@ -26,7 +26,6 @@ export const hdmiStreamConfig = {
         right: '20px',
       },
     },
-    zIndex: 1000,
     showControlsInCollapsed: false,
     showControlsInExpanded: true,
     header: {
@@ -80,7 +79,6 @@ export const hdmiStreamMobileConfig = {
         right: '20px',
       },
     },
-    zIndex: 1000,
     showControlsInCollapsed: false,
     showControlsInExpanded: true,
     header: {

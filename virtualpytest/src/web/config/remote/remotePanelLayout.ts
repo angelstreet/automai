@@ -3,6 +3,8 @@
  * Handles all remote panel positioning, sizing, and layout logic
  */
 
+import { getZIndex } from '../../utils/zIndexUtils';
+
 // Import configurations
 import { androidMobileRemoteConfig } from './androidMobileRemote';
 import { androidTvRemoteConfig } from './androidTvRemote';
@@ -102,7 +104,7 @@ export const getConfigurableRemotePanelLayout = (
           right: panelLayout.expanded?.position?.right || '20px',
         },
       },
-      zIndex: panelLayout.zIndex || 1000,
+      zIndex: getZIndex('REMOTE_PANELS'),
       showScreenshotInCollapsed: panelLayout.showScreenshotInCollapsed ?? false,
       showScreenshotInExpanded: panelLayout.showScreenshotInExpanded ?? true,
     };
@@ -128,7 +130,7 @@ export const getConfigurableRemotePanelLayout = (
             right: '20px',
           },
         },
-        zIndex: 1000,
+        zIndex: getZIndex('REMOTE_PANELS'),
         showScreenshotInCollapsed: false,
         showScreenshotInExpanded: true,
       };
@@ -150,7 +152,7 @@ export const getConfigurableRemotePanelLayout = (
             right: '20px',
           },
         },
-        zIndex: 1000,
+        zIndex: getZIndex('REMOTE_PANELS'),
         showScreenshotInCollapsed: false,
         showScreenshotInExpanded: false,
       };
@@ -172,7 +174,7 @@ export const getConfigurableRemotePanelLayout = (
             right: '20px',
           },
         },
-        zIndex: 1000,
+        zIndex: getZIndex('REMOTE_PANELS'),
         showScreenshotInCollapsed: false,
         showScreenshotInExpanded: false,
       };
@@ -194,7 +196,7 @@ export const getConfigurableRemotePanelLayout = (
             right: '20px',
           },
         },
-        zIndex: 1000,
+        zIndex: getZIndex('REMOTE_PANELS'),
         showScreenshotInCollapsed: false,
         showScreenshotInExpanded: false,
       };
@@ -216,7 +218,7 @@ export const getConfigurableRemotePanelLayout = (
             right: '20px',
           },
         },
-        zIndex: 1000,
+        zIndex: getZIndex('REMOTE_PANELS'),
         showScreenshotInCollapsed: false,
         showScreenshotInExpanded: true,
       };
@@ -238,7 +240,7 @@ export const getConfigurableRemotePanelLayout = (
             right: '20px',
           },
         },
-        zIndex: 1000,
+        zIndex: getZIndex('REMOTE_PANELS'),
         showScreenshotInCollapsed: false,
         showScreenshotInExpanded: true,
       };

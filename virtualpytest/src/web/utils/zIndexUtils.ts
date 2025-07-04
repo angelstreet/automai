@@ -18,10 +18,10 @@ const Z_INDEX_ORDER = [
   'READ_ONLY_INDICATOR',
   'TOOLTIPS',
 
-  // Remote control panels
+  // Remote control panels - positioned below navigation panels
+  'REMOTE_PANELS',
   'ANDROID_MOBILE_OVERLAY',
   'APPIUM_OVERLAY',
-  'REMOTE_PANELS',
 
   // Navigation panels
   'NAVIGATION_PANELS',

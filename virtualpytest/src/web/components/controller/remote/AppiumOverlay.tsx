@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 
 import { PanelInfo } from '../../../types/controller/Panel_Types';
 import { AppiumElement } from '../../../types/controller/Remote_Types';
+import { getZIndex } from '../../../utils/zIndexUtils';
 
 interface ScaledElement {
   id: string;
@@ -360,7 +361,7 @@ export const AppiumOverlay = React.memo(function AppiumOverlay({
           top: panelInfo.position.y,
           width: actualContentWidth,
           height: panelInfo.size.height,
-          zIndex: 1000,
+          zIndex: getZIndex('APPIUM_OVERLAY'),
           pointerEvents: 'auto',
           cursor: 'crosshair',
         }}
@@ -379,7 +380,7 @@ export const AppiumOverlay = React.memo(function AppiumOverlay({
             height: scaledElement.height,
             border: `2px solid ${scaledElement.color}`,
             backgroundColor: `${scaledElement.color}20`,
-            zIndex: 1001,
+            zIndex: getZIndex('APPIUM_OVERLAY', 1),
             pointerEvents: 'auto',
             cursor: 'pointer',
             borderRadius: '2px',
@@ -400,7 +401,7 @@ export const AppiumOverlay = React.memo(function AppiumOverlay({
               fontSize: '10px',
               borderRadius: '2px',
               whiteSpace: 'nowrap',
-              zIndex: 1002,
+              zIndex: getZIndex('APPIUM_OVERLAY', 2),
             }}
           >
             {scaledElement.id}
@@ -420,7 +421,7 @@ export const AppiumOverlay = React.memo(function AppiumOverlay({
             border: '3px solid #FF6B6B',
             borderRadius: '50%',
             pointerEvents: 'none',
-            zIndex: 1003,
+            zIndex: getZIndex('APPIUM_OVERLAY', 3),
             animation: 'clickPulse 0.5s ease-out',
           }}
         />

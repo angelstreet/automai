@@ -1,5 +1,6 @@
 import { LayoutConfig, DeviceResolution } from '../../types/pages/UserInterface_Types';
 import { getVerificationEditorLayout } from '../../config/layoutConfig';
+import { getZIndex } from '../zIndexUtils';
 
 /**
  * Creates layout configuration for compact view based on device model
@@ -78,7 +79,7 @@ export const createBaseContainerStyles = () => ({
   bottom: 0,
   left: 0,
   display: 'flex',
-  zIndex: 1000,
+  zIndex: getZIndex('UI_ELEMENTS'),
   userSelect: 'none' as const,
   WebkitUserSelect: 'none' as const,
   MozUserSelect: 'none' as const,

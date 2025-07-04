@@ -20,7 +20,6 @@ export const bluetoothRemoteConfig = {
         right: '20px',
       },
     },
-    zIndex: 1000,
     showScreenshotInCollapsed: false,
     showScreenshotInExpanded: false,
     header: {

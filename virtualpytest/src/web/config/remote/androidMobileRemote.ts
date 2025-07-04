@@ -1,3 +1,5 @@
+import { getZIndex } from '../../utils/zIndexUtils';
+
 export const androidMobileRemoteConfig = {
   remote_info: {
     name: 'Android Mobile',
@@ -20,7 +22,6 @@ export const androidMobileRemoteConfig = {
         right: '20px',
       },
     },
-    zIndex: 1000,
     showScreenshotInCollapsed: false,
     showScreenshotInExpanded: false,
     header: {
