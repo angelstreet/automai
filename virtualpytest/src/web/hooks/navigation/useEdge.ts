@@ -33,22 +33,29 @@ export const useEdge = (props?: UseEdgeProps) => {
    * Convert navigation EdgeAction to controller EdgeAction for action execution
    */
   const convertToControllerAction = useCallback((navAction: EdgeAction): any => {
+    // Safely extract input value from various parameter types
+    const getInputValue = (params: any): string => {
+      if (!params) return '';
+
+      // Try different possible input fields
+      return params.input || params.text || params.key || params.package || params.element_id || '';
+    };
+
+    // Safely get wait time
+    const getWaitTime = (params: any): number => {
+      return params?.wait_time || 0;
+    };
+
     return {
       id: navAction.id,
-      label: navAction.description || navAction.command,
+      label: navAction.label || navAction.command,
       command: navAction.command,
       params: {
         ...navAction.params,
-        wait_time: navAction.params?.wait_time || 0, // Use wait_time in ms
+        wait_time: getWaitTime(navAction.params), // Use wait_time in ms
       },
       requiresInput: false,
-      inputValue:
-        navAction.params?.input ||
-        navAction.params?.text ||
-        navAction.params?.key ||
-        navAction.params?.package ||
-        navAction.params?.element_id ||
-        '',
+      inputValue: getInputValue(navAction.params),
     };
   }, []);
 

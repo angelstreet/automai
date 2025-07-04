@@ -139,7 +139,7 @@ export const useNavigationEditor = () => {
                 device_model: verification.device_model || 'android_mobile',
                 verification_type: verification.verification_type || 'image',
                 command: verification.command || '',
-                parameters: verification.params || {},
+                params: verification.params || {},
               };
 
               console.log(

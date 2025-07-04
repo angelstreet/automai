@@ -78,7 +78,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     clearNavigationMessages,
     loadNavigationPreview,
     // Removed 'nodes' from dependencies to prevent infinite loop
-    // since loadNavigationPreview updates nodes via updateNodesWithMinimapIndicators
+    // loadNavigationPreview now only updates minimap when shouldUpdateMinimap=true (during execution)
   ]);
 
   return (

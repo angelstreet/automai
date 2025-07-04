@@ -273,6 +273,44 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       null,
     );
 
+    // Wrap the original click handlers to close goto panel
+    const wrappedOnNodeClick = useCallback(
+      (event: React.MouseEvent, node: any) => {
+        // Close goto panel if it's open
+        if (showGotoPanel) {
+          setShowGotoPanel(false);
+          setSelectedNodeForGoto(null);
+        }
+        // Call the original handler
+        onNodeClick(event, node);
+      },
+      [onNodeClick, showGotoPanel],
+    );
+
+    const wrappedOnEdgeClick = useCallback(
+      (event: React.MouseEvent, edge: any) => {
+        // Close goto panel if it's open
+        if (showGotoPanel) {
+          setShowGotoPanel(false);
+          setSelectedNodeForGoto(null);
+        }
+        // Call the original handler
+        onEdgeClick(event, edge);
+      },
+      [onEdgeClick, showGotoPanel],
+    );
+
+    // Wrap the pane click handler to also close goto panel
+    const wrappedOnPaneClick = useCallback(() => {
+      // Close goto panel if it's open
+      if (showGotoPanel) {
+        setShowGotoPanel(false);
+        setSelectedNodeForGoto(null);
+      }
+      // Call the original handler
+      onPaneClick();
+    }, [onPaneClick, showGotoPanel]);
+
     // Memoize the AV panel collapsed change handler to prevent infinite loops
     const handleAVPanelCollapsedChange = useCallback((isCollapsed: boolean) => {
       setIsAVPanelCollapsed(isCollapsed);
@@ -612,10 +650,10 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                   onNodesChange={onNodesChange}
                   onEdgesChange={onEdgesChange}
                   onConnect={onConnect}
-                  onNodeClick={onNodeClick}
-                  onEdgeClick={onEdgeClick}
+                  onNodeClick={wrappedOnNodeClick}
+                  onEdgeClick={wrappedOnEdgeClick}
                   onNodeDoubleClick={onNodeDoubleClick}
-                  onPaneClick={onPaneClick}
+                  onPaneClick={wrappedOnPaneClick}
                   onInit={setReactFlowInstance}
                   nodeTypes={nodeTypes}
                   edgeTypes={edgeTypes}

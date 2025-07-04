@@ -633,3 +633,43 @@ def run_comprehensive_validation(tree_id):
         }), 200
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+@validation_bp.route('/optimal-path/<tree_id>', methods=['GET'])
+def get_optimal_path(tree_id):
+    """Get optimal validation path using NetworkX algorithms"""
+    try:
+        team_id = get_team_id()
+        
+        # Get the optimal sequence
+        sequence = find_optimal_edge_validation_sequence(tree_id, team_id)
+        
+        if not sequence:
+            return jsonify({
+                'success': False,
+                'error': 'No optimal path found or graph is empty'
+            }), 404
+        
+        # Calculate summary statistics
+        total_steps = len(sequence)
+        edge_validations = len([step for step in sequence if step.get('validation_type') == 'edge'])
+        navigation_steps = total_steps - edge_validations
+        efficiency_ratio = edge_validations / total_steps if total_steps > 0 else 0
+        
+        result = {
+            'sequence': sequence,
+            'summary': {
+                'total_steps': total_steps,
+                'edge_validations': edge_validations,
+                'navigation_steps': navigation_steps,
+                'efficiency_ratio': efficiency_ratio
+            }
+        }
+        
+        return jsonify(result), 200
+        
+    except Exception as e:
+        print(f"[@validation:optimal-path] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

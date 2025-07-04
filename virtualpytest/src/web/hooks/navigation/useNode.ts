@@ -208,7 +208,11 @@ export const useNode = (props?: UseNodeProps) => {
    * Load navigation preview for NodeGotoPanel
    */
   const loadNavigationPreview = useCallback(
-    async (selectedNode: UINavigationNode, allNodes?: UINavigationNode[]) => {
+    async (
+      selectedNode: UINavigationNode,
+      allNodes?: UINavigationNode[],
+      shouldUpdateMinimap: boolean = false,
+    ) => {
       if (!props?.treeId) return;
 
       setIsLoadingPreview(true);
@@ -242,6 +246,11 @@ export const useNode = (props?: UseNodeProps) => {
 
         if (result.success) {
           setNavigationSteps(result.steps);
+
+          // Only update minimap indicators if explicitly requested (during execution)
+          if (shouldUpdateMinimap) {
+            updateNodesWithMinimapIndicators(result.steps);
+          }
         } else {
           setNavigationError(result.error || 'Failed to load navigation preview');
         }
@@ -253,7 +262,13 @@ export const useNode = (props?: UseNodeProps) => {
         setIsLoadingPreview(false);
       }
     },
-    [props?.treeId, currentNodeId, props?.currentNodeId, findHomeRootNode],
+    [
+      props?.treeId,
+      currentNodeId,
+      props?.currentNodeId,
+      findHomeRootNode,
+      updateNodesWithMinimapIndicators,
+    ],
   );
 
   /**
@@ -306,7 +321,8 @@ export const useNode = (props?: UseNodeProps) => {
           // Update current position after successful navigation
           updateCurrentPosition(selectedNode.id, selectedNode.data.label);
 
-          await loadNavigationPreview(selectedNode, allNodes);
+          // Reload preview with minimap updates to show navigation route
+          await loadNavigationPreview(selectedNode, allNodes, true);
         } else {
           const errorMessage = result.error || 'Navigation failed';
           setExecutionMessage(`Navigation failed: ${errorMessage}`);
