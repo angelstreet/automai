@@ -385,7 +385,7 @@ export function StreamViewer({
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
             padding: 2,
             borderRadius: 1,
-            zIndex: getZIndex('streamError'),
+            zIndex: getZIndex('STREAM_VIEWER'),
           }}
         >
           <Typography variant="body2" sx={{ mb: 1 }}>
@@ -406,7 +406,7 @@ export function StreamViewer({
             transform: 'translate(-50%, -50%)',
             textAlign: 'center',
             color: 'white',
-            zIndex: getZIndex('loadingStream'),
+            zIndex: getZIndex('STREAM_VIEWER'),
           }}
         >
           <Typography variant="body2">Loading stream...</Typography>
@@ -425,7 +425,7 @@ export function StreamViewer({
             backgroundColor: 'rgba(0, 0, 0, 0.8)',
             padding: 3,
             borderRadius: 2,
-            zIndex: getZIndex('userInteraction'),
+            zIndex: getZIndex('STREAM_VIEWER'),
           }}
         >
           <Typography variant="body2" sx={{ mb: 2 }}>
@@ -455,7 +455,7 @@ export function StreamViewer({
             transform: 'translate(-50%, -50%)',
             textAlign: 'center',
             color: 'text.secondary',
-            zIndex: getZIndex('noStreamAvailable'),
+            zIndex: getZIndex('STREAM_VIEWER'),
           }}
         >
           <Typography variant="body2">No stream available</Typography>
@@ -474,7 +474,7 @@ export function StreamViewer({
             py: 0.5,
             borderRadius: 1,
             fontSize: '0.75rem',
-            zIndex: getZIndex('recording'),
+            zIndex: getZIndex('STREAM_VIEWER'),
           }}
         >
           RECORDING
