@@ -1,11 +1,13 @@
 """
-Navigation Pathfinding and Automation Routes
+Navigation Pathfinding Routes
 
 This module contains the API endpoints for:
-- Navigation pathfinding and execution
+- Navigation pathfinding and path preview (read-only)
 - Take control mode management
 - Navigation cache management
 - Navigation graph statistics
+
+NOTE: Navigation execution routes are in server_navigation_routes.py
 """
 
 import time
@@ -50,100 +52,34 @@ def deactivate_take_control_session(tree_id: str, team_id: str):
         del take_control_sessions[session_key]
 
 # =====================================================
-# NAVIGATION PATHFINDING & EXECUTION ROUTES
+# NAVIGATION PATHFINDING ROUTES (PREVIEW ONLY)
 # =====================================================
 
-@pathfinding_bp.route('/navigate/<tree_id>/<node_id>', methods=['POST'])
-def navigate_to_node(tree_id, node_id):
-    """API endpoint for navigation requests"""
-    try:
-        print(f"[@pathfinding:navigate] Request to navigate to node {node_id} in tree {tree_id}")
-        
-        # Get team_id from request or use default
-        team_id = get_team_id()
-        data = request.get_json() or {}
-        current_node_id = data.get('current_node_id')
-        execute = data.get('execute', True)
-        
-        if execute:
-            # Import navigation execution modules
-            try:
-                from src.navigation.navigation_pathfinding import find_shortest_path
-                from src.web.cache.navigation_cache import get_cached_graph
-                from src.web.utils.routeUtils import get_host_from_request
-                
-                # Extract host information from request
-                host_info, error = get_host_from_request()
-                if not host_info:
-                    return jsonify({
-                        'success': False,
-                        'error': error or 'Host information required for navigation execution'
-                    }), 400
-                
-                # Execute navigation with verification (now includes host info)
-                result = execute_navigation_with_verification(tree_id, node_id, team_id, current_node_id, host_info)
-                
-                # Add navigation metadata
-                result.update({
-                    'tree_id': tree_id,
-                    'team_id': team_id,
-                    'navigation_type': 'execute'
-                })
-                
-                return jsonify(result)
-                
-            except ImportError as e:
-                print(f"[@pathfinding:navigate] Navigation modules not available: {e}")
-                return jsonify({
-                    'success': False,
-                    'error': 'Navigation execution modules not available',
-                    'error_code': 'MODULES_UNAVAILABLE'
-                }), 503
-        else:
-            # Return navigation preview
-            try:
-                preview = get_navigation_preview_internal(tree_id, node_id, team_id, current_node_id)
-                preview.update({
-                    'success': True,
-                    'navigation_type': 'preview'
-                })
-                
-                return jsonify(preview)
-                
-            except ImportError as e:
-                print(f"[@pathfinding:navigate] Navigation modules not available: {e}")
-                return jsonify({
-                    'success': False,
-                    'error': 'Navigation preview modules not available',
-                    'error_code': 'MODULES_UNAVAILABLE'
-                }), 503
-        
-    except Exception as e:
-        print(f"[@pathfinding:navigate] Error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'error_code': 'API_ERROR'
-        }), 500
+# NOTE: Navigation execution routes moved to server_navigation_routes.py
+# This module only handles pathfinding and path preview functionality
 
 @pathfinding_bp.route('/preview/<tree_id>/<node_id>', methods=['GET'])
 def get_navigation_preview(tree_id, node_id):
-    """API endpoint for navigation preview"""
+    """API endpoint for navigation path preview - returns pathfinding results only"""
     try:
-        print(f"[@pathfinding:preview] Request for navigation preview to node {node_id} in tree {tree_id}")
+        print(f"[@pathfinding:preview] Request for navigation path preview to node {node_id} in tree {tree_id}")
         
         # Get team_id from query params or use default
         team_id = get_team_id()
         current_node_id = request.args.get('current_node_id')
         
-        steps = get_navigation_preview_internal(tree_id, node_id, team_id, current_node_id)
+        # Get pathfinding results (transitions with actions)
+        transitions = get_navigation_preview_internal(tree_id, node_id, team_id, current_node_id)
         
         return jsonify({
             'success': True,
             'tree_id': tree_id,
             'target_node_id': node_id,
-            'steps': steps,
-            'total_steps': len(steps)
+            'current_node_id': current_node_id,
+            'transitions': transitions,
+            'total_transitions': len(transitions),
+            'total_actions': sum(len(t.get('actions', [])) for t in transitions) if transitions else 0,
+            'navigation_type': 'preview'
         })
         
     except Exception as e:
@@ -217,16 +153,12 @@ def get_navigation_stats(tree_id):
 # INTERNAL HELPER FUNCTIONS
 # =====================================================
 
-def execute_navigation_with_verification(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None, host_info: dict = None):
-    """Execute navigation with verification using the real navigation executor"""
-    from src.navigation.navigation_executor import execute_navigation_with_verification as real_executor
-    
-    return real_executor(tree_id, target_node_id, team_id, current_node_id, host_info)
+# NOTE: execute_navigation_with_verification helper removed - now using proxy_to_host pattern
 
 def get_navigation_preview_internal(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None):
     """Get navigation preview - returns rich transition data directly"""
     try:
-        from src.navigation.navigation_pathfinding import find_shortest_path
+                        from src.lib.navigation.navigation_pathfinding import find_shortest_path
         
         # Find path from current to target node - returns rich transition data
         transitions = find_shortest_path(tree_id, target_node_id, team_id, current_node_id)

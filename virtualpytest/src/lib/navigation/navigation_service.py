@@ -48,7 +48,7 @@ class NavigationService:
             
             if execute:
                 # Execute navigation with verification
-                from src.navigation.navigation_executor import execute_navigation_with_verification
+                from src.lib.navigation.navigation_executor import execute_navigation_with_verification
                 
                 result = execute_navigation_with_verification(tree_id, target_node_id, team_id, current_node_id)
                 
@@ -66,7 +66,7 @@ class NavigationService:
                 return result
             else:
                 # Return navigation preview
-                from src.navigation.navigation_executor import get_navigation_preview
+                from src.lib.navigation.navigation_executor import get_navigation_preview
                 
                 preview = get_navigation_preview(tree_id, target_node_id, team_id, current_node_id)
                 preview.update({
@@ -102,7 +102,7 @@ class NavigationService:
         print(f"[@navigation:service:get_navigation_preview] Getting preview for {target_node_id}")
         
         try:
-            from src.navigation.navigation_pathfinding import get_navigation_transitions
+            from src.lib.navigation.navigation_pathfinding import get_navigation_transitions
             
             transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
             return transitions
@@ -272,7 +272,7 @@ class NavigationService:
         print(f"[@navigation:service:find_alternative_paths] Finding {max_paths} alternative paths to {target_node_id}")
         
         try:
-            from src.navigation.navigation_pathfinding import find_all_paths
+            from src.lib.navigation.navigation_pathfinding import find_all_paths
             
             paths = find_all_paths(tree_id, target_node_id, team_id, current_node_id, max_paths)
             return paths
@@ -294,7 +294,7 @@ class NavigationService:
             List of reachable node IDs
         """
         try:
-            from src.navigation.navigation_pathfinding import get_reachable_nodes
+            from src.lib.navigation.navigation_pathfinding import get_reachable_nodes
             
             reachable = get_reachable_nodes(tree_id, team_id, current_node_id)
             return reachable

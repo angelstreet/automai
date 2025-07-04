@@ -16,7 +16,7 @@ from collections import defaultdict, deque
 import networkx as nx
 
 # Import existing NetworkX-based navigation utilities
-from src.navigation.navigation_pathfinding import (
+from src.lib.navigation.navigation_pathfinding import (
     find_shortest_path,
     get_navigation_transitions,
     get_reachable_nodes as get_networkx_reachable_nodes,

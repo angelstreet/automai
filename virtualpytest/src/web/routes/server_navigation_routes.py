@@ -4,7 +4,9 @@ Navigation API Routes
 This module contains the API endpoints for:
 - Navigation trees management
 - Navigation nodes and edges management
-- Navigation execution on devices
+- Navigation execution on devices (navigate to node functionality)
+
+NOTE: Navigation pathfinding and preview routes are in server_pathfinding_routes.py
 """
 
 from flask import Blueprint, request, jsonify, current_app
@@ -38,6 +40,58 @@ navigation_bp = Blueprint('navigation', __name__, url_prefix='/server/navigation
 # =====================================================
 # NAVIGATION EXECUTION ENDPOINTS (HOST)
 # =====================================================
+
+@navigation_bp.route('/navigate/<tree_id>/<node_id>', methods=['POST'])
+def navigate_to_node(tree_id, node_id):
+    """Navigate to a specific node in a navigation tree using pathfinding and execution"""
+    try:
+        print(f"[@route:navigate_to_node] Request to navigate to node {node_id} in tree {tree_id}")
+        
+        # Get team_id from request or use default
+        team_id = get_team_id()
+        data = request.get_json() or {}
+        current_node_id = data.get('current_node_id')
+        
+        # Use proxy pattern to send navigation request to host
+        try:
+            from src.web.utils.routeUtils import proxy_to_host
+            
+            # Prepare navigation data for host
+            navigation_request = {
+                'tree_id': tree_id,
+                'target_node_id': node_id,
+                'team_id': team_id,
+                'current_node_id': current_node_id
+            }
+            
+            # Proxy to host navigation execution
+            result, status_code = proxy_to_host('/host/navigation/execute', 'POST', navigation_request, timeout=120)
+            
+            # Add navigation metadata
+            if isinstance(result, dict):
+                result.update({
+                    'tree_id': tree_id,
+                    'team_id': team_id,
+                    'navigation_type': 'execute'
+                })
+            
+            return jsonify(result), status_code
+            
+        except Exception as e:
+            print(f"[@route:navigate_to_node] Navigation proxy error: {e}")
+            return jsonify({
+                'success': False,
+                'error': f'Navigation execution error: {str(e)}',
+                'error_code': 'NAVIGATION_ERROR'
+            }), 500
+        
+    except Exception as e:
+        print(f"[@route:navigate_to_node] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_code': 'API_ERROR'
+        }), 500
 
 @navigation_bp.route('/goto', methods=['POST'])
 def goto_navigation_node():

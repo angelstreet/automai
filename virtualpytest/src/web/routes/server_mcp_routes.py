@@ -207,7 +207,7 @@ def _execute_navigate_to_page(params):
 def _execute_navigation_to_node(params):
     """Execute execute_navigation_to_node MCP tool"""
     try:
-        from src.navigation.navigation_executor import execute_navigation_to_node
+        from src.lib.navigation.navigation_executor import execute_navigation_to_node
         
         tree_id = params.get("tree_id", "default_tree")
         target_node_id = params.get("target_node_id", "home")

@@ -11,7 +11,7 @@ import json
 from flask import Blueprint, request, jsonify
 
 # Import existing pathfinding utilities
-from src.navigation.navigation_pathfinding import (
+from src.lib.navigation.navigation_pathfinding import (
     get_reachable_nodes,
     find_shortest_path,
     get_navigation_transitions,
