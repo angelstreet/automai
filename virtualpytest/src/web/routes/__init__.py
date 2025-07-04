@@ -116,6 +116,7 @@ def _register_host_routes(app):
         ('host_control_routes', 'control_bp'),  # ✅ Unified naming
         ('host_remote_routes', 'remote_bp'),  # ✅ Unified naming
         ('host_av_routes', 'av_bp'),  # ✅ Unified naming
+        ('host_navigation_routes', 'host_navigation_bp'),  # ✅ Navigation execution
 
         ('host_script_routes', 'host_script_bp'),  # ✅ Script execution
         ('host_aiagent_routes', 'aiagent_host_bp'),  # ✅ AI agent execution routes

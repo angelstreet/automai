@@ -22,124 +22,9 @@ from src.web.cache.navigation_graph import get_node_info
 # Import centralized URL building from routes utils
 from src.utils.build_url_utils import buildServerUrl
 
-def execute_navigation_to_node(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> bool:
-    """
-    Execute navigation to a specific node
-    
-    Args:
-        tree_id: Navigation tree ID
-        target_node_id: Target node to navigate to
-        team_id: Team ID for security
-        current_node_id: Current position (if None, starts from entry point)
-        
-    Returns:
-        True if navigation completed successfully, False otherwise
-    """
-    print(f"[@navigation:executor:execute_navigation_to_node] Starting navigation to {target_node_id} in tree {tree_id}")
-    
-    # Get navigation steps
-    from src.navigation.navigation_pathfinding import get_navigation_transitions
-    
-    transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
-    
-    if not transitions:
-        print(f"[@navigation:executor:execute_navigation_to_node] No navigation path found to {target_node_id}")
-        return False
-    
-    # Convert transitions to individual steps for execution
-    steps = []
-    step_counter = 1
-    for transition in transitions:
-        for action in transition.get('actions', []):
-            step = {
-                'step_number': step_counter,
-                'from_node_id': transition['from_node_id'],
-                'to_node_id': transition['to_node_id'],
-                'from_node_label': transition.get('from_node_label', ''),
-                'to_node_label': transition.get('to_node_label', ''),
-                'action': action.get('command', ''),
-                'action_info': action,
-                'description': f"Execute {action.get('label', action.get('command', 'Unknown Action'))} to navigate from '{transition.get('from_node_label', '')}' to '{transition.get('to_node_label', '')}'"
-            }
-            steps.append(step)
-            step_counter += 1
-    
-    print(f"[@navigation:executor:execute_navigation_to_node] Executing {len(steps)} navigation steps")
-    
-    # Execute each step
-    for step in steps:
-        success = execute_navigation_step(
-            step['action'], 
-            step['from_node_id'], 
-            step['to_node_id']
-        )
-        
-        if not success:
-            print(f"[@navigation:executor:execute_navigation_to_node] Failed at step {step['step_number']}: {step['description']}")
-            return False
-        
-        # Small delay between steps to allow UI transitions
-        time.sleep(0.5)
-    
-    print(f"[@navigation:executor:execute_navigation_to_node] Successfully navigated to {target_node_id}")
-    return True
+# NOTE: execute_navigation_to_node function removed - now using batch execution via execute_navigation_with_verification
 
-def execute_navigation_step(action: str, from_node: str, to_node: str) -> bool:
-    """
-    Execute a single navigation step using real device automation
-    
-    Args:
-        action: Navigation action to perform
-        from_node: Source node ID
-        to_node: Target node ID
-        
-    Returns:
-        True if step executed successfully, False otherwise
-    """
-    print(f"[@navigation:executor:execute_navigation_step] Executing action '{action}' from {from_node} to {to_node}")
-    
-    if not action:
-        print(f"[@navigation:executor:execute_navigation_step] WARNING: No action defined for transition {from_node} -> {to_node}")
-        return False
-    
-    try:
-        # Convert action string to action object for API call
-        action_object = parse_action_string(action)
-        if not action_object:
-            print(f"[@navigation:executor:execute_navigation_step] ERROR: Could not parse action '{action}'")
-            return False
-        
-        print(f"[@navigation:executor:execute_navigation_step] Parsed action: {action_object}")
-        
-        # Use centralized server URL building
-        api_url = buildServerUrl('/server/a-step')
-        
-        # Call the abstract remote controller API endpoint
-        print(f"[@navigation_executor:execute_action] Calling abstract remote controller API")
-        
-        response = requests.post(api_url, 
-                               headers={'Content-Type': 'application/json'},
-                               json={'action': action_object},
-                               timeout=30)
-        
-        if response.status_code == 200:
-            result = response.json()
-            if result.get('success'):
-                print(f"[@navigation:executor:execute_navigation_step] Action '{action}' executed successfully: {result.get('message', 'Success')}")
-                
-                # Add a brief wait after successful action
-                time.sleep(1.0)  # Wait for UI to settle
-                return True
-            else:
-                print(f"[@navigation:executor:execute_navigation_step] Action '{action}' failed: {result.get('error', 'Unknown error')}")
-                return False
-        else:
-            print(f"[@navigation:executor:execute_navigation_step] API call failed with status {response.status_code}: {response.text}")
-            return False
-        
-    except Exception as e:
-        print(f"[@navigation:executor:execute_navigation_step] Error executing action '{action}': {e}")
-        return False
+# NOTE: execute_navigation_step function removed - now using batch execution via host
 
 def parse_action_string(action_str: str) -> dict:
     """
@@ -303,8 +188,7 @@ def verify_node_reached(tree_id: str, expected_node_id: str, team_id: str) -> bo
 
 def execute_navigation_with_verification(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> Dict:
     """
-    Execute navigation with step-by-step verification and detailed progress tracking
-    Shows transitions (from → to) with multiple actions per transition
+    Execute navigation with batch execution - sends all transitions to host at once
     
     Args:
         tree_id: Navigation tree ID
@@ -315,7 +199,7 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
     Returns:
         Dictionary with execution results and detailed transition progress
     """
-    print(f"[@navigation:executor:execute_navigation_with_verification] Starting verified navigation to {target_node_id}")
+    print(f"[@navigation:executor:execute_navigation_with_verification] Starting batch navigation to {target_node_id}")
     
     result = {
         'success': False,
@@ -327,28 +211,22 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
         'execution_time': 0,
         'error_message': None,
         'transitions_details': [],
-        'current_transition': None,  # Track currently executing transition
-        'progress_info': []    # Detailed progress tracking
+        'action_results': []
     }
     
     start_time = time.time()
     
     try:
-        # Get navigation transitions with enhanced information
+        # Get navigation transitions
         from src.navigation.navigation_pathfinding import get_navigation_transitions
         
         transitions = get_navigation_transitions(tree_id, target_node_id, team_id, current_node_id)
         
         if not transitions:
             # Check if this means "already at target" vs "no path found"
-            # If current_node_id == target_node_id, this is success (already there)
             if current_node_id == target_node_id:
                 result['success'] = True
                 result['execution_time'] = time.time() - start_time
-                result['transitions_executed'] = 0
-                result['total_transitions'] = 0
-                result['actions_executed'] = 0
-                result['total_actions'] = 0
                 result['final_message'] = f"Already at target node '{target_node_id}'"
                 print(f"[@navigation:executor:execute_navigation_with_verification] ✅ Already at target node {target_node_id}")
                 return result
@@ -359,279 +237,68 @@ def execute_navigation_with_verification(tree_id: str, target_node_id: str, team
         result['total_transitions'] = len(transitions)
         result['total_actions'] = sum(len(t.get('actions', [])) for t in transitions)
         
-        print(f"[@navigation:executor:execute_navigation_with_verification] Executing {len(transitions)} navigation transitions with {result['total_actions']} total actions:")
-        for i, transition in enumerate(transitions):
-            actions_summary = [f"{a.get('label', a.get('command', 'unknown'))}" for a in transition.get('actions', [])]
-            print(f"  Transition {i+1}: {transition.get('from_node_label')} → {transition.get('to_node_label')} ({len(transition.get('actions', []))} actions: {actions_summary})")
+        print(f"[@navigation:executor:execute_navigation_with_verification] Sending {len(transitions)} transitions with {result['total_actions']} total actions to host for batch execution")
         
-        # Execute each transition with detailed progress tracking
-        for i, transition in enumerate(transitions):
-            transition_start_time = time.time()
-            
-            current_transition_info = {
-                'transition_number': transition['transition_number'],
-                'from_node_id': transition['from_node_id'],
-                'to_node_id': transition['to_node_id'],
-                'from_node_label': transition.get('from_node_label', ''),
-                'to_node_label': transition.get('to_node_label', ''),
-                'actions': transition.get('actions', []),
-                'total_actions': len(transition.get('actions', [])),
-                'actions_executed': 0,
-                'status': 'executing'
-            }
-            
-            result['current_transition'] = current_transition_info
-            
-            print(f"[@navigation:executor:execute_navigation_with_verification] Executing Transition {i+1}/{len(transitions)}: {current_transition_info['from_node_label']} → {current_transition_info['to_node_label']}")
-            print(f"[@navigation:executor:execute_navigation_with_verification] Actions to execute: {len(current_transition_info['actions'])}")
-            
-            # Execute all actions in this transition
-            transition_success = True
-            actions_executed = 0
-            
-            # Execute main actions
-            for j, action in enumerate(current_transition_info['actions']):
-                action_start_time = time.time()
-                
-                print(f"[@navigation:executor:execute_navigation_with_verification]   Action {j+1}/{len(current_transition_info['actions'])}: {action.get('label', action.get('command', 'Unknown'))}")
-                
-                # Execute the action using the real action execution
-                action_success = execute_action_object(action)
-                
-                action_execution_time = time.time() - action_start_time
-                
-                if action_success:
-                    actions_executed += 1
-                    current_transition_info['actions_executed'] += 1
-                    result['actions_executed'] += 1
-                    print(f"[@navigation:executor:execute_navigation_with_verification]   ✓ Action {j+1} completed successfully in {action_execution_time:.2f}s")
-                    
-                    # Wait after action if specified
-                    if action.get('waitTime', 0) > 0:
-                        wait_time_seconds = action.get('waitTime', 0) / 1000.0
-                        print(f"[@navigation:executor:execute_navigation_with_verification]   Waiting {wait_time_seconds}s after action")
-                        time.sleep(wait_time_seconds)
-                else:
-                    print(f"[@navigation:executor:execute_navigation_with_verification]   ✗ Action {j+1} failed after {action_execution_time:.2f}s")
-                    transition_success = False
-                    break
-            
-            # If main actions failed and we have retry actions, execute them
-            retry_actions = transition.get('retryActions', [])
-            if not transition_success and retry_actions:
-                print(f"[@navigation:executor:execute_navigation_with_verification] 🔄 Main actions failed. Starting retry actions...")
-                print(f"[@navigation:executor:execute_navigation_with_verification] 📋 Processing {len(retry_actions)} retry action(s):")
-                
-                # Reset transition success for retry attempt
-                retry_success = True
-                retry_actions_executed = 0
-                
-                for j, retry_action in enumerate(retry_actions):
-                    action_start_time = time.time()
-                    
-                    print(f"[@navigation:executor:execute_navigation_with_verification]   Retry Action {j+1}/{len(retry_actions)}: {retry_action.get('label', retry_action.get('command', 'Unknown'))}")
-                    
-                    # Execute the retry action
-                    action_success = execute_action_object(retry_action)
-                    
-                    action_execution_time = time.time() - action_start_time
-                    
-                    if action_success:
-                        retry_actions_executed += 1
-                        print(f"[@navigation:executor:execute_navigation_with_verification]   ✓ Retry Action {j+1} completed successfully in {action_execution_time:.2f}s")
-                        
-                        # Wait after retry action if specified
-                        if retry_action.get('waitTime', 0) > 0:
-                            wait_time_seconds = retry_action.get('waitTime', 0) / 1000.0
-                            print(f"[@navigation:executor:execute_navigation_with_verification]   Waiting {wait_time_seconds}s after retry action")
-                            time.sleep(wait_time_seconds)
-                    else:
-                        print(f"[@navigation:executor:execute_navigation_with_verification]   ✗ Retry Action {j+1} failed after {action_execution_time:.2f}s")
-                        retry_success = False
-                        break
-                
-                if retry_success and retry_actions_executed == len(retry_actions):
-                    print(f"[@navigation:executor:execute_navigation_with_verification] ✅ Retry actions completed successfully!")
-                    transition_success = True
-                    # Update counters to reflect successful retry
-                    current_transition_info['actions_executed'] = len(current_transition_info['actions']) + retry_actions_executed
-                    result['actions_executed'] += retry_actions_executed
-                else:
-                    print(f"[@navigation:executor:execute_navigation_with_verification] ❌ Retry actions also failed.")
-                    transition_success = False
-            
-            # Final wait for transition if specified
-            if transition_success and transition.get('finalWaitTime', 0) > 0:
-                final_wait_seconds = transition.get('finalWaitTime', 0) / 1000.0
-                print(f"[@navigation:executor:execute_navigation_with_verification] Final wait for transition: {final_wait_seconds}s")
-                time.sleep(final_wait_seconds)
-            
-            # Verify we reached the target node of this transition
-            if transition_success:
-                transition_success = verify_node_reached(tree_id, transition['to_node_id'], team_id)
-            
-            transition_execution_time = time.time() - transition_start_time
-            current_transition_info['execution_time'] = transition_execution_time
-            current_transition_info['status'] = 'completed' if transition_success else 'failed'
-            
-            transition_detail = {
-                'transition_number': transition['transition_number'],
-                'from_node_id': transition['from_node_id'],
-                'to_node_id': transition['to_node_id'],
-                'from_node_label': transition.get('from_node_label', ''),
-                'to_node_label': transition.get('to_node_label', ''),
-                'actions': transition.get('actions', []),
-                'retryActions': transition.get('retryActions', []),  # Include retry actions in result
-                'actions_executed': current_transition_info['actions_executed'],
-                'total_actions': current_transition_info['total_actions'],
-                'success': transition_success,
-                'execution_time': transition_execution_time,
-                'description': transition['description'],
-                'retry_attempted': not transition_success and len(transition.get('retryActions', [])) > 0,  # Flag if retry was attempted
-                'retry_successful': transition_success and len(transition.get('retryActions', [])) > 0  # Flag if retry was successful
-            }
-            
-            result['transitions_details'].append(transition_detail)
-            result['progress_info'].append(current_transition_info.copy())
-            
-            if transition_success:
-                result['transitions_executed'] += 1
-                print(f"[@navigation:executor:execute_navigation_with_verification] ✓ Transition {i+1}/{len(transitions)} completed successfully")
-                print(f"[@navigation:executor:execute_navigation_with_verification] Successfully navigated from '{current_transition_info['from_node_label']}' to '{current_transition_info['to_node_label']}'")
-            else:
-                result['error_message'] = f"Failed at transition {i+1}: Navigate from '{current_transition_info['from_node_label']}' to '{current_transition_info['to_node_label']}' - {current_transition_info['actions_executed']}/{current_transition_info['total_actions']} actions completed"
-                print(f"[@navigation:executor:execute_navigation_with_verification] ✗ {result['error_message']}")
-                break
-            
-            # Small delay between transitions
-            time.sleep(0.5)
-        
-        # Check if all transitions completed successfully
-        result['success'] = result['transitions_executed'] == result['total_transitions']
-        result['execution_time'] = time.time() - start_time
-        result['current_transition'] = None  # Clear current transition when done
-        
-        if result['success']:
-            print(f"[@navigation:executor:execute_navigation_with_verification] 🎉 Successfully navigated to {target_node_id} in {result['execution_time']:.2f}s")
-            result['final_message'] = f"Success ! Reached '{transitions[-1].get('to_node_label', target_node_id)}'"
-        else:
-            print(f"[@navigation:executor:execute_navigation_with_verification] ❌ Navigation failed: {result['error_message']}")
-        
-    except Exception as e:
-        result['error_message'] = f"Execution error: {str(e)}"
-        result['execution_time'] = time.time() - start_time
-        result['current_transition'] = None
-        print(f"[@navigation:executor:execute_navigation_with_verification] Exception: {e}")
-    
-    return result
-
-def execute_action_object(action_obj: dict) -> bool:
-    """
-    Execute a single action object (same format as EdgeSelectionPanel)
-    
-    Args:
-        action_obj: Action object with id, command, params, etc.
-        
-    Returns:
-        True if action executed successfully, False otherwise
-    """
-    if not action_obj or not action_obj.get('command'):
-        print(f"[@navigation:executor:execute_action_object] ERROR: Invalid action object: {action_obj}")
-        return False
-    
-    # ENHANCED LOGGING: Show original action object received
-    print(f"[@navigation:executor:execute_action_object] ORIGINAL ACTION OBJECT: {action_obj}")
-    print(f"[@navigation:executor:execute_action_object] Action keys: {list(action_obj.keys()) if action_obj else 'None'}")
-    print(f"[@navigation:executor:execute_action_object] Action command: '{action_obj.get('command')}'")
-    print(f"[@navigation:executor:execute_action_object] Action params: {action_obj.get('params')}")
-    print(f"[@navigation:executor:execute_action_object] Requires input: {action_obj.get('requiresInput')}")
-    print(f"[@navigation:executor:execute_action_object] Input value: '{action_obj.get('inputValue')}'")
-    
-    try:
-        print(f"[@navigation:executor:execute_action_object] Executing action: {action_obj}")
-        
-        # Prepare action for API call (same format as EdgeSelectionPanel)
-        action_to_execute = {
-            'id': action_obj.get('id'),
-            'label': action_obj.get('label'),
-            'command': action_obj.get('command'),
-            'params': action_obj.get('params', {}).copy(),
-            'requiresInput': action_obj.get('requiresInput', False),
-            'waitTime': action_obj.get('waitTime', 1000)
+        # Prepare navigation data for batch execution
+        navigation_data = {
+            'tree_id': tree_id,
+            'target_node_id': target_node_id,
+            'current_node_id': current_node_id,
+            'transitions': transitions,
+            'team_id': team_id
         }
         
-        # Update params with input values for actions that require them
-        if action_obj.get('requiresInput') and action_obj.get('inputValue'):
-            input_value = action_obj.get('inputValue')
-            command = action_obj.get('command')
-            
-            if command == 'launch_app':
-                action_to_execute['params']['package'] = input_value
-            elif command == 'close_app':
-                action_to_execute['params']['package'] = input_value
-            elif command == 'input_text':
-                action_to_execute['params']['text'] = input_value
-            elif command == 'click_element':
-                action_to_execute['params']['element_id'] = input_value
-            elif command == 'coordinate_tap':
-                coords = input_value.split(',')
-                if len(coords) >= 2:
-                    try:
-                        action_to_execute['params']['x'] = int(coords[0].strip())
-                        action_to_execute['params']['y'] = int(coords[1].strip())
-                    except ValueError:
-                        print(f"[@navigation:executor:execute_action_object] WARNING: Invalid coordinates: {input_value}")
+        # Send all transitions to host for batch execution
+        api_url = buildServerUrl('/server/control/navigation/execute')
         
-        # ENHANCED LOGGING: Show exact action being sent to API
-        print(f"[@navigation:executor:execute_action_object] SENDING TO API: {action_to_execute}")
-        print(f"[@navigation:executor:execute_action_object] Action command: '{action_to_execute.get('command')}'")
-        print(f"[@navigation:executor:execute_action_object] Action params: {action_to_execute.get('params')}")
-        
-        # Call the abstract remote controller API endpoint
-        print(f"[@navigation_executor:execute_action] Calling abstract remote controller API")
-        api_url = buildServerUrl('/server/navigation/execute-step')
-        
-        print(f"[@navigation:executor:execute_action_object] API URL: {api_url}")
+        print(f"[@navigation:executor:execute_navigation_with_verification] Calling batch navigation API: {api_url}")
         
         response = requests.post(api_url, 
                                headers={'Content-Type': 'application/json'},
-                               json={'action': action_to_execute},
-                               timeout=30)
+                               json={'navigation_data': navigation_data},
+                               timeout=120)  # Longer timeout for batch execution
         
-        print(f"[@navigation:executor:execute_action_object] API Response Status: {response.status_code}")
+        execution_time = time.time() - start_time
+        result['execution_time'] = execution_time
         
         if response.status_code == 200:
-            result = response.json()
-            print(f"[@navigation:executor:execute_action_object] API Response Body: {result}")
+            batch_result = response.json()
+            print(f"[@navigation:executor:execute_navigation_with_verification] Batch execution response: {batch_result}")
             
-            if result.get('success'):
-                print(f"[@navigation:executor:execute_action_object] Action executed successfully: {result.get('message', 'Success')}")
-                return True
+            if batch_result.get('success'):
+                result['success'] = True
+                result['transitions_executed'] = batch_result.get('transitions_executed', len(transitions))
+                result['actions_executed'] = batch_result.get('actions_executed', result['total_actions'])
+                result['transitions_details'] = batch_result.get('transitions_details', [])
+                result['action_results'] = batch_result.get('action_results', [])
+                result['final_message'] = f"Successfully navigated to '{target_node_id}' via batch execution"
+                
+                print(f"[@navigation:executor:execute_navigation_with_verification] ✅ Batch navigation completed successfully")
+                print(f"[@navigation:executor:execute_navigation_with_verification] Executed {result['transitions_executed']}/{result['total_transitions']} transitions")
+                print(f"[@navigation:executor:execute_navigation_with_verification] Executed {result['actions_executed']}/{result['total_actions']} actions")
+                
+                return result
             else:
-                error_message = result.get('error', 'Unknown error')
-                print(f"[@navigation:executor:execute_action_object] Action failed: {error_message}")
-                print(f"[@navigation:executor:execute_action_object] Full error response: {result}")
+                result['error_message'] = batch_result.get('error', 'Batch navigation failed')
+                result['transitions_executed'] = batch_result.get('transitions_executed', 0)
+                result['actions_executed'] = batch_result.get('actions_executed', 0)
+                result['transitions_details'] = batch_result.get('transitions_details', [])
+                result['action_results'] = batch_result.get('action_results', [])
                 
-                # Check if failure is acceptable (desired state already achieved)
-                if is_acceptable_failure(action_obj, error_message):
-                    print(f"[@navigation:executor:execute_action_object] Failure is acceptable - desired state likely already achieved")
-                    return True
-                    
-                return False
+                print(f"[@navigation:executor:execute_navigation_with_verification] ❌ Batch navigation failed: {result['error_message']}")
+                return result
         else:
-            error_text = response.text
-            print(f"[@navigation:executor:execute_action_object] API call failed with status {response.status_code}: {error_text}")
-            
-            # Check if API failure indicates desired state is already achieved
-            if is_acceptable_api_failure(action_obj, response.status_code, error_text):
-                print(f"[@navigation:executor:execute_action_object] API failure is acceptable - desired state likely already achieved")
-                return True
-                
-            return False
+            result['error_message'] = f"Navigation API call failed with status {response.status_code}: {response.text}"
+            print(f"[@navigation:executor:execute_navigation_with_verification] ❌ {result['error_message']}")
+            return result
         
     except Exception as e:
-        print(f"[@navigation:executor:execute_action_object] Error executing action: {e}")
-        return False
+        result['execution_time'] = time.time() - start_time
+        result['error_message'] = f"Navigation execution error: {str(e)}"
+        print(f"[@navigation:executor:execute_navigation_with_verification] ❌ Exception: {e}")
+        return result
+
+# NOTE: execute_action_object function removed - now using batch execution via host
 
 def is_acceptable_failure(action_obj: dict, error_message: str) -> bool:
     """
