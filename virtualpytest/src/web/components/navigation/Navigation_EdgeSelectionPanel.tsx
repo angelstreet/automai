@@ -270,17 +270,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
             </Box>
           )}
 
-          {/* Show if no actions configured */}
-          {actions.length === 0 && (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ mb: 1, fontSize: '0.75rem', fontStyle: 'italic' }}
-            >
-              No actions configured
-            </Typography>
-          )}
-
           <Box sx={{ mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             {/* Edit and Delete buttons */}
             <Box sx={{ display: 'flex', gap: 0.5 }}>
