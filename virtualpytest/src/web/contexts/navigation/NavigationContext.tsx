@@ -184,10 +184,7 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
     interfaceId?: string;
   }>();
 
-  const { treeName } = useMemo(
-    () => routeParams,
-    [routeParams.treeId, routeParams.treeName, routeParams.interfaceId],
-  );
+  const { treeName } = useMemo(() => routeParams, [routeParams]);
 
   // ========================================
   // STATE
@@ -301,57 +298,25 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
     console.log('[@context:NavigationProvider] userInterface changed:', userInterface);
   }, [userInterface]);
 
-  // Update minimap indicators when current position changes
+  // Separate effects to prevent infinite loops
   const prevCurrentNodeIdRef = useRef<string | null>(null);
-  const nodesLengthRef = useRef<number>(0);
+  const initializationKeyRef = useRef<string>('');
 
+  // Effect 1: Initialize device position when context first loads
   useEffect(() => {
-    // Only update if currentNodeId actually changed and we have nodes
-    if (
-      nodes.length > 0 &&
-      (prevCurrentNodeIdRef.current !== currentNodeId || nodesLengthRef.current !== nodes.length)
-    ) {
-      console.log('[@context:NavigationProvider] Updating nodes with minimap indicators');
-      prevCurrentNodeIdRef.current = currentNodeId;
-      nodesLengthRef.current = nodes.length;
+    const currentKey = `${JSON.stringify(currentHost) || ''}-${currentDeviceId || ''}-${treeId || ''}`;
 
-      setNodes((currentNodes) => {
-        return currentNodes.map((node) => {
-          const isCurrentPosition = node.id === currentNodeId;
-
-          // Check if node is part of navigation route (no navigationSteps in this context)
-          const isOnNavigationRoute = false;
-
-          // Only update if the flags actually changed to prevent unnecessary re-renders
-          if (
-            node.data.isCurrentPosition !== isCurrentPosition ||
-            node.data.isOnNavigationRoute !== isOnNavigationRoute
-          ) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                isCurrentPosition,
-                isOnNavigationRoute,
-              },
-            };
-          }
-          return node;
-        });
-      });
-    }
-  }, [currentNodeId, nodes.length]); // Removed setNodes dependency
-
-  // Initialize current position from device position when tree and device context are available
-  useEffect(() => {
     if (
       nodes.length > 0 &&
       currentHost &&
       currentDeviceId &&
       treeId &&
       getDevicePosition &&
-      initializeDevicePosition
+      initializeDevicePosition &&
+      initializationKeyRef.current !== currentKey
     ) {
+      initializationKeyRef.current = currentKey;
+
       // Check if we already have a position for this device/tree combination
       const existingPosition = getDevicePosition(currentHost, currentDeviceId, treeId);
 
@@ -383,14 +348,60 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
         }
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    nodes.length,
+    nodes.length, // Only trigger when nodes are first loaded (not on every node change)
     currentHost,
     currentDeviceId,
     treeId,
     getDevicePosition,
     initializeDevicePosition,
   ]);
+
+  // Effect 2: Update minimap indicators when currentNodeId changes (but not when nodes change)
+  useEffect(() => {
+    if (prevCurrentNodeIdRef.current !== currentNodeId) {
+      console.log('[@context:NavigationProvider] Updating nodes with minimap indicators');
+      prevCurrentNodeIdRef.current = currentNodeId;
+
+      setNodes((currentNodes) => {
+        // Check if any node actually needs updating to prevent unnecessary re-renders
+        const needsUpdate = currentNodes.some((node) => {
+          const isCurrentPosition = node.id === currentNodeId;
+          const isOnNavigationRoute = false;
+          return (
+            node.data.isCurrentPosition !== isCurrentPosition ||
+            node.data.isOnNavigationRoute !== isOnNavigationRoute
+          );
+        });
+
+        if (!needsUpdate) {
+          return currentNodes; // Return same reference if no changes needed
+        }
+
+        return currentNodes.map((node) => {
+          const isCurrentPosition = node.id === currentNodeId;
+          const isOnNavigationRoute = false;
+
+          // Only update if the flags actually changed
+          if (
+            node.data.isCurrentPosition !== isCurrentPosition ||
+            node.data.isOnNavigationRoute !== isOnNavigationRoute
+          ) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                isCurrentPosition,
+                isOnNavigationRoute,
+              },
+            };
+          }
+          return node;
+        });
+      });
+    }
+  }, [currentNodeId, setNodes]); // Only depend on currentNodeId, NOT on nodes
 
   const [rootTree, setRootTree] = useState<any>(null);
   const [isLoadingInterface, setIsLoadingInterface] = useState<boolean>(!!interfaceId);
@@ -631,6 +642,7 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
   // CONTEXT VALUE
   // ========================================
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const contextValue: NavigationContextType = useMemo(() => {
     // console.log('[@context:NavigationProvider] Creating context value');
     return {
