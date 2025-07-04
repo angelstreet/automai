@@ -68,6 +68,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     // Clear any previous execution messages when loading for a new node
     clearNavigationState();
     loadNavigationPreview(selectedNode, nodes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     treeId,
     selectedNode.id,
@@ -75,7 +76,8 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     selectedNode,
     clearNavigationState,
     loadNavigationPreview,
-    nodes,
+    // Removed 'nodes' from dependencies to prevent infinite loop
+    // since loadNavigationPreview updates nodes via updateNodesWithMinimapIndicators
   ]);
 
   return (
