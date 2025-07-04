@@ -41,24 +41,3 @@
 .react-flow__node[data-node-type='screen'] {
   border-width: 2px !important;
 }
-
-/* Horizontal connection edges */
-.react-flow__edge[data-edge-type='horizontal'] .react-flow__edge-path {
-  stroke: #f59e0b; /* Orange for sibling connections */
-  stroke-width: 2px;
-}
-
-/* Vertical connection edges */
-.react-flow__edge[data-edge-type='vertical'] .react-flow__edge-path {
-  stroke: #10b981; /* Green for parent-child connections */
-  stroke-width: 2px;
-}
-
-/* Edge markers */
-.react-flow__edge[data-edge-type='horizontal'] .react-flow__arrowhead {
-  fill: #f59e0b;
-}
-
-.react-flow__edge[data-edge-type='vertical'] .react-flow__arrowhead {
-  fill: #10b981;
-}

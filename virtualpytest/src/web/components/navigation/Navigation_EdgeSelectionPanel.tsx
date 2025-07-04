@@ -1,6 +1,7 @@
 import { Close as CloseIcon } from '@mui/icons-material';
 import { Box, Typography, Button, IconButton, Paper, LinearProgress } from '@mui/material';
 import React, { useEffect, useMemo } from 'react';
+import { useReactFlow } from 'reactflow';
 
 import { useEdge } from '../../hooks/navigation/useEdge';
 import { Host } from '../../types/common/Host_Types';
@@ -35,6 +36,20 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
     selectedHost,
     panelIndex = 0,
   }) => {
+    const { getNodes } = useReactFlow();
+
+    // Get actual node labels for from/to display
+    const { fromLabel, toLabel } = useMemo(() => {
+      const nodes = getNodes();
+      const sourceNode = nodes.find((node) => node.id === selectedEdge.source);
+      const targetNode = nodes.find((node) => node.id === selectedEdge.target);
+
+      return {
+        fromLabel: sourceNode?.data?.label || selectedEdge.source,
+        toLabel: targetNode?.data?.label || selectedEdge.target,
+      };
+    }, [getNodes, selectedEdge.source, selectedEdge.target]);
+
     // Use the consolidated edge hook
     const edgeHook = useEdge({
       selectedHost: selectedHost || null,
@@ -75,8 +90,8 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
       <Paper
         sx={{
           position: 'absolute',
-          top: 16 + panelIndex * 400, // Stack panels vertically
-          right: 16,
+          top: 16,
+          right: 16 + panelIndex * 380, // Position panels side by side horizontally
           width: 360,
           p: 1.5,
           zIndex: 1500,
@@ -104,16 +119,22 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
             </IconButton>
           </Box>
 
-          {/* Show From/To information */}
+          {/* Show From/To information with actual node labels */}
           <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-              {selectedEdge.data?.from || 'Unknown'}
+            <Typography
+              variant="body2"
+              sx={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#1976d2' }}
+            >
+              {fromLabel}
             </Typography>
             <Typography variant="body1" sx={{ fontSize: '1rem' }}>
               →
             </Typography>
-            <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-              {selectedEdge.data?.to || 'Unknown'}
+            <Typography
+              variant="body2"
+              sx={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#4caf50' }}
+            >
+              {toLabel}
             </Typography>
           </Box>
 

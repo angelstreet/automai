@@ -18,6 +18,7 @@ import ReactFlow, {
   MiniMap,
   ConnectionLineType,
   BackgroundVariant,
+  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -57,6 +58,12 @@ const defaultEdgeOptions = {
   type: 'uiNavigation',
   animated: false,
   style: { strokeWidth: 2, stroke: '#b1b1b7' },
+  markerEnd: {
+    type: MarkerType.ArrowClosed,
+    width: 20,
+    height: 20,
+    color: '#b1b1b7',
+  },
 };
 
 const defaultViewport = { x: 0, y: 0, zoom: 1 };
