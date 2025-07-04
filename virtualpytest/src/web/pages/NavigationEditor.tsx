@@ -294,14 +294,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       setSelectedNodeForGoto(null);
     }, []);
 
-    // Close goto panel when selected node changes
-    useEffect(() => {
-      if (selectedNode?.id !== selectedNodeForGoto?.id) {
-        setShowGotoPanel(false);
-        setSelectedNodeForGoto(null);
-      }
-    }, [selectedNode?.id, selectedNodeForGoto?.id]);
-
     // Memoize the selectedHost to prevent unnecessary re-renders
     const stableSelectedHost = useMemo(() => selectedHost, [selectedHost]);
 

@@ -270,8 +270,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50% 0 0 50%',
-          left: -2,
+          borderRadius: '50%',
+          left: -5,
           top: '50%',
           transform: 'translateY(-50%)',
           cursor: 'crosshair',
@@ -292,8 +292,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50% 0 0 50%',
-          left: -2,
+          borderRadius: '50%',
+          left: -5,
           top: '50%',
           transform: 'translateY(-50%)',
           cursor: 'crosshair',
@@ -302,45 +302,49 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         }}
       />
 
-      {/* Right Handles */}
-      {/* Top-right: SOURCE for sending connections to right-side nodes */}
+      {/* Right Handles - Overlapping for Bidirectional Effect */}
+      {/* Right: SOURCE for sending connections */}
       <Handle
         type="source"
         position={Position.Right}
-        id="right-top-source"
+        id="right-source"
         isConnectable={true}
         isConnectableStart={true}
         isConnectableEnd={false}
         style={{
-          background: 'linear-gradient(135deg, #1976d2, #42a5f5)', // Bright blue gradient
-          width: '14px',
-          height: '14px',
+          background: '#1976d2',
           border: '2px solid #fff',
+          width: '16px',
+          height: '16px',
           borderRadius: '50%',
           right: -5,
-          top: '30%',
-          boxShadow: '0 3px 8px rgba(25, 118, 210, 0.4), 0 0 12px rgba(25, 118, 210, 0.3)',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          cursor: 'crosshair',
+          zIndex: 11,
         }}
       />
 
-      {/* Bottom-right: TARGET for receiving connections from left-side nodes */}
+      {/* Right: TARGET for receiving connections - same position, lower z-index */}
       <Handle
         type="target"
         position={Position.Right}
-        id="right-bottom-target"
+        id="right-target"
         isConnectable={true}
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          background: 'linear-gradient(135deg, #ef9a9a, #e57373)', // Muted red gradient
-          width: '14px',
-          height: '14px',
+          background: '#ff5722',
           border: '2px solid #fff',
+          width: '16px',
+          height: '16px',
           borderRadius: '50%',
           right: -5,
-          top: '70%',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
-          opacity: 0.8,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          cursor: 'crosshair',
+          zIndex: 10,
+          opacity: 0,
         }}
       />
 
@@ -359,10 +363,10 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50% 50% 0 0',
+          borderRadius: '50%',
           left: '50%',
           transform: 'translateX(-50%)',
-          top: -2,
+          top: -5,
           cursor: 'crosshair',
           zIndex: 11,
         }}
@@ -381,10 +385,10 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '50% 50% 0 0',
+          borderRadius: '50%',
           left: '50%',
           transform: 'translateX(-50%)',
-          top: -2,
+          top: -5,
           cursor: 'crosshair',
           zIndex: 10,
           opacity: 0,
@@ -405,10 +409,10 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '0 0 50% 50%',
+          borderRadius: '50%',
           left: '50%',
           transform: 'translateX(-50%)',
-          bottom: -2,
+          bottom: -5,
           cursor: 'crosshair',
           zIndex: 11,
         }}
@@ -427,10 +431,10 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           border: '2px solid #fff',
           width: '16px',
           height: '16px',
-          borderRadius: '0 0 50% 50%',
+          borderRadius: '50%',
           left: '50%',
           transform: 'translateX(-50%)',
-          bottom: -2,
+          bottom: -5,
           cursor: 'crosshair',
           zIndex: 10,
           opacity: 0,

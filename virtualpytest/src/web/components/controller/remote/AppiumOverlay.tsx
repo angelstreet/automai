@@ -380,7 +380,7 @@ export const AppiumOverlay = React.memo(function AppiumOverlay({
             height: scaledElement.height,
             border: `2px solid ${scaledElement.color}`,
             backgroundColor: `${scaledElement.color}20`,
-            zIndex: getZIndex('APPIUM_OVERLAY', 1),
+            zIndex: getZIndex('APPIUM_OVERLAY'),
             pointerEvents: 'auto',
             cursor: 'pointer',
             borderRadius: '2px',
@@ -401,7 +401,7 @@ export const AppiumOverlay = React.memo(function AppiumOverlay({
               fontSize: '10px',
               borderRadius: '2px',
               whiteSpace: 'nowrap',
-              zIndex: getZIndex('APPIUM_OVERLAY', 2),
+              zIndex: getZIndex('APPIUM_OVERLAY'),
             }}
           >
             {scaledElement.id}
@@ -421,7 +421,7 @@ export const AppiumOverlay = React.memo(function AppiumOverlay({
             border: '3px solid #FF6B6B',
             borderRadius: '50%',
             pointerEvents: 'none',
-            zIndex: getZIndex('APPIUM_OVERLAY', 3),
+            zIndex: getZIndex('APPIUM_OVERLAY'),
             animation: 'clickPulse 0.5s ease-out',
           }}
         />

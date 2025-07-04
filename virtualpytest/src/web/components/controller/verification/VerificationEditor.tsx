@@ -22,6 +22,7 @@ import {
 import { useVerificationEditor } from '../../../hooks/verification/useVerificationEditor';
 import { Host } from '../../../types/common/Host_Types';
 import { VerificationsList } from '../../verification/VerificationsList';
+import { getZIndex } from '../../../utils/zIndexUtils';
 
 import VerificationCapture from './VerificationCapture';
 
@@ -235,6 +236,7 @@ export const VerificationEditor: React.FC<VerificationEditorProps> = React.memo(
             sx: {
               backgroundColor: '#2E2E2E',
               color: '#ffffff',
+              zIndex: getZIndex('VERIFICATION_EDITOR'),
             },
           }}
         >

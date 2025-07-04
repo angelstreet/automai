@@ -18,11 +18,6 @@ const Z_INDEX_ORDER = [
   'READ_ONLY_INDICATOR',
   'TOOLTIPS',
 
-  // Remote control panels - positioned below navigation panels
-  'REMOTE_PANELS',
-  'ANDROID_MOBILE_OVERLAY',
-  'APPIUM_OVERLAY',
-
   // Navigation panels
   'NAVIGATION_PANELS',
   'NAVIGATION_GOTO_PANEL',
@@ -37,9 +32,19 @@ const Z_INDEX_ORDER = [
   'HEADER',
   'HEADER_DROPDOWN',
 
-  // Modals and full-screen overlays
+  // Modals and streams
   'MODAL_BACKDROP',
   'MODAL_CONTENT',
+  'STREAM_VIEWER',
+  'VERIFICATION_EDITOR',
+  'HDMI_STREAM',
+
+  // Remote control panels - ON TOP of modals and streams
+  'REMOTE_PANELS',
+  'ANDROID_MOBILE_OVERLAY',
+  'APPIUM_OVERLAY',
+
+  // Screenshot and debug overlays - highest priority
   'SCREENSHOT_MODAL',
 
   // Emergency/Debug

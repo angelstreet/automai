@@ -14,6 +14,7 @@ import { useRec } from '../../hooks/pages/useRec';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
+import { getZIndex } from '../../utils/zIndexUtils';
 import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
 import { RemotePanel } from '../controller/remote/RemotePanel';
 import { MonitoringPlayer } from '../monitoring/MonitoringPlayer';
@@ -265,7 +266,7 @@ const RecHostStreamModalContent: React.FC<{
       sx={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
+        zIndex: getZIndex('MODAL_CONTENT'),
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -517,7 +518,7 @@ const RecHostStreamModalContent: React.FC<{
                 top: '50%',
                 right: 16,
                 transform: 'translateY(-50%)',
-                zIndex: 1000020,
+                zIndex: getZIndex('MODAL_CONTENT'),
                 pointerEvents: 'auto',
                 width: '380px',
                 backgroundColor: 'rgba(0,0,0,0.85)',

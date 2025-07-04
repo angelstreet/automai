@@ -15,6 +15,7 @@ import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
 import { useHdmiStream, useStream } from '../../../hooks/controller';
 import { Host } from '../../../types/common/Host_Types';
 import { VerificationEditor } from '../verification';
+import { getZIndex } from '../../../utils/zIndexUtils';
 
 import { RecordingOverlay, LoadingOverlay, ModeIndicatorDot } from './ScreenEditorOverlay';
 import { ScreenshotCapture } from './ScreenshotCapture';
@@ -236,7 +237,7 @@ export const HDMIStream = React.memo(
     // Build position styles - simple container without scaling
     const positionStyles: any = {
       position: 'fixed',
-      zIndex: panelLayout.zIndex,
+      zIndex: getZIndex('HDMI_STREAM'),
       // Always anchor at bottom-left (collapsed position)
       bottom: panelLayout.collapsed.position.bottom || '20px',
       left: panelLayout.collapsed.position.left || '20px',
@@ -497,7 +498,7 @@ export const HDMIStream = React.memo(
           <Box
             sx={{
               position: 'fixed',
-              zIndex: panelLayout.zIndex,
+              zIndex: getZIndex('VERIFICATION_EDITOR'),
               // Position right next to the main panel
               bottom: panelLayout.collapsed.position.bottom || '20px',
               left: `calc(${panelLayout.collapsed.position.left || '20px'} + ${getPanelWidth()})`,
