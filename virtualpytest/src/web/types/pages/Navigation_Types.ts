@@ -3,6 +3,9 @@ import { Node, Edge } from 'reactflow';
 import { EdgeAction } from '../controller/Action_Types';
 import { Verification } from '../verification/Verification_Types';
 
+// Re-export EdgeAction for use in navigation components
+export type { EdgeAction };
+
 // Navigation types are centralized in this file
 // NavigationConfig_Types and NavigationContext_Types are imported where needed
 
@@ -94,6 +97,7 @@ export interface NodeForm {
 
 // Updated EdgeForm interface for multiple actions
 export interface EdgeForm {
+  edgeId: string; // Required edge ID to track which edge is being edited
   actions: EdgeAction[];
   retryActions: EdgeAction[];
   finalWaitTime: number;

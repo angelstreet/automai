@@ -198,6 +198,7 @@ export const useEdge = (props?: UseEdgeProps) => {
       const retryActions = getRetryActionsFromEdge(edge);
 
       return {
+        edgeId: edge.id, // Include edge ID for tracking
         description: edge.data?.description || '',
         actions: actions,
         retryActions: retryActions,

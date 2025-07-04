@@ -242,7 +242,6 @@ export const useNode = (props?: UseNodeProps) => {
 
         if (result.success) {
           setNavigationSteps(result.steps);
-          updateNodesWithMinimapIndicators(result.steps);
         } else {
           setNavigationError(result.error || 'Failed to load navigation preview');
         }
@@ -254,13 +253,7 @@ export const useNode = (props?: UseNodeProps) => {
         setIsLoadingPreview(false);
       }
     },
-    [
-      props?.treeId,
-      currentNodeId,
-      props?.currentNodeId,
-      findHomeRootNode,
-      updateNodesWithMinimapIndicators,
-    ],
+    [props?.treeId, currentNodeId, props?.currentNodeId, findHomeRootNode],
   );
 
   /**
@@ -356,6 +349,16 @@ export const useNode = (props?: UseNodeProps) => {
   }, [updateNodesWithMinimapIndicators]);
 
   /**
+   * Clear only navigation messages without affecting minimap indicators
+   * Used when opening goto panel to clear previous messages but keep minimap unchanged
+   */
+  const clearNavigationMessages = useCallback(() => {
+    setNavigationError(null);
+    setExecutionMessage(null);
+    // ❌ DON'T update minimap indicators when just clearing messages for preview
+  }, []);
+
+  /**
    * Check if node is an entry node
    */
   const isEntryNode = useCallback((node: UINavigationNode): boolean => {
@@ -429,5 +432,8 @@ export const useNode = (props?: UseNodeProps) => {
 
     // Additional helper functions
     isEntryNode,
+
+    // New functions
+    clearNavigationMessages,
   };
 };

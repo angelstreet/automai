@@ -255,13 +255,32 @@ export const useNavigationEditor = () => {
       });
 
       try {
-        // Get the selected edge from the current edges - find it by checking which edge is being edited
-        const currentSelectedEdge =
-          navigation.edges.find((edge) => edge.id === navigation.selectedEdge?.id) ||
-          navigation.selectedEdge;
+        // Get edge ID from form - this is the single source of truth
+        if (!edgeForm.edgeId) {
+          console.error('[@useNavigationEditor:handleEdgeFormSubmit] No edge ID in form');
+          navigation.setError('Edge ID missing from form data');
+          return;
+        }
+
+        console.log('[@useNavigationEditor:handleEdgeFormSubmit] Processing edge save:', {
+          edgeId: edgeForm.edgeId,
+          actions: edgeForm.actions?.length || 0,
+          retryActions: edgeForm.retryActions?.length || 0,
+        });
+
+        // Find the edge to update using the ID from form
+        const currentSelectedEdge = navigation.edges.find((edge) => edge.id === edgeForm.edgeId);
 
         if (!currentSelectedEdge) {
-          console.warn('[@useNavigationEditor:handleEdgeFormSubmit] No edge found to update');
+          console.error(
+            '[@useNavigationEditor:handleEdgeFormSubmit] Edge not found:',
+            edgeForm.edgeId,
+          );
+          console.error(
+            '[@useNavigationEditor:handleEdgeFormSubmit] Available edges:',
+            navigation.edges.map((e) => ({ id: e.id, source: e.source, target: e.target })),
+          );
+          navigation.setError(`Edge ${edgeForm.edgeId} not found in current tree`);
           return;
         }
 

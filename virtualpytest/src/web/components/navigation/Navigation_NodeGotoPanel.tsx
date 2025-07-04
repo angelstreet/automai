@@ -55,18 +55,19 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
   });
 
   // Memoize the functions we need to avoid recreating them on every render
-  const { clearNavigationState, loadNavigationPreview } = useMemo(
+  const { clearNavigationMessages, loadNavigationPreview } = useMemo(
     () => ({
-      clearNavigationState: nodeHook.clearNavigationState,
+      clearNavigationMessages: nodeHook.clearNavigationMessages,
       loadNavigationPreview: nodeHook.loadNavigationPreview,
     }),
-    [nodeHook.clearNavigationState, nodeHook.loadNavigationPreview],
+    [nodeHook.clearNavigationMessages, nodeHook.loadNavigationPreview],
   );
 
   // Load navigation preview on component mount and when key dependencies change
   useEffect(() => {
     // Clear any previous execution messages when loading for a new node
-    clearNavigationState();
+    // Use clearNavigationMessages to avoid triggering minimap updates
+    clearNavigationMessages();
     loadNavigationPreview(selectedNode, nodes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -74,7 +75,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     selectedNode.id,
     currentNodeId,
     selectedNode,
-    clearNavigationState,
+    clearNavigationMessages,
     loadNavigationPreview,
     // Removed 'nodes' from dependencies to prevent infinite loop
     // since loadNavigationPreview updates nodes via updateNodesWithMinimapIndicators
