@@ -21,7 +21,6 @@ import ReactFlow, {
   MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Add as AddIcon, Error as ErrorIcon, Save as SaveIcon } from '@mui/icons-material';
 
 // Import extracted components and hooks
 import { HDMIStream } from '../components/controller/av/HDMIStream';
@@ -33,8 +32,8 @@ import { UIMenuNode } from '../components/navigation/Navigation_MenuNode';
 import { NavigationEdgeComponent } from '../components/navigation/Navigation_NavigationEdge';
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
-import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
 import { NodeGotoPanel } from '../components/navigation/Navigation_NodeGotoPanel';
+import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDeviceData } from '../contexts/device/DeviceDataContext';
 import { useHostManager } from '../contexts/index';
@@ -626,7 +625,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                   nodeTypes={nodeTypes}
                   edgeTypes={edgeTypes}
                   defaultEdgeOptions={defaultEdgeOptions}
-                  connectionLineType={ConnectionLineType.Straight}
+                  connectionLineType={ConnectionLineType.SimpleBezier}
                   defaultViewport={defaultViewport}
                   translateExtent={translateExtent}
                   nodeExtent={nodeExtent}
