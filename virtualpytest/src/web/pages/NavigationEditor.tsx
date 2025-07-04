@@ -727,6 +727,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
             treeId={treeId}
             onClose={handleCloseGotoPanel}
             currentNodeId={currentNodeId || undefined}
+            selectedHost={selectedHost || undefined}
+            selectedDeviceId={selectedDeviceId || undefined}
+            isControlActive={isControlActive}
           />
         )}
 

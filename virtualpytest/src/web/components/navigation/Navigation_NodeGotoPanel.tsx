@@ -29,6 +29,10 @@ interface NodeGotoPanelProps {
   onClose: () => void;
   // Optional current node ID for navigation starting point
   currentNodeId?: string;
+  // Device control props (optional for navigation preview)
+  selectedHost?: any;
+  selectedDeviceId?: string;
+  isControlActive?: boolean;
 }
 
 export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
@@ -37,9 +41,15 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
   treeId,
   onClose,
   currentNodeId,
+  selectedHost,
+  selectedDeviceId,
+  isControlActive = false,
 }) => {
   // Use the consolidated node hook
   const nodeHook = useNode({
+    selectedHost,
+    selectedDeviceId,
+    isControlActive,
     treeId,
     currentNodeId,
   });
@@ -202,96 +212,101 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             Navigation Steps:
           </Typography>
 
-          {!nodeHook.isLoadingPreview && nodeHook.navigationSteps.length > 0 && (
-            <Box>
-              {nodeHook.navigationSteps.map((transition, index) => {
-                const transitionData = transition as any;
-                return (
-                  <Box
-                    key={index}
-                    sx={{
-                      mb: 0,
-                      p: 0.5,
-                      borderRadius: 1,
-                      '&:last-child': { mb: 0 },
-                    }}
-                  >
-                    <Typography
-                      variant="subtitle2"
-                      sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '0.875rem' }}
+          {!nodeHook.isLoadingPreview &&
+            nodeHook.navigationSteps &&
+            nodeHook.navigationSteps.length > 0 && (
+              <Box>
+                {nodeHook.navigationSteps.map((transition, index) => {
+                  const transitionData = transition as any;
+                  return (
+                    <Box
+                      key={index}
+                      sx={{
+                        mb: 0,
+                        p: 0.5,
+                        borderRadius: 1,
+                        '&:last-child': { mb: 0 },
+                      }}
                     >
-                      {transitionData.transition_number || index + 1}.{' '}
-                      {transitionData.from_node_label || 'Start'} →{' '}
-                      {transitionData.to_node_label || 'Target'}
-                    </Typography>
-
-                    {transitionData.actions && transitionData.actions.length > 0 ? (
-                      <Box sx={{ ml: 1.5 }}>
-                        {transitionData.actions.map((action: any, actionIndex: number) => {
-                          // Generic display: command and first parameter
-                          const getActionDisplayText = (action: any) => {
-                            const command = action.command || 'unknown_action';
-                            const params = action.params || {};
-
-                            // If there are parameters, show the first one
-                            if (params && Object.keys(params).length > 0) {
-                              const firstParam = Object.values(params)[0];
-                              const paramStr =
-                                typeof firstParam === 'string'
-                                  ? firstParam
-                                  : JSON.stringify(firstParam);
-                              const truncatedParam =
-                                paramStr.length > 30 ? `${paramStr.substring(0, 30)}...` : paramStr;
-                              return `${command}(${truncatedParam})`;
-                            } else {
-                              return command;
-                            }
-                          };
-
-                          return (
-                            <Typography
-                              key={actionIndex}
-                              variant="body2"
-                              sx={{
-                                fontSize: '0.8rem',
-                                color: 'text.secondary',
-                                mb: 0,
-                                fontFamily: 'monospace',
-                                '&:before': {
-                                  content: '"- "',
-                                  fontWeight: 'bold',
-                                },
-                              }}
-                            >
-                              {getActionDisplayText(action)}
-                            </Typography>
-                          );
-                        })}
-                      </Box>
-                    ) : (
                       <Typography
-                        variant="body2"
-                        sx={{
-                          fontSize: '0.8rem',
-                          color: 'text.secondary',
-                          ml: 1.5,
-                          fontStyle: 'italic',
-                        }}
+                        variant="subtitle2"
+                        sx={{ fontWeight: 'bold', mb: 0.5, fontSize: '0.875rem' }}
                       >
-                        No actions defined
+                        {transitionData.transition_number || index + 1}.{' '}
+                        {transitionData.from_node_label || 'Start'} →{' '}
+                        {transitionData.to_node_label || 'Target'}
                       </Typography>
-                    )}
-                  </Box>
-                );
-              })}
-            </Box>
-          )}
 
-          {!nodeHook.isLoadingPreview && nodeHook.navigationSteps.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
-              No navigation path available
-            </Typography>
-          )}
+                      {transitionData.actions && transitionData.actions.length > 0 ? (
+                        <Box sx={{ ml: 1.5 }}>
+                          {transitionData.actions.map((action: any, actionIndex: number) => {
+                            // Generic display: command and first parameter
+                            const getActionDisplayText = (action: any) => {
+                              const command = action.command || 'unknown_action';
+                              const params = action.params || {};
+
+                              // If there are parameters, show the first one
+                              if (params && Object.keys(params).length > 0) {
+                                const firstParam = Object.values(params)[0];
+                                const paramStr =
+                                  typeof firstParam === 'string'
+                                    ? firstParam
+                                    : JSON.stringify(firstParam);
+                                const truncatedParam =
+                                  paramStr.length > 30
+                                    ? `${paramStr.substring(0, 30)}...`
+                                    : paramStr;
+                                return `${command}(${truncatedParam})`;
+                              } else {
+                                return command;
+                              }
+                            };
+
+                            return (
+                              <Typography
+                                key={actionIndex}
+                                variant="body2"
+                                sx={{
+                                  fontSize: '0.8rem',
+                                  color: 'text.secondary',
+                                  mb: 0,
+                                  fontFamily: 'monospace',
+                                  '&:before': {
+                                    content: '"- "',
+                                    fontWeight: 'bold',
+                                  },
+                                }}
+                              >
+                                {getActionDisplayText(action)}
+                              </Typography>
+                            );
+                          })}
+                        </Box>
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontSize: '0.8rem',
+                            color: 'text.secondary',
+                            ml: 1.5,
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          No actions defined
+                        </Typography>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+
+          {!nodeHook.isLoadingPreview &&
+            (!nodeHook.navigationSteps || nodeHook.navigationSteps.length === 0) && (
+              <Typography variant="body2" color="text.secondary">
+                No navigation path available
+              </Typography>
+            )}
 
           {nodeHook.isLoadingPreview && (
             <Typography variant="body2" color="text.secondary">
