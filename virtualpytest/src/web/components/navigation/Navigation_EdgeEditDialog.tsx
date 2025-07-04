@@ -15,9 +15,9 @@ import React, { useState } from 'react';
 import { useEdgeEdit } from '../../hooks/navigation/useEdgeEdit';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationEdge, EdgeForm } from '../../types/pages/Navigation_Types';
+import { getZIndex } from '../../utils/zIndexUtils';
 import { ActionsList } from '../actions';
 import { ActionDependencyDialog } from '../actions/ActionDependencyDialog';
-import { getZIndex } from '../../utils/zIndexUtils';
 
 interface EdgeEditDialogProps {
   isOpen: boolean;
