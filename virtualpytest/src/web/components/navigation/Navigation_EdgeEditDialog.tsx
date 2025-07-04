@@ -290,7 +290,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
                 border: '1px solid',
                 borderColor: 'divider',
                 borderRadius: 1,
-                backgroundColor: 'background.default',
               }}
             >
               <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
