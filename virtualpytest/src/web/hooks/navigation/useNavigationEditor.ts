@@ -228,8 +228,20 @@ export const useNavigationEditor = () => {
 
   const handleEdgeFormSubmit = useCallback(
     async (edgeForm: any) => {
+      console.log('[@useNavigationEditor:handleEdgeFormSubmit] Received edge form data:', {
+        description: edgeForm?.description,
+        actions: edgeForm?.actions?.length || 0,
+        retryActions: edgeForm?.retryActions?.length || 0,
+        finalWaitTime: edgeForm?.finalWaitTime,
+      });
+
       try {
-        if (!navigation.selectedEdge) return;
+        if (!navigation.selectedEdge) {
+          console.warn('[@useNavigationEditor:handleEdgeFormSubmit] No selected edge to update');
+          return;
+        }
+
+        console.log('[@useNavigationEditor:handleEdgeFormSubmit] Starting edge save process');
 
         // Batch save all actions to database and get their IDs
         let actionIds: string[] = [];
@@ -240,6 +252,10 @@ export const useNavigationEditor = () => {
 
         if (actionsToSave.length > 0 || retryActionsToSave.length > 0) {
           try {
+            console.log(
+              `[@useNavigationEditor:handleEdgeFormSubmit] Saving ${actionsToSave.length} actions and ${retryActionsToSave.length} retry actions`,
+            );
+
             const response = await fetch('/server/action/saveActions', {
               method: 'POST',
               headers: {
@@ -261,20 +277,36 @@ export const useNavigationEditor = () => {
               }),
             });
 
+            if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`Server returned ${response.status}: ${errorText}`);
+            }
+
             const result = await response.json();
             if (result.success) {
               actionIds = result.action_ids || [];
               retryActionIds = result.retry_action_ids || [];
+              console.log(
+                `[@useNavigationEditor:handleEdgeFormSubmit] Actions saved successfully. Got ${actionIds.length} action IDs and ${retryActionIds.length} retry action IDs`,
+              );
             } else {
-              console.error('Error saving actions:', result.error);
+              console.error(
+                '[@useNavigationEditor:handleEdgeFormSubmit] Error saving actions:',
+                result.error,
+              );
               navigation.setError(`Failed to save actions: ${result.error}`);
               return;
             }
           } catch (error) {
-            console.error('Error saving actions:', error);
+            console.error(
+              '[@useNavigationEditor:handleEdgeFormSubmit] Error saving actions:',
+              error,
+            );
             navigation.setError('Failed to save actions');
             return;
           }
+        } else {
+          console.log('[@useNavigationEditor:handleEdgeFormSubmit] No actions to save');
         }
 
         // Update edge with action IDs and retry action IDs
@@ -283,12 +315,21 @@ export const useNavigationEditor = () => {
           // Ensure finalWaitTime is at top level for UI compatibility
           finalWaitTime: edgeForm.finalWaitTime,
           data: {
-            ...navigation.selectedEdge.data,
+            ...(navigation.selectedEdge.data || {}),
             ...edgeForm,
             action_ids: actionIds,
             retry_action_ids: retryActionIds,
+            description: edgeForm.description || navigation.selectedEdge.data?.description || '',
           },
         };
+
+        console.log('[@useNavigationEditor:handleEdgeFormSubmit] Updating edge with new data:', {
+          id: updatedEdge.id,
+          finalWaitTime: updatedEdge.finalWaitTime,
+          actionIds: actionIds.length,
+          retryActionIds: retryActionIds.length,
+          description: updatedEdge.data.description,
+        });
 
         const updatedEdges = navigation.edges.map((edge) =>
           edge.id === navigation.selectedEdge?.id ? updatedEdge : edge,
@@ -306,7 +347,11 @@ export const useNavigationEditor = () => {
           );
 
           try {
-            await saveToConfig(navigation.userInterface.id, { edges: updatedEdges });
+            // Pass nodes and edges to ensure complete tree is saved
+            await saveToConfig(navigation.userInterface.id, {
+              nodes: navigation.nodes,
+              edges: updatedEdges,
+            });
             console.log('[@useNavigationEditor:handleEdgeFormSubmit] Tree saved successfully');
           } catch (saveError) {
             console.error(
@@ -323,7 +368,7 @@ export const useNavigationEditor = () => {
           );
         }
       } catch (error) {
-        console.error('Error during edge save:', error);
+        console.error('[@useNavigationEditor:handleEdgeFormSubmit] Error during edge save:', error);
         navigation.setError('Failed to save edge actions');
       }
     },

@@ -29,6 +29,8 @@ interface EdgeEditDialogProps {
   selectedEdge?: UINavigationEdge | null;
   isControlActive?: boolean;
   selectedHost?: Host | null;
+  fromLabel?: string;
+  toLabel?: string;
 }
 
 export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
@@ -40,6 +42,8 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   selectedEdge: _selectedEdge,
   isControlActive = false,
   selectedHost,
+  fromLabel = '',
+  toLabel = '',
 }) => {
   // State for dependency dialog
   const [dependencyDialogOpen, setDependencyDialogOpen] = useState(false);
@@ -122,7 +126,28 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
       >
         <DialogTitle sx={{ pb: 0.5 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="h6">Edit Edge</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6">Edit Edge</Typography>
+              {fromLabel && toLabel && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#1976d2' }}
+                  >
+                    {fromLabel}
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontSize: '1rem' }}>
+                    →
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#4caf50' }}
+                  >
+                    {toLabel}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
             <IconButton onClick={onClose} size="small">
               <CloseIcon />
             </IconButton>
@@ -130,22 +155,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
         </DialogTitle>
 
         <DialogContent sx={{ py: 0.5 }}>
-          {/* Description */}
-          <TextField
-            label="Description"
-            value={edgeForm.description || ''}
-            onChange={(e) =>
-              setEdgeForm({
-                ...edgeForm,
-                description: e.target.value,
-              })
-            }
-            fullWidth
-            margin="dense"
-            size="small"
-            sx={{ mb: 1 }}
-          />
-
           {/* Main Actions */}
           <Box
             sx={{

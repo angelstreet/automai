@@ -1,5 +1,5 @@
 import { Box, Typography, Paper, Grid, Switch, FormControlLabel } from '@mui/material';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 import { HDMIStream } from '../components/controller/av/HDMIStream';
 import { RemotePanel } from '../components/controller/remote/RemotePanel';
@@ -245,19 +245,49 @@ const mockHosts: TestHost[] = [
 export default function RemoteTestPage() {
   const [selectedHost, setSelectedHost] = useState<TestHost>(mockHosts[0]);
   const [useModalLayout, setUseModalLayout] = useState<boolean>(false);
+  const [showRemote, setShowRemote] = useState<boolean>(true);
 
   // State to coordinate between HDMIStream and RemotePanel
   const [captureMode, setCaptureMode] = useState<'stream' | 'screenshot' | 'video'>('stream');
   const [streamCollapsed, setStreamCollapsed] = useState<boolean>(true);
   const [streamMinimized, setStreamMinimized] = useState<boolean>(false);
 
-  // Mock dimensions for modal testing
-  const mockStreamContainerDimensions = {
-    width: 800,
-    height: 600,
-    x: 100,
-    y: 100,
-  };
+  // Stable stream container dimensions to prevent re-renders - copied from RecHostStreamModal
+  const streamContainerDimensions = useMemo(() => {
+    if (!useModalLayout) return undefined;
+
+    const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
+
+    // Modal dimensions (95vw x 90vh)
+    const modalWidth = windowWidth * 0.95;
+    const modalHeight = windowHeight * 0.9;
+
+    // Header height
+    const headerHeight = 48;
+
+    // Use fixed stream area (assume remote might be shown)
+    const streamAreaWidth = modalWidth * 0.75;
+    const streamAreaHeight = modalHeight - headerHeight;
+
+    // Modal position (centered)
+    const modalX = (windowWidth - modalWidth) / 2;
+    const modalY = (windowHeight - modalHeight) / 2;
+
+    // Stream container position
+    const streamX = modalX;
+    const streamY = modalY + headerHeight;
+
+    return {
+      width: Math.round(streamAreaWidth),
+      height: Math.round(streamAreaHeight),
+      x: Math.round(streamX),
+      y: Math.round(streamY),
+    };
+  }, [useModalLayout]);
+
+  // Stable device resolution to prevent re-renders
+  const stableDeviceResolution = useMemo(() => ({ width: 1920, height: 1080 }), []);
 
   console.log('[@page:RemoteTestPage] Rendering test page with host:', selectedHost.host_name);
 
@@ -338,6 +368,24 @@ export default function RemoteTestPage() {
         </Typography>
       </Paper>
 
+      {/* Remote Toggle */}
+      <Paper sx={{ p: 2, mb: 3, backgroundColor: 'info.light' }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={showRemote}
+              onChange={(e) => setShowRemote(e.target.checked)}
+              color="primary"
+            />
+          }
+          label={
+            <Typography variant="body2" fontWeight="bold">
+              Show Remote Panel
+            </Typography>
+          }
+        />
+      </Paper>
+
       {/* Current Selection Info */}
       <Paper sx={{ p: 2, mb: 3, backgroundColor: 'info.light' }}>
         <Typography variant="h6" gutterBottom>
@@ -391,67 +439,171 @@ export default function RemoteTestPage() {
       </Paper>
 
       {/* Test Components */}
-      <Box sx={{ position: 'relative', minHeight: '600px' }}>
-        {/* Remote Panel */}
-        {(() => {
-          if (!selectedHost.controller_configs) return false;
-          return (
-            Object.keys(selectedHost.controller_configs).some((key) => key.startsWith('remote_')) ||
-            selectedHost.controller_configs.remote !== undefined
-          );
-        })() && (
-          <RemotePanel
-            host={selectedHost as any} // Type cast to avoid type errors with controller_configs
-            deviceId="test-device-1"
-            deviceModel={selectedHost.devices[0].device_model}
-            isConnected={true}
-            initialCollapsed={true}
-            deviceResolution={{ width: 1920, height: 1080 }}
-            streamCollapsed={streamCollapsed}
-            streamMinimized={streamMinimized}
-            captureMode={captureMode}
-            streamContainerDimensions={useModalLayout ? mockStreamContainerDimensions : undefined}
-          />
-        )}
-
-        {/* AV Stream */}
-        {selectedHost.controller_configs?.av && (
-          <HDMIStream
-            host={selectedHost as any} // Type cast to avoid type errors with controller_configs
-            deviceId="test-device-1"
-            deviceModel={selectedHost.devices[0].device_model}
-            onCollapsedChange={setStreamCollapsed}
-            onMinimizedChange={setStreamMinimized}
-            onCaptureModeChange={setCaptureMode}
-          />
-        )}
-
-        {/* Center message */}
+      {useModalLayout ? (
+        // Modal layout - mimic RecHostStreamModal layout
         <Box
           sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            textAlign: 'center',
-            p: 3,
+            position: 'relative',
+            width: '95vw',
+            height: '90vh',
             backgroundColor: 'background.paper',
-            border: '2px dashed',
-            borderColor: 'divider',
             borderRadius: 2,
+            boxShadow: 24,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            margin: '0 auto',
           }}
         >
-          <Typography variant="h6" gutterBottom>
-            Testing Area
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Remote and AV panels should appear at screen edges
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            This center area represents your main workspace
-          </Typography>
+          {/* Header */}
+          <Box
+            sx={{
+              px: 2,
+              py: 1,
+              backgroundColor: 'grey.800',
+              color: 'white',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderRadius: '8px 8px 0 0',
+              minHeight: 48,
+            }}
+          >
+            <Typography variant="h6" component="h2">
+              {selectedHost.devices[0].device_name || selectedHost.host_name} - Modal Test
+            </Typography>
+          </Box>
+
+          {/* Main Content */}
+          <Box
+            sx={{
+              flex: 1,
+              display: 'flex',
+              overflow: 'hidden',
+              backgroundColor: 'black',
+              position: 'relative',
+            }}
+          >
+            {/* Stream Viewer */}
+            <Box
+              sx={{
+                width: showRemote ? '75%' : '100%',
+                position: 'relative',
+                overflow: 'hidden',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'black',
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%',
+                  color: 'white',
+                }}
+              >
+                <Typography>Stream area (mock)</Typography>
+              </Box>
+            </Box>
+
+            {/* Remote Control Panel */}
+            {showRemote && (
+              <Box
+                sx={{
+                  width: '25%',
+                  backgroundColor: 'background.default',
+                  borderLeft: '1px solid',
+                  borderColor: 'divider',
+                  overflow: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  height: '100%',
+                }}
+              >
+                <RemotePanel
+                  host={selectedHost as any}
+                  deviceId="test-device-1"
+                  deviceModel={selectedHost.devices[0].device_model}
+                  isConnected={true}
+                  onReleaseControl={() => console.log('Release control')}
+                  initialCollapsed={false}
+                  deviceResolution={stableDeviceResolution}
+                  streamCollapsed={false}
+                  streamMinimized={false}
+                  streamContainerDimensions={streamContainerDimensions}
+                />
+              </Box>
+            )}
+          </Box>
         </Box>
-      </Box>
+      ) : (
+        // Standard layout
+        <Box sx={{ position: 'relative', minHeight: '600px' }}>
+          {/* Remote Panel */}
+          {showRemote &&
+            (() => {
+              if (!selectedHost.controller_configs) return false;
+              return (
+                Object.keys(selectedHost.controller_configs).some((key) =>
+                  key.startsWith('remote_'),
+                ) || selectedHost.controller_configs.remote !== undefined
+              );
+            })() && (
+              <RemotePanel
+                host={selectedHost as any}
+                deviceId="test-device-1"
+                deviceModel={selectedHost.devices[0].device_model}
+                isConnected={true}
+                initialCollapsed={true}
+                deviceResolution={{ width: 1920, height: 1080 }}
+                streamCollapsed={streamCollapsed}
+                streamMinimized={streamMinimized}
+                captureMode={captureMode}
+              />
+            )}
+
+          {/* AV Stream */}
+          {selectedHost.controller_configs?.av && (
+            <HDMIStream
+              host={selectedHost as any}
+              deviceId="test-device-1"
+              deviceModel={selectedHost.devices[0].device_model}
+              onCollapsedChange={setStreamCollapsed}
+              onMinimizedChange={setStreamMinimized}
+              onCaptureModeChange={setCaptureMode}
+            />
+          )}
+
+          {/* Center message */}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              p: 3,
+              backgroundColor: 'background.paper',
+              border: '2px dashed',
+              borderColor: 'divider',
+              borderRadius: 2,
+            }}
+          >
+            <Typography variant="h6" gutterBottom>
+              Testing Area
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Remote and AV panels should appear at screen edges
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              This center area represents your main workspace
+            </Typography>
+          </Box>
+        </Box>
+      )}
     </Box>
   );
 }

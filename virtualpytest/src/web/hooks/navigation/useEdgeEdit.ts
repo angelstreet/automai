@@ -83,12 +83,17 @@ export const useEdgeEdit = ({
     const actionsToCheck = actions.filter((action) => action.id && action.id.length > 10);
 
     if (actionsToCheck.length === 0) {
-      console.log('No actions with DB IDs to check for dependencies');
+      console.log('[@hook:useEdgeEdit] No actions with DB IDs to check for dependencies');
       return { success: true, has_shared_actions: false, edges: [], count: 0 };
     }
 
     try {
-      console.log(`Checking dependencies for ${actionsToCheck.length} actions`);
+      console.log(`[@hook:useEdgeEdit] Checking dependencies for ${actionsToCheck.length} actions`);
+      console.log(
+        `[@hook:useEdgeEdit] Action IDs being checked:`,
+        actionsToCheck.map((a) => a.id),
+      );
+
       const response = await fetch('/server/action/checkDependenciesBatch', {
         method: 'POST',
         headers: {
@@ -100,22 +105,29 @@ export const useEdgeEdit = ({
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[@hook:useEdgeEdit] Server returned ${response.status}: ${errorText}`);
         throw new Error(`Server returned ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
-      console.log('Dependency check result:', result);
+      console.log('[@hook:useEdgeEdit] Dependency check result:', result);
       setDependencyCheckResult(result);
 
+      if (!result.success) {
+        console.error('[@hook:useEdgeEdit] Dependency check failed:', result);
+        return { success: false, error: 'Dependency check failed' };
+      }
+
       if (result.success && !result.has_shared_actions) {
-        console.log('No dependencies found, edge can be saved directly');
+        console.log('[@hook:useEdgeEdit] No dependencies found, edge can be saved directly');
       } else if (result.success && result.has_shared_actions) {
-        console.log(`Found ${result.count} edges with shared actions`);
+        console.log(`[@hook:useEdgeEdit] Found ${result.count} edges with shared actions`);
       }
 
       return result;
     } catch (error) {
-      console.error('Failed to check dependencies:', error);
+      console.error('[@hook:useEdgeEdit] Failed to check dependencies:', error);
       return { success: false, error: String(error) };
     }
   }, []);

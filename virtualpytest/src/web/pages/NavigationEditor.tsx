@@ -19,6 +19,7 @@ import ReactFlow, {
   ConnectionLineType,
   BackgroundVariant,
   MarkerType,
+  Node,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -128,6 +129,12 @@ const miniMapNodeColor = (node: any) => {
     default:
       return '#6b7280';
   }
+};
+
+// Helper function to get node label by ID
+const getNodeLabelById = (nodeId: string, nodes: Node[]): string => {
+  const node = nodes.find((n) => n.id === nodeId);
+  return node?.data?.label || nodeId;
 };
 
 const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.memo(
@@ -297,30 +304,12 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const stableSelectedHost = useMemo(() => selectedHost, [selectedHost]);
 
     // Centralized reference management - both verification references and actions
-    const { actions: availableActionsArray, referencesLoading, setControlState } = useDeviceData();
-
-    // Convert actions array to Actions object format
-    const availableActions = useMemo(() => {
-      if (Array.isArray(availableActionsArray)) {
-        return availableActionsArray.reduce((acc: any, action: any) => {
-          if (action.name) {
-            acc[action.name] = action;
-          }
-          return acc;
-        }, {});
-      }
-      return availableActionsArray || {};
-    }, [availableActionsArray]);
+    const { setControlState } = useDeviceData();
 
     // Set control state in device data context when it changes
     useEffect(() => {
       setControlState(stableSelectedHost, selectedDeviceId, isControlActive);
     }, [stableSelectedHost, selectedDeviceId, isControlActive, setControlState]);
-
-    // Keep an empty modelReferences object to satisfy component props
-    const currentModelReferences = useMemo(() => {
-      return {}; // Empty object for component props
-    }, []);
 
     // Memoize the RemotePanel props to prevent unnecessary re-renders
     const remotePanelProps = useMemo(
@@ -760,6 +749,8 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
             selectedEdge={selectedEdge}
             isControlActive={isControlActive}
             selectedHost={selectedHost}
+            fromLabel={selectedEdge ? getNodeLabelById(selectedEdge.source, nodes) : ''}
+            toLabel={selectedEdge ? getNodeLabelById(selectedEdge.target, nodes) : ''}
           />
         )}
 

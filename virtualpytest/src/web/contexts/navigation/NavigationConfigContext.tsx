@@ -339,6 +339,15 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         state.setIsLoading(true);
         state.setError(null);
 
+        console.log(
+          '[@context:NavigationConfigProvider:saveToConfig] Saving tree for userInterface:',
+          userInterfaceId,
+        );
+        console.log('[@context:NavigationConfigProvider:saveToConfig] Tree data:', {
+          nodes: state.nodes.length,
+          edges: state.edges.length,
+        });
+
         // Prepare tree data for saving - only store structure and IDs
         const treeDataForSaving = {
           nodes: state.nodes.map((node: UINavigationNode) => ({
@@ -355,7 +364,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
               // Only save IDs and core properties - strip full action objects
               action_ids: edge.data?.action_ids || [],
               retry_action_ids: edge.data?.retry_action_ids || [],
-              description: edge.data?.description,
+              description: edge.data?.description || '',
               finalWaitTime:
                 edge.finalWaitTime !== undefined ? edge.finalWaitTime : edge.data?.finalWaitTime,
             },
@@ -370,6 +379,10 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           modification_type: 'update',
           changes_summary: 'Updated navigation tree from editor',
         };
+
+        console.log(
+          '[@context:NavigationConfigProvider:saveToConfig] Sending request to save tree',
+        );
 
         const response = await fetch(`/server/navigationTrees/saveTree`, {
           method: 'POST',
@@ -391,6 +404,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         const data = await response.json();
 
         if (data.success) {
+          console.log('[@context:NavigationConfigProvider:saveToConfig] Tree saved successfully');
           // Update initial state to reflect saved state
           state.setInitialState({ nodes: [...state.nodes], edges: [...state.edges] });
           state.setHasUnsavedChanges(false);
@@ -401,6 +415,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       } catch (error) {
         console.error(`[@context:NavigationConfigProvider:saveToConfig] Error saving tree:`, error);
         state.setError(error instanceof Error ? error.message : 'Unknown error occurred');
+        throw error; // Re-throw to allow caller to handle
       } finally {
         state.setIsLoading(false);
       }
