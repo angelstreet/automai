@@ -80,6 +80,9 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
       const edgeForm = edgeHook.createEdgeForm(selectedEdge);
       setEdgeForm(edgeForm);
       setIsEdgeDialogOpen(true);
+      onClose(); // Close the selection panel when opening the edit dialog
+      // Note: Dependency check happens in EdgeEditDialog when saving
+      // If no dependencies are found, the edge will be saved directly
     };
 
     // Execute all edge actions using hook function

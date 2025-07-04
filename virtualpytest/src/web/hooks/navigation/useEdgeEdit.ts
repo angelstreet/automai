@@ -38,6 +38,7 @@ export const useEdgeEdit = ({
   const [localActions, setLocalActions] = useState<EdgeAction[]>([]);
   const [localRetryActions, setLocalRetryActions] = useState<EdgeAction[]>([]);
   const [actionResult, setActionResult] = useState<string | null>(null);
+  const [dependencyCheckResult, setDependencyCheckResult] = useState<any>(null);
 
   // Initialize actions when dialog opens or edgeForm/selectedEdge changes
   useEffect(() => {
@@ -72,8 +73,52 @@ export const useEdgeEdit = ({
       setLocalActions([]);
       setLocalRetryActions([]);
       setActionResult(null);
+      setDependencyCheckResult(null);
     }
   }, [isOpen]);
+
+  // Check dependencies for actions
+  const checkDependencies = useCallback(async (actions: EdgeAction[]): Promise<any> => {
+    // Filter actions with real DB IDs
+    const actionsToCheck = actions.filter((action) => action.id && action.id.length > 10);
+
+    if (actionsToCheck.length === 0) {
+      console.log('No actions with DB IDs to check for dependencies');
+      return { success: true, has_shared_actions: false, edges: [], count: 0 };
+    }
+
+    try {
+      console.log(`Checking dependencies for ${actionsToCheck.length} actions`);
+      const response = await fetch('/server/action/checkDependenciesBatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action_ids: actionsToCheck.map((action) => action.id),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Dependency check result:', result);
+      setDependencyCheckResult(result);
+
+      if (result.success && !result.has_shared_actions) {
+        console.log('No dependencies found, edge can be saved directly');
+      } else if (result.success && result.has_shared_actions) {
+        console.log(`Found ${result.count} edges with shared actions`);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Failed to check dependencies:', error);
+      return { success: false, error: String(error) };
+    }
+  }, []);
 
   // Convert EdgeAction to ControllerAction format
   const convertToControllerAction = useCallback((action: EdgeAction) => {
@@ -197,11 +242,13 @@ export const useEdgeEdit = ({
     // Action execution
     actionHook,
     executeLocalActions,
+    checkDependencies,
 
     // Local state
     localActions,
     localRetryActions,
     actionResult,
+    dependencyCheckResult,
 
     // Handlers
     handleActionsChange,

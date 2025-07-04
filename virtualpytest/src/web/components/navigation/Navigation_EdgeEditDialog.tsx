@@ -9,6 +9,7 @@ import {
   Box,
   Typography,
   IconButton,
+  CircularProgress,
 } from '@mui/material';
 import React, { useState } from 'react';
 
@@ -44,6 +45,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   const [dependencyDialogOpen, setDependencyDialogOpen] = useState(false);
   const [dependencyEdges, setDependencyEdges] = useState<any[]>([]);
   const [pendingSubmit, setPendingSubmit] = useState<any>(null);
+  const [isCheckingDependencies, setIsCheckingDependencies] = useState(false);
 
   const edgeEdit = useEdgeEdit({
     isOpen,
@@ -59,41 +61,33 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
     if (!edgeEdit.isFormValid()) return;
 
     // Check for existing actions that might have dependencies
-    const actionsToCheck = [...edgeEdit.localActions, ...edgeEdit.localRetryActions].filter(
-      (action) => action.id && action.id.length > 10,
-    ); // Only check real DB IDs
+    const allActions = [...edgeEdit.localActions, ...edgeEdit.localRetryActions];
 
-    if (actionsToCheck.length > 0) {
-      // Batch check dependencies for all actions
-      const actionIds = actionsToCheck.map((action) => action.id);
+    setIsCheckingDependencies(true);
+    try {
+      // Use the new checkDependencies function from the hook
+      const result = await edgeEdit.checkDependencies(allActions);
 
-      try {
-        const response = await fetch('/server/action/checkDependenciesBatch', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action_ids: actionIds,
-          }),
-        });
-
-        const result = await response.json();
-        if (result.success && result.has_shared_actions) {
-          // Show dependency dialog
-          setDependencyEdges(result.edges);
-          setPendingSubmit(edgeForm);
-          setDependencyDialogOpen(true);
-          return;
-        }
-      } catch (error) {
-        console.warn('Failed to check dependencies for actions:', error);
-        // Continue with save if dependency check fails
+      if (result.success && result.has_shared_actions) {
+        // Show dependency dialog
+        setDependencyEdges(result.edges);
+        setPendingSubmit(edgeForm);
+        setDependencyDialogOpen(true);
+      } else if (result.success && !result.has_shared_actions) {
+        // No dependencies found, proceed with saving
+        onSubmit(edgeForm);
+      } else {
+        // Handle other cases (like API errors)
+        console.warn('Unexpected dependency check result:', result);
+        onSubmit(edgeForm);
       }
+    } catch (error) {
+      console.warn('Failed to check dependencies for actions:', error);
+      // Continue with save if dependency check fails
+      onSubmit(edgeForm);
+    } finally {
+      setIsCheckingDependencies(false);
     }
-
-    // No dependencies or no shared actions, proceed directly
-    onSubmit(edgeForm);
   };
 
   const handleDependencyConfirm = () => {
@@ -308,14 +302,15 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
           <Button
             onClick={handleSubmitWithDependencyCheck}
             variant="contained"
-            disabled={!edgeEdit.isFormValid()}
+            disabled={!edgeEdit.isFormValid() || isCheckingDependencies}
+            startIcon={isCheckingDependencies ? <CircularProgress size={16} /> : null}
           >
-            Save
+            {isCheckingDependencies ? 'Checking...' : 'Save'}
           </Button>
           <Button
             onClick={handleRunActions}
             variant="contained"
-            disabled={!edgeEdit.canRunLocalActions()}
+            disabled={!edgeEdit.canRunLocalActions() || edgeEdit.actionHook.loading}
             sx={{ opacity: !edgeEdit.canRunLocalActions() ? 0.5 : 1 }}
           >
             {edgeEdit.actionHook.loading ? 'Running...' : 'Run'}

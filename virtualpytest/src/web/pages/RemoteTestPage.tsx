@@ -1,17 +1,58 @@
-import { Box, Typography, Paper, Grid } from '@mui/material';
+import { Box, Typography, Paper, Grid, Switch, FormControlLabel } from '@mui/material';
 import { useState } from 'react';
 
 import { HDMIStream } from '../components/controller/av/HDMIStream';
 import { RemotePanel } from '../components/controller/remote/RemotePanel';
 import { Host } from '../types/common/Host_Types';
 
+// Extended Host type to include controller_configs used in the components
+interface TestHost extends Host {
+  controller_configs?: {
+    remote?: {
+      implementation: string;
+      type: string;
+      parameters: any;
+    };
+    av?: {
+      implementation: string;
+      type: string;
+      parameters: any;
+    };
+    [key: string]: any; // Allow indexing with string keys
+  };
+}
+
 // Mock host data for testing different device types
-const mockHosts: Host[] = [
+const mockHosts: TestHost[] = [
   {
-    id: 'test-android-mobile',
     host_name: 'Test Android Mobile',
-    device_model: 'android_mobile',
+    description: 'Android Mobile Test Device',
+    host_url: 'http://localhost:6109',
+    host_port: 6109,
+    devices: [
+      {
+        device_id: 'device1',
+        device_name: 'Android Mobile',
+        device_model: 'android_mobile',
+        device_capabilities: {
+          av: 'hdmi_stream',
+          remote: 'android_mobile',
+        },
+      },
+    ],
+    device_count: 1,
     status: 'online',
+    last_seen: Date.now(),
+    registered_at: new Date().toISOString(),
+    system_stats: {
+      cpu_percent: 10,
+      memory_percent: 30,
+      disk_percent: 50,
+      platform: 'linux',
+      architecture: 'x64',
+      python_version: '3.9.0',
+    },
+    isLocked: false,
     controller_configs: {
       remote: {
         implementation: 'android_mobile',
@@ -26,10 +67,34 @@ const mockHosts: Host[] = [
     },
   },
   {
-    id: 'test-android-tv',
     host_name: 'Test Android TV',
-    device_model: 'android_tv',
+    description: 'Android TV Test Device',
+    host_url: 'http://localhost:6109',
+    host_port: 6109,
+    devices: [
+      {
+        device_id: 'device1',
+        device_name: 'Android TV',
+        device_model: 'android_tv',
+        device_capabilities: {
+          av: 'hdmi_stream',
+          remote: 'android_tv',
+        },
+      },
+    ],
+    device_count: 1,
     status: 'online',
+    last_seen: Date.now(),
+    registered_at: new Date().toISOString(),
+    system_stats: {
+      cpu_percent: 10,
+      memory_percent: 30,
+      disk_percent: 50,
+      platform: 'linux',
+      architecture: 'x64',
+      python_version: '3.9.0',
+    },
+    isLocked: false,
     controller_configs: {
       remote: {
         implementation: 'android_tv',
@@ -44,10 +109,34 @@ const mockHosts: Host[] = [
     },
   },
   {
-    id: 'test-ios-mobile',
     host_name: 'Test iOS Mobile',
-    device_model: 'ios_mobile',
+    description: 'iOS Mobile Test Device',
+    host_url: 'http://localhost:6109',
+    host_port: 6109,
+    devices: [
+      {
+        device_id: 'device1',
+        device_name: 'iOS Mobile',
+        device_model: 'ios_mobile',
+        device_capabilities: {
+          av: 'hdmi_stream',
+          remote: 'appium_remote',
+        },
+      },
+    ],
+    device_count: 1,
     status: 'online',
+    last_seen: Date.now(),
+    registered_at: new Date().toISOString(),
+    system_stats: {
+      cpu_percent: 10,
+      memory_percent: 30,
+      disk_percent: 50,
+      platform: 'darwin',
+      architecture: 'x64',
+      python_version: '3.9.0',
+    },
+    isLocked: false,
     controller_configs: {
       remote: {
         implementation: 'appium_remote',
@@ -68,10 +157,34 @@ const mockHosts: Host[] = [
     },
   },
   {
-    id: 'test-bluetooth',
     host_name: 'Test Bluetooth Remote',
-    device_model: 'bluetooth_remote',
+    description: 'Bluetooth Remote Test Device',
+    host_url: 'http://localhost:6109',
+    host_port: 6109,
+    devices: [
+      {
+        device_id: 'device1',
+        device_name: 'Bluetooth Remote',
+        device_model: 'bluetooth_remote',
+        device_capabilities: {
+          av: 'hdmi_stream',
+          remote: 'bluetooth_remote',
+        },
+      },
+    ],
+    device_count: 1,
     status: 'online',
+    last_seen: Date.now(),
+    registered_at: new Date().toISOString(),
+    system_stats: {
+      cpu_percent: 10,
+      memory_percent: 30,
+      disk_percent: 50,
+      platform: 'linux',
+      architecture: 'x64',
+      python_version: '3.9.0',
+    },
+    isLocked: false,
     controller_configs: {
       remote: {
         implementation: 'bluetooth_remote',
@@ -86,10 +199,34 @@ const mockHosts: Host[] = [
     },
   },
   {
-    id: 'test-infrared',
     host_name: 'Test Infrared Remote',
-    device_model: 'ir_remote',
+    description: 'IR Remote Test Device',
+    host_url: 'http://localhost:6109',
+    host_port: 6109,
+    devices: [
+      {
+        device_id: 'device1',
+        device_name: 'IR Remote',
+        device_model: 'ir_remote',
+        device_capabilities: {
+          av: 'hdmi_stream',
+          remote: 'ir_remote',
+        },
+      },
+    ],
+    device_count: 1,
     status: 'online',
+    last_seen: Date.now(),
+    registered_at: new Date().toISOString(),
+    system_stats: {
+      cpu_percent: 10,
+      memory_percent: 30,
+      disk_percent: 50,
+      platform: 'linux',
+      architecture: 'x64',
+      python_version: '3.9.0',
+    },
+    isLocked: false,
     controller_configs: {
       remote: {
         implementation: 'ir_remote',
@@ -106,12 +243,21 @@ const mockHosts: Host[] = [
 ];
 
 export default function RemoteTestPage() {
-  const [selectedHost, setSelectedHost] = useState<Host>(mockHosts[0]);
+  const [selectedHost, setSelectedHost] = useState<TestHost>(mockHosts[0]);
+  const [useModalLayout, setUseModalLayout] = useState<boolean>(false);
 
   // State to coordinate between HDMIStream and RemotePanel
   const [captureMode, setCaptureMode] = useState<'stream' | 'screenshot' | 'video'>('stream');
   const [streamCollapsed, setStreamCollapsed] = useState<boolean>(true);
   const [streamMinimized, setStreamMinimized] = useState<boolean>(false);
+
+  // Mock dimensions for modal testing
+  const mockStreamContainerDimensions = {
+    width: 800,
+    height: 600,
+    x: 100,
+    y: 100,
+  };
 
   console.log('[@page:RemoteTestPage] Rendering test page with host:', selectedHost.host_name);
 
@@ -132,18 +278,24 @@ export default function RemoteTestPage() {
         </Typography>
         <Grid container spacing={2}>
           {mockHosts.map((host) => (
-            <Grid item key={host.id}>
+            <Grid item key={host.host_name}>
               <Box
                 component="button"
                 onClick={() => setSelectedHost(host)}
                 sx={{
                   p: 2,
                   border: '2px solid',
-                  borderColor: selectedHost.id === host.id ? 'primary.main' : 'divider',
+                  borderColor:
+                    selectedHost.host_name === host.host_name ? 'primary.main' : 'divider',
                   borderRadius: 1,
                   backgroundColor:
-                    selectedHost.id === host.id ? 'primary.light' : 'background.paper',
-                  color: selectedHost.id === host.id ? 'primary.contrastText' : 'text.primary',
+                    selectedHost.host_name === host.host_name
+                      ? 'primary.light'
+                      : 'background.paper',
+                  color:
+                    selectedHost.host_name === host.host_name
+                      ? 'primary.contrastText'
+                      : 'text.primary',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
                   '&:hover': {
@@ -156,12 +308,34 @@ export default function RemoteTestPage() {
                   {host.host_name}
                 </Typography>
                 <Typography variant="caption" display="block">
-                  {host.device_model}
+                  {host.devices[0].device_model}
                 </Typography>
               </Box>
             </Grid>
           ))}
         </Grid>
+      </Paper>
+
+      {/* Modal Layout Toggle */}
+      <Paper sx={{ p: 2, mb: 3, backgroundColor: 'warning.light' }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={useModalLayout}
+              onChange={(e) => setUseModalLayout(e.target.checked)}
+              color="primary"
+            />
+          }
+          label={
+            <Typography variant="body2" fontWeight="bold">
+              Use RecHostStreamModal Layout (button_layout_recmodal)
+            </Typography>
+          }
+        />
+        <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+          When enabled, this will simulate the remote layout as it appears in RecHostStreamModal
+          using button_layout_recmodal
+        </Typography>
       </Paper>
 
       {/* Current Selection Info */}
@@ -170,7 +344,7 @@ export default function RemoteTestPage() {
           Currently Testing: {selectedHost.host_name}
         </Typography>
         <Typography variant="body2">
-          Device Model: <strong>{selectedHost.device_model}</strong>
+          Device Model: <strong>{selectedHost.devices[0].device_model}</strong>
         </Typography>
         <Typography variant="body2">
           Remote Type:{' '}
@@ -182,12 +356,20 @@ export default function RemoteTestPage() {
               );
               return remoteKey
                 ? selectedHost.controller_configs[remoteKey]?.implementation || 'Unknown'
-                : 'None';
+                : selectedHost.controller_configs.remote?.implementation || 'None';
             })()}
           </strong>
         </Typography>
         <Typography variant="body2">
           AV Type: <strong>{selectedHost.controller_configs?.av?.type || 'None'}</strong>
+        </Typography>
+        <Typography variant="body2">
+          Layout Mode:{' '}
+          <strong>
+            {useModalLayout
+              ? 'RecHostStreamModal (button_layout_recmodal)'
+              : 'Standard (button_layout)'}
+          </strong>
         </Typography>
       </Paper>
 
@@ -201,6 +383,9 @@ export default function RemoteTestPage() {
           <li>AV stream should appear at bottom-left</li>
           <li>Toggle panels between collapsed/expanded states</li>
           <li>Verify positioning and sizing from config files</li>
+          <li>
+            Toggle "Use RecHostStreamModal Layout" to test button_layout_recmodal configuration
+          </li>
           <li>No actual device control - just UI testing</li>
         </Typography>
       </Paper>
@@ -210,28 +395,31 @@ export default function RemoteTestPage() {
         {/* Remote Panel */}
         {(() => {
           if (!selectedHost.controller_configs) return false;
-          return Object.keys(selectedHost.controller_configs).some((key) =>
-            key.startsWith('remote_'),
+          return (
+            Object.keys(selectedHost.controller_configs).some((key) => key.startsWith('remote_')) ||
+            selectedHost.controller_configs.remote !== undefined
           );
         })() && (
           <RemotePanel
-            host={selectedHost}
+            host={selectedHost as any} // Type cast to avoid type errors with controller_configs
             deviceId="test-device-1"
-            deviceModel={selectedHost.device_model}
+            deviceModel={selectedHost.devices[0].device_model}
             isConnected={true}
             initialCollapsed={true}
             deviceResolution={{ width: 1920, height: 1080 }}
             streamCollapsed={streamCollapsed}
             streamMinimized={streamMinimized}
             captureMode={captureMode}
+            streamContainerDimensions={useModalLayout ? mockStreamContainerDimensions : undefined}
           />
         )}
 
         {/* AV Stream */}
         {selectedHost.controller_configs?.av && (
           <HDMIStream
-            host={selectedHost}
-            deviceResolution={{ width: 1920, height: 1080 }}
+            host={selectedHost as any} // Type cast to avoid type errors with controller_configs
+            deviceId="test-device-1"
+            deviceModel={selectedHost.devices[0].device_model}
             onCollapsedChange={setStreamCollapsed}
             onMinimizedChange={setStreamMinimized}
             onCaptureModeChange={setCaptureMode}
