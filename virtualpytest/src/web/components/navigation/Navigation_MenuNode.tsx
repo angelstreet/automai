@@ -207,7 +207,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
               borderRadius: '50%',
               left: '50%',
               transform: 'translateX(-50%)',
-              top: -8,
+              top: -2,
               cursor: 'crosshair',
               zIndex: 10,
             }}
@@ -230,7 +230,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
             width: '16px',
             height: '16px',
             borderRadius: '50%',
-            left: -8,
+            left: -2,
             top: '50%',
             transform: 'translateY(-50%)',
             cursor: 'crosshair',
@@ -256,7 +256,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           borderRadius: '50%',
           left: '50%',
           transform: 'translateX(-50%)',
-          bottom: -8,
+          bottom: -2,
           cursor: 'crosshair',
           zIndex: 11,
         }}
@@ -278,7 +278,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           borderRadius: '50%',
           left: '50%',
           transform: 'translateX(-50%)',
-          bottom: -8,
+          bottom: -2,
           cursor: 'crosshair',
           zIndex: 10,
         }}
