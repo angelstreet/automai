@@ -1,5 +1,5 @@
 import React from 'react';
-import { EdgeProps, getBezierPath } from 'reactflow';
+import { EdgeProps, getStraightPath } from 'reactflow';
 
 import { useEdge } from '../../hooks/navigation/useEdge';
 import { UINavigationEdge as UINavigationEdgeType } from '../../types/pages/Navigation_Types';
@@ -7,8 +7,7 @@ import { UINavigationEdge as UINavigationEdgeType } from '../../types/pages/Navi
 export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['data']>> = (
   props,
 ) => {
-  const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data, selected } =
-    props;
+  const { id, sourceX, sourceY, targetX, targetY, data, selected } = props;
 
   // Use the consolidated edge hook
   const edgeHook = useEdge();
@@ -16,14 +15,12 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
   // Get edge colors based on validation status
   const edgeColors = edgeHook.getEdgeColorsForEdge(id, false);
 
-  // Get the bezier path for the edge
-  const [edgePath] = getBezierPath({
+  // Get the straight path for the edge
+  const [edgePath] = getStraightPath({
     sourceX,
     sourceY,
-    sourcePosition,
     targetX,
     targetY,
-    targetPosition,
   });
 
   return (
