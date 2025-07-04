@@ -7,7 +7,7 @@ import { UINavigationEdge as UINavigationEdgeType } from '../../types/pages/Navi
 export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['data']>> = (
   props,
 ) => {
-  const { id, source, target, sourceX, sourceY, targetX, targetY, data, selected } = props;
+  const { id, source, target, sourceX, sourceY, targetX, targetY, data, selected, sourcePosition, targetPosition } = props;
   const { getNodes } = useReactFlow();
 
   // Use the consolidated edge hook
@@ -26,6 +26,39 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
     sourceNode?.data?.type === 'entry' &&
     (targetNode?.data?.is_root === true || targetNode?.data?.label?.toLowerCase() === 'home');
 
+  // Calculate handle offsets to extend paths to actual handle positions
+  const getHandleOffset = (nodeType: string, position: string) => {
+    if (nodeType === 'entry') {
+      return 4; // Entry handles are at -4px
+    }
+    return 7; // Regular and menu handles are at -7px
+  };
+
+  // Extend coordinates to touch the handles
+  const extendedSourceX = sourcePosition === 'right' 
+    ? sourceX + getHandleOffset(sourceNode?.data?.type || 'screen', 'right')
+    : sourcePosition === 'left'
+    ? sourceX - getHandleOffset(sourceNode?.data?.type || 'screen', 'left')
+    : sourceX;
+    
+  const extendedSourceY = sourcePosition === 'bottom'
+    ? sourceY + getHandleOffset(sourceNode?.data?.type || 'screen', 'bottom')
+    : sourcePosition === 'top'
+    ? sourceY - getHandleOffset(sourceNode?.data?.type || 'screen', 'top')
+    : sourceY;
+
+  const extendedTargetX = targetPosition === 'left'
+    ? targetX - getHandleOffset(targetNode?.data?.type || 'screen', 'left')
+    : targetPosition === 'right'
+    ? targetX + getHandleOffset(targetNode?.data?.type || 'screen', 'right')
+    : targetX;
+    
+  const extendedTargetY = targetPosition === 'top'
+    ? targetY - getHandleOffset(targetNode?.data?.type || 'screen', 'top')
+    : targetPosition === 'bottom'
+    ? targetY + getHandleOffset(targetNode?.data?.type || 'screen', 'bottom')
+    : targetY;
+
   // Normalize coordinates for bidirectional edges to ensure same path (for non-entry edges)
   // Always use the lexicographically smaller node ID as "source" for path calculation
   const normalizedSource = source < target ? source : target;
@@ -35,13 +68,13 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
 
   // Use normalized coordinates for consistent path (only for non-entry edges)
   const pathSourceX =
-    isEntryToHome || shouldSwapCoordinates ? (isEntryToHome ? sourceX : targetX) : sourceX;
+    isEntryToHome || shouldSwapCoordinates ? (isEntryToHome ? extendedSourceX : extendedTargetX) : extendedSourceX;
   const pathSourceY =
-    isEntryToHome || shouldSwapCoordinates ? (isEntryToHome ? sourceY : targetY) : sourceY;
+    isEntryToHome || shouldSwapCoordinates ? (isEntryToHome ? extendedSourceY : extendedTargetY) : extendedSourceY;
   const pathTargetX =
-    isEntryToHome || shouldSwapCoordinates ? (isEntryToHome ? targetX : sourceX) : targetX;
+    isEntryToHome || shouldSwapCoordinates ? (isEntryToHome ? extendedTargetX : extendedSourceX) : extendedTargetX;
   const pathTargetY =
-    isEntryToHome || shouldSwapCoordinates ? (isEntryToHome ? targetY : sourceY) : targetY;
+    isEntryToHome || shouldSwapCoordinates ? (isEntryToHome ? extendedTargetY : extendedSourceY) : extendedTargetY;
 
   // Choose path type based on edge type
   let edgePath: string;
