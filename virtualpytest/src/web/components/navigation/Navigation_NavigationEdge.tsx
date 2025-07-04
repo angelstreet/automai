@@ -45,19 +45,20 @@ export const NavigationEdgeComponent: React.FC<EdgeProps<UINavigationEdgeType['d
 
   return (
     <g className={edgeColors.className} data-edge-type={data?.edgeType}>
-      {/* Arrow marker definition */}
+      {/* Arrow marker definition - matching ReactFlow's ArrowClosed specifications */}
       <defs>
         <marker
           id={`${id}-arrow`}
-          markerWidth="20"
-          markerHeight="20"
-          refX="18"
-          refY="3"
+          markerWidth="12.5"
+          markerHeight="12.5"
+          refX="12"
+          refY="3.5"
           orient="auto"
           markerUnits="strokeWidth"
+          viewBox="0 0 12.5 12.5"
         >
           <path
-            d="M0,0 L0,6 L9,3 z"
+            d="M0,0 L0,7 L7,3.5 z"
             style={{
               fill: edgeColors.stroke,
               stroke: edgeColors.stroke,
