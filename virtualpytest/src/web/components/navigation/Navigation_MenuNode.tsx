@@ -57,6 +57,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   // Get handle colors for different positions (updated to match simplified handle IDs)
   const topHandle = getHandleColors(id, 'topLeft', 'top', 'menu');
   const leftHandle = getHandleColors(id, 'leftTop', 'left', 'menu');
+  const rightHandle = getHandleColors(id, 'rightTop', 'right', 'menu');
   const bottomHandle = getHandleColors(id, 'bottomRight', 'bottom', 'menu');
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
@@ -221,6 +222,33 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           ←
         </Handle>
       )}
+
+      {/* Right Handle - Smart handle for menu connections */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        id="right"
+        isConnectable={true}
+        isConnectableStart={true}
+        isConnectableEnd={true}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          width: '20px',
+          height: '20px',
+          right: -10,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px',
+          color: '#ff5722',
+          cursor: 'crosshair',
+        }}
+      >
+        →
+      </Handle>
 
       {/* Bottom Handle - Smart handle for menu connections */}
       <Handle
