@@ -34,6 +34,7 @@ import { NavigationEdgeComponent } from '../components/navigation/Navigation_Nav
 import { UINavigationNode } from '../components/navigation/Navigation_NavigationNode';
 import { NodeEditDialog } from '../components/navigation/Navigation_NodeEditDialog';
 import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSelectionPanel';
+import { NodeGotoPanel } from '../components/navigation/Navigation_NodeGotoPanel';
 import { useTheme } from '../contexts/ThemeContext';
 import { useDeviceData } from '../contexts/device/DeviceDataContext';
 import { useHostManager } from '../contexts/index';
@@ -41,7 +42,11 @@ import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfi
 import { useNavigation } from '../contexts/navigation/NavigationContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { useNavigationEditor } from '../hooks/navigation/useNavigationEditor';
-import { NodeForm, EdgeForm } from '../types/pages/Navigation_Types';
+import {
+  NodeForm,
+  EdgeForm,
+  UINavigationNode as UINavigationNodeType,
+} from '../types/pages/Navigation_Types';
 import { getZIndex } from '../utils/zIndexUtils';
 
 // Node types for React Flow - defined outside component to prevent recreation on every render
@@ -256,6 +261,12 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const [isAVPanelMinimized, setIsAVPanelMinimized] = useState(false);
     const [captureMode, setCaptureMode] = useState<'stream' | 'screenshot' | 'video'>('stream');
 
+    // Goto panel state
+    const [showGotoPanel, setShowGotoPanel] = useState(false);
+    const [selectedNodeForGoto, setSelectedNodeForGoto] = useState<UINavigationNodeType | null>(
+      null,
+    );
+
     // Memoize the AV panel collapsed change handler to prevent infinite loops
     const handleAVPanelCollapsedChange = useCallback((isCollapsed: boolean) => {
       setIsAVPanelCollapsed(isCollapsed);
@@ -270,6 +281,26 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const handleCaptureModeChange = useCallback((mode: 'stream' | 'screenshot' | 'video') => {
       setCaptureMode(mode);
     }, []);
+
+    // Handle opening goto panel
+    const handleOpenGotoPanel = useCallback((node: UINavigationNodeType) => {
+      setSelectedNodeForGoto(node);
+      setShowGotoPanel(true);
+    }, []);
+
+    // Handle closing goto panel
+    const handleCloseGotoPanel = useCallback(() => {
+      setShowGotoPanel(false);
+      setSelectedNodeForGoto(null);
+    }, []);
+
+    // Close goto panel when selected node changes
+    useEffect(() => {
+      if (selectedNode?.id !== selectedNodeForGoto?.id) {
+        setShowGotoPanel(false);
+        setSelectedNodeForGoto(null);
+      }
+    }, [selectedNode?.id, selectedNodeForGoto?.id]);
 
     // Memoize the selectedHost to prevent unnecessary re-renders
     const stableSelectedHost = useMemo(() => selectedHost, [selectedHost]);
@@ -646,6 +677,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                         selectedDeviceId={selectedDeviceId || undefined}
                         treeId={treeId || ''}
                         currentNodeId={currentNodeId || undefined}
+                        onOpenGotoPanel={handleOpenGotoPanel}
                       />
                     </>
                   ) : selectedEdge ? (
@@ -694,6 +726,17 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         )}
 
         {showAVPanel && selectedHost && selectedDeviceId && <HDMIStream {...hdmiStreamProps} />}
+
+        {/* Node Goto Panel */}
+        {showGotoPanel && selectedNodeForGoto && treeId && (
+          <NodeGotoPanel
+            selectedNode={selectedNodeForGoto}
+            nodes={nodes}
+            treeId={treeId}
+            onClose={handleCloseGotoPanel}
+            currentNodeId={currentNodeId || undefined}
+          />
+        )}
 
         {/* Node Edit Dialog */}
         {isNodeDialogOpen && (

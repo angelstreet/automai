@@ -15,14 +15,12 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 
 import { useNode } from '../../hooks/navigation/useNode';
 import { Host } from '../../types/common/Host_Types';
 import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
 import { getZIndex } from '../../utils/zIndexUtils';
-
-import { NodeGotoPanel } from './Navigation_NodeGotoPanel';
 
 interface NodeSelectionPanelProps {
   selectedNode: UINavigationNode;
@@ -40,6 +38,8 @@ interface NodeSelectionPanelProps {
   // Navigation props
   treeId?: string;
   currentNodeId?: string;
+  // Goto panel callback
+  onOpenGotoPanel?: (node: UINavigationNode) => void;
 }
 
 // Custom comparison function for React.memo to prevent unnecessary re-renders
@@ -99,6 +99,7 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     selectedDeviceId,
     treeId = '',
     currentNodeId,
+    onOpenGotoPanel,
   }) => {
     // Don't render the panel for entry nodes - MUST be before any hooks
     if ((selectedNode.data.type as string) === 'entry') {
@@ -120,18 +121,9 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     // Use the consolidated node hook
     const nodeHook = useNode(nodeHookProps);
 
-    // Add state to control showing/hiding the NodeGotoPanel
-    const [showGotoPanel, setShowGotoPanel] = useState(false);
-
     // Add states for confirmation dialogs
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [showScreenshotConfirm, setShowScreenshotConfirm] = useState(false);
-
-    // Clear the goto panel when the component unmounts or when a new node is selected
-    useEffect(() => {
-      // Close the goto panel when the selected node changes
-      setShowGotoPanel(false);
-    }, [selectedNode.id]);
 
     // Memoize handlers to prevent unnecessary re-renders of child components
     const handleEdit = useCallback(() => {
@@ -189,13 +181,11 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
     }, []);
 
     const handleGoToButtonClick = useCallback(() => {
-      setShowGotoPanel(true);
-      onClose(); // Close the node selection panel when goto panel opens
-    }, [onClose]);
-
-    const handleGotoPanelClose = useCallback(() => {
-      setShowGotoPanel(false);
-    }, []);
+      if (onOpenGotoPanel) {
+        onOpenGotoPanel(selectedNode);
+        onClose(); // Close the node selection panel when goto panel opens
+      }
+    }, [onOpenGotoPanel, selectedNode, onClose]);
 
     const handleResetConfirmClose = useCallback(() => {
       setShowResetConfirm(false);
@@ -348,17 +338,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
             </Box>
           </Box>
         </Paper>
-
-        {/* Render the NodeGotoPanel when showGotoPanel is true */}
-        {showGotoPanel && treeId && (
-          <NodeGotoPanel
-            selectedNode={selectedNode}
-            nodes={nodes}
-            treeId={treeId}
-            onClose={handleGotoPanelClose}
-            currentNodeId={currentNodeId}
-          />
-        )}
 
         {/* Reset Node Confirmation Dialog */}
         <Dialog
