@@ -69,7 +69,12 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
 
   // Load navigation preview on component mount and when key dependencies change
   useEffect(() => {
+    // Don't reload if we're already at the destination
     if (currentNodeId === selectedNode.id) return;
+    
+    // Don't reload if we're currently executing navigation
+    if (nodeHook.isExecuting) return;
+    
     clearNavigationMessages();
     loadNavigationPreview(selectedNode, nodes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,11 +82,8 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     treeId,
     selectedNode.id,
     currentNodeId,
-    selectedNode,
-    clearNavigationMessages,
-    loadNavigationPreview,
-    // Removed 'nodes' from dependencies to prevent infinite loop
-    // loadNavigationPreview now only updates minimap when shouldUpdateMinimap=true (during execution)
+    // Removed selectedNode, clearNavigationMessages, loadNavigationPreview to prevent reloading on success
+    // Only reload when the actual IDs change, not when node data updates
   ]);
 
   return (
