@@ -411,13 +411,14 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
           // Force refresh navigation cache after successful save (invalidate + rebuild)
           try {
+            const actualTreeId = data.tree?.id || userInterfaceId || 'horizon_android_mobile';
             const cacheResponse = await fetch('/server/pathfinding/cache/refresh', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                tree_id: userInterfaceId || 'horizon_android_mobile',
+                tree_id: actualTreeId,
               }),
             });
 

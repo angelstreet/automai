@@ -210,9 +210,10 @@ def clear_all_cache():
 def force_refresh_cache(tree_id: str, team_id: str) -> bool:
     """
     Force refresh cache for a specific tree by invalidating and reloading
+    Uses the actual tree_id (UUID) returned from save operation
     
     Args:
-        tree_id: Navigation tree ID
+        tree_id: Navigation tree ID (UUID from database)
         team_id: Team ID for security
         
     Returns:
@@ -222,7 +223,7 @@ def force_refresh_cache(tree_id: str, team_id: str) -> bool:
         # Invalidate existing cache
         invalidate_cache(tree_id, team_id)
         
-        # Try to reload tree data to populate cache
+        # Reload tree data using the actual tree_id
         try:
             from src.lib.supabase.navigation_trees_db import get_navigation_tree
             success, message, tree_data = get_navigation_tree(tree_id, team_id)

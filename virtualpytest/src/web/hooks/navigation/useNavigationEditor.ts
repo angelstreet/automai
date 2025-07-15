@@ -412,6 +412,8 @@ export const useNavigationEditor = () => {
 
             // Force refresh navigation cache after successful save (invalidate + rebuild)
             try {
+              // Note: saveToConfig doesn't return the tree ID, so we use the userinterface_name as fallback
+              // The backend cache system should handle both tree ID and userinterface_name lookups
               const cacheResponse = await fetch('/server/pathfinding/cache/refresh', {
                 method: 'POST',
                 headers: {
