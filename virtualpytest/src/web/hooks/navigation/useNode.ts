@@ -196,8 +196,8 @@ export const useNode = (props?: UseNodeProps) => {
       selectedNode: UINavigationNode,
       _allNodes?: UINavigationNode[],
       shouldUpdateMinimap: boolean = false,
-    ) => {
-      if (!props?.treeId) return;
+    ): Promise<NavigationStep[]> => {
+      if (!props?.treeId) return [];
 
       setIsLoadingPreview(true);
       setNavigationError(null);
@@ -234,13 +234,17 @@ export const useNode = (props?: UseNodeProps) => {
           if (shouldUpdateMinimap) {
             updateNodesWithMinimapIndicators(transitions);
           }
+
+          return transitions;
         } else {
           setNavigationError(result.error || 'Failed to load navigation preview');
+          return [];
         }
       } catch (err) {
         setNavigationError(
           `Failed to load navigation preview: ${err instanceof Error ? err.message : 'Unknown error'}`,
         );
+        return [];
       } finally {
         setIsLoadingPreview(false);
       }
@@ -307,11 +311,6 @@ export const useNode = (props?: UseNodeProps) => {
         // Update current position after successful navigation
         updateCurrentPosition(selectedNode.id, selectedNode.data.label);
 
-        // Set edges to green for successful navigation transitions
-        if (navigationTransitions && navigationTransitions.length > 0) {
-          setNavigationEdgesSuccess(navigationTransitions);
-        }
-
         // Handle node verification results if present
         if (result.verification_results && result.verification_results.length > 0) {
           const verificationSuccess = result.verification_results.every((vr: any) => vr.success);
@@ -323,7 +322,12 @@ export const useNode = (props?: UseNodeProps) => {
         }
 
         // Reload preview with minimap updates to show navigation route
-        await loadNavigationPreview(selectedNode, allNodes, true);
+        const updatedTransitions = await loadNavigationPreview(selectedNode, allNodes, true);
+
+        // Set edges to green for successful navigation transitions using the returned transitions
+        if (updatedTransitions && updatedTransitions.length > 0) {
+          setNavigationEdgesSuccess(updatedTransitions);
+        }
       } catch (error: any) {
         console.error(`[@hook:useNode:executeNavigation] Navigation failed:`, error);
         const errorMessage = error.message || 'Navigation failed';
@@ -331,23 +335,36 @@ export const useNode = (props?: UseNodeProps) => {
         setNavigationError(errorMessage);
         setIsExecuting(false);
 
-        // Set edges to red for failed navigation
-        if (navigationTransitions && navigationTransitions.length > 0) {
-          // Try to extract failed transition index from error message or response
-          let failedTransitionIndex: number | undefined;
+        // Get fresh transitions to determine which one failed
+        try {
+          const failureTransitions = await loadNavigationPreview(selectedNode, allNodes, true);
 
-          // Check if the error contains transition failure information
-          if (error.response?.data?.failed_transition) {
-            failedTransitionIndex = error.response.data.failed_transition - 1; // Convert to 0-based index
-          } else if (error.message?.includes('transition')) {
-            // Try to parse transition number from error message
-            const match = error.message.match(/transition (\d+)/i);
-            if (match) {
-              failedTransitionIndex = parseInt(match[1]) - 1; // Convert to 0-based index
+          if (failureTransitions && failureTransitions.length > 0) {
+            // Try to extract failed transition index from error message or response
+            let failedTransitionIndex: number | undefined;
+
+            // Check if the error contains transition failure information
+            if (error.response?.data?.failed_transition) {
+              failedTransitionIndex = error.response.data.failed_transition - 1; // Convert to 0-based index
+            } else if (error.message?.includes('transition')) {
+              // Try to parse transition number from error message
+              const match = error.message.match(/transition (\d+)/i);
+              if (match) {
+                failedTransitionIndex = parseInt(match[1]) - 1; // Convert to 0-based index
+              }
             }
-          }
 
-          setNavigationEdgesFailure(navigationTransitions, failedTransitionIndex);
+            setNavigationEdgesFailure(failureTransitions, failedTransitionIndex);
+          }
+        } catch (previewError) {
+          console.error(
+            `[@hook:useNode:executeNavigation] Failed to load preview for failure coloring:`,
+            previewError,
+          );
+          // Fallback to using old transitions if preview fails
+          if (navigationTransitions && navigationTransitions.length > 0) {
+            setNavigationEdgesFailure(navigationTransitions);
+          }
         }
       }
     },
