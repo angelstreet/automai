@@ -105,6 +105,36 @@ def populate_cache(tree_id: str, team_id: str, nodes: List[Dict], edges: List[Di
         print(f"[@navigation:cache:populate_cache] Error building graph: {e}")
         return None
 
+def _cache_graph_under_key(tree_id: str, team_id: str, graph: nx.DiGraph, nodes: List[Dict], edges: List[Dict]) -> None:
+    """
+    Cache an already-built graph under a specific key without rebuilding
+    
+    Args:
+        tree_id: Navigation tree ID (name or UUID)
+        team_id: Team ID for security
+        graph: Already built NetworkX graph
+        nodes: Tree nodes data (with resolved verification objects)
+        edges: Tree edges data (with resolved action objects)
+    """
+    cache_key = f"{tree_id}_{team_id}"
+    
+    try:
+        # Cache the NetworkX graph
+        _navigation_graphs_cache[cache_key] = graph
+        _cache_timestamps[cache_key] = datetime.now()
+        
+        # Cache the resolved tree data (nodes and edges with resolved objects)
+        _resolved_tree_data_cache[cache_key] = {
+            'nodes': nodes,  # Resolved nodes with verification objects
+            'edges': edges   # Resolved edges with action objects
+        }
+        
+        print(f"[@navigation:cache:_cache_graph_under_key] Cached existing graph under key: {cache_key}")
+        print(f"[@navigation:cache:_cache_graph_under_key] Graph has {len(graph.nodes)} nodes and {len(graph.edges)} edges")
+        
+    except Exception as e:
+        print(f"[@navigation:cache:_cache_graph_under_key] Error caching graph under key {cache_key}: {e}")
+
 def invalidate_cache(tree_id: str, team_id: str = None):
     """
     Invalidate cache when tree is updated

@@ -561,6 +561,7 @@ def _populate_navigation_cache(tree: Dict, team_id: str):
         invalidate_cache(tree_name, team_id)
         
         # Also invalidate userinterface cache if we can get the name
+        userinterface_name = None
         if userinterface_id:
             try:
                 from src.lib.supabase.userinterface_db import get_userinterface
@@ -704,28 +705,30 @@ def _populate_navigation_cache(tree: Dict, team_id: str):
         
         print(f'[@db:navigation_trees:_populate_navigation_cache] Resolved tree: {len(resolved_nodes)} nodes, {len(resolved_edges)} edges with resolved objects')
         
-        # Populate cache with resolved data
-        populate_cache(tree_id, team_id, resolved_nodes, resolved_edges)
-        populate_cache(tree_name, team_id, resolved_nodes, resolved_edges)
+        # BUILD GRAPH ONCE and cache under multiple keys
+        print(f'[@db:navigation_trees:_populate_navigation_cache] Building graph once for multiple cache keys')
         
-        # CRITICAL: Get userinterface name and populate cache for navigation requests
-        if userinterface_id:
-            try:
-                from src.lib.supabase.userinterface_db import get_userinterface
-                userinterface = get_userinterface(userinterface_id, team_id)
-                if userinterface and userinterface.get('name'):
-                    userinterface_name = userinterface['name']
-                    populate_cache(userinterface_name, team_id, resolved_nodes, resolved_edges)
-                    print(f'[@db:navigation_trees:_populate_navigation_cache] ✅ Auto-cached RESOLVED tree data - ID: {tree_id}, Name: {tree_name}, UserInterface: {userinterface_name}')
-                else:
-                    print(f'[@db:navigation_trees:_populate_navigation_cache] Warning: Could not fetch userinterface name for ID: {userinterface_id}')
-                    print(f'[@db:navigation_trees:_populate_navigation_cache] ✅ Auto-cached RESOLVED tree data - ID: {tree_id}, Name: {tree_name}')
-            except Exception as ui_error:
-                print(f'[@db:navigation_trees:_populate_navigation_cache] Error fetching userinterface name: {ui_error}')
+        # Build the graph once
+        graph = populate_cache(tree_id, team_id, resolved_nodes, resolved_edges)
+        
+        if graph:
+            # Cache the same graph under additional keys without rebuilding
+            from src.web.cache.navigation_cache import _cache_graph_under_key
+            
+            # Cache under tree name
+            _cache_graph_under_key(tree_name, team_id, graph, resolved_nodes, resolved_edges)
+            print(f'[@db:navigation_trees:_populate_navigation_cache] ✅ Cached graph under tree name: {tree_name}')
+            
+            # Cache under userinterface name if available
+            if userinterface_name:
+                _cache_graph_under_key(userinterface_name, team_id, graph, resolved_nodes, resolved_edges)
+                print(f'[@db:navigation_trees:_populate_navigation_cache] ✅ Cached graph under userinterface name: {userinterface_name}')
+                print(f'[@db:navigation_trees:_populate_navigation_cache] ✅ Auto-cached RESOLVED tree data - ID: {tree_id}, Name: {tree_name}, UserInterface: {userinterface_name}')
+            else:
+                print(f'[@db:navigation_trees:_populate_navigation_cache] Warning: No userinterface name found')
                 print(f'[@db:navigation_trees:_populate_navigation_cache] ✅ Auto-cached RESOLVED tree data - ID: {tree_id}, Name: {tree_name}')
         else:
-            print(f'[@db:navigation_trees:_populate_navigation_cache] Warning: No userinterface_id found for tree: {tree_id}')
-            print(f'[@db:navigation_trees:_populate_navigation_cache] ✅ Auto-cached RESOLVED tree data - ID: {tree_id}, Name: {tree_name}')
+            print(f'[@db:navigation_trees:_populate_navigation_cache] ❌ Failed to build graph for tree: {tree_id}')
             
     except Exception as e:
         print(f'[@db:navigation_trees:_populate_navigation_cache] Error populating cache: {e}')
