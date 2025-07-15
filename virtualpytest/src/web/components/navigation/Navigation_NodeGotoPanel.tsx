@@ -287,7 +287,9 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           {!nodeHook.isLoadingPreview &&
             (!nodeHook.navigationTransitions || nodeHook.navigationTransitions.length === 0) && (
               <Typography variant="body2" color="text.secondary">
-                No navigation path available
+                {currentNodeId === selectedNode.id
+                  ? 'Already at destination'
+                  : 'No navigation path available'}
               </Typography>
             )}
 
@@ -410,7 +412,11 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           fullWidth
           sx={{ fontSize: '0.875rem' }}
         >
-          {nodeHook.isExecuting ? 'Executing...' : 'Run'}
+          {nodeHook.isExecuting
+            ? 'Executing...'
+            : currentNodeId === selectedNode.id
+              ? 'Already at destination'
+              : 'Run'}
         </Button>
 
         {nodeHook.isExecuting && (
