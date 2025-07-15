@@ -19,6 +19,7 @@ import {
 import React, { useEffect, useMemo } from 'react';
 
 import { useNode } from '../../hooks/navigation/useNode';
+import { useValidationColors } from '../../hooks/validation/useValidationColors';
 import { UINavigationNode } from '../../types/pages/Navigation_Types';
 import { getZIndex } from '../../utils/zIndexUtils';
 
@@ -53,6 +54,9 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     treeId,
     currentNodeId,
   });
+
+  // Get validation colors hook for resetting edge colors
+  const { resetNavigationEdgeColors } = useValidationColors();
 
   // Memoize the functions we need to avoid recreating them on every render
   const { clearNavigationMessages, loadNavigationPreview } = useMemo(
@@ -388,7 +392,11 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
               <PlayArrowIcon />
             )
           }
-          onClick={() => nodeHook.executeNavigation(selectedNode, nodes)}
+          onClick={() => {
+            // Reset edge colors before starting new navigation
+            resetNavigationEdgeColors();
+            nodeHook.executeNavigation(selectedNode, nodes);
+          }}
           disabled={
             nodeHook.isExecuting ||
             nodeHook.isLoadingPreview ||
@@ -396,8 +404,8 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             nodeHook.navigationTransitions.length === 0 ||
             nodeHook.navigationError !== null ||
             // Disable if any transition has no actions defined
-            nodeHook.navigationTransitions.some((transition: any) => 
-              !transition.actions || transition.actions.length === 0
+            nodeHook.navigationTransitions.some(
+              (transition: any) => !transition.actions || transition.actions.length === 0,
             )
           }
           fullWidth

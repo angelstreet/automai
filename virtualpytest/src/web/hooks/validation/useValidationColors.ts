@@ -437,6 +437,70 @@ export const useValidationColors = (edges?: UINavigationEdge[]) => {
     loggedNodesRef.current.clear();
   }, []);
 
+  // Set edges to green for successful navigation transitions
+  const setNavigationEdgesSuccess = useCallback(
+    (navigationTransitions: any[]) => {
+      if (!navigationTransitions || navigationTransitions.length === 0) return;
+
+      navigationTransitions.forEach((transition: any) => {
+        const edgeId = `${transition.from_node_id}-${transition.to_node_id}`;
+
+        // Set edge status to high (green) for successful navigation
+        edgeValidationStatus.set(edgeId, {
+          status: 'high',
+          confidence: 1.0,
+          lastTested: new Date(),
+        });
+      });
+    },
+    [edgeValidationStatus],
+  );
+
+  // Set edges to red for failed navigation transitions
+  const setNavigationEdgesFailure = useCallback(
+    (navigationTransitions: any[], failedTransitionIndex?: number) => {
+      if (!navigationTransitions || navigationTransitions.length === 0) return;
+
+      navigationTransitions.forEach((transition: any, index: number) => {
+        const edgeId = `${transition.from_node_id}-${transition.to_node_id}`;
+
+        if (failedTransitionIndex !== undefined) {
+          // If we know which transition failed, color accordingly
+          if (index < failedTransitionIndex) {
+            // Transitions before the failed one were successful (green)
+            edgeValidationStatus.set(edgeId, {
+              status: 'high',
+              confidence: 1.0,
+              lastTested: new Date(),
+            });
+          } else if (index === failedTransitionIndex) {
+            // The failed transition (red)
+            edgeValidationStatus.set(edgeId, {
+              status: 'low',
+              confidence: 0.0,
+              lastTested: new Date(),
+            });
+          }
+          // Transitions after the failed one remain unchanged (grey)
+        } else {
+          // If we don't know which specific transition failed, mark all as failed (red)
+          edgeValidationStatus.set(edgeId, {
+            status: 'low',
+            confidence: 0.0,
+            lastTested: new Date(),
+          });
+        }
+      });
+    },
+    [edgeValidationStatus],
+  );
+
+  // Reset navigation edge colors (set to untested/grey)
+  const resetNavigationEdgeColors = useCallback(() => {
+    // Clear all edge validation status to reset to grey
+    edgeValidationStatus.clear();
+  }, [edgeValidationStatus]);
+
   // Memoized values for performance
   const validationState = useMemo(
     () => ({
@@ -455,7 +519,7 @@ export const useValidationColors = (edges?: UINavigationEdge[]) => {
       clearStaleValidationResults();
       staleCheckPerformedRef.current = true;
     }
-  }, []); // Empty dependency array - only run once on mount
+  }, [clearStaleValidationResults]); // Fixed: Added missing dependency
 
   // Effect to clear logged nodes when validation state changes significantly
   useEffect(() => {
@@ -487,5 +551,10 @@ export const useValidationColors = (edges?: UINavigationEdge[]) => {
 
     // Clear stale validation results
     clearStaleValidationResults,
+
+    // Navigation edge coloring
+    setNavigationEdgesSuccess,
+    setNavigationEdgesFailure,
+    resetNavigationEdgeColors,
   };
 };

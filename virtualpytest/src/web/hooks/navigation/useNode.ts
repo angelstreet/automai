@@ -10,6 +10,7 @@ import {
   NavigationPreviewResponse,
   NavigationExecuteResponse,
 } from '../../types/pages/Navigation_Types';
+import { useValidationColors } from '../validation/useValidationColors';
 
 export interface UseNodeProps {
   selectedHost?: Host;
@@ -23,6 +24,8 @@ export const useNode = (props?: UseNodeProps) => {
   const { getModelReferences, referencesLoading } = useDeviceData();
   const { currentNodeId, updateCurrentPosition, updateNodesWithMinimapIndicators } =
     useNavigation();
+  const { setNavigationEdgesSuccess, setNavigationEdgesFailure, resetNavigationEdgeColors } =
+    useValidationColors();
 
   // Get the selected device from the host's devices array
   const selectedDevice = useMemo(() => {
@@ -249,6 +252,9 @@ export const useNode = (props?: UseNodeProps) => {
       setIsExecuting(true);
       setNavigationError(null);
 
+      // Reset edge colors to grey before starting new navigation
+      resetNavigationEdgeColors();
+
       const startTime = Date.now();
 
       try {
@@ -292,6 +298,11 @@ export const useNode = (props?: UseNodeProps) => {
         // Update current position after successful navigation
         updateCurrentPosition(selectedNode.id, selectedNode.data.label);
 
+        // Set edges to green for successful navigation transitions
+        if (navigationTransitions && navigationTransitions.length > 0) {
+          setNavigationEdgesSuccess(navigationTransitions);
+        }
+
         // Reload preview with minimap updates to show navigation route
         await loadNavigationPreview(selectedNode, allNodes, true);
       } catch (error: any) {
@@ -300,6 +311,25 @@ export const useNode = (props?: UseNodeProps) => {
         setExecutionMessage(`Navigation failed: ${errorMessage}`);
         setNavigationError(errorMessage);
         setIsExecuting(false);
+
+        // Set edges to red for failed navigation
+        if (navigationTransitions && navigationTransitions.length > 0) {
+          // Try to extract failed transition index from error message or response
+          let failedTransitionIndex: number | undefined;
+
+          // Check if the error contains transition failure information
+          if (error.response?.data?.failed_transition) {
+            failedTransitionIndex = error.response.data.failed_transition - 1; // Convert to 0-based index
+          } else if (error.message?.includes('transition')) {
+            // Try to parse transition number from error message
+            const match = error.message.match(/transition (\d+)/i);
+            if (match) {
+              failedTransitionIndex = parseInt(match[1]) - 1; // Convert to 0-based index
+            }
+          }
+
+          setNavigationEdgesFailure(navigationTransitions, failedTransitionIndex);
+        }
       }
     },
     [
@@ -309,6 +339,10 @@ export const useNode = (props?: UseNodeProps) => {
       currentNodeId,
       updateCurrentPosition,
       loadNavigationPreview,
+      navigationTransitions,
+      resetNavigationEdgeColors,
+      setNavigationEdgesSuccess,
+      setNavigationEdgesFailure,
     ],
   );
 
