@@ -759,8 +759,8 @@ class ADBUtils:
                 print(f"[@lib:adbUtils:smart_element_search] {error_msg}")
                 return False, [], error_msg
             
-            # Convert search term to lowercase for case-insensitive comparison
-            search_lower = search_term.lower()
+            # Convert search term to lowercase for case-insensitive comparison and strip spaces
+            search_lower = search_term.strip().lower()
             matches = []
             
             print(f"[@lib:adbUtils:smart_element_search] Searching {len(elements)} elements for '{search_term}' (case-insensitive)")
@@ -859,7 +859,7 @@ class ADBUtils:
                 for i, term in enumerate(terms):
                     print(f"[@lib:adbUtils:check_element_exists] Attempt {i+1}/{len(terms)}: Searching for '{term}'")
                     
-                    success, matches, error = self.smart_element_search(device_id, term)
+                    success, matches, error = self.smart_element_search(device_id, term.strip())
                     
                     if success and matches:
                         # Return the first match as AndroidElement
