@@ -219,11 +219,8 @@ export const useNode = (props?: UseNodeProps) => {
       setNavigationError(null);
 
       try {
-        // Determine starting node: use context currentNodeId, then props currentNodeId, then find home root node
-        let startingNodeId = currentNodeId || props.currentNodeId;
-        if (!startingNodeId && allNodes) {
-          startingNodeId = findHomeRootNode(allNodes);
-        }
+        // Use only context currentNodeId - no fallbacks
+        const startingNodeId = currentNodeId;
 
         const url = new URL(
           `/server/pathfinding/preview/${props.treeId}/${selectedNode.id}`,
@@ -264,17 +261,11 @@ export const useNode = (props?: UseNodeProps) => {
         setIsLoadingPreview(false);
       }
     },
-    [
-      props?.treeId,
-      currentNodeId,
-      props?.currentNodeId,
-      findHomeRootNode,
-      updateNodesWithMinimapIndicators,
-    ],
+    [props?.treeId, currentNodeId, updateNodesWithMinimapIndicators],
   );
 
   /**
-   * Execute navigation for NodeGotoPanel
+   * Execute navigation for NodeGotoPanel using standardized action/verification execution
    */
   const executeNavigation = useCallback(
     async (selectedNode: UINavigationNode, allNodes?: UINavigationNode[]) => {
@@ -284,75 +275,149 @@ export const useNode = (props?: UseNodeProps) => {
       setNavigationError(null);
 
       try {
-        // Determine starting node: use context currentNodeId, then props currentNodeId, then find home root node
-        let startingNodeId = currentNodeId || props.currentNodeId;
-        if (!startingNodeId && allNodes) {
-          startingNodeId = findHomeRootNode(allNodes);
-        }
+        // Use only context currentNodeId - no fallbacks
+        const startingNodeId = currentNodeId;
 
-        const requestBody: any = {
-          execute: true,
-        };
-
-        // Only add current_node_id if we have a valid starting node
-        if (startingNodeId) {
-          requestBody.current_node_id = startingNodeId;
-        }
-
-        const response = await fetch(
-          `/server/pathfinding/navigate/${props.treeId}/${selectedNode.id}`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody),
-          },
+        // 1. Get navigation path using existing pathfinding preview
+        const url = new URL(
+          `/server/pathfinding/preview/${props.treeId}/${selectedNode.id}`,
+          window.location.origin,
         );
 
-        const result: NavigationExecuteResponse = await response.json();
-
-        if (result.success) {
-          let successMessage = 'Navigation completed successfully!';
-          if (result.steps_executed && result.total_steps) {
-            successMessage = `Executed ${result.steps_executed}/${result.total_steps} steps in ${result.execution_time?.toFixed(2) || 0}s`;
-          }
-          setExecutionMessage(successMessage);
-          setIsExecuting(false);
-
-          // Update current position after successful navigation
-          updateCurrentPosition(selectedNode.id, selectedNode.data.label);
-
-          // Reload preview with minimap updates to show navigation route
-          await loadNavigationPreview(selectedNode, allNodes, true);
-        } else {
-          const errorMessage = result.error || 'Navigation failed';
-          setExecutionMessage(`Navigation failed: ${errorMessage}`);
-          setIsExecuting(false);
-        }
-      } catch (err) {
-        let errorMessage = `Navigation execution failed: ${err instanceof Error ? err.message : 'Unknown error'}`;
-
-        if (err instanceof Error) {
-          if (err.message.includes('fetch')) {
-            errorMessage =
-              'Unable to connect to navigation service. Please check if the backend is running.';
-          } else if (err.message.includes('timeout')) {
-            errorMessage =
-              'Navigation request timed out. The operation may take longer than expected.';
-          }
+        if (startingNodeId) {
+          url.searchParams.append('current_node_id', startingNodeId);
         }
 
-        setNavigationError(errorMessage);
+        const previewResponse = await fetch(url.toString());
+        const previewResult = await previewResponse.json();
+
+        if (!previewResult.success) {
+          throw new Error(previewResult.error || 'Failed to get navigation path');
+        }
+
+        const transitions = previewResult.transitions || [];
+
+        if (transitions.length === 0) {
+          throw new Error('No navigation path available');
+        }
+
+        console.log(
+          `[@hook:useNode:executeNavigation] Found ${transitions.length} transitions to execute`,
+        );
+
+        // 2. Execute each transition using standardized action executor
+        let transitionsExecuted = 0;
+        let actionsExecuted = 0;
+        const totalActions = transitions.reduce((sum, t) => sum + (t.actions?.length || 0), 0);
+
+        for (let i = 0; i < transitions.length; i++) {
+          const transition = transitions[i];
+          const actions = transition.actions || [];
+          const retryActions = transition.retryActions || [];
+          const finalWaitTime = transition.finalWaitTime || 2000;
+
+          console.log(
+            `[@hook:useNode:executeNavigation] Executing transition ${i + 1}/${transitions.length}: ${transition.description}`,
+          );
+
+          if (actions.length > 0) {
+            // Use standardized action execution via API (same as useAction hook)
+            const actionResponse = await fetch('/server/action/executeBatch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                host: props.selectedHost,
+                device_id: props.selectedDeviceId,
+                actions: actions,
+                retry_actions: retryActions,
+                final_wait_time: finalWaitTime,
+              }),
+            });
+
+            const actionResult = await actionResponse.json();
+
+            if (!actionResult.success) {
+              throw new Error(
+                `Action execution failed in transition ${i + 1}: ${actionResult.error || 'Unknown error'}`,
+              );
+            }
+
+            actionsExecuted += actionResult.passed_count || 0;
+            console.log(
+              `[@hook:useNode:executeNavigation] Transition ${i + 1} actions completed: ${actionResult.passed_count}/${actions.length} passed`,
+            );
+          }
+
+          transitionsExecuted++;
+        }
+
+        // 3. Execute target node verifications using standardized verification executor
+        const nodeVerifications = selectedNode.data.verifications || [];
+        let verificationResults = [];
+
+        if (nodeVerifications.length > 0) {
+          console.log(
+            `[@hook:useNode:executeNavigation] Executing ${nodeVerifications.length} target node verifications`,
+          );
+
+          // Get device model for verification context
+          const device = props.selectedHost?.devices?.find(
+            (d) => d.device_id === props.selectedDeviceId,
+          );
+          const deviceModel = device?.device_model || 'unknown';
+
+          // Use standardized verification execution via API (same as useVerification hook)
+          const verificationResponse = await fetch('/server/verification/executeBatch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              host: props.selectedHost,
+              device_id: props.selectedDeviceId,
+              verifications: nodeVerifications,
+              model: deviceModel,
+            }),
+          });
+
+          const verificationResult = await verificationResponse.json();
+          verificationResults = verificationResult.results || [];
+
+          if (!verificationResult.success) {
+            throw new Error(
+              `Target node verification failed: ${verificationResult.error || 'Unknown error'}`,
+            );
+          }
+
+          console.log(
+            `[@hook:useNode:executeNavigation] Target node verifications completed: ${verificationResult.passed_count}/${nodeVerifications.length} passed`,
+          );
+        }
+
+        // 4. Navigation completed successfully
+        const successMessage = `Navigation completed successfully! Executed ${transitionsExecuted}/${transitions.length} transitions, ${actionsExecuted}/${totalActions} actions`;
+        setExecutionMessage(successMessage);
+        setIsExecuting(false);
+
+        // Update current position after successful navigation
+        updateCurrentPosition(selectedNode.id, selectedNode.data.label);
+
+        // Reload preview with minimap updates to show navigation route
+        await loadNavigationPreview(selectedNode, allNodes, true);
+
+        console.log(`[@hook:useNode:executeNavigation] Navigation completed successfully`);
+      } catch (error: any) {
+        console.error(`[@hook:useNode:executeNavigation] Navigation failed:`, error);
+        const errorMessage = error.message || 'Navigation failed';
+        setExecutionMessage(`Navigation failed: ${errorMessage}`);
+        setIsExecuting(false);
       }
     },
     [
       props?.treeId,
+      props?.selectedHost,
+      props?.selectedDeviceId,
       currentNodeId,
-      props?.currentNodeId,
-      findHomeRootNode,
-      loadNavigationPreview,
       updateCurrentPosition,
+      loadNavigationPreview,
     ],
   );
 

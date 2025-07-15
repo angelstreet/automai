@@ -109,23 +109,31 @@ class MockMCPServer:
             src_path = Path(__file__).parent.parent.parent
             sys.path.insert(0, str(src_path))
             
-            from navigation.navigation_executor import execute_navigation_to_node
+            from src.lib.navigation.navigation_execution import NavigationExecutor
+            from src.utils.app_utils import get_team_id
             
             tree_id = params.get("tree_id", "default_tree")
             target_node_id = params.get("target_node_id", "home")
-            team_id = params.get("team_id", "default_team")
+            team_id = params.get("team_id") or get_team_id()
             current_node_id = params.get("current_node_id")
             
-            success = execute_navigation_to_node(
-                tree_id=tree_id,
-                target_node_id=target_node_id,
-                team_id=team_id,
-                current_node_id=current_node_id
-            )
+            # Create minimal host configuration for MCP execution
+            host = {"host_name": "mcp_host", "device_model": "MCP_Interface"}
+            
+            # Use the new NavigationExecutor
+            executor = NavigationExecutor(host, None, team_id)
+            result = executor.execute_navigation(tree_id, target_node_id, current_node_id)
+            
+            success = result.get('success', False)
+            message = result.get('message', f"Navigation to {target_node_id} {'completed' if success else 'failed'}")
             
             return {
-                "success": success,
-                "message": f"Navigation to {target_node_id} {'completed' if success else 'failed'}"
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Navigation result: {message}"
+                    }
+                ]
             }
             
         except Exception as e:

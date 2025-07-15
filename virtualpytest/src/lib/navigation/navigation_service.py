@@ -1,16 +1,85 @@
 """
 Navigation Service
 
-High-level service for navigation operations.
-Provides a clean interface for all navigation functionality including:
-- Navigation execution with verification
-- Navigation previews and pathfinding
-- Take control session management
-- Cache management
+This module provides service-level navigation functionality that can be used by:
+- API routes
+- Internal services
+- Background tasks
+
+It wraps the NavigationExecutor to provide additional service-level features.
 """
 
 import time
-from typing import Dict, List
+from typing import Dict, List, Optional, Any
+from src.lib.navigation.navigation_execution import NavigationExecutor
+from src.utils.app_utils import get_team_id
+
+
+def execute_navigation_with_verification(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> Dict[str, Any]:
+    """
+    Execute navigation with verification using the new NavigationExecutor
+    
+    Args:
+        tree_id: Navigation tree ID
+        target_node_id: Target node to navigate to
+        team_id: Team ID for security
+        current_node_id: Optional current node ID
+        
+    Returns:
+        Dict with execution results
+    """
+    try:
+        # Create minimal host configuration for service execution
+        host = {"host_name": "service_host", "device_model": "service"}
+        
+        # Use the new NavigationExecutor
+        executor = NavigationExecutor(host, None, team_id)
+        result = executor.execute_navigation(tree_id, target_node_id, current_node_id)
+        
+        return result
+        
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Navigation service error: {str(e)}',
+            'tree_id': tree_id,
+            'target_node_id': target_node_id,
+            'current_node_id': current_node_id
+        }
+
+
+def get_navigation_preview(tree_id: str, target_node_id: str, team_id: str, current_node_id: str = None) -> Dict[str, Any]:
+    """
+    Get navigation preview using the new NavigationExecutor
+    
+    Args:
+        tree_id: Navigation tree ID
+        target_node_id: Target node to navigate to
+        team_id: Team ID for security
+        current_node_id: Optional current node ID
+        
+    Returns:
+        Dict with preview information
+    """
+    try:
+        # Create minimal host configuration for service preview
+        host = {"host_name": "service_host", "device_model": "service"}
+        
+        # Use the new NavigationExecutor
+        executor = NavigationExecutor(host, None, team_id)
+        result = executor.get_navigation_preview(tree_id, target_node_id, current_node_id)
+        
+        return result
+        
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Navigation preview service error: {str(e)}',
+            'tree_id': tree_id,
+            'target_node_id': target_node_id,
+            'current_node_id': current_node_id
+        }
+
 
 class NavigationService:
     """
@@ -48,8 +117,6 @@ class NavigationService:
             
             if execute:
                 # Execute navigation with verification
-                from src.lib.navigation.navigation_executor import execute_navigation_with_verification
-                
                 result = execute_navigation_with_verification(tree_id, target_node_id, team_id, current_node_id)
                 
                 # Map error_message to error field for consistent API response
@@ -66,8 +133,6 @@ class NavigationService:
                 return result
             else:
                 # Return navigation preview
-                from src.lib.navigation.navigation_executor import get_navigation_preview
-                
                 preview = get_navigation_preview(tree_id, target_node_id, team_id, current_node_id)
                 preview.update({
                     'success': True,
