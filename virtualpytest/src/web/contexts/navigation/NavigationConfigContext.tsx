@@ -408,6 +408,34 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           // Update initial state to reflect saved state
           state.setInitialState({ nodes: [...state.nodes], edges: [...state.edges] });
           state.setHasUnsavedChanges(false);
+
+          // Invalidate navigation cache after successful save
+          try {
+            const cacheResponse = await fetch('/server/pathfinding/cache/clear', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                tree_id: userInterfaceId || 'horizon_android_mobile',
+              }),
+            });
+
+            if (cacheResponse.ok) {
+              console.log(
+                '[@context:NavigationConfigProvider:saveToConfig] Navigation cache invalidated successfully',
+              );
+            } else {
+              console.warn(
+                '[@context:NavigationConfigProvider:saveToConfig] Failed to invalidate navigation cache',
+              );
+            }
+          } catch (cacheError) {
+            console.warn(
+              '[@context:NavigationConfigProvider:saveToConfig] Cache invalidation failed:',
+              cacheError,
+            );
+          }
         } else {
           console.error('[@context:NavigationConfigProvider:saveToConfig] Save failed:', data);
           throw new Error(data.message || 'Failed to save navigation tree to database');

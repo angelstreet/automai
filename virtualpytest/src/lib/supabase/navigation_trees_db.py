@@ -331,6 +331,19 @@ def save_navigation_tree(userinterface_id: str, team_id: str, tree_data: Dict,
             print(f'[@db:navigation_trees:save_navigation_tree] Created history version {version_number}')
         
         print(f'[@db:navigation_trees:save_navigation_tree] Successfully saved tree: {tree_record["id"]}')
+        
+        # Invalidate navigation cache after successful save
+        try:
+            from src.web.cache.navigation_cache import invalidate_cache
+            # Use the tree ID as the cache key
+            tree_cache_id = tree_record["id"]
+            invalidate_cache(tree_cache_id, team_id)
+            print(f'[@db:navigation_trees:save_navigation_tree] Cache invalidated for tree: {tree_cache_id}')
+        except ImportError:
+            print(f'[@db:navigation_trees:save_navigation_tree] Cache invalidation not available')
+        except Exception as cache_error:
+            print(f'[@db:navigation_trees:save_navigation_tree] Cache invalidation failed: {cache_error}')
+        
         return True, "Navigation tree saved successfully", tree_record
         
     except Exception as e:

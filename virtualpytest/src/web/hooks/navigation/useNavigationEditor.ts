@@ -409,6 +409,34 @@ export const useNavigationEditor = () => {
 
             await saveToConfig(navigation.userInterface.id, stateForSaving);
             console.log('[@useNavigationEditor:handleEdgeFormSubmit] Tree saved successfully');
+
+            // Invalidate navigation cache after successful save
+            try {
+              const cacheResponse = await fetch('/server/pathfinding/cache/clear', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  tree_id: navigation.userInterface.userinterface_name || 'horizon_android_mobile',
+                }),
+              });
+
+              if (cacheResponse.ok) {
+                console.log(
+                  '[@useNavigationEditor:handleEdgeFormSubmit] Navigation cache invalidated successfully',
+                );
+              } else {
+                console.warn(
+                  '[@useNavigationEditor:handleEdgeFormSubmit] Failed to invalidate navigation cache',
+                );
+              }
+            } catch (cacheError) {
+              console.warn(
+                '[@useNavigationEditor:handleEdgeFormSubmit] Cache invalidation failed:',
+                cacheError,
+              );
+            }
           } catch (saveError) {
             console.error(
               '[@useNavigationEditor:handleEdgeFormSubmit] Failed to auto-save tree:',
