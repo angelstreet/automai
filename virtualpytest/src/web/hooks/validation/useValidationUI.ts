@@ -5,204 +5,190 @@
  * built on top of the base useValidation hook.
  */
 
-import { useCallback } from 'react';
-
+import { useState, useCallback } from 'react';
 import { useValidationStore } from '../../components/store/validationStore';
-import { ValidationEvents } from '../../components/validation/ValidationEventListener';
-import { ValidationProgress } from '../../types/features/Validation_Types';
+import { useHostManager } from '../useHostManager';
+import { ValidationPreview, ValidationResults } from '../../types/features/Validation_Types';
 
-import { useValidation } from './useValidation';
+interface ValidationResult {
+  success: boolean;
+  summary: {
+    totalTested: number;
+    successful: number;
+    failed: number;
+    skipped: number;
+    overallHealth: 'excellent' | 'good' | 'fair' | 'poor';
+    healthPercentage: number;
+  };
+  results: Array<{
+    from_node: string;
+    to_node: string;
+    from_name: string;
+    to_name: string;
+    success: boolean;
+    skipped: boolean;
+    step_number: number;
+    total_steps: number;
+    error_message?: string;
+    execution_time: number;
+    transitions_executed: number;
+    total_transitions: number;
+    actions_executed: number;
+    total_actions: number;
+    verification_results: Array<any>;
+  }>;
+}
 
-export function useValidationUI(treeId: string, selectedHost?: any, selectedDeviceId?: string) {
+export const useValidationUI = (treeId: string) => {
+  const { selectedHost, selectedDeviceId } = useHostManager();
   const {
     isValidating,
-    showPreview,
-    showResults,
-    showProgress,
-    previewData,
     results,
-    lastResult,
-    progress,
+    setValidating,
+    setResults,
     setShowPreview,
     setShowResults,
-    setShowProgress,
-    setPreviewData,
-    setResults,
-    setProgress,
-    setValidating,
-    showLastResult,
-    resetValidationColors,
+    reset,
   } = useValidationStore();
 
-  const {
-    getPreview,
-    runValidation: baseRunValidation,
-    exportReport: baseExportReport,
-    updateProgressCallback,
-    currentSessionId,
-  } = useValidation();
+  const [preview, setPreview] = useState<ValidationPreview | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const openPreview = useCallback(async () => {
-    console.log(`[@hook:useValidationUI] Opening preview for tree: ${treeId}`);
+  /**
+   * Load validation preview
+   */
+  const loadPreview = useCallback(async () => {
+    if (!treeId) return;
 
+    setIsLoadingPreview(true);
     try {
-      const preview = await getPreview(treeId);
-      setPreviewData(preview);
-      setShowPreview(true);
+      const response = await fetch(`/server/validation/preview/${treeId}`);
+      const data = await response.json();
 
-      console.log(`[@hook:useValidationUI] Preview opened successfully`);
+      if (data.success) {
+        setPreview(data);
+      } else {
+        console.error('Failed to load validation preview:', data.error);
+        setValidationError(data.error || 'Failed to load validation preview');
+      }
     } catch (error) {
-      console.error('[@hook:useValidationUI] Failed to get preview:', error);
-      // Could add toast notification here
+      console.error('Error loading validation preview:', error);
+      setValidationError(error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsLoadingPreview(false);
     }
-  }, [treeId, getPreview, setPreviewData, setShowPreview]);
+  }, [treeId]);
 
+  /**
+   * Run validation using NavigationExecutor for each edge
+   */
   const runValidation = useCallback(
-    async (skippedEdges?: Array<{ from: string; to: string }>) => {
-      console.log(
-        `[@hook:useValidationUI] Starting validation for tree: ${treeId}`,
-        skippedEdges ? `with ${skippedEdges.length} skipped edges` : '',
-      );
-
-      // Reset all validation colors to grey (untested) before starting validation
-      console.log(
-        `[@hook:useValidationUI] Resetting all validation colors to grey (untested) before starting validation`,
-      );
-      resetValidationColors();
+    async (skippedEdges: string[] = []) => {
+      if (!treeId || !selectedHost) {
+        setValidationError('Tree ID and host are required');
+        return;
+      }
 
       setValidating(true);
-      setShowPreview(false);
-
-      // Show progress immediately when validation starts
-      setShowProgress(true);
-      setProgress({
-        currentStep: 1,
-        totalSteps: previewData?.totalEdges || 1,
-        currentNode: '',
-        currentNodeName: 'Starting validation...',
-        currentEdgeFrom: 'ENTRY',
-        currentEdgeTo: 'home',
-        currentEdgeFromName: 'ENTRY',
-        currentEdgeToName: 'home',
-        currentEdgeStatus: 'testing',
-        retryAttempt: 0,
-        status: 'running',
-        completedNodes: [],
-      });
+      setValidationError(null);
+      reset();
 
       try {
-        // Set up progress callback for real-time updates
-        updateProgressCallback((progressData: ValidationProgress) => {
-          console.log(`[@hook:useValidationUI] Real-time progress update:`, progressData);
-          setProgress(progressData);
+        console.log(`[@hook:useValidationUI] Starting validation for tree ${treeId}`);
+        console.log(
+          `[@hook:useValidationUI] Host: ${selectedHost.host_name}, Device: ${selectedDeviceId}`,
+        );
+        console.log(`[@hook:useValidationUI] Skipped edges: ${skippedEdges.length}`);
+
+        const response = await fetch(`/server/validation/run/${treeId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: selectedHost,
+            device_id: selectedDeviceId,
+            skipped_edges: skippedEdges,
+          }),
         });
 
-        // Run actual validation with real-time progress updates and optional skipped edges
-        const results = await baseRunValidation(
-          treeId,
-          skippedEdges,
-          selectedHost,
-          selectedDeviceId,
-        );
-        setResults(results);
+        const result: ValidationResult = await response.json();
 
-        // Hide progress and show results
-        setShowProgress(false);
-        setShowResults(true);
+        if (result.success) {
+          console.log(`[@hook:useValidationUI] Validation completed successfully`);
+          console.log(
+            `[@hook:useValidationUI] Results: ${result.summary.successful}/${result.summary.totalTested} successful`,
+          );
 
-        // Dispatch completion event
-        window.dispatchEvent(new Event(ValidationEvents.VALIDATION_COMPLETE));
+          // Convert to expected ValidationResults format
+          const validationResults: ValidationResults = {
+            treeId,
+            summary: {
+              totalNodes: result.summary.totalTested,
+              totalEdges: result.summary.totalTested,
+              validNodes: result.summary.successful,
+              errorNodes: result.summary.failed,
+              skippedEdges: result.summary.skipped,
+              overallHealth: result.summary.overallHealth,
+              executionTime: result.results.reduce((sum, r) => sum + r.execution_time, 0),
+            },
+            nodeResults: [], // Will be derived from edge results if needed
+            edgeResults: result.results.map((result) => ({
+              from: result.from_node,
+              to: result.to_node,
+              fromName: result.from_name,
+              toName: result.to_name,
+              success: result.success,
+              skipped: result.skipped,
+              retryAttempts: 0,
+              errors: result.error_message ? [result.error_message] : [],
+              actionsExecuted: result.actions_executed,
+              totalActions: result.total_actions,
+              executionTime: result.execution_time,
+            })),
+          };
 
-        console.log(`[@hook:useValidationUI] Validation completed successfully`);
+          setResults(validationResults);
+          setShowResults(true);
+        } else {
+          console.error('[@hook:useValidationUI] Validation failed:', result);
+          setValidationError('Validation failed');
+        }
       } catch (error) {
-        console.error('[@hook:useValidationUI] Validation failed:', error);
-        setShowProgress(false);
-        // Could add toast notification here
+        console.error('[@hook:useValidationUI] Error running validation:', error);
+        setValidationError(error instanceof Error ? error.message : 'Unknown error');
       } finally {
-        // Clear progress callback
-        updateProgressCallback(null);
         setValidating(false);
       }
     },
-    [
-      treeId,
-      baseRunValidation,
-      updateProgressCallback,
-      setValidating,
-      setShowPreview,
-      setShowProgress,
-      setProgress,
-      setResults,
-      setShowResults,
-      previewData,
-      resetValidationColors,
-      selectedHost,
-      selectedDeviceId,
-    ],
+    [treeId, selectedHost, selectedDeviceId, setValidating, setResults, setShowResults, reset],
   );
 
-  const exportReport = useCallback(
-    async (format: 'json' | 'csv' = 'json') => {
-      console.log(
-        `[@hook:useValidationUI] Exporting report for tree: ${treeId}, format: ${format}`,
-      );
-
-      try {
-        const blob = await baseExportReport(treeId, format);
-        const filename = `validation-${treeId}.${format}`;
-
-        // Create download link
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        console.log(`[@hook:useValidationUI] Report exported successfully`);
-      } catch (error) {
-        console.error('[@hook:useValidationUI] Export failed:', error);
-        // Could add toast notification here
-      }
-    },
-    [treeId, baseExportReport],
-  );
-
-  const closePreview = useCallback(() => {
-    console.log(`[@hook:useValidationUI] Closing preview`);
-    setShowPreview(false);
-  }, [setShowPreview]);
-
-  const closeResults = useCallback(() => {
-    console.log(`[@hook:useValidationUI] Closing results`);
-    setShowResults(false);
-  }, [setShowResults]);
-
-  const viewLastResult = useCallback(() => {
-    console.log(`[@hook:useValidationUI] Viewing last result`);
-    showLastResult();
-  }, [showLastResult]);
+  /**
+   * Clear validation state
+   */
+  const clearValidation = useCallback(() => {
+    reset();
+    setPreview(null);
+    setValidationError(null);
+  }, [reset]);
 
   return {
     // State
     isValidating,
-    showPreview,
-    showResults,
-    showProgress,
-    previewData,
-    results,
-    lastResult,
-    progress,
-    currentSessionId,
+    validationResults: results,
+    validationError,
+    preview,
+    isLoadingPreview,
 
     // Actions
-    openPreview,
+    loadPreview,
     runValidation,
-    exportReport,
-    closePreview,
-    closeResults,
-    viewLastResult,
+    clearValidation,
+
+    // Computed
+    hasResults: !!results,
+    canRunValidation: !isValidating && !!selectedHost && !!treeId,
   };
-}
+};
