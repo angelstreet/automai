@@ -32,6 +32,9 @@ server_validation_bp = Blueprint('server_validation', __name__, url_prefix='/ser
 # Store SSE connections by session_id
 sse_connections = {}
 
+# Store active validation sessions for stopping
+validation_sessions = {}
+
 class ValidationService:
     """Service for comprehensive navigation tree validation"""
     
@@ -49,6 +52,12 @@ class ValidationService:
                 sse_connections[session_id].put(data)
             except Exception as e:
                 print(f"[@service:validation:_send_to_sse_connections] Error sending to SSE: {e}")
+    
+    def _should_stop_validation(self, session_id: str) -> bool:
+        """Check if validation should be stopped"""
+        if session_id and session_id in validation_sessions:
+            return validation_sessions[session_id].get('should_stop', False)
+        return False
     
     def _report_progress(self, current_step: int, total_steps: int, edge_from: str, edge_to: str, 
                         edge_from_name: str, edge_to_name: str, status: str, retry_attempt: int = 0, session_id: str = None):
@@ -161,6 +170,10 @@ class ValidationService:
         """
         print(f"[@service:validation:run_comprehensive_validation] Starting validation for tree {tree_id}")
         
+        # Register session for stopping capability
+        if session_id:
+            validation_sessions[session_id] = {'should_stop': False, 'tree_id': tree_id}
+        
         if skipped_edges:
             print(f"[@service:validation:run_comprehensive_validation] Will skip {len(skipped_edges)} user-selected edges")
         
@@ -270,6 +283,24 @@ class ValidationService:
             skipped_paths = 0
             
             for i, (from_node, to_node, edge_data) in enumerate(testable_edges):
+                # Check if validation should be stopped
+                if self._should_stop_validation(session_id):
+                    print(f"[@service:validation:run_comprehensive_validation] ⏹️ Validation stopped by user at step {i+1}")
+                    # Send stop notification to SSE
+                    if session_id:
+                        self._send_to_sse_connections(session_id, {
+                            'currentStep': i + 1,
+                            'totalSteps': len(testable_edges),
+                            'currentEdgeFrom': '',
+                            'currentEdgeTo': '',
+                            'currentEdgeFromName': '',
+                            'currentEdgeToName': '',
+                            'currentEdgeStatus': 'stopped',
+                            'retryAttempt': 0,
+                            'progressPercentage': round((i + 1) / len(testable_edges) * 100, 1)
+                        })
+                    break
+                
                 current_step = i + 1
                 total_steps = len(testable_edges)
                 
@@ -412,13 +443,18 @@ class ValidationService:
             print(f"[@service:validation:run_comprehensive_validation] Completed: {successful_paths}/{executed_paths} successful, {skipped_paths} skipped, health: {health}")
             
             # Report final progress: Validation completed
-            self._report_progress(len(testable_edges), len(testable_edges), '', '', '', '', 'completed', session_id=session_id)
+            if not self._should_stop_validation(session_id):
+                self._report_progress(len(testable_edges), len(testable_edges), '', '', '', '', 'completed', session_id=session_id)
             
             return results
             
         except Exception as e:
             print(f"[@service:validation:run_comprehensive_validation] Error: {e}")
             raise
+        finally:
+            # Clean up session
+            if session_id and session_id in validation_sessions:
+                del validation_sessions[session_id]
 
     def _test_navigation_path(self, tree_id: str, from_node: str, to_node: str, graph, host: Optional[Dict] = None, device_id: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -755,3 +791,43 @@ def get_validation_progress(session_id):
             'Access-Control-Allow-Headers': 'Cache-Control'
         }
     )
+
+@server_validation_bp.route('/stop/<session_id>', methods=['POST'])
+def stop_validation(session_id):
+    """Stop a running validation session"""
+    try:
+        if session_id in validation_sessions:
+            validation_sessions[session_id]['should_stop'] = True
+            print(f"[@validation:stop] Stopping validation session: {session_id}")
+            
+            # Send stop notification to SSE connection
+            if session_id in sse_connections:
+                try:
+                    sse_connections[session_id].put({
+                        'currentStep': 0,
+                        'totalSteps': 0,
+                        'currentEdgeFrom': '',
+                        'currentEdgeTo': '',
+                        'currentEdgeFromName': '',
+                        'currentEdgeToName': '',
+                        'currentEdgeStatus': 'stopped',
+                        'retryAttempt': 0,
+                        'progressPercentage': 0
+                    })
+                except Exception as e:
+                    print(f"[@validation:stop] Error sending stop notification: {e}")
+            
+            return jsonify({
+                'success': True,
+                'message': f'Validation session {session_id} stopped'
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Validation session {session_id} not found'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

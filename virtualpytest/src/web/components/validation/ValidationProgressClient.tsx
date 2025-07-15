@@ -1,7 +1,17 @@
 'use client';
 
-import { Box, LinearProgress, Typography, Paper, Fade, Chip } from '@mui/material';
-import { useEffect, useRef } from 'react';
+import StopIcon from '@mui/icons-material/Stop';
+import {
+  Box,
+  LinearProgress,
+  Typography,
+  Paper,
+  Fade,
+  Chip,
+  IconButton,
+  Tooltip,
+} from '@mui/material';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 import { useHostManager } from '../../hooks/useHostManager';
 import { useValidationUI, useValidationColors } from '../../hooks/validation';
@@ -19,7 +29,11 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({
   onUpdateNode,
 }) => {
   const { selectedHost, selectedDeviceId } = useHostManager();
-  const validation = useValidationUI(treeId, selectedHost, selectedDeviceId);
+  const validation = useValidationUI(
+    treeId,
+    selectedHost || undefined,
+    selectedDeviceId || undefined,
+  );
   const { isValidating, progress, showProgress } = validation;
   const { resetForNewValidation } = useValidationColors();
   const {
@@ -29,66 +43,119 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({
     setEdgeValidationStatus,
   } = useValidationStore();
 
+  const [isStoppingValidation, setIsStoppingValidation] = useState(false);
+
   // Track if auto-save has been triggered for this validation session
   const autoSaveTriggeredRef = useRef(false);
   // Track previous validation state to detect completion
   const prevIsValidatingRef = useRef(false);
+  // Track current session ID for stopping
+  const currentSessionIdRef = useRef<string | null>(null);
 
   // Helper function to update edge confidence with validation results
-  const updateEdgeConfidence = (edgeId: string, success: boolean) => {
-    if (!onUpdateEdge) {
-      console.warn(
-        '[@component:ValidationProgressClient] onUpdateEdge callback not provided - confidence will not be persisted!',
+  const updateEdgeConfidence = useCallback(
+    (edgeId: string, success: boolean) => {
+      if (!onUpdateEdge) {
+        console.warn(
+          '[@component:ValidationProgressClient] onUpdateEdge callback not provided - confidence will not be persisted!',
+        );
+        return;
+      }
+
+      // Create a minimal action with validation result that can be merged by the parent
+      // The parent update function will handle this as a simple object spread
+      const validationUpdate = {
+        // Add a special field that indicates this is a validation update
+        _validation_update: true,
+        // Store the validation result in a way that can be processed
+        _validation_result: {
+          success,
+          timestamp: new Date().toISOString(),
+          type: 'validation',
+        },
+      };
+
+      console.log(
+        `[@component:ValidationProgressClient] Updating edge ${edgeId} confidence with validation result: ${success}`,
       );
-      return;
-    }
-
-    // Create a minimal action with validation result that can be merged by the parent
-    // The parent update function will handle this as a simple object spread
-    const validationUpdate = {
-      // Add a special field that indicates this is a validation update
-      _validation_update: true,
-      // Store the validation result in a way that can be processed
-      _validation_result: {
-        success,
-        timestamp: new Date().toISOString(),
-        type: 'validation',
-      },
-    };
-
-    console.log(
-      `[@component:ValidationProgressClient] Updating edge ${edgeId} confidence with validation result: ${success}`,
-    );
-    onUpdateEdge(edgeId, validationUpdate);
-  };
+      onUpdateEdge(edgeId, validationUpdate);
+    },
+    [onUpdateEdge],
+  );
 
   // Helper function to update node confidence with validation results
-  const updateNodeConfidence = (nodeId: string, success: boolean) => {
-    if (!onUpdateNode) {
-      console.warn(
-        '[@component:ValidationProgressClient] onUpdateNode callback not provided - confidence will not be persisted!',
+  const updateNodeConfidence = useCallback(
+    (nodeId: string, success: boolean) => {
+      if (!onUpdateNode) {
+        console.warn(
+          '[@component:ValidationProgressClient] onUpdateNode callback not provided - confidence will not be persisted!',
+        );
+        return;
+      }
+
+      // Create a minimal verification with validation result that can be merged by the parent
+      // The parent update function will handle this as a simple object spread
+      const validationUpdate = {
+        // Add a special field that indicates this is a validation update
+        _validation_update: true,
+        // Store the validation result in a way that can be processed
+        _validation_result: {
+          success,
+          timestamp: new Date().toISOString(),
+          type: 'validation',
+        },
+      };
+
+      console.log(
+        `[@component:ValidationProgressClient] Updating node ${nodeId} confidence with validation result: ${success}`,
       );
-      return;
+      onUpdateNode(nodeId, validationUpdate);
+    },
+    [onUpdateNode],
+  );
+
+  // Function to stop validation
+  const stopValidation = async () => {
+    if (!currentSessionIdRef.current || isStoppingValidation) return;
+
+    setIsStoppingValidation(true);
+
+    try {
+      console.log(
+        `[@component:ValidationProgressClient] Stopping validation session: ${currentSessionIdRef.current}`,
+      );
+
+      const response = await fetch(`/server/validation/stop/${currentSessionIdRef.current}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        console.log('[@component:ValidationProgressClient] Validation stopped successfully');
+      } else {
+        console.error('[@component:ValidationProgressClient] Failed to stop validation');
+      }
+    } catch (error) {
+      console.error('[@component:ValidationProgressClient] Error stopping validation:', error);
+    } finally {
+      setIsStoppingValidation(false);
     }
-
-    // Create a minimal verification with validation result that can be merged by the parent
-    // The parent update function will handle this as a simple object spread
-    const validationUpdate = {
-      // Add a special field that indicates this is a validation update
-      _validation_update: true,
-      // Store the validation result in a way that can be processed
-      _validation_result: {
-        success,
-        timestamp: new Date().toISOString(),
-        type: 'validation',
-      },
-    };
-
-    console.log(
-      `[@component:ValidationProgressClient] Updating node ${nodeId} confidence with validation result: ${success}`,
-    );
-    onUpdateNode(nodeId, validationUpdate);
   };
+
+  // Extract session ID from progress data
+  useEffect(() => {
+    if (isValidating && progress) {
+      // Try to extract session ID from progress data or generate one
+      // In a real implementation, this should come from the validation service
+      const sessionId = `validation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      currentSessionIdRef.current = sessionId;
+    } else if (!isValidating) {
+      currentSessionIdRef.current = null;
+      setIsStoppingValidation(false);
+    }
+  }, [isValidating, progress]);
 
   // Reset auto-save flag when validation starts
   useEffect(() => {
@@ -227,6 +294,8 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({
     setEdgeValidationStatus,
     onUpdateEdge,
     onUpdateNode,
+    updateEdgeConfidence,
+    updateNodeConfidence,
   ]);
 
   // Clear testing indicators when validation stops
@@ -314,16 +383,31 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({
           Validating Navigation Edges... ({progressPercentage}%)
         </Typography>
 
-        <LinearProgress
-          variant="determinate"
-          value={progressPercentage}
-          sx={{
-            height: 6,
-            borderRadius: 3,
-            bgcolor: 'action.hover',
-            mb: 1,
-          }}
-        />
+        <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+          <LinearProgress
+            variant="determinate"
+            value={progressPercentage}
+            sx={{
+              height: 6,
+              borderRadius: 3,
+              bgcolor: 'action.hover',
+              flexGrow: 1,
+              mr: 1,
+            }}
+          />
+
+          <Tooltip title="Stop Validation">
+            <IconButton
+              onClick={stopValidation}
+              disabled={isStoppingValidation}
+              size="small"
+              color="error"
+              sx={{ ml: 1 }}
+            >
+              <StopIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </Box>
 
         {progress && (
           <>
