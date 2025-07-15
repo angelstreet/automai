@@ -106,16 +106,16 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
             left: data.is_root ? '50px' : '4px', // Always 50px from left for root nodes, 4px for others
             backgroundColor: '#2196f3',
             color: 'white',
-            fontSize: '14px',
+            fontSize: '10px',
             fontWeight: 'bold',
-            padding: '4px 6px',
+            padding: '2px 6px',
             borderRadius: '4px',
             zIndex: 15,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             minWidth: '24px',
-            minHeight: '24px',
+            height: '20px', // Same height as ROOT badge
           }}
         >
           ↓
