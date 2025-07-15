@@ -132,8 +132,9 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
     
     # SYSTEMATICALLY add entry→home when home is in any transition
     # This ensures we always start from home when home is involved in navigation
+    # FIXED: Always add entry→home when home is involved, even if starting from home
     entry_to_home_added = False
-    if entry_node and home_node and entry_node != home_node and path_has_home and G.has_edge(entry_node, home_node):
+    if entry_node and home_node and path_has_home and G.has_edge(entry_node, home_node):
         entry_info = get_node_info(G, entry_node)
         home_info = get_node_info(G, home_node)
         entry_edge_data = G.edges[entry_node, home_node]
