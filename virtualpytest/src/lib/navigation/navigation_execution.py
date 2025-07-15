@@ -111,12 +111,23 @@ class NavigationExecutor:
                     )
                     
                     if not result.get('success'):
+                        # Calculate where we actually are: if we're at transition i and it failed,
+                        # we're still at the from_node_id of the failed transition
+                        # (or at the to_node_id of the previous successful transition)
+                        if transitions_executed > 0:
+                            # We successfully completed some transitions, so we're at the to_node_id of the last successful one
+                            final_position_node_id = transitions[transitions_executed - 1].get('to_node_id', current_node_id)
+                        else:
+                            # No transitions succeeded, we're still at the starting position
+                            final_position_node_id = current_node_id
+                        
                         return {
                             'success': False,
                             'error': f'Action execution failed in transition {i+1}: {result.get("error", "Unknown error")}',
                             'tree_id': tree_id,
                             'target_node_id': target_node_id,
                             'current_node_id': current_node_id,
+                            'final_position_node_id': final_position_node_id,  # Where we actually ended up
                             'transitions_executed': transitions_executed,
                             'total_transitions': len(transitions),
                             'actions_executed': actions_executed,
@@ -151,12 +162,16 @@ class NavigationExecutor:
                 verification_results = result.get('results', [])
                 
                 if not result.get('success'):
+                    # All transitions succeeded but verification failed - we're at the target node
+                    final_position_node_id = target_node_id
+                    
                     return {
                         'success': False,
                         'error': f'Target node verification failed: {result.get("error", "Unknown error")}',
                         'tree_id': tree_id,
                         'target_node_id': target_node_id,
                         'current_node_id': current_node_id,
+                        'final_position_node_id': final_position_node_id,  # Where we actually ended up
                         'transitions_executed': transitions_executed,
                         'total_transitions': len(transitions),
                         'actions_executed': actions_executed,
@@ -175,12 +190,16 @@ class NavigationExecutor:
             print(f"[@lib:navigation_execution:execute_navigation] Navigation completed successfully in {execution_time:.2f}s")
             print(f"[@lib:navigation_execution:execute_navigation] Executed {transitions_executed}/{len(transitions)} transitions, {actions_executed}/{total_actions} actions")
             
+            # Update current position to target node since all transitions succeeded
+            final_position_node_id = target_node_id
+            
             return {
                 'success': True,
                 'message': f'Navigation to {target_node_id} completed successfully',
                 'tree_id': tree_id,
                 'target_node_id': target_node_id,
                 'current_node_id': current_node_id,
+                'final_position_node_id': final_position_node_id,  # Where we actually ended up
                 'transitions_executed': transitions_executed,
                 'total_transitions': len(transitions),
                 'actions_executed': actions_executed,
@@ -194,12 +213,16 @@ class NavigationExecutor:
             execution_time = time.time() - start_time
             print(f"[@lib:navigation_execution:execute_navigation] Navigation failed with error: {str(e)}")
             
+            # On exception, we don't know exactly where we are, assume starting position
+            final_position_node_id = current_node_id
+            
             return {
                 'success': False,
                 'error': f'Navigation execution error: {str(e)}',
                 'tree_id': tree_id,
                 'target_node_id': target_node_id,
                 'current_node_id': current_node_id,
+                'final_position_node_id': final_position_node_id,  # Where we actually ended up
                 'transitions_executed': 0,
                 'total_transitions': 0,
                 'actions_executed': 0,

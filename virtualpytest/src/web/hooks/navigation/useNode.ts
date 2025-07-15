@@ -292,7 +292,10 @@ export const useNode = (props?: UseNodeProps) => {
         const result: NavigationExecuteResponse = await response.json();
 
         if (!result.success) {
-          throw new Error(result.error || 'Navigation execution failed');
+          // Create an error object that includes the result data for position tracking
+          const error = new Error(result.error || 'Navigation execution failed');
+          (error as any).response = { data: result };
+          throw error;
         }
 
         const duration = Date.now() - startTime;
@@ -308,8 +311,9 @@ export const useNode = (props?: UseNodeProps) => {
         setExecutionMessage(successMessage);
         setIsExecuting(false);
 
-        // Update current position after successful navigation
-        updateCurrentPosition(selectedNode.id, selectedNode.data.label);
+        // Update current position to where we actually ended up
+        const finalPositionNodeId = result.final_position_node_id || selectedNode.id;
+        updateCurrentPosition(finalPositionNodeId, selectedNode.data.label);
 
         // Handle node verification results if present
         if (result.verification_results && result.verification_results.length > 0) {
@@ -332,6 +336,21 @@ export const useNode = (props?: UseNodeProps) => {
         setExecutionMessage(`Navigation failed: ${errorMessage}`);
         setNavigationError(errorMessage);
         setIsExecuting(false);
+
+        // Try to get the response data to see where we actually ended up
+        let finalPositionNodeId = currentNodeId; // Default to current position
+
+        // Check if we have response data with final_position_node_id
+        if (error.response?.data?.final_position_node_id) {
+          finalPositionNodeId = error.response.data.final_position_node_id;
+        }
+
+        // Update current position to where we actually are after partial navigation
+        if (finalPositionNodeId && finalPositionNodeId !== currentNodeId) {
+          // We need to find the node label for the final position
+          // For now, we'll update with the node ID and let the system resolve the label
+          updateCurrentPosition(finalPositionNodeId, null);
+        }
 
         // Set edges to red for failed navigation using the current transitions
         if (navigationTransitions && navigationTransitions.length > 0) {

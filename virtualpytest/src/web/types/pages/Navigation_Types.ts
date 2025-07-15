@@ -141,6 +141,7 @@ export interface NavigationExecuteResponse {
   tree_id: string;
   target_node_id: string;
   current_node_id?: string;
+  final_position_node_id?: string; // Where we actually ended up after navigation
   transitions_executed: number;
   total_transitions: number;
   actions_executed: number;
