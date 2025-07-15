@@ -1,15 +1,9 @@
 import { AppBar, Toolbar, Typography, Box } from '@mui/material';
-import React, { useContext } from 'react';
+import React from 'react';
 
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
-import { useNavigationEditor } from '../../hooks/navigation/useNavigationEditor';
-import {
-  ValidationPreviewClient,
-  ValidationResultsClient,
-  ValidationProgressClient,
-} from '../validation';
 
 import NavigationEditorActionButtons from './Navigation_NavigationEditor_ActionButtons';
 import NavigationEditorDeviceControls from './Navigation_NavigationEditor_DeviceControls';
@@ -26,7 +20,6 @@ export const NavigationEditorHeader: React.FC<{
   error: string | null;
   isLocked: boolean;
   treeId: string;
-  userInterfaceId: string; // Add userInterfaceId for navigation tree locking
   selectedHost: any; // Full host object
   selectedDeviceId?: string | null; // Selected device ID
   isRemotePanelOpen: boolean;
@@ -43,8 +36,8 @@ export const NavigationEditorHeader: React.FC<{
   onToggleRemotePanel: () => void;
   onControlStateChange: (active: boolean) => void;
   onDeviceSelect: (host: any, deviceId: string | null) => void;
-  onUpdateNode: (nodeId: string, updatedData: any) => void;
-  onUpdateEdge: (edgeId: string, updatedData: any) => void;
+  onUpdateNode?: (nodeId: string, updatedData: any) => void;
+  onUpdateEdge?: (edgeId: string, updatedData: any) => void;
 }> = ({
   hasUnsavedChanges,
   focusNodeId,
@@ -56,7 +49,6 @@ export const NavigationEditorHeader: React.FC<{
   error,
   isLocked,
   treeId,
-  userInterfaceId,
   selectedHost,
   selectedDeviceId,
   isRemotePanelOpen,
@@ -72,8 +64,6 @@ export const NavigationEditorHeader: React.FC<{
   onToggleRemotePanel,
   onControlStateChange,
   onDeviceSelect,
-  onUpdateNode,
-  onUpdateEdge,
 }) => {
   // Get toast notifications
   const { showError } = useToast();
@@ -95,13 +85,6 @@ export const NavigationEditorHeader: React.FC<{
     sessionId: 'navigation-editor-session',
     autoCleanup: true, // Auto-release on unmount
   });
-
-  // Navigation tree control hook (editing control)
-  const {
-    isLocked: isNavigationTreeLocked,
-    lockNavigationTree,
-    isCheckingLock: isCheckingTreeLock,
-  } = useNavigationEditor();
 
   // Device control handler (only controls physical device, not navigation tree)
   const handleDeviceControl = React.useCallback(async () => {
@@ -230,18 +213,7 @@ export const NavigationEditorHeader: React.FC<{
         </Toolbar>
       </AppBar>
 
-      {/* Validation Components */}
-      {treeId && (
-        <>
-          <ValidationPreviewClient treeId={treeId} />
-          <ValidationResultsClient treeId={treeId} />
-          <ValidationProgressClient
-            treeId={treeId}
-            onUpdateNode={onUpdateNode}
-            onUpdateEdge={onUpdateEdge}
-          />
-        </>
-      )}
+      {/* Validation components are now rendered by ValidationButtonClient when needed */}
     </>
   );
 };

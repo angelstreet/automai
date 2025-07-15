@@ -26,9 +26,10 @@ import { useValidationUI } from '../../hooks/validation';
 
 interface ValidationPreviewClientProps {
   treeId: string;
+  onClose?: () => void;
 }
 
-export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
+export default function ValidationPreviewClient({ treeId, onClose }: ValidationPreviewClientProps) {
   const validation = useValidationUI(treeId);
   const [selectedEdges, setSelectedEdges] = useState<Set<string>>(new Set());
 
@@ -194,7 +195,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={() => window.location.reload()}>Cancel</Button>
+        <Button onClick={onClose}>Cancel</Button>
         <Button
           variant="contained"
           startIcon={<PlayArrowIcon />}

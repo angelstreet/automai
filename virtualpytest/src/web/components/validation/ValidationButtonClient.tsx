@@ -13,6 +13,9 @@ import {
 import React, { useState } from 'react';
 
 import { useValidationUI } from '../../hooks/validation';
+import ValidationPreviewClient from './ValidationPreviewClient';
+import ValidationResultsClient from './ValidationResultsClient';
+import ValidationProgressClient from './ValidationProgressClient';
 
 interface ValidationButtonClientProps {
   treeId: string;
@@ -22,6 +25,7 @@ interface ValidationButtonClientProps {
 export default function ValidationButtonClient({ treeId, disabled }: ValidationButtonClientProps) {
   const validation = useValidationUI(treeId);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (validation.isValidating) return;
@@ -34,13 +38,8 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
 
   const handleRunValidation = () => {
     handleClose();
-    validation.loadPreview(); // This will show the validation preview dialog
-  };
-
-  const handleViewResults = () => {
-    handleClose();
-    // Results are automatically shown when validation completes
-    // If we need to show previous results, we can add that functionality
+    setShowPreview(true);
+    validation.loadPreview(); // Load the preview data
   };
 
   return (
@@ -77,7 +76,13 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
         </MenuItem>
 
         {validation.hasResults && (
-          <MenuItem onClick={handleViewResults}>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              // Results are automatically shown when validation completes
+              // If we need to show previous results, we can add that functionality
+            }}
+          >
             <ListItemIcon>
               <CheckCircleIcon fontSize="small" />
             </ListItemIcon>
@@ -85,6 +90,15 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
           </MenuItem>
         )}
       </Menu>
+
+      {/* Validation Preview Dialog - only show when triggered */}
+      {showPreview && (
+        <ValidationPreviewClient treeId={treeId} onClose={() => setShowPreview(false)} />
+      )}
+
+      {/* Global validation dialogs - these manage their own visibility */}
+      <ValidationResultsClient treeId={treeId} />
+      <ValidationProgressClient treeId={treeId} />
     </>
   );
 }
