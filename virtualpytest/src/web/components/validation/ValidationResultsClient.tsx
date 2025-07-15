@@ -22,14 +22,13 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Alert,
   Divider,
   IconButton,
 } from '@mui/material';
 import React from 'react';
 
 import { useValidationUI } from '../../hooks/validation';
-import { useValidationStore } from '../../components/store/validationStore';
+import { useValidationStore } from '../store/validationStore';
 
 interface ValidationResultsClientProps {
   treeId: string;
