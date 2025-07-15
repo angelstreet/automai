@@ -78,17 +78,20 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
     validation.runValidation(skippedEdges);
   };
 
-  // Show loading dialog while loading or if no preview data yet
-  if (!validation.preview) {
+  // Only show dialog when there's preview data or when loading
+  if (!validation.preview && !validation.isLoadingPreview) {
+    return null;
+  }
+
+  // Show loading dialog
+  if (!validation.preview && validation.isLoadingPreview) {
     return (
       <Dialog open={true} maxWidth="md" fullWidth>
         <DialogTitle>Validation Preview</DialogTitle>
         <DialogContent>
           <Box display="flex" justifyContent="center" alignItems="center" py={4}>
             <CircularProgress size={24} sx={{ mr: 2 }} />
-            <Typography>
-              {validation.isLoadingPreview ? 'Loading validation preview...' : 'Preparing validation...'}
-            </Typography>
+            <Typography>Loading validation preview...</Typography>
           </Box>
         </DialogContent>
       </Dialog>
