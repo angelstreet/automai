@@ -8,7 +8,9 @@ Provides functionality for testing navigation paths and verifying UI elements.
 from typing import Dict, List, Optional, Any
 import time
 import json
-from flask import Blueprint, request, jsonify
+import queue
+import threading
+from flask import Blueprint, request, jsonify, Response
 
 # Import existing pathfinding utilities
 from src.lib.navigation.navigation_pathfinding import (
@@ -27,6 +29,9 @@ from src.utils.app_utils import get_team_id, check_supabase
 # Create blueprint
 server_validation_bp = Blueprint('server_validation', __name__, url_prefix='/server/validation')
 
+# Store SSE connections by session_id
+sse_connections = {}
+
 class ValidationService:
     """Service for comprehensive navigation tree validation"""
     
@@ -37,8 +42,16 @@ class ValidationService:
         """Set the progress callback function for real-time updates"""
         self.progress_callback = callback_func
     
+    def _send_to_sse_connections(self, session_id: str, data: Dict):
+        """Send data to SSE connection for a specific session"""
+        if session_id in sse_connections:
+            try:
+                sse_connections[session_id].put(data)
+            except Exception as e:
+                print(f"[@service:validation:_send_to_sse_connections] Error sending to SSE: {e}")
+    
     def _report_progress(self, current_step: int, total_steps: int, edge_from: str, edge_to: str, 
-                        edge_from_name: str, edge_to_name: str, status: str, retry_attempt: int = 0):
+                        edge_from_name: str, edge_to_name: str, status: str, retry_attempt: int = 0, session_id: str = None):
         """Report progress to the callback function if one is set"""
         if self.progress_callback:
             progress_data = {
@@ -56,6 +69,20 @@ class ValidationService:
                 self.progress_callback(progress_data)
             except Exception as e:
                 print(f"[@service:validation:_report_progress] Error in progress callback: {e}")
+        
+        # Also send to SSE connection if session_id is provided
+        if session_id:
+            self._send_to_sse_connections(session_id, {
+                'currentStep': current_step,
+                'totalSteps': total_steps,
+                'currentEdgeFrom': edge_from,
+                'currentEdgeTo': edge_to,
+                'currentEdgeFromName': edge_from_name,
+                'currentEdgeToName': edge_to_name,
+                'currentEdgeStatus': status,
+                'retryAttempt': retry_attempt,
+                'progressPercentage': round((current_step / total_steps) * 100, 1) if total_steps > 0 else 0
+            })
 
     def get_validation_preview(self, tree_id: str, team_id: str) -> Dict[str, Any]:
         """
@@ -123,7 +150,7 @@ class ValidationService:
             print(f"[@service:validation:get_validation_preview] Error: {e}")
             raise
 
-    def run_comprehensive_validation(self, tree_id: str, team_id: str, skipped_edges: Optional[List[Dict[str, str]]] = None, host: Optional[Dict] = None, device_id: Optional[str] = None) -> Dict[str, Any]:
+    def run_comprehensive_validation(self, tree_id: str, team_id: str, skipped_edges: Optional[List[Dict[str, str]]] = None, host: Optional[Dict] = None, device_id: Optional[str] = None, session_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Run comprehensive validation by testing all navigation paths with smart dependency logic
         
@@ -253,7 +280,7 @@ class ValidationService:
                 to_name = to_info.get('label', to_node) if to_info else to_node
                 
                 # Report progress: Starting to test this edge
-                self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'testing')
+                self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'testing', session_id=session_id)
                 
                 # Check if this edge was marked to skip due to failed dependency
                 if (from_node, to_node) in edges_to_skip:
@@ -261,7 +288,7 @@ class ValidationService:
                     print(f"[@service:validation:run_comprehensive_validation] ⏭️ CASCADING SKIP: {from_name} -> {to_name}")
                     
                     # Report progress: Edge skipped
-                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'skipped')
+                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'skipped', session_id=session_id)
                     
                     # Mark as skipped - DO NOT EXECUTE THE NAVIGATION
                     path_result = {
@@ -290,7 +317,7 @@ class ValidationService:
                     print(f"[@service:validation:run_comprehensive_validation] ❌ SKIPPING {from_name} -> {to_name}")
                     
                     # Report progress: Edge skipped
-                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'skipped')
+                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'skipped', session_id=session_id)
                     
                     # Mark as skipped
                     path_result = {
@@ -325,7 +352,7 @@ class ValidationService:
                     successful_paths += 1
                     reachable_nodes.add(to_node)
                     print(f"[@service:validation:run_comprehensive_validation] ✅ SUCCESS {from_name} -> {to_node}")
-                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'success')
+                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'success', session_id=session_id)
                 else:
                     print(f"[@service:validation:run_comprehensive_validation] ❌ FAILED {from_name} -> {to_name}")
                     
@@ -336,7 +363,7 @@ class ValidationService:
                         if dep_from in unreachable_nodes:
                             edges_to_skip.add((dep_from, dep_to))
                     
-                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'failed')
+                    self._report_progress(current_step, total_steps, from_node, to_node, from_name, to_name, 'failed', session_id=session_id)
                 
                 # Small delay between tests
                 time.sleep(1)
@@ -385,7 +412,7 @@ class ValidationService:
             print(f"[@service:validation:run_comprehensive_validation] Completed: {successful_paths}/{executed_paths} successful, {skipped_paths} skipped, health: {health}")
             
             # Report final progress: Validation completed
-            self._report_progress(len(testable_edges), len(testable_edges), '', '', '', '', 'completed')
+            self._report_progress(len(testable_edges), len(testable_edges), '', '', '', '', 'completed', session_id=session_id)
             
             return results
             
@@ -633,8 +660,9 @@ def run_comprehensive_validation(tree_id):
         skipped_edges = data.get('skipped_edges', [])
         host = data.get('host')
         device_id = data.get('device_id')
+        session_id = data.get('session_id') # Get session_id from request
         
-        result = validation_service.run_comprehensive_validation(tree_id, team_id, skipped_edges, host, device_id)
+        result = validation_service.run_comprehensive_validation(tree_id, team_id, skipped_edges, host, device_id, session_id)
         return jsonify({
             'success': True,
             'results': result
@@ -681,3 +709,49 @@ def get_optimal_path(tree_id):
             'success': False,
             'error': str(e)
         }), 500
+
+@server_validation_bp.route('/progress/<session_id>', methods=['GET'])
+def get_validation_progress(session_id):
+    """Server-Sent Events endpoint for real-time validation progress"""
+    
+    def generate_progress_events():
+        # Create a queue for this session
+        progress_queue = queue.Queue()
+        sse_connections[session_id] = progress_queue
+        
+        try:
+            # Send initial heartbeat
+            yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
+            
+            while True:
+                try:
+                    # Wait for progress data with timeout
+                    data = progress_queue.get(timeout=30)  # 30 second timeout
+                    
+                    if data is None:  # Signal to close connection
+                        break
+                    
+                    # Send progress update
+                    yield f"data: {json.dumps(data)}\n\n"
+                    
+                except queue.Empty:
+                    # Send heartbeat every 30 seconds to keep connection alive
+                    yield f"data: {json.dumps({'type': 'heartbeat', 'timestamp': time.time()})}\n\n"
+                    
+        except Exception as e:
+            print(f"[@validation:progress] Error in SSE generator: {e}")
+        finally:
+            # Clean up connection
+            if session_id in sse_connections:
+                del sse_connections[session_id]
+    
+    return Response(
+        generate_progress_events(),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Cache-Control'
+        }
+    )
