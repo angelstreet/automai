@@ -409,34 +409,10 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           state.setInitialState({ nodes: [...state.nodes], edges: [...state.edges] });
           state.setHasUnsavedChanges(false);
 
-          // Force refresh navigation cache after successful save (invalidate + rebuild)
-          try {
-            const actualTreeId = data.tree?.id || userInterfaceId || 'horizon_android_mobile';
-            const cacheResponse = await fetch('/server/pathfinding/cache/refresh', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                tree_id: actualTreeId,
-              }),
-            });
-
-            if (cacheResponse.ok) {
-              console.log(
-                '[@context:NavigationConfigProvider:saveToConfig] Navigation cache refreshed successfully',
-              );
-            } else {
-              console.warn(
-                '[@context:NavigationConfigProvider:saveToConfig] Failed to refresh navigation cache',
-              );
-            }
-          } catch (cacheError) {
-            console.warn(
-              '[@context:NavigationConfigProvider:saveToConfig] Cache refresh failed:',
-              cacheError,
-            );
-          }
+          // Cache refresh is handled automatically by the backend save_navigation_tree function
+          console.log(
+            '[@context:NavigationConfigProvider:saveToConfig] Navigation cache will be refreshed automatically by backend',
+          );
         } else {
           console.error('[@context:NavigationConfigProvider:saveToConfig] Save failed:', data);
           throw new Error(data.message || 'Failed to save navigation tree to database');

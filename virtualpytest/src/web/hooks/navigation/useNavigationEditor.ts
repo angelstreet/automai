@@ -410,35 +410,10 @@ export const useNavigationEditor = () => {
             await saveToConfig(navigation.userInterface.id, stateForSaving);
             console.log('[@useNavigationEditor:handleEdgeFormSubmit] Tree saved successfully');
 
-            // Force refresh navigation cache after successful save (invalidate + rebuild)
-            try {
-              // Note: saveToConfig doesn't return the tree ID, so we use the userinterface_name as fallback
-              // The backend cache system should handle both tree ID and userinterface_name lookups
-              const cacheResponse = await fetch('/server/pathfinding/cache/refresh', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  tree_id: navigation.userInterface.userinterface_name || 'horizon_android_mobile',
-                }),
-              });
-
-              if (cacheResponse.ok) {
-                console.log(
-                  '[@useNavigationEditor:handleEdgeFormSubmit] Navigation cache refreshed successfully',
-                );
-              } else {
-                console.warn(
-                  '[@useNavigationEditor:handleEdgeFormSubmit] Failed to refresh navigation cache',
-                );
-              }
-            } catch (cacheError) {
-              console.warn(
-                '[@useNavigationEditor:handleEdgeFormSubmit] Cache refresh failed:',
-                cacheError,
-              );
-            }
+            // Cache refresh is handled automatically by the backend save_navigation_tree function
+            console.log(
+              '[@useNavigationEditor:handleEdgeFormSubmit] Navigation cache will be refreshed automatically by backend',
+            );
           } catch (saveError) {
             console.error(
               '[@useNavigationEditor:handleEdgeFormSubmit] Failed to auto-save tree:',
