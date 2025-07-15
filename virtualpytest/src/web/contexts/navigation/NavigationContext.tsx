@@ -558,7 +558,7 @@ export const NavigationProvider: React.FC<NavigationProviderProps> = ({ children
       setSelectedEdge(edge);
       setEdgeForm({
         actions: edge.data?.actions || [],
-        retryActions: [], // Will be resolved from retry_action_ids by useEdgeEdit hook
+        retryActions: edge.data?.retryActions || [], // Include retry actions from edge data
         finalWaitTime: edge.data?.finalWaitTime || 2000,
         description: edge.data?.description || '',
       });

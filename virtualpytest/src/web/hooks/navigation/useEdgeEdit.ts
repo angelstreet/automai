@@ -42,14 +42,14 @@ export const useEdgeEdit = ({
 
   // Initialize actions when dialog opens or edgeForm/selectedEdge changes
   useEffect(() => {
-    if (isOpen && edgeForm?.actions) {
+    if (isOpen && edgeForm?.actions !== undefined) {
       setLocalActions(edgeForm.actions);
     }
 
     // Load retry actions from selectedEdge using ID resolution if edgeForm has none
     if (isOpen && selectedEdge) {
-      if (edgeForm?.retryActions && edgeForm.retryActions.length > 0) {
-        // Use retry actions from form if they exist
+      if (edgeForm?.retryActions !== undefined) {
+        // Use retry actions from form if they exist (even if empty array)
         setLocalRetryActions(edgeForm.retryActions);
       } else {
         // Load retry actions from edge using ID resolution
