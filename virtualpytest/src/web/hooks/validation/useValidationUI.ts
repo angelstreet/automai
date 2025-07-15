@@ -13,7 +13,7 @@ import { ValidationProgress } from '../../types/features/Validation_Types';
 
 import { useValidation } from './useValidation';
 
-export function useValidationUI(treeId: string) {
+export function useValidationUI(treeId: string, selectedHost?: any, selectedDeviceId?: string) {
   const {
     isValidating,
     showPreview,
@@ -97,7 +97,12 @@ export function useValidationUI(treeId: string) {
         });
 
         // Run actual validation with real-time progress updates and optional skipped edges
-        const results = await baseRunValidation(treeId, skippedEdges);
+        const results = await baseRunValidation(
+          treeId,
+          skippedEdges,
+          selectedHost,
+          selectedDeviceId,
+        );
         setResults(results);
 
         // Hide progress and show results
@@ -130,6 +135,8 @@ export function useValidationUI(treeId: string) {
       setShowResults,
       previewData,
       resetValidationColors,
+      selectedHost,
+      selectedDeviceId,
     ],
   );
 

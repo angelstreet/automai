@@ -123,7 +123,7 @@ class ValidationService:
             print(f"[@service:validation:get_validation_preview] Error: {e}")
             raise
 
-    def run_comprehensive_validation(self, tree_id: str, team_id: str, skipped_edges: Optional[List[Dict[str, str]]] = None) -> Dict[str, Any]:
+    def run_comprehensive_validation(self, tree_id: str, team_id: str, skipped_edges: Optional[List[Dict[str, str]]] = None, host: Optional[Dict] = None, device_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Run comprehensive validation by testing all navigation paths with smart dependency logic
         
@@ -316,7 +316,7 @@ class ValidationService:
                 print(f"[@service:validation:run_comprehensive_validation] ✅ TESTING {from_name} -> {to_name}")
                 
                 # Execute the navigation test ONLY if source node is reachable
-                path_result = self._test_navigation_path(tree_id, from_node, to_node, G)
+                path_result = self._test_navigation_path(tree_id, from_node, to_node, G, host, device_id)
                 path_result['skipped'] = False
                 path_results.append(path_result)
                 
@@ -393,9 +393,9 @@ class ValidationService:
             print(f"[@service:validation:run_comprehensive_validation] Error: {e}")
             raise
 
-    def _test_navigation_path(self, tree_id: str, from_node: str, to_node: str, graph) -> Dict[str, Any]:
+    def _test_navigation_path(self, tree_id: str, from_node: str, to_node: str, graph, host: Optional[Dict] = None, device_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Test a specific navigation path by calling pathfinding routes via HTTP
+        Test a specific navigation path by calling the same navigation executor that goto uses
         """
         try:
             # Get node names for display
@@ -404,23 +404,29 @@ class ValidationService:
             from_name = from_info.get('label', from_node) if from_info else from_node
             to_name = to_info.get('label', to_node) if to_info else to_node
             
-            # Call pathfinding route via HTTP instead of direct function calls
+            # Call the same navigation executor endpoint that goto uses
             import requests
             import json
             
             # Get team_id for the request
             team_id = get_team_id()
             
-            # Make HTTP request to pathfinding navigation endpoint
+            # Make HTTP request to navigation executor endpoint (same as goto)
             from src.utils.build_url_utils import buildServerUrl
-            pathfinding_url = buildServerUrl(f'server/pathfinding/navigate/{tree_id}/{to_node}')
+            navigation_url = buildServerUrl(f'server/navigation/execute/{tree_id}/{to_node}')
+            
+            # Use the same payload structure as goto functionality
             payload = {
                 'current_node_id': from_node,
-                'execute': True
             }
             
+            # Add host and device information if provided (same as goto)
+            if host and device_id:
+                payload['host'] = host
+                payload['device_id'] = device_id
+            
             response = requests.post(
-                pathfinding_url,
+                navigation_url,
                 json=payload,
                 headers={
                     'Content-Type': 'application/json',
@@ -624,9 +630,11 @@ def run_comprehensive_validation(tree_id):
     try:
         team_id = get_team_id()
         data = request.get_json() or {}
-        skipped_edges = data.get('skippedEdges', [])
+        skipped_edges = data.get('skipped_edges', [])
+        host = data.get('host')
+        device_id = data.get('device_id')
         
-        result = validation_service.run_comprehensive_validation(tree_id, team_id, skipped_edges)
+        result = validation_service.run_comprehensive_validation(tree_id, team_id, skipped_edges, host, device_id)
         return jsonify({
             'success': True,
             'results': result

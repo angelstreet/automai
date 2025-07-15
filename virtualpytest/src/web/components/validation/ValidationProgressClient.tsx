@@ -3,6 +3,7 @@
 import { Box, LinearProgress, Typography, Paper, Fade, Chip } from '@mui/material';
 import { useEffect, useRef } from 'react';
 
+import { useHostManager } from '../../hooks/useHostManager';
 import { useValidationUI, useValidationColors } from '../../hooks/validation';
 import { useValidationStore } from '../store/validationStore';
 
@@ -17,7 +18,8 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({
   onUpdateEdge,
   onUpdateNode,
 }) => {
-  const validation = useValidationUI(treeId);
+  const { selectedHost, selectedDeviceId } = useHostManager();
+  const validation = useValidationUI(treeId, selectedHost, selectedDeviceId);
   const { isValidating, progress, showProgress } = validation;
   const { resetForNewValidation } = useValidationColors();
   const {

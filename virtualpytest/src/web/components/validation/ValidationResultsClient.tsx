@@ -32,6 +32,7 @@ import {
 import { useState, useEffect } from 'react';
 
 import { getValidationStatusFromConfidence } from '../../config/validationColors';
+import { useHostManager } from '../../hooks/useHostManager';
 import { useValidationUI, useValidationColors } from '../../hooks/validation';
 import { useValidationStore } from '../store/validationStore';
 
@@ -40,7 +41,8 @@ interface ValidationResultsClientProps {
 }
 
 const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeId }) => {
-  const validation = useValidationUI(treeId);
+  const { selectedHost, selectedDeviceId } = useHostManager();
+  const validation = useValidationUI(treeId, selectedHost, selectedDeviceId);
   const { showResults, results, closeResults } = validation;
   const {
     setNodeValidationStatus,

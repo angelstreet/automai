@@ -129,6 +129,8 @@ export const useValidation = () => {
     async (
       treeId: string,
       skippedEdges?: Array<{ from: string; to: string }>,
+      selectedHost?: any,
+      selectedDeviceId?: string,
     ): Promise<ValidationResults> => {
       console.log(
         `[@hook:useValidation:runValidation] Running validation for tree: ${treeId}`,
@@ -151,6 +153,12 @@ export const useValidation = () => {
         // Add skipped edges if provided
         if (skippedEdges && skippedEdges.length > 0) {
           requestBody.skipped_edges = skippedEdges;
+        }
+
+        // Add host and device information if provided
+        if (selectedHost && selectedDeviceId) {
+          requestBody.host = selectedHost;
+          requestBody.device_id = selectedDeviceId;
         }
 
         const response = await fetch(`${VALIDATION_API_BASE_URL}/run/${treeId}`, {

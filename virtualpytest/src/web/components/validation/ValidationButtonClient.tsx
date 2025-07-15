@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 
+import { useHostManager } from '../../hooks/useHostManager';
 import { useValidationUI } from '../../hooks/validation';
 
 interface ValidationButtonClientProps {
@@ -25,7 +26,8 @@ interface ValidationButtonClientProps {
 }
 
 export default function ValidationButtonClient({ treeId, disabled }: ValidationButtonClientProps) {
-  const validation = useValidationUI(treeId);
+  const { selectedHost, selectedDeviceId } = useHostManager();
+  const validation = useValidationUI(treeId, selectedHost, selectedDeviceId);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 

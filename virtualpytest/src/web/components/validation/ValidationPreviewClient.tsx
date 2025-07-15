@@ -64,9 +64,9 @@ interface OptimalPathData {
 }
 
 export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
-  const validation = useValidationUI(treeId);
+  const { selectedHost, selectedDeviceId } = useHostManager();
+  const validation = useValidationUI(treeId, selectedHost, selectedDeviceId);
   const { resetForNewValidation } = useValidationColors();
-  const { selectedHost } = useHostManager();
   const [showDetails, setShowDetails] = useState(false);
   const [optimalPath, setOptimalPath] = useState<OptimalPathData | null>(null);
   const [loadingOptimalPath] = useState(false);
