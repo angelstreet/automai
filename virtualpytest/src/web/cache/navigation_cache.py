@@ -76,6 +76,29 @@ def populate_cache(tree_id: str, team_id: str, nodes: List[Dict], edges: List[Di
         
         print(f"[@navigation:cache:populate_cache] Successfully cached graph with {len(G.nodes)} nodes and {len(G.edges)} edges")
         print(f"[@navigation:cache:populate_cache] Successfully cached resolved tree data with {len(nodes)} nodes and {len(edges)} edges")
+        
+        # Log cache statistics
+        print(f"[@navigation:cache:populate_cache] ===== CACHE STATISTICS =====")
+        print(f"[@navigation:cache:populate_cache] Cache key: {cache_key}")
+        print(f"[@navigation:cache:populate_cache] Total cached graphs: {len(_navigation_graphs_cache)}")
+        print(f"[@navigation:cache:populate_cache] Total cached tree data: {len(_resolved_tree_data_cache)}")
+        print(f"[@navigation:cache:populate_cache] All cache keys: {list(_navigation_graphs_cache.keys())}")
+        
+        # Log what transitions are now available for pathfinding
+        print(f"[@navigation:cache:populate_cache] ===== CACHED TRANSITIONS AVAILABLE FOR PATHFINDING =====")
+        for i, (from_node, to_node, edge_data) in enumerate(G.edges(data=True), 1):
+            from_info = G.nodes[from_node]
+            to_info = G.nodes[to_node]
+            from_label = from_info.get('label', from_node)
+            to_label = to_info.get('label', to_node)
+            actions = edge_data.get('actions', [])
+            action_count = len(actions) if actions else 0
+            primary_action = edge_data.get('go_action', 'none')
+            
+            print(f"[@navigation:cache:populate_cache] Cached Transition {i:2d}: {from_label} → {to_label} (primary: {primary_action}, {action_count} actions)")
+        
+        print(f"[@navigation:cache:populate_cache] ===== END CACHED TRANSITIONS =====")
+        
         return G
         
     except Exception as e:

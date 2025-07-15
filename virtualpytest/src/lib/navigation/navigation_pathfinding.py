@@ -107,9 +107,24 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         # Use NetworkX shortest path algorithm
         path = nx.shortest_path(G, start_node_id, target_node_id)
         print(f"[@navigation:pathfinding:find_shortest_path] Found path with {len(path)} nodes")
+        print(f"[@navigation:pathfinding:find_shortest_path] Path nodes: {' → '.join(path)}")
+        
+        # Log available transitions from start node for debugging
+        print(f"[@navigation:pathfinding:find_shortest_path] ===== AVAILABLE TRANSITIONS FROM START NODE =====")
+        start_successors = list(G.successors(start_node_id))
+        for successor in start_successors:
+            successor_info = get_node_info(G, successor)
+            successor_label = successor_info.get('label', successor) if successor_info else successor
+            edge_data = G.edges[start_node_id, successor]
+            actions = edge_data.get('actions', [])
+            action_count = len(actions) if actions else 0
+            primary_action = edge_data.get('go_action', 'none')
+            print(f"[@navigation:pathfinding:find_shortest_path] Available: {get_node_info(G, start_node_id).get('label', start_node_id)} → {successor_label} (primary: {primary_action}, {action_count} actions)")
         
         # Convert path to navigation transitions (grouped by from → to)
         navigation_transitions = []
+        print(f"[@navigation:pathfinding:find_shortest_path] ===== BUILDING NAVIGATION TRANSITIONS =====")
+        
         for i in range(len(path) - 1):
             from_node = path[i]
             to_node = path[i + 1]
@@ -122,8 +137,32 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             edge_data = G.edges[from_node, to_node] if G.has_edge(from_node, to_node) else {}
             actions_list = edge_data.get('actions', [])
             
+            # Log detailed transition information
+            print(f"[@navigation:pathfinding:find_shortest_path] Transition {i+1}: {from_node_info.get('label', from_node) if from_node_info else from_node} → {to_node_info.get('label', to_node) if to_node_info else to_node}")
+            print(f"[@navigation:pathfinding:find_shortest_path]   From Node ID: {from_node}")
+            print(f"[@navigation:pathfinding:find_shortest_path]   To Node ID: {to_node}")
+            print(f"[@navigation:pathfinding:find_shortest_path]   Edge exists: {G.has_edge(from_node, to_node)}")
+            print(f"[@navigation:pathfinding:find_shortest_path]   Actions found: {len(actions_list)}")
+            
+            if actions_list:
+                for j, action in enumerate(actions_list):
+                    command = action.get('command', 'unknown')
+                    params = action.get('params', {})
+                    params_str = ', '.join([f"{k}={v}" for k, v in params.items()]) if params else 'no params'
+                    print(f"[@navigation:pathfinding:find_shortest_path]     Action {j+1}: {command}({params_str})")
+            else:
+                print(f"[@navigation:pathfinding:find_shortest_path]     No actions found for this transition")
+            
             # Get retry actions
             retry_actions_list = edge_data.get('retryActions', [])
+            
+            print(f"[@navigation:pathfinding:find_shortest_path]   Retry Actions found: {len(retry_actions_list)}")
+            if retry_actions_list:
+                for j, action in enumerate(retry_actions_list):
+                    command = action.get('command', 'unknown')
+                    params = action.get('params', {})
+                    params_str = ', '.join([f"{k}={v}" for k, v in params.items()]) if params else 'no params'
+                    print(f"[@navigation:pathfinding:find_shortest_path]     Retry Action {j+1}: {command}({params_str})")
             
             transition = {
                 'transition_number': i + 1,
@@ -140,7 +179,9 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             }
             
             navigation_transitions.append(transition)
+            print(f"[@navigation:pathfinding:find_shortest_path] -----")
         
+        print(f"[@navigation:pathfinding:find_shortest_path] ===== NAVIGATION TRANSITIONS COMPLETE =====")
         print(f"[@navigation:pathfinding:find_shortest_path] Generated {len(navigation_transitions)} navigation transitions")
         for i, transition in enumerate(navigation_transitions):
             actions_summary = [f"{a.get('command', 'unknown')}" for a in transition['actions']]

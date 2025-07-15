@@ -63,6 +63,9 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
     # Add edges with actions as attributes
     edges_added = 0
     edges_skipped = 0
+    
+    print(f"[@navigation:graph:create_networkx_graph] ===== ADDING EDGES WITH ACTIONS =====")
+    
     for edge in edges:
         # Handle both ReactFlow format (source/target) and database format (source_id/target_id)
         source_id = edge.get('source') or edge.get('source_id')
@@ -86,6 +89,37 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
         actions_list = edge_data.get('actions', [])
         retry_actions_list = edge_data.get('retryActions', [])
         
+        # Get node labels for logging
+        source_node_data = G.nodes[source_id]
+        target_node_data = G.nodes[target_id]
+        source_label = source_node_data.get('label', source_id)
+        target_label = target_node_data.get('label', target_id)
+        
+        # Log detailed edge information
+        print(f"[@navigation:graph:create_networkx_graph] Adding Edge: {source_label} → {target_label}")
+        print(f"[@navigation:graph:create_networkx_graph]   Source ID: {source_id}")
+        print(f"[@navigation:graph:create_networkx_graph]   Target ID: {target_id}")
+        print(f"[@navigation:graph:create_networkx_graph]   Actions ({len(actions_list)}):")
+        
+        if actions_list:
+            for i, action in enumerate(actions_list):
+                command = action.get('command', 'unknown')
+                params = action.get('params', {})
+                params_str = ', '.join([f"{k}={v}" for k, v in params.items()]) if params else 'no params'
+                print(f"[@navigation:graph:create_networkx_graph]     {i+1}. {command}({params_str})")
+        else:
+            print(f"[@navigation:graph:create_networkx_graph]     No actions defined")
+        
+        print(f"[@navigation:graph:create_networkx_graph]   Retry Actions ({len(retry_actions_list)}):")
+        if retry_actions_list:
+            for i, action in enumerate(retry_actions_list):
+                command = action.get('command', 'unknown')
+                params = action.get('params', {})
+                params_str = ', '.join([f"{k}={v}" for k, v in params.items()]) if params else 'no params'
+                print(f"[@navigation:graph:create_networkx_graph]     {i+1}. {command}({params_str})")
+        else:
+            print(f"[@navigation:graph:create_networkx_graph]     No retry actions defined")
+        
         # Get the primary action for pathfinding
         primary_action = actions_list[0]['command'] if actions_list else None
         
@@ -107,6 +141,9 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
         # Add reverse edge if bidirectional
         if edge_data.get('is_bidirectional', False):
             comeback_action = edge_data.get('comeback_action') or primary_action
+            print(f"[@navigation:graph:create_networkx_graph] Adding Bidirectional Edge: {target_label} → {source_label}")
+            print(f"[@navigation:graph:create_networkx_graph]   Comeback Action: {comeback_action}")
+            
             G.add_edge(target_id, source_id, **{
                 'go_action': comeback_action,
                 'comeback_action': primary_action,
@@ -119,9 +156,27 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
             })
         
         edges_added += 1
+        print(f"[@navigation:graph:create_networkx_graph] -----")
     
+    print(f"[@navigation:graph:create_networkx_graph] ===== GRAPH CONSTRUCTION COMPLETE =====")
     print(f"[@navigation:graph:create_networkx_graph] Successfully created graph with {len(G.nodes)} nodes and {len(G.edges)} edges")
     print(f"[@navigation:graph:create_networkx_graph] Edge processing summary: {edges_added} added, {edges_skipped} skipped")
+    
+    # Log all possible transitions summary
+    print(f"[@navigation:graph:create_networkx_graph] ===== ALL POSSIBLE TRANSITIONS SUMMARY =====")
+    for i, (from_node, to_node, edge_data) in enumerate(G.edges(data=True), 1):
+        from_info = G.nodes[from_node]
+        to_info = G.nodes[to_node]
+        from_label = from_info.get('label', from_node)
+        to_label = to_info.get('label', to_node)
+        actions = edge_data.get('actions', [])
+        action_summary = f"{len(actions)} actions" if actions else "no actions"
+        primary_action = edge_data.get('go_action', 'none')
+        
+        print(f"[@navigation:graph:create_networkx_graph] Transition {i:2d}: {from_label} → {to_label} (primary: {primary_action}, {action_summary})")
+    
+    print(f"[@navigation:graph:create_networkx_graph] ===== END TRANSITIONS SUMMARY =====")
+    
     return G
 
 def get_node_info(graph: nx.DiGraph, node_id: str) -> Optional[Dict]:
