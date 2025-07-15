@@ -83,6 +83,14 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
     }
   }, [validation.showPreview, treeId]);
 
+  // Select all edges by default when optimal path is loaded
+  useEffect(() => {
+    if (optimalPath && optimalPath.sequence) {
+      const allSteps = new Set(optimalPath.sequence.map((step: OptimalPathStep) => step.step_number));
+      setSelectedEdges(allSteps);
+    }
+  }, [optimalPath]);
+
   const fetchOptimalPath = async () => {
     setError(null);
 
