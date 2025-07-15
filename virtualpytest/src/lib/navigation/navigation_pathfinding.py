@@ -104,7 +104,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         print(f"[@navigation:pathfinding:find_shortest_path] Already at target node {target_node_id}")
         return []
     
-    # ALWAYS include entry→home transition when needed for execution
+    # ALWAYS include entry→home transition when it exists (for execution context)
     navigation_transitions = []
     transition_number = 1
     
@@ -121,7 +121,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             home_node = node_id
             break
     
-    # If we have both entry and home nodes, and they're different, include entry→home transition
+    # ALWAYS include entry→home transition when it exists (represents actual execution flow)
     if entry_node and home_node and entry_node != home_node and G.has_edge(entry_node, home_node):
         entry_info = get_node_info(G, entry_node)
         home_info = get_node_info(G, home_node)
@@ -143,10 +143,16 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         
         navigation_transitions.append(entry_transition)
         transition_number += 1
-        print(f"[@navigation:pathfinding:find_shortest_path] Added entry→home transition for execution context")
+        print(f"[@navigation:pathfinding:find_shortest_path] Added entry→home transition (execution context)")
+    
+    # If target is home and we just added entry→home, we're done
+    if home_node and target_node_id == home_node and navigation_transitions:
+        print(f"[@navigation:pathfinding:find_shortest_path] Target is home node, returning entry→home transition")
+        return navigation_transitions
     
     # Now find the path from home (or actual start) to target
-    path_start = home_node if home_node else actual_start_node
+    # Use the actual start node for pathfinding, but we've already added entry→home context
+    path_start = actual_start_node
     
     try:
         # Use NetworkX shortest path algorithm
