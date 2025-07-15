@@ -69,8 +69,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
 
   // Load navigation preview on component mount and when key dependencies change
   useEffect(() => {
-    // Always load navigation preview to show current path
-    // This ensures the "from" node is always up-to-date with the current position
+    if (currentNodeId === selectedNode.id) return;
     clearNavigationMessages();
     loadNavigationPreview(selectedNode, nodes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
