@@ -20,13 +20,13 @@ from src.lib.supabase.device_models_db import (
 from src.utils.app_utils import check_supabase, get_team_id
 
 # Create blueprint
-devicemodel_bp = Blueprint('server_devicemodel', __name__, url_prefix='/server/devicemodel')
+server_devicemodel_bp = Blueprint('server_devicemodel', __name__, url_prefix='/server/devicemodel')
 
 # =====================================================
 # DEVICE MODELS ENDPOINTS
 # =====================================================
 
-@devicemodel_bp.route('/getAllModels', methods=['GET'])
+@server_devicemodel_bp.route('/getAllModels', methods=['GET'])
 def get_device_models():
     """Get all device models for the team"""
     error = check_supabase()
@@ -41,7 +41,7 @@ def get_device_models():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/createDeviceModel', methods=['POST'])
+@server_devicemodel_bp.route('/createDeviceModel', methods=['POST'])
 def create_device_model_endpoint():
     """Create a new device model"""
     error = check_supabase()
@@ -73,7 +73,7 @@ def create_device_model_endpoint():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/getDeviceModel/<model_id>', methods=['GET'])
+@server_devicemodel_bp.route('/getDeviceModel/<model_id>', methods=['GET'])
 def get_device_model_endpoint(model_id):
     """Get a specific device model by ID"""
     error = check_supabase()
@@ -91,7 +91,7 @@ def get_device_model_endpoint(model_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/updateDeviceModel/<model_id>', methods=['PUT'])
+@server_devicemodel_bp.route('/updateDeviceModel/<model_id>', methods=['PUT'])
 def update_device_model_endpoint(model_id):
     """Update a specific device model"""
     error = check_supabase()
@@ -123,7 +123,7 @@ def update_device_model_endpoint(model_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@devicemodel_bp.route('/deleteDeviceModel/<model_id>', methods=['DELETE'])
+@server_devicemodel_bp.route('/deleteDeviceModel/<model_id>', methods=['DELETE'])
 def delete_device_model_endpoint(model_id):
     """Delete a specific device model"""
     error = check_supabase()

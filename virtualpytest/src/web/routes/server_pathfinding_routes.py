@@ -16,7 +16,7 @@ from flask import Blueprint, request, jsonify
 from src.utils.app_utils import check_supabase, get_team_id
 
 # Create blueprint
-pathfinding_bp = Blueprint('pathfinding', __name__, url_prefix='/server/pathfinding')
+server_pathfinding_bp = Blueprint('pathfinding', __name__, url_prefix='/server/pathfinding')
 
 # In-memory session tracking for take control mode
 take_control_sessions = {}
@@ -58,7 +58,7 @@ def deactivate_take_control_session(tree_id: str, team_id: str):
 # NOTE: Navigation execution routes moved to server_navigation_routes.py
 # This module only handles pathfinding and path preview functionality
 
-@pathfinding_bp.route('/preview/<tree_id>/<node_id>', methods=['GET'])
+@server_pathfinding_bp.route('/preview/<tree_id>/<node_id>', methods=['GET'])
 def get_navigation_preview(tree_id, node_id):
     """API endpoint for navigation path preview - returns pathfinding results only"""
     try:
@@ -90,7 +90,7 @@ def get_navigation_preview(tree_id, node_id):
             'error_code': 'API_ERROR'
         }), 500
 
-@pathfinding_bp.route('/stats/<tree_id>', methods=['GET'])
+@server_pathfinding_bp.route('/stats/<tree_id>', methods=['GET'])
 def get_navigation_stats(tree_id):
     """API endpoint for navigation graph statistics"""
     try:
@@ -179,7 +179,7 @@ def get_navigation_preview_internal(tree_id: str, target_node_id: str, team_id: 
 # CACHE MANAGEMENT ROUTES
 # =====================================================
 
-@pathfinding_bp.route('/cache/clear', methods=['POST'])
+@server_pathfinding_bp.route('/cache/clear', methods=['POST'])
 def clear_navigation_cache():
     """API endpoint for clearing navigation cache"""
     try:
@@ -220,7 +220,7 @@ def clear_navigation_cache():
             'error_code': 'API_ERROR'
         }), 500
 
-@pathfinding_bp.route('/cache/stats', methods=['GET'])
+@server_pathfinding_bp.route('/cache/stats', methods=['GET'])
 def get_cache_stats():
     """API endpoint for navigation cache statistics"""
     try:
@@ -256,7 +256,7 @@ def get_cache_stats():
 # TAKE CONTROL MODE ROUTES
 # =====================================================
 
-@pathfinding_bp.route('/takeControl/<tree_id>', methods=['POST'])
+@server_pathfinding_bp.route('/takeControl/<tree_id>', methods=['POST'])
 def toggle_take_control(tree_id):
     """API endpoint for toggling take control mode"""
     try:
@@ -289,7 +289,7 @@ def toggle_take_control(tree_id):
             'error_code': 'API_ERROR'
         }), 500
 
-@pathfinding_bp.route('/takeControl/<tree_id>/status', methods=['GET'])
+@server_pathfinding_bp.route('/takeControl/<tree_id>/status', methods=['GET'])
 def get_take_control_status(tree_id):
     """API endpoint for getting take control mode status"""
     try:
@@ -320,7 +320,7 @@ def get_take_control_status(tree_id):
 # ALTERNATIVE PATHS ROUTES
 # =====================================================
 
-@pathfinding_bp.route('/alternatives/<tree_id>/<node_id>', methods=['GET'])
+@server_pathfinding_bp.route('/alternatives/<tree_id>/<node_id>', methods=['GET'])
 def get_alternative_paths(tree_id, node_id):
     """API endpoint for getting alternative navigation paths"""
     try:

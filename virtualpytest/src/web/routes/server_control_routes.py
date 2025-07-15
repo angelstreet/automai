@@ -25,13 +25,13 @@ from src.utils.lock_utils import lock_device, unlock_device, get_all_locked_devi
 from src.controllers.controller_config_factory import create_controller_configs_from_device_info
 
 # Create blueprint
-control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
+server_control_bp = Blueprint('server_control', __name__, url_prefix='/server/control')
 
 # =====================================================
 # SERVER-SIDE DEVICE CONTROL ENDPOINTS
 # =====================================================
 
-@control_bp.route('/takeControl', methods=['POST'])
+@server_control_bp.route('/takeControl', methods=['POST'])
 def take_control():
     """Take control of a device"""
     try:
@@ -150,7 +150,7 @@ def take_control():
         print(f"❌ [CONTROL] Error taking control: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@control_bp.route('/releaseControl', methods=['POST'])
+@server_control_bp.route('/releaseControl', methods=['POST'])
 def release_control():
     """Release control of a device"""
     try:
@@ -225,7 +225,7 @@ def release_control():
         print(f"❌ [CONTROL] Error releasing control: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@control_bp.route('/lockedDevices', methods=['GET'])
+@server_control_bp.route('/lockedDevices', methods=['GET'])
 def get_locked_devices():
     """Get information about all currently locked devices"""
     try:
@@ -240,7 +240,7 @@ def get_locked_devices():
         print(f"❌ [CONTROL] Error getting locked devices: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@control_bp.route('/navigation/execute', methods=['POST'])
+@server_control_bp.route('/navigation/execute', methods=['POST'])
 def execute_navigation():
     """Execute navigation on a host device."""
     try:
@@ -295,7 +295,7 @@ def execute_navigation():
         print(f"❌ [NAVIGATION] Error executing navigation: {e}")
         return jsonify({'error': str(e)}), 500
 
-@control_bp.route('/navigationBatchExecute', methods=['POST'])
+@server_control_bp.route('/navigationBatchExecute', methods=['POST'])
 def batch_execute_navigation():
     """Execute batch navigation on a host device."""
     try:
@@ -354,7 +354,7 @@ def batch_execute_navigation():
 # CONTROLLER INFORMATION ENDPOINTS
 # =====================================================
 
-@control_bp.route('/getAllControllers', methods=['GET'])
+@server_control_bp.route('/getAllControllers', methods=['GET'])
 def get_all_controllers():
     """Get all available controller implementations from Python code"""
     try:

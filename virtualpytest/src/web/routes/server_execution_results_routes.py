@@ -17,12 +17,12 @@ from src.lib.supabase.execution_results_db import (
 )
 
 # Create blueprint for execution results routes
-execution_results_bp = Blueprint('execution_results', __name__)
+server_execution_results_bp = Blueprint('execution_results', __name__)
 
 # TODO: Get team_id from authentication context
 DEFAULT_TEAM_ID = "2211d930-8f20-4654-a0ca-699084e7917f"
 
-@execution_results_bp.route('/executionResults/record', methods=['POST'])
+@server_execution_results_bp.route('/executionResults/record', methods=['POST'])
 def record_execution_result():
     """Record a single execution result."""
     try:
@@ -48,7 +48,7 @@ def record_execution_result():
         print(f"[@routes:execution_results:record_execution_result] Error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@execution_results_bp.route('/executionResults/recordBatch', methods=['POST'])
+@server_execution_results_bp.route('/executionResults/recordBatch', methods=['POST'])
 def record_batch_execution_results():
     """Record multiple execution results in a batch."""
     try:
@@ -72,7 +72,7 @@ def record_batch_execution_results():
         print(f"[@routes:execution_results:record_batch_execution_results] Error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@execution_results_bp.route('/executionResults/confidence', methods=['GET'])
+@server_execution_results_bp.route('/executionResults/confidence', methods=['GET'])
 def get_confidence():
     """Get confidence score for a specific context."""
     try:
@@ -96,7 +96,7 @@ def get_confidence():
         print(f"[@routes:execution_results:get_confidence] Error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@execution_results_bp.route('/executionResults/history', methods=['GET'])
+@server_execution_results_bp.route('/executionResults/history', methods=['GET'])
 def get_history():
     """Get recent execution history for a context."""
     try:
@@ -119,7 +119,7 @@ def get_history():
         print(f"[@routes:execution_results:get_history] Error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@execution_results_bp.route('/executionResults/teamStats', methods=['GET'])
+@server_execution_results_bp.route('/executionResults/teamStats', methods=['GET'])
 def get_team_stats():
     """Get team execution statistics."""
     try:
@@ -135,7 +135,7 @@ def get_team_stats():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # Convenience endpoints for specific execution types
-@execution_results_bp.route('/executionResults/recordVerification', methods=['POST'])
+@server_execution_results_bp.route('/executionResults/recordVerification', methods=['POST'])
 def execution_results_record_verification():
     """Convenience endpoint for recording verification executions."""
     try:
@@ -183,7 +183,7 @@ def execution_results_record_verification():
         print(f"[@routes:execution_results:execution_results_record_verification] Error: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@execution_results_bp.route('/executionResults/recordAction', methods=['POST'])
+@server_execution_results_bp.route('/executionResults/recordAction', methods=['POST'])
 def execution_results_record_action():
     """Convenience endpoint for recording action executions."""
     try:

@@ -22,7 +22,7 @@ from src.lib.supabase.testcase_db import (
 from src.utils.app_utils import check_supabase
 
 # Create blueprint with abstract server testcases prefix
-testcase_bp = Blueprint('testcase', __name__, url_prefix='/server/testcases')
+server_testcase_bp = Blueprint('testcase', __name__, url_prefix='/server/testcases')
 
 # Helper functions (these should be imported from a shared module)
 def get_user_id():
@@ -36,7 +36,7 @@ def get_user_id():
 # TEST CASE ENDPOINTS WITH CONSISTENT NAMING
 # =====================================================
 
-@testcase_bp.route('/getAllTestCases', methods=['GET'])
+@server_testcase_bp.route('/getAllTestCases', methods=['GET'])
 def get_all_test_cases_route():
     """Get all test cases for a team"""
     error = check_supabase()
@@ -51,7 +51,7 @@ def get_all_test_cases_route():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@testcase_bp.route('/getTestCase/<test_id>', methods=['GET'])
+@server_testcase_bp.route('/getTestCase/<test_id>', methods=['GET'])
 def get_test_case_route(test_id):
     """Get a specific test case by ID"""
     error = check_supabase()
@@ -66,7 +66,7 @@ def get_test_case_route(test_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@testcase_bp.route('/createTestCase', methods=['POST'])
+@server_testcase_bp.route('/createTestCase', methods=['POST'])
 def create_test_case_route():
     """Create a new test case"""
     error = check_supabase()
@@ -83,7 +83,7 @@ def create_test_case_route():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@testcase_bp.route('/updateTestCase/<test_id>', methods=['PUT'])
+@server_testcase_bp.route('/updateTestCase/<test_id>', methods=['PUT'])
 def update_test_case_route(test_id):
     """Update an existing test case"""
     error = check_supabase()
@@ -101,7 +101,7 @@ def update_test_case_route(test_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@testcase_bp.route('/deleteTestCase/<test_id>', methods=['DELETE'])
+@server_testcase_bp.route('/deleteTestCase/<test_id>', methods=['DELETE'])
 def delete_test_case_route(test_id):
     """Delete a test case"""
     error = check_supabase()
@@ -119,7 +119,7 @@ def delete_test_case_route(test_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@testcase_bp.route('/executeTestCase', methods=['POST'])
+@server_testcase_bp.route('/executeTestCase', methods=['POST'])
 def execute_test_case():
     """Execute a test case using abstract controllers"""
     try:

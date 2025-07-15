@@ -72,7 +72,7 @@ const Dashboard: React.FC = () => {
       const [campaignsResponse, testCasesResponse, treesResponse] = await Promise.all([
         fetch('/server/campaigns/getAllCampaigns'),
         fetch('/server/testcases/getAllTestCases'),
-        fetch('/server/navigationTrees/getAllTrees'), // Use relative URL for navigation requests
+        fetch('/server/navigation/trees/getAllTrees'), // Use relative URL for navigation requests
       ]);
 
       let testCases: TestCase[] = [];

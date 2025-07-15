@@ -6,9 +6,9 @@ import requests
 from src.utils.build_url_utils import buildHostUrl
 from src.utils.host_utils import get_host_manager
 
-server_script_bp = Blueprint('server_script', __name__, url_prefix='/server')
+server_script_bp = Blueprint('server_script', __name__, url_prefix='/server/script')
 
-@server_script_bp.route('/script/execute', methods=['POST'])
+@server_script_bp.route('/execute', methods=['POST'])
 def execute_script():
     """Proxy script execution to host"""
     try:

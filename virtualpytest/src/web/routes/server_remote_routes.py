@@ -8,14 +8,14 @@ from flask import Blueprint, request, jsonify
 from src.web.utils.routeUtils import proxy_to_host, get_host_from_request
 import requests
 
-# Create blueprint 
-remote_bp = Blueprint('server_remote', __name__, url_prefix='/server/remote')
+# Create blueprint
+server_remote_bp = Blueprint('server_remote', __name__, url_prefix='/server/remote')
 
 # =====================================================
 # REMOTE CONTROLLER ENDPOINTS
 # =====================================================
 
-@remote_bp.route('/takeScreenshot', methods=['POST'])
+@server_remote_bp.route('/takeScreenshot', methods=['POST'])
 def take_screenshot():
     """Proxy take screenshot request to selected host"""
     try:
@@ -35,7 +35,7 @@ def take_screenshot():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/screenshotAndDump', methods=['POST'])
+@server_remote_bp.route('/screenshotAndDump', methods=['POST'])
 def screenshot_and_dump():
     """Proxy screenshot and dump request to selected host"""
     try:
@@ -55,7 +55,7 @@ def screenshot_and_dump():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/getApps', methods=['POST'])
+@server_remote_bp.route('/getApps', methods=['POST'])
 def get_apps():
     """Proxy get apps request to selected host"""
     try:
@@ -75,7 +75,7 @@ def get_apps():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/clickElement', methods=['POST'])
+@server_remote_bp.route('/clickElement', methods=['POST'])
 def click_element():
     """Proxy click element request to selected host (for Appium controllers)"""
     try:
@@ -106,7 +106,7 @@ def click_element():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/tapCoordinates', methods=['POST'])
+@server_remote_bp.route('/tapCoordinates', methods=['POST'])
 def tap_coordinates():
     """Handle tap coordinates for mobile devices - centralized mobile control"""
     try:
@@ -137,7 +137,7 @@ def tap_coordinates():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/streamTap', methods=['POST'])
+@server_remote_bp.route('/streamTap', methods=['POST'])
 def stream_tap():
     """Handle stream tap with device coordinate conversion - mobile control integration"""
     try:
@@ -210,7 +210,7 @@ def tap_coordinates_internal(host, x, y):
             'error': f'Server error: {str(e)}'
         }), 500
 
-@remote_bp.route('/executeCommand', methods=['POST'])
+@server_remote_bp.route('/executeCommand', methods=['POST'])
 def execute_command():
     """Proxy execute command request to selected host"""
     try:
@@ -241,7 +241,7 @@ def execute_command():
             'error': str(e)
         }), 500
 
-@remote_bp.route('/dumpUi', methods=['POST'])
+@server_remote_bp.route('/dumpUi', methods=['POST'])
 def dump_ui():
     """Dump UI elements without screenshot - for HDMI stream usage"""
     try:

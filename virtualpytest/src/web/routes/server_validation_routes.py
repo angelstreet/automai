@@ -25,7 +25,7 @@ from src.web.cache.navigation_graph import get_node_info, get_entry_points
 from src.utils.app_utils import get_team_id, check_supabase
 
 # Create blueprint
-validation_bp = Blueprint('validation', __name__, url_prefix='/server/validation')
+server_validation_bp = Blueprint('validation', __name__, url_prefix='/server/validation')
 
 class ValidationService:
     """Service for comprehensive navigation tree validation"""
@@ -595,7 +595,7 @@ validation_service = ValidationService()
 # Bind method to ValidationService class
 ValidationService.get_validation_preview = validation_service.get_validation_preview
 
-@validation_bp.route('/health', methods=['GET'])
+@server_validation_bp.route('/health', methods=['GET'])
 def validation_health():
     """Health check for validation endpoints"""
     return jsonify({
@@ -605,7 +605,7 @@ def validation_health():
         'message': 'Validation routes are operational'
     }), 200
 
-@validation_bp.route('/preview/<tree_id>', methods=['GET'])
+@server_validation_bp.route('/preview/<tree_id>', methods=['GET'])
 def get_validation_preview(tree_id):
     """Get validation preview showing what will be tested"""
     try:
@@ -618,7 +618,7 @@ def get_validation_preview(tree_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@validation_bp.route('/run/<tree_id>', methods=['POST'])
+@server_validation_bp.route('/run/<tree_id>', methods=['POST'])
 def run_comprehensive_validation(tree_id):
     """Run comprehensive validation by testing all navigation paths"""
     try:
@@ -634,7 +634,7 @@ def run_comprehensive_validation(tree_id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@validation_bp.route('/optimal-path/<tree_id>', methods=['GET'])
+@server_validation_bp.route('/optimal-path/<tree_id>', methods=['GET'])
 def get_optimal_path(tree_id):
     """Get optimal validation path using NetworkX algorithms"""
     try:

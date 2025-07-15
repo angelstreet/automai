@@ -14,9 +14,9 @@ from src.utils.host_utils import get_controller, get_device_by_id
 import os
 
 # Create blueprint
-av_bp = Blueprint('host_av', __name__, url_prefix='/host/av')
+host_av_bp = Blueprint('host_av', __name__, url_prefix='/host/av')
 
-@av_bp.route('/connect', methods=['POST'])
+@host_av_bp.route('/connect', methods=['POST'])
 def connect():
     """Connect to AV controller using new architecture"""
     try:
@@ -69,7 +69,7 @@ def connect():
             'error': str(e)
         }), 500
 
-@av_bp.route('/disconnect', methods=['POST'])
+@host_av_bp.route('/disconnect', methods=['POST'])
 def disconnect():
     """Disconnect from AV controller using new architecture"""
     try:
@@ -114,7 +114,7 @@ def disconnect():
             'error': str(e)
         }), 500
 
-@av_bp.route('/status', methods=['GET'])
+@host_av_bp.route('/status', methods=['GET'])
 def get_status():
     """Get AV controller status using new architecture"""
     try:
@@ -158,7 +158,7 @@ def get_status():
             'error': str(e)
         }), 500
 
-@av_bp.route('/restartStream', methods=['POST'])
+@host_av_bp.route('/restartStream', methods=['POST'])
 def restart_stream():
     """Restart stream service using new architecture"""
     try:
@@ -212,7 +212,7 @@ def restart_stream():
             'error': str(e)
         }), 500
 
-@av_bp.route('/takeControl', methods=['POST'])
+@host_av_bp.route('/takeControl', methods=['POST'])
 def take_control():
     """Take control of AV system using new architecture"""
     try:
@@ -260,7 +260,7 @@ def take_control():
             'error': str(e)
         }), 500
 
-@av_bp.route('/getStreamUrl', methods=['GET'])
+@host_av_bp.route('/getStreamUrl', methods=['GET'])
 def get_stream_url():
     """Get stream URL from AV controller using host URL building"""
     try:
@@ -309,7 +309,7 @@ def get_stream_url():
             'error': str(e)
         }), 500
 
-@av_bp.route('/takeScreenshot', methods=['POST'])
+@host_av_bp.route('/takeScreenshot', methods=['POST'])
 def take_screenshot():
     """Take temporary screenshot to nginx folder using new architecture"""
     try:
@@ -381,7 +381,7 @@ def take_screenshot():
             'error': str(e)
         }), 500
 
-@av_bp.route('/saveScreenshot', methods=['POST'])
+@host_av_bp.route('/saveScreenshot', methods=['POST'])
 def save_screenshot():
     """Take screenshot and upload to R2 for navigation documentation"""
     try:
@@ -494,7 +494,7 @@ def save_screenshot():
             'error': str(e)
         }), 500
 
-@av_bp.route('/startCapture', methods=['POST'])
+@host_av_bp.route('/startCapture', methods=['POST'])
 def start_video_capture():
     """Start video capture using new architecture"""
     try:
@@ -563,7 +563,7 @@ def start_video_capture():
             'error': str(e)
         }), 500
 
-@av_bp.route('/stopCapture', methods=['POST'])
+@host_av_bp.route('/stopCapture', methods=['POST'])
 def stop_video_capture():
     """Stop video capture using new architecture"""
     try:
@@ -614,7 +614,7 @@ def stop_video_capture():
             'error': str(e)
         }), 500
 
-@av_bp.route('/images/screenshot/<filename>', methods=['GET', 'OPTIONS'])
+@host_av_bp.route('/images/screenshot/<filename>', methods=['GET', 'OPTIONS'])
 def serve_screenshot(filename):
     """Serve a screenshot image by filename from host"""
     # Handle OPTIONS request for CORS
@@ -662,7 +662,7 @@ def serve_screenshot(filename):
         print(f"[@route:host_av:serve_screenshot] Error serving screenshot: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@av_bp.route('/images', methods=['GET', 'OPTIONS'])
+@host_av_bp.route('/images', methods=['GET', 'OPTIONS'])
 def serve_image_by_path():
     """Serve an image or JSON file from a specified path on host"""
     # Handle OPTIONS request for CORS
@@ -726,7 +726,7 @@ def serve_image_by_path():
         print(f"[@route:host_av:serve_image_by_path] Error serving file: {str(e)}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@av_bp.route('/listCaptures', methods=['POST'])
+@host_av_bp.route('/listCaptures', methods=['POST'])
 def list_captures():
     """List captured frames for monitoring with URLs built like screenshots"""
     try:

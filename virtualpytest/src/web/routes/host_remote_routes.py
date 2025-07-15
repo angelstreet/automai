@@ -8,13 +8,13 @@ from flask import Blueprint, request, jsonify, current_app
 from src.utils.host_utils import get_controller, get_device_by_id
 
 # Create blueprint
-remote_bp = Blueprint('host_remote', __name__, url_prefix='/host/remote')
+host_remote_bp = Blueprint('host_remote', __name__, url_prefix='/host/remote')
 
 # =====================================================
 # REMOTE CONTROLLER ENDPOINTS
 # =====================================================
 
-@remote_bp.route('/takeScreenshot', methods=['POST'])
+@host_remote_bp.route('/takeScreenshot', methods=['POST'])
 def take_screenshot():
     """Take a screenshot using the remote controller."""
     try:
@@ -68,7 +68,7 @@ def take_screenshot():
             'error': f'Screenshot error: {str(e)}'
         }), 500
 
-@remote_bp.route('/screenshotAndDump', methods=['POST'])
+@host_remote_bp.route('/screenshotAndDump', methods=['POST'])
 def screenshot_and_dump():
     """Take screenshot and dump UI elements."""
     try:
@@ -159,7 +159,7 @@ def screenshot_and_dump():
             'error': f'Screenshot and UI dump error: {str(e)}'
         }), 500
 
-@remote_bp.route('/getApps', methods=['POST'])
+@host_remote_bp.route('/getApps', methods=['POST'])
 def get_apps():
     """Get list of installed apps."""
     try:
@@ -216,7 +216,7 @@ def get_apps():
             'error': f'Get apps error: {str(e)}'
         }), 500
 
-@remote_bp.route('/tapCoordinates', methods=['POST'])
+@host_remote_bp.route('/tapCoordinates', methods=['POST'])
 def tap_coordinates():
     """Handle tap coordinates - mobile control only"""
     try:
@@ -274,7 +274,7 @@ def tap_coordinates():
             'error': f'Server error: {str(e)}'
         }), 500
 
-@remote_bp.route('/executeCommand', methods=['POST'])
+@host_remote_bp.route('/executeCommand', methods=['POST'])
 def execute_command():
     """Execute a remote command."""
     try:
@@ -481,7 +481,7 @@ def execute_command():
             'error': f'Command execution error: {str(e)}'
         }), 500
 
-@remote_bp.route('/dumpUi', methods=['POST'])
+@host_remote_bp.route('/dumpUi', methods=['POST'])
 def dump_ui():
     """Dump UI elements without screenshot - for HDMI stream usage"""
     try:

@@ -25,13 +25,13 @@ from src.lib.supabase.navigation_trees_db import (
 from src.utils.app_utils import check_supabase, get_team_id
 
 # Create blueprint
-userinterface_bp = Blueprint('server_userinterface', __name__, url_prefix='/server/userinterface')
+server_userinterface_bp = Blueprint('server_userinterface', __name__, url_prefix='/server/userinterface')
 
 # =====================================================
 # USER INTERFACES ENDPOINTS
 # =====================================================
 
-@userinterface_bp.route('/getAllUserInterfaces', methods=['GET'])
+@server_userinterface_bp.route('/getAllUserInterfaces', methods=['GET'])
 def get_userinterfaces():
     """Get all user interfaces for the team"""
     error = check_supabase()
@@ -56,7 +56,7 @@ def get_userinterfaces():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/createUserInterface', methods=['POST'])
+@server_userinterface_bp.route('/createUserInterface', methods=['POST'])
 def create_userinterface():
     """Create a new user interface"""
     error = check_supabase()
@@ -88,7 +88,7 @@ def create_userinterface():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/getUserInterface/<interface_id>', methods=['GET'])
+@server_userinterface_bp.route('/getUserInterface/<interface_id>', methods=['GET'])
 def get_userinterface(interface_id):
     """Get a specific user interface by ID"""
     error = check_supabase()
@@ -110,7 +110,7 @@ def get_userinterface(interface_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/getUserInterfaceByName/<interface_name>', methods=['GET'])
+@server_userinterface_bp.route('/getUserInterfaceByName/<interface_name>', methods=['GET'])
 def get_userinterface_by_name(interface_name):
     """Get a specific user interface by name (for navigation editor)"""
     error = check_supabase()
@@ -128,7 +128,7 @@ def get_userinterface_by_name(interface_name):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/updateUserInterface/<interface_id>', methods=['PUT'])
+@server_userinterface_bp.route('/updateUserInterface/<interface_id>', methods=['PUT'])
 def update_userinterface(interface_id):
     """Update a specific user interface"""
     error = check_supabase()
@@ -160,7 +160,7 @@ def update_userinterface(interface_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@userinterface_bp.route('/deleteUserInterface/<interface_id>', methods=['DELETE'])
+@server_userinterface_bp.route('/deleteUserInterface/<interface_id>', methods=['DELETE'])
 def delete_userinterface(interface_id):
     """Delete a specific user interface"""
     error = check_supabase()

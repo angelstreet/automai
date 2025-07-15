@@ -12,9 +12,9 @@ import requests
 from src.web.utils.routeUtils import proxy_to_host, proxy_to_host_with_params, get_host_from_request
 
 # Create blueprint
-av_bp = Blueprint('server_av', __name__, url_prefix='/server/av')
+server_av_bp = Blueprint('server_av', __name__, url_prefix='/server/av')
 
-@av_bp.route('/restartStream', methods=['POST'])
+@server_av_bp.route('/restartStream', methods=['POST'])
 def restart_stream():
     """Proxy restart stream request to selected host with device_id"""
     try:
@@ -50,7 +50,7 @@ def restart_stream():
             'error': str(e)
         }), 500
 
-@av_bp.route('/getStreamUrl', methods=['GET', 'POST'])
+@server_av_bp.route('/getStreamUrl', methods=['GET', 'POST'])
 def get_stream_url():
     """Proxy get stream URL request to selected host with device_id"""
     try:
@@ -85,7 +85,7 @@ def get_stream_url():
             'error': str(e)
         }), 500
 
-@av_bp.route('/proxyImage', methods=['GET'])
+@server_av_bp.route('/proxyImage', methods=['GET'])
 def proxy_image():
     """
     Proxy HTTP image URLs through HTTPS to solve mixed content issues.
@@ -177,7 +177,7 @@ def proxy_image():
             'error': f'Image proxy error: {str(e)}'
         }), 500
 
-@av_bp.route('/proxyImage', methods=['OPTIONS'])
+@server_av_bp.route('/proxyImage', methods=['OPTIONS'])
 def proxy_image_options():
     """Handle CORS preflight requests for image proxy"""
     return Response(
@@ -190,7 +190,7 @@ def proxy_image_options():
         }
     )
 
-@av_bp.route('/proxyMonitoringImage/<filename>', methods=['GET'])
+@server_av_bp.route('/proxyMonitoringImage/<filename>', methods=['GET'])
 def proxy_monitoring_image(filename):
     """
     Proxy monitoring image and JSON requests to the selected host.
@@ -266,7 +266,7 @@ def proxy_monitoring_image(filename):
             'error': f'Monitoring file proxy error: {str(e)}'
         }), 500
 
-@av_bp.route('/proxyStream', methods=['GET'])
+@server_av_bp.route('/proxyStream', methods=['GET'])
 def proxy_stream():
     """
     Proxy HTTP HLS streams through HTTPS to solve mixed content issues.
@@ -410,7 +410,7 @@ def proxy_stream():
             'error': f'Stream proxy error: {str(e)}'
         }), 500
 
-@av_bp.route('/proxyStream', methods=['OPTIONS'])
+@server_av_bp.route('/proxyStream', methods=['OPTIONS'])
 def proxy_stream_options():
     """Handle CORS preflight requests for stream proxy"""
     return Response(
@@ -423,7 +423,7 @@ def proxy_stream_options():
         }
     )
 
-@av_bp.route('/getStatus', methods=['GET', 'POST'])
+@server_av_bp.route('/getStatus', methods=['GET', 'POST'])
 def get_status():
     """Proxy get status request to selected host with device_id"""
     try:
@@ -460,7 +460,7 @@ def get_status():
             'error': str(e)
         }), 500
 
-@av_bp.route('/takeScreenshot', methods=['POST'])
+@server_av_bp.route('/takeScreenshot', methods=['POST'])
 def take_screenshot():
     """Proxy take screenshot request to selected host with device_id"""
     try:
@@ -496,7 +496,7 @@ def take_screenshot():
             'error': str(e)
         }), 500
 
-@av_bp.route('/saveScreenshot', methods=['POST'])
+@server_av_bp.route('/saveScreenshot', methods=['POST'])
 def save_screenshot():
     """Proxy save screenshot request to selected host with device_id"""
     try:
@@ -532,7 +532,7 @@ def save_screenshot():
             'error': str(e)
         }), 500
 
-@av_bp.route('/startCapture', methods=['POST'])
+@server_av_bp.route('/startCapture', methods=['POST'])
 def start_video_capture():
     """Proxy start video capture request to selected host with device_id"""
     try:
@@ -568,7 +568,7 @@ def start_video_capture():
             'error': str(e)
         }), 500
 
-@av_bp.route('/stopCapture', methods=['POST'])
+@server_av_bp.route('/stopCapture', methods=['POST'])
 def stop_video_capture():
     """Proxy stop video capture request to selected host with device_id"""
     try:
@@ -604,7 +604,7 @@ def stop_video_capture():
             'error': str(e)
         }), 500
 
-@av_bp.route('/takeControl', methods=['POST'])
+@server_av_bp.route('/takeControl', methods=['POST'])
 def take_control():
     """Proxy take control request to selected host with device_id"""
     try:
@@ -640,7 +640,7 @@ def take_control():
             'error': str(e)
         }), 500
 
-@av_bp.route('/connect', methods=['POST'])
+@server_av_bp.route('/connect', methods=['POST'])
 def connect():
     """Proxy connect request to selected host with device_id"""
     try:
@@ -676,7 +676,7 @@ def connect():
             'error': str(e)
         }), 500
 
-@av_bp.route('/disconnect', methods=['POST'])
+@server_av_bp.route('/disconnect', methods=['POST'])
 def disconnect():
     """Proxy disconnect request to selected host with device_id"""
     try:
@@ -712,7 +712,7 @@ def disconnect():
             'error': str(e)
         }), 500
 
-@av_bp.route('/listCaptures', methods=['POST'])
+@server_av_bp.route('/listCaptures', methods=['POST'])
 def list_captures():
     """Proxy list captures request to selected host with device_id"""
     try:

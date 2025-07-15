@@ -8,9 +8,9 @@ Routes work with any power controller type (USB, network, etc.)
 from flask import Blueprint, request, jsonify, current_app
 import os
 
-power_bp = Blueprint('power', __name__, url_prefix='/server/power')
+server_power_bp = Blueprint('power', __name__, url_prefix='/server/power')
 
-@power_bp.route('/takeControl', methods=['POST'])
+@server_power_bp.route('/takeControl', methods=['POST'])
 def power_take_control():
     """Take control of power device using abstract power controller."""
     try:
@@ -51,7 +51,7 @@ def power_take_control():
             'error': f'Connection error: {str(e)}'
         }), 500
 
-@power_bp.route('/releaseControl', methods=['POST'])
+@server_power_bp.route('/releaseControl', methods=['POST'])
 def power_release_control():
     """Release control of power device using abstract power controller."""
     try:
@@ -82,7 +82,7 @@ def power_release_control():
             'error': f'Release error: {str(e)}'
         }), 500
 
-@power_bp.route('/status', methods=['GET'])
+@server_power_bp.route('/status', methods=['GET'])
 def get_power_status():
     """Get power controller session status."""
     try:
@@ -119,7 +119,7 @@ def get_power_status():
             'error': f'Status check error: {str(e)}'
         }), 500
 
-@power_bp.route('/powerStatus', methods=['GET'])
+@server_power_bp.route('/powerStatus', methods=['GET'])
 def get_power_state():
     """Get current power state using abstract power controller."""
     try:
@@ -154,7 +154,7 @@ def get_power_state():
             'error': f'Power status error: {str(e)}'
         }), 500
 
-@power_bp.route('/powerOn', methods=['POST'])
+@server_power_bp.route('/powerOn', methods=['POST'])
 def power_on():
     """Turn power on using abstract power controller."""
     try:
@@ -196,7 +196,7 @@ def power_on():
             'error': f'Power on error: {str(e)}'
         }), 500
 
-@power_bp.route('/powerOff', methods=['POST'])
+@server_power_bp.route('/powerOff', methods=['POST'])
 def power_off():
     """Turn power off using abstract power controller."""
     try:
@@ -238,7 +238,7 @@ def power_off():
             'error': f'Power off error: {str(e)}'
         }), 500
 
-@power_bp.route('/reboot', methods=['POST'])
+@server_power_bp.route('/reboot', methods=['POST'])
 def power_reboot():
     """Reboot power device using abstract power controller."""
     try:
@@ -280,7 +280,7 @@ def power_reboot():
             'error': f'Reboot error: {str(e)}'
         }), 500
 
-@power_bp.route('/toggle', methods=['POST'])
+@server_power_bp.route('/toggle', methods=['POST'])
 def power_toggle():
     """Toggle power state (on->off or off->on) using abstract power controller."""
     try:

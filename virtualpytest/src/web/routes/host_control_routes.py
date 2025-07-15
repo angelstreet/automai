@@ -12,13 +12,13 @@ from flask import Blueprint, request, jsonify, current_app
 from src.utils.host_utils import get_controller, get_device_by_id, list_available_devices
 
 # Create blueprint
-control_bp = Blueprint('host_control', __name__, url_prefix='/host')
+host_control_bp = Blueprint('host_control', __name__, url_prefix='/host/control')
 
 # =====================================================
 # HOST-SIDE DEVICE CONTROL ENDPOINTS
 # =====================================================
 
-@control_bp.route('/takeControl', methods=['POST'])
+@host_control_bp.route('/takeControl', methods=['POST'])
 def take_control():
     """Host-side take control - Check controllers for the requested device"""
     try:
@@ -104,7 +104,7 @@ def take_control():
         }), 500
 
 
-@control_bp.route('/releaseControl', methods=['POST'])
+@host_control_bp.route('/releaseControl', methods=['POST'])
 def release_control():
     """Host-side release control"""
     try:
@@ -134,7 +134,7 @@ def release_control():
         }), 500
 
 
-@control_bp.route('/devices', methods=['GET'])
+@host_control_bp.route('/devices', methods=['GET'])
 def list_devices():
     """List all available devices on this host"""
     try:
@@ -222,7 +222,7 @@ def list_devices():
             'error': str(e)
         }), 500
 
-@control_bp.route('/controllerStatus', methods=['GET'])
+@host_control_bp.route('/controllerStatus', methods=['GET'])
 def controller_status():
     """Get status of all controllers on this host"""
     try:

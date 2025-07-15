@@ -21,7 +21,7 @@ from src.lib.supabase.campaign_db import (
 from src.utils.app_utils import check_supabase
 
 # Create blueprint with abstract server campaign prefix
-campaign_bp = Blueprint('campaign', __name__, url_prefix='/server/campaigns')
+server_campaign_bp = Blueprint('campaign', __name__, url_prefix='/server/campaigns')
 
 # Helper functions (these should be imported from a shared module)
 def get_user_id():
@@ -35,7 +35,7 @@ def get_user_id():
 # CAMPAIGN ENDPOINTS WITH CONSISTENT NAMING
 # =====================================================
 
-@campaign_bp.route('/getAllCampaigns', methods=['GET'])
+@server_campaign_bp.route('/getAllCampaigns', methods=['GET'])
 def get_all_campaigns_route():
     """Get all campaigns for a team"""
     error = check_supabase()
@@ -50,7 +50,7 @@ def get_all_campaigns_route():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@campaign_bp.route('/getCampaign/<campaign_id>', methods=['GET'])
+@server_campaign_bp.route('/getCampaign/<campaign_id>', methods=['GET'])
 def get_campaign_route(campaign_id):
     """Get a specific campaign by ID"""
     error = check_supabase()
@@ -65,7 +65,7 @@ def get_campaign_route(campaign_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@campaign_bp.route('/createCampaign', methods=['POST'])
+@server_campaign_bp.route('/createCampaign', methods=['POST'])
 def create_campaign_route():
     """Create a new campaign"""
     error = check_supabase()
@@ -82,7 +82,7 @@ def create_campaign_route():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@campaign_bp.route('/updateCampaign/<campaign_id>', methods=['PUT'])
+@server_campaign_bp.route('/updateCampaign/<campaign_id>', methods=['PUT'])
 def update_campaign_route(campaign_id):
     """Update an existing campaign"""
     error = check_supabase()
@@ -100,7 +100,7 @@ def update_campaign_route(campaign_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@campaign_bp.route('/deleteCampaign/<campaign_id>', methods=['DELETE'])
+@server_campaign_bp.route('/deleteCampaign/<campaign_id>', methods=['DELETE'])
 def delete_campaign_route(campaign_id):
     """Delete a campaign"""
     error = check_supabase()

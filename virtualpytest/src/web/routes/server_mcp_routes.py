@@ -12,12 +12,12 @@ import logging
 from src.controllers.ai.ai_agent import AIAgentController
 
 # Create blueprint
-mcp_bp = Blueprint('server_mcp', __name__, url_prefix='/server/mcp')
+server_mcp_bp = Blueprint('server_mcp', __name__, url_prefix='/server/mcp')
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
-@mcp_bp.route('/execute-task', methods=['POST'])
+@server_mcp_bp.route('/execute-task', methods=['POST'])
 def execute_task():
     """
     Execute a user task using AI agent with MCP tool awareness
@@ -262,7 +262,7 @@ def _execute_remote_command(params):
             'result': {'success': False, 'error': str(e)}
         }
 
-@mcp_bp.route('/health', methods=['GET'])
+@server_mcp_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for MCP routes"""
     return jsonify({

@@ -7,8 +7,6 @@
 
 import { useState, useCallback } from 'react';
 
-import { Host } from '../../types/common/Host_Types';
-
 interface ScriptExecutionResult {
   success: boolean;
   stdout: string;

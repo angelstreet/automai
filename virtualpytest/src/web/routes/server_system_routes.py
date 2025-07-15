@@ -18,9 +18,9 @@ from src.controllers.controller_config_factory import create_controller_configs_
 
 from src.utils.host_utils import get_host_manager
 
-system_bp = Blueprint('system', __name__, url_prefix='/server/system')
+server_system_bp = Blueprint('system', __name__, url_prefix='/server/system')
 
-@system_bp.route('/register', methods=['POST'])
+@server_system_bp.route('/register', methods=['POST'])
 def register_host():
     """Host registers with server"""
     try:
@@ -139,7 +139,7 @@ def register_host():
         traceback.print_exc()
         return jsonify({'error': error_msg}), 500
 
-@system_bp.route('/unregister', methods=['POST'])
+@server_system_bp.route('/unregister', methods=['POST'])
 def unregister_host():
     """Host unregisters from server"""
     try:
@@ -167,7 +167,7 @@ def unregister_host():
         print(f"❌ Error unregistering host: {e}")
         return jsonify({'error': str(e)}), 500
 
-@system_bp.route('/health', methods=['GET'])
+@server_system_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint for clients"""
     system_stats = get_system_stats()
@@ -179,7 +179,7 @@ def health_check():
         'system_stats': system_stats
     }), 200
 
-@system_bp.route('/getAllHosts', methods=['GET'])
+@server_system_bp.route('/getAllHosts', methods=['GET'])
 def getAllHosts():
     """Return all registered hosts - single REST endpoint for host listing"""
     try:
@@ -223,7 +223,7 @@ def getAllHosts():
         print(f"❌ [HOSTS] Error listing hosts: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@system_bp.route('/environmentProfiles', methods=['GET'])
+@server_system_bp.route('/environmentProfiles', methods=['GET'])
 def get_environment_profiles():
     """Get available environment profiles for test execution"""
     try:
@@ -272,7 +272,7 @@ def get_environment_profiles():
         print(f"❌ Error getting environment profiles: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
-@system_bp.route('/ping', methods=['POST'])
+@server_system_bp.route('/ping', methods=['POST'])
 def client_ping():
     """Client sends periodic health ping to server"""
     try:

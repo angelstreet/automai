@@ -55,30 +55,30 @@ def _register_server_routes(app):
     
     # Server-only routes (including former "common" routes that are actually server-only)
     server_route_modules = [
-        ('server_remote_routes', 'remote_bp'),
-        ('server_av_routes', 'av_bp'),  # ✅ AV proxy routes
+        ('server_remote_routes', 'server_remote_bp'),
+        ('server_av_routes', 'server_av_bp'),  # ✅ AV proxy routes
         ('server_stream_proxy_routes', 'server_stream_proxy_routes'),  # ✅ HTTP to HTTPS stream proxy
-        ('server_navigation_routes', 'navigation_bp'),
-        ('server_navigation_execution_routes', 'navigation_execution_bp'),  # ✅ Standardized navigation execution
-        ('server_campaign_routes', 'campaign_bp'),
-        ('server_testcase_routes', 'testcase_bp'),
-        ('server_pathfinding_routes', 'pathfinding_bp'),
-        ('server_validation_routes', 'validation_bp'),
-        ('server_power_routes', 'power_bp'),
-        ('server_device_routes', 'device_bp'),  # ✅ Unified naming
-        ('server_userinterface_routes', 'userinterface_bp'),  # ✅ Unified naming
-        ('server_devicemodel_routes', 'devicemodel_bp'),  # ✅ Unified naming
+        ('server_navigation_routes', 'server_navigation_bp'),
+        ('server_navigation_execution_routes', 'server_navigation_execution_bp'),  # ✅ Standardized navigation execution
+        ('server_campaign_routes', 'server_campaign_bp'),
+        ('server_testcase_routes', 'server_testcase_bp'),
+        ('server_pathfinding_routes', 'server_pathfinding_bp'),
+        ('server_validation_routes', 'server_validation_bp'),
+        ('server_power_routes', 'server_power_bp'),
+        ('server_device_routes', 'server_device_bp'),  # ✅ Unified naming
+        ('server_userinterface_routes', 'server_userinterface_bp'),  # ✅ Unified naming
+        ('server_devicemodel_routes', 'server_devicemodel_bp'),  # ✅ Unified naming
         ('server_verification_common_routes', 'server_verification_common_bp'),
-        ('server_control_routes', 'control_bp'),  # ✅ Unified naming
-        ('server_system_routes', 'system_bp'),
+        ('server_control_routes', 'server_control_bp'),  # ✅ Unified naming
+        ('server_system_routes', 'server_system_bp'),
 
         ('server_actions_routes', 'server_actions_bp'),  # ✅ Unified actions API
         ('server_navigation_trees_routes', 'server_navigation_trees_bp'),  # ✅ Navigation trees with history
-        ('server_execution_results_routes', 'execution_results_bp'),  # ✅ Execution results tracking
+        ('server_execution_results_routes', 'server_execution_results_bp'),  # ✅ Execution results tracking
         ('server_script_routes', 'server_script_bp'),  # ✅ Script execution proxy
-        ('server_aiagent_routes', 'aiagent_bp'),  # ✅ AI agent proxy routes
-        ('server_frontend_routes', 'frontend_bp'),  # ✅ Frontend navigation control for MCP
-        ('server_mcp_routes', 'mcp_bp'),  # ✅ MCP task execution bridge
+        ('server_aiagent_routes', 'server_aiagent_bp'),  # ✅ AI agent proxy routes
+        ('server_frontend_routes', 'server_frontend_bp'),  # ✅ Frontend navigation control for MCP
+        ('server_mcp_routes', 'server_mcp_bp'),  # ✅ MCP task execution bridge
 
     ]
     
@@ -112,23 +112,14 @@ def _register_host_routes(app):
     host_route_modules = [
         ('host_remote_routes', 'host_remote_bp'),  # ✅ Remote device control
         ('host_aiagent_routes', 'aiagent_host_bp'),  # ✅ AI agent execution
-        ('host_verification_image_routes', 'host_verification_image_bp'),  # ✅ Image verification
-        ('host_verification_text_routes', 'host_verification_text_bp'),  # ✅ Text verification
-        ('host_verification_adb_routes', 'host_verification_adb_bp'),  # ✅ ADB verification
-        ('host_verification_appium_routes', 'host_verification_appium_bp'),  # ✅ Appium verification
-        ('host_verification_audio_routes', 'host_verification_audio_bp'),  # ✅ Audio verification
-        ('host_verification_video_routes', 'host_verification_video_bp'),  # ✅ Video verification
-        ('host_screenshot_routes', 'host_screenshot_bp'),  # ✅ Screenshot capture
-        ('host_test_routes', 'host_test_bp'),  # ✅ Test execution
-        ('host_capture_routes', 'host_capture_bp'),  # ✅ Capture operations
-        ('host_reference_routes', 'host_reference_bp'),  # ✅ Reference management
-        ('host_device_routes', 'host_device_bp'),  # ✅ Device operations
-        ('host_system_routes', 'host_system_bp'),  # ✅ System operations
-        ('host_power_routes', 'host_power_bp'),  # ✅ Power management
-        ('host_campaign_routes', 'host_campaign_bp'),  # ✅ Campaign execution
+        ('host_verification_image_routes', 'verification_image_host_bp'),  # ✅ Image verification
+        ('host_verification_text_routes', 'verification_text_host_bp'),  # ✅ Text verification
+        ('host_verification_adb_routes', 'verification_adb_host_bp'),  # ✅ ADB verification
+        ('host_verification_video', 'host_verification_video_bp'),  # ✅ Video verification
+        ('host_verification_routes', 'verification_host_bp'),  # ✅ General verification
         ('host_script_routes', 'host_script_bp'),  # ✅ Script execution
-        ('host_android_routes', 'host_android_bp'),  # ✅ Android device operations
         ('host_av_routes', 'host_av_bp'),  # ✅ Audio/Video operations
+        ('host_control_routes', 'host_control_bp'),  # ✅ Control operations
     ]
     
     for module_name, blueprint_name in host_route_modules:

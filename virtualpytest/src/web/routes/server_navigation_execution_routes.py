@@ -15,10 +15,10 @@ from src.lib.navigation.navigation_execution import NavigationExecutor
 from src.utils.app_utils import get_team_id
 
 # Create blueprint
-navigation_execution_bp = Blueprint('navigation_execution', __name__, url_prefix='/server/navigation')
+server_navigation_execution_bp = Blueprint('navigation_execution', __name__, url_prefix='/server/navigation')
 
 
-@navigation_execution_bp.route('/execute/<tree_id>/<node_id>', methods=['POST'])
+@server_navigation_execution_bp.route('/execute/<tree_id>/<node_id>', methods=['POST'])
 def execute_navigation(tree_id, node_id):
     """
     Execute navigation using standardized NavigationExecutor
@@ -65,7 +65,7 @@ def execute_navigation(tree_id, node_id):
         }), 500
 
 
-@navigation_execution_bp.route('/preview/<tree_id>/<node_id>', methods=['GET'])
+@server_navigation_execution_bp.route('/preview/<tree_id>/<node_id>', methods=['GET'])
 def get_navigation_preview_with_executor(tree_id, node_id):
     """
     Get navigation preview using NavigationExecutor (alternative to pathfinding preview)
@@ -110,7 +110,7 @@ def get_navigation_preview_with_executor(tree_id, node_id):
         }), 500
 
 
-@navigation_execution_bp.route('/batch-execute', methods=['POST'])
+@server_navigation_execution_bp.route('/batch-execute', methods=['POST'])
 def batch_execute_navigation():
     """
     Execute multiple navigation operations in sequence

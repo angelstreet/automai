@@ -4,9 +4,9 @@ Host Script Routes - Execute scripts on host device
 from flask import Blueprint, request, jsonify
 from src.utils.script_utils import execute_script
 
-host_script_bp = Blueprint('host_script', __name__, url_prefix='/host')
+host_script_bp = Blueprint('host_script', __name__, url_prefix='/host/script')
 
-@host_script_bp.route('/script/execute', methods=['POST'])
+@host_script_bp.route('/execute', methods=['POST'])
 def _execute_script():
     """Execute script on host device"""
     try:

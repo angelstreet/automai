@@ -7,12 +7,12 @@ from flask import Blueprint, request, jsonify
 import logging
 
 # Create blueprint for frontend routes
-frontend_bp = Blueprint('frontend', __name__)
+server_frontend_bp = Blueprint('frontend', __name__)
 
 # Set up logging
 logger = logging.getLogger(__name__)
 
-@frontend_bp.route('/navigate', methods=['POST'])
+@server_frontend_bp.route('/navigate', methods=['POST'])
 def navigate_to_page():
     """
     Navigate to a specific page
@@ -74,7 +74,7 @@ def navigate_to_page():
             "error": f"Internal server error: {str(e)}"
         }), 500
 
-@frontend_bp.route('/health', methods=['GET'])
+@server_frontend_bp.route('/health', methods=['GET'])
 def health_check():
     """
     Health check endpoint for frontend routes

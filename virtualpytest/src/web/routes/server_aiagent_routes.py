@@ -8,9 +8,9 @@ from flask import Blueprint, request, jsonify
 from src.web.utils.routeUtils import proxy_to_host
 
 # Create blueprint
-aiagent_bp = Blueprint('server_aiagent', __name__, url_prefix='/server/aiagent')
+server_aiagent_bp = Blueprint('server_aiagent', __name__, url_prefix='/server/aiagent')
 
-@aiagent_bp.route('/executeTask', methods=['POST'])
+@server_aiagent_bp.route('/executeTask', methods=['POST'])
 def execute_task():
     """Proxy AI task execution request to selected host"""
     try:
@@ -30,7 +30,7 @@ def execute_task():
             'error': str(e)
         }), 500
 
-@aiagent_bp.route('/getStatus', methods=['GET'])
+@server_aiagent_bp.route('/getStatus', methods=['GET'])
 def get_status():
     """Proxy AI agent status request to selected host"""
     try:
@@ -51,7 +51,7 @@ def get_status():
             'error': str(e)
         }), 500
 
-@aiagent_bp.route('/stopExecution', methods=['POST'])
+@server_aiagent_bp.route('/stopExecution', methods=['POST'])
 def stop_execution():
     """Proxy AI agent stop execution request to selected host"""
     try:
