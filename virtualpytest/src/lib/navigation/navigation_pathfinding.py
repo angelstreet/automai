@@ -135,31 +135,39 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
     # FIXED: Always add entry→home when home is involved, even if starting from home
     entry_to_home_added = False
     if entry_node and home_node and path_has_home:
-        entry_info = get_node_info(G, entry_node)
-        home_info = get_node_info(G, home_node)
-        if G.has_edge(entry_node, home_node):
-            entry_edge_data = G.edges[entry_node, home_node]
+        if entry_node == home_node:
+            print(f"[@navigation:pathfinding:find_shortest_path] Entry and home are the same node {home_node}, skipping self-transition")
         else:
-            entry_edge_data = {'actions': [], 'retryActions': [], 'finalWaitTime': 2000}
-        
-        entry_transition = {
-            'transition_number': transition_number,
-            'from_node_id': entry_node,
-            'to_node_id': home_node,
-            'from_node_label': entry_info.get('label', '') if entry_info else 'Entry',
-            'to_node_label': home_info.get('label', '') if home_info else 'Home',
-            'actions': entry_edge_data.get('actions', []),
-            'retryActions': entry_edge_data.get('retryActions', []),
-            'total_actions': len(entry_edge_data.get('actions', [])),
-            'total_retry_actions': len(entry_edge_data.get('retryActions', [])),
-            'finalWaitTime': entry_edge_data.get('finalWaitTime', 2000),
-            'description': f"Navigate from entry to '{home_info.get('label', home_node)}'"
-        }
-        
-        navigation_transitions.append(entry_transition)
-        transition_number += 1
-        entry_to_home_added = True
-        print(f"[@navigation:pathfinding:find_shortest_path] Added entry→home transition (home involved in navigation)")
+            entry_info = get_node_info(G, entry_node)
+            home_info = get_node_info(G, home_node)
+            if G.has_edge(entry_node, home_node):
+                entry_edge_data = G.edges[entry_node, home_node]
+                actions = entry_edge_data.get('actions', [])
+                retry_actions = entry_edge_data.get('retryActions', [])
+                final_wait = entry_edge_data.get('finalWaitTime', 2000)
+            else:
+                actions = [{'command': 'launch_app', 'params': {}}]
+                retry_actions = []
+                final_wait = 2000
+            
+            entry_transition = {
+                'transition_number': transition_number,
+                'from_node_id': entry_node,
+                'to_node_id': home_node,
+                'from_node_label': 'Entry',
+                'to_node_label': home_info.get('label', '') if home_info else 'Home',
+                'actions': actions,
+                'retryActions': retry_actions,
+                'total_actions': len(actions),
+                'total_retry_actions': len(retry_actions),
+                'finalWaitTime': final_wait,
+                'description': f"Navigate from entry to '{home_info.get('label', home_node)}'"
+            }
+            
+            navigation_transitions.append(entry_transition)
+            transition_number += 1
+            entry_to_home_added = True
+            print(f"[@navigation:pathfinding:find_shortest_path] Added entry→home transition (home involved in navigation)")
     
     # If target is home and we just added entry→home, we're done
     if home_node and target_node_id == home_node and navigation_transitions:
