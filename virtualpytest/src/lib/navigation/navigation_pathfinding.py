@@ -63,49 +63,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         print(f"[@navigation:pathfinding:find_shortest_path] ERROR: Target node {target_node_id} not found in graph")
         return None
     
-    # Handle entry point navigation
-    target_node_info = get_node_info(G, target_node_id)
-    is_target_entry_point = target_node_info and target_node_info.get('is_entry_point', False)
-    
-    if is_target_entry_point:
-        print(f"[@navigation:pathfinding:find_shortest_path] Target {target_node_id} is an entry point (root node)")
-        
-        # Look for entry edges that connect to this root node
-        entry_edges = []
-        for from_node, to_node, edge_data in G.edges(data=True):
-            if to_node == target_node_id:
-                from_node_info = get_node_info(G, from_node)
-                if from_node_info and (from_node_info.get('node_type') == 'entry' or 'entry' in from_node.lower()):
-                    entry_edges.append((from_node, to_node, edge_data))
-        
-        if entry_edges:
-            # Use the first entry edge as our path
-            from_node, to_node, edge_data = entry_edges[0]
-            
-            # Create a simple one-step navigation path using the entry edge
-            from_node_info = get_node_info(G, from_node)
-            actions_list = edge_data.get('actions', [])
-            
-            # Get retry actions
-            retry_actions_list = edge_data.get('retryActions', [])
-            
-            # Create navigation transition for entry edge
-            transition = {
-                'transition_number': 1,
-                'from_node_id': from_node,
-                'to_node_id': to_node,
-                'from_node_label': from_node_info.get('label', '') if from_node_info else 'Entry',
-                'to_node_label': target_node_info.get('label', '') if target_node_info else '',
-                'actions': actions_list,
-                'retryActions': retry_actions_list,
-                'total_actions': len(actions_list),
-                'total_retry_actions': len(retry_actions_list),
-                'finalWaitTime': edge_data.get('finalWaitTime', 2000),
-                'description': f"Navigate from entry to '{target_node_info.get('label', target_node_id)}'"
-            }
-            
-            print(f"[@navigation:pathfinding:find_shortest_path] Created entry edge path to root node")
-            return [transition]
+
     
     # Check if we're already at the target
     if actual_start_node == target_node_id:
