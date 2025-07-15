@@ -65,9 +65,10 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
 
   // Load navigation preview on component mount and when key dependencies change
   useEffect(() => {
-    // Clear any previous execution messages when loading for a new node
-    // Use clearNavigationMessages to avoid triggering minimap updates
-    clearNavigationMessages();
+    // Only clear messages if we're not already at the target node (to preserve success messages)
+    if (currentNodeId !== selectedNode.id) {
+      clearNavigationMessages();
+    }
     loadNavigationPreview(selectedNode, nodes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
