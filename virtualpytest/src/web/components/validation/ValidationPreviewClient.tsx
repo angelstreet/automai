@@ -37,12 +37,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
   const validation = useValidationUI(treeId);
   const [selectedEdges, setSelectedEdges] = useState<Set<string>>(new Set());
 
-  // Load preview when component mounts
-  useEffect(() => {
-    if (treeId) {
-      validation.loadPreview();
-    }
-  }, [treeId, validation.loadPreview]);
+
 
   // Auto-select all edges when preview loads
   useEffect(() => {
