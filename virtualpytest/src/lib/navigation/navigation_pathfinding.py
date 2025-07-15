@@ -31,7 +31,8 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         return None
     
     # Determine starting node
-    if not start_node_id:
+    actual_start_node = start_node_id
+    if not actual_start_node:
         entry_points = get_entry_points(G)
         
         if not entry_points:
@@ -40,13 +41,13 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             if not nodes:
                 print(f"[@navigation:pathfinding:find_shortest_path] No nodes in graph")
                 return None
-            start_node_id = nodes[0]
+            actual_start_node = nodes[0]
         else:
-            start_node_id = entry_points[0]
+            actual_start_node = entry_points[0]
     
     # Check if start node exists
-    if start_node_id not in G.nodes:
-        print(f"[@navigation:pathfinding:find_shortest_path] ERROR: Start node {start_node_id} not found in graph")
+    if actual_start_node not in G.nodes:
+        print(f"[@navigation:pathfinding:find_shortest_path] ERROR: Start node {actual_start_node} not found in graph")
         return None
     
     # Check if target node exists
@@ -99,30 +100,73 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             return [transition]
     
     # Check if we're already at the target
-    if start_node_id == target_node_id:
+    if actual_start_node == target_node_id:
         print(f"[@navigation:pathfinding:find_shortest_path] Already at target node {target_node_id}")
         return []
     
+    # ALWAYS include entry→home transition when needed for execution
+    navigation_transitions = []
+    transition_number = 1
+    
+    # Find entry point and home node
+    entry_points = get_entry_points(G)
+    entry_node = entry_points[0] if entry_points else None
+    
+    # Find home node (the main starting point for navigation)
+    home_node = None
+    for node_id, node_data in G.nodes(data=True):
+        if (node_data.get('is_root') or 
+            node_data.get('label', '').lower() == 'home' or
+            node_id == 'node-1'):  # Common home node ID
+            home_node = node_id
+            break
+    
+    # If we have both entry and home nodes, and they're different, include entry→home transition
+    if entry_node and home_node and entry_node != home_node and G.has_edge(entry_node, home_node):
+        entry_info = get_node_info(G, entry_node)
+        home_info = get_node_info(G, home_node)
+        entry_edge_data = G.edges[entry_node, home_node]
+        
+        entry_transition = {
+            'transition_number': transition_number,
+            'from_node_id': entry_node,
+            'to_node_id': home_node,
+            'from_node_label': entry_info.get('label', '') if entry_info else 'Entry',
+            'to_node_label': home_info.get('label', '') if home_info else 'Home',
+            'actions': entry_edge_data.get('actions', []),
+            'retryActions': entry_edge_data.get('retryActions', []),
+            'total_actions': len(entry_edge_data.get('actions', [])),
+            'total_retry_actions': len(entry_edge_data.get('retryActions', [])),
+            'finalWaitTime': entry_edge_data.get('finalWaitTime', 2000),
+            'description': f"Navigate from entry to '{home_info.get('label', home_node)}'"
+        }
+        
+        navigation_transitions.append(entry_transition)
+        transition_number += 1
+        print(f"[@navigation:pathfinding:find_shortest_path] Added entry→home transition for execution context")
+    
+    # Now find the path from home (or actual start) to target
+    path_start = home_node if home_node else actual_start_node
+    
     try:
         # Use NetworkX shortest path algorithm
-        path = nx.shortest_path(G, start_node_id, target_node_id)
+        path = nx.shortest_path(G, path_start, target_node_id)
         print(f"[@navigation:pathfinding:find_shortest_path] Found path with {len(path)} nodes")
         print(f"[@navigation:pathfinding:find_shortest_path] Path nodes: {' → '.join(path)}")
         
         # Log available transitions from start node for debugging
         print(f"[@navigation:pathfinding:find_shortest_path] ===== AVAILABLE TRANSITIONS FROM START NODE =====")
-        start_successors = list(G.successors(start_node_id))
+        start_successors = list(G.successors(path_start))
         for successor in start_successors:
             successor_info = get_node_info(G, successor)
             successor_label = successor_info.get('label', successor) if successor_info else successor
-            edge_data = G.edges[start_node_id, successor]
+            edge_data = G.edges[path_start, successor]
             actions = edge_data.get('actions', [])
             action_count = len(actions) if actions else 0
             primary_action = edge_data.get('go_action', 'none')
-            print(f"[@navigation:pathfinding:find_shortest_path] Available: {get_node_info(G, start_node_id).get('label', start_node_id)} → {successor_label} (primary: {primary_action}, {action_count} actions)")
+            print(f"[@navigation:pathfinding:find_shortest_path] Available: {get_node_info(G, path_start).get('label', path_start)} → {successor_label} (primary: {primary_action}, {action_count} actions)")
         
         # Convert path to navigation transitions (grouped by from → to)
-        navigation_transitions = []
         print(f"[@navigation:pathfinding:find_shortest_path] ===== BUILDING NAVIGATION TRANSITIONS =====")
         
         for i in range(len(path) - 1):
@@ -138,7 +182,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             actions_list = edge_data.get('actions', [])
             
             # Log detailed transition information
-            print(f"[@navigation:pathfinding:find_shortest_path] Transition {i+1}: {from_node_info.get('label', from_node) if from_node_info else from_node} → {to_node_info.get('label', to_node) if to_node_info else to_node}")
+            print(f"[@navigation:pathfinding:find_shortest_path] Transition {transition_number}: {from_node_info.get('label', from_node) if from_node_info else from_node} → {to_node_info.get('label', to_node) if to_node_info else to_node}")
             print(f"[@navigation:pathfinding:find_shortest_path]   From Node ID: {from_node}")
             print(f"[@navigation:pathfinding:find_shortest_path]   To Node ID: {to_node}")
             print(f"[@navigation:pathfinding:find_shortest_path]   Edge exists: {G.has_edge(from_node, to_node)}")
@@ -165,7 +209,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
                     print(f"[@navigation:pathfinding:find_shortest_path]     Retry Action {j+1}: {command}({params_str})")
             
             transition = {
-                'transition_number': i + 1,
+                'transition_number': transition_number,
                 'from_node_id': from_node,
                 'to_node_id': to_node,
                 'from_node_label': from_node_info.get('label', '') if from_node_info else '',
@@ -179,6 +223,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             }
             
             navigation_transitions.append(transition)
+            transition_number += 1
             print(f"[@navigation:pathfinding:find_shortest_path] -----")
         
         print(f"[@navigation:pathfinding:find_shortest_path] ===== NAVIGATION TRANSITIONS COMPLETE =====")
@@ -190,7 +235,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         return navigation_transitions
         
     except nx.NetworkXNoPath:
-        print(f"[@navigation:pathfinding:find_shortest_path] No path found from {start_node_id} to {target_node_id}")
+        print(f"[@navigation:pathfinding:find_shortest_path] No path found from {path_start} to {target_node_id}")
         
         # Additional debugging for no path case
         print(f"[@navigation:pathfinding:find_shortest_path] DEBUGGING NO PATH:")
@@ -210,12 +255,12 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             start_component = None
             target_component = None
             for i, component in enumerate(components):
-                if start_node_id in component:
+                if path_start in component:
                     start_component = i
                 if target_node_id in component:
                     target_component = i
             
-            print(f"[@navigation:pathfinding:find_shortest_path] Start node {start_node_id} in component {start_component}")
+            print(f"[@navigation:pathfinding:find_shortest_path] Start node {path_start} in component {start_component}")
             print(f"[@navigation:pathfinding:find_shortest_path] Target node {target_node_id} in component {target_component}")
             
             if start_component != target_component:
@@ -223,14 +268,14 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         
         # Check reachability from start node
         try:
-            reachable_from_start = set(nx.descendants(G, start_node_id))
-            reachable_from_start.add(start_node_id)
-            print(f"[@navigation:pathfinding:find_shortest_path] Nodes reachable from {start_node_id}: {reachable_from_start}")
+            reachable_from_start = set(nx.descendants(G, path_start))
+            reachable_from_start.add(path_start)
+            print(f"[@navigation:pathfinding:find_shortest_path] Nodes reachable from {path_start}: {reachable_from_start}")
             
             if target_node_id not in reachable_from_start:
-                print(f"[@navigation:pathfinding:find_shortest_path] Target {target_node_id} is NOT reachable from start {start_node_id}")
+                print(f"[@navigation:pathfinding:find_shortest_path] Target {target_node_id} is NOT reachable from start {path_start}")
             else:
-                print(f"[@navigation:pathfinding:find_shortest_path] Target {target_node_id} IS reachable from start {start_node_id} - this shouldn't happen!")
+                print(f"[@navigation:pathfinding:find_shortest_path] Target {target_node_id} IS reachable from start {path_start} - this shouldn't happen!")
                 
         except Exception as reach_error:
             print(f"[@navigation:pathfinding:find_shortest_path] Error checking reachability: {reach_error}")

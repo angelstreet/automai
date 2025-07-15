@@ -245,11 +245,13 @@ export const useNode = (props?: UseNodeProps) => {
         const result: NavigationPreviewResponse = await response.json();
 
         if (result.success) {
-          setNavigationSteps(result.steps);
+          // Use the correct property name from server response
+          const steps = result.transitions || [];
+          setNavigationSteps(steps);
 
           // Only update minimap indicators if explicitly requested (during execution)
           if (shouldUpdateMinimap) {
-            updateNodesWithMinimapIndicators(result.steps);
+            updateNodesWithMinimapIndicators(steps);
           }
         } else {
           setNavigationError(result.error || 'Failed to load navigation preview');

@@ -127,8 +127,11 @@ export interface NavigationPreviewResponse {
   error?: string;
   tree_id: string;
   target_node_id: string;
-  steps: NavigationStep[];
-  total_steps: number;
+  current_node_id: string;
+  navigation_type: string;
+  transitions: NavigationStep[]; // Server uses 'transitions' - keep consistent
+  total_transitions: number;
+  total_actions: number;
 }
 
 export interface NavigationExecuteResponse {
