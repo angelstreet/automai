@@ -77,31 +77,28 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
     validation.runValidation(skippedEdges);
   };
 
-  if (!validation.preview) {
+  // Only show dialog when there's preview data or when loading
+  if (!validation.preview && !validation.isLoadingPreview) {
+    return null;
+  }
+
+  // Show loading dialog
+  if (!validation.preview && validation.isLoadingPreview) {
     return (
       <Dialog open={true} maxWidth="md" fullWidth>
         <DialogTitle>Validation Preview</DialogTitle>
         <DialogContent>
           <Box display="flex" justifyContent="center" alignItems="center" py={4}>
-            {validation.isLoadingPreview ? (
-              <>
-                <CircularProgress size={24} sx={{ mr: 2 }} />
-                <Typography>Loading validation preview...</Typography>
-              </>
-            ) : (
-              <Typography color="text.secondary">No validation preview available</Typography>
-            )}
+            <CircularProgress size={24} sx={{ mr: 2 }} />
+            <Typography>Loading validation preview...</Typography>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => window.location.reload()}>Close</Button>
-        </DialogActions>
       </Dialog>
     );
   }
 
   const selectedCount = selectedEdges.size;
-  const totalCount = validation.preview.edges?.length || 0;
+  const totalCount = validation.preview?.edges?.length || 0;
 
   return (
     <Dialog open={true} maxWidth="md" fullWidth>
@@ -143,7 +140,7 @@ export default function ValidationPreviewClient({ treeId }: ValidationPreviewCli
         <Divider sx={{ my: 2 }} />
 
         <List dense>
-          {validation.preview.edges?.map((edge, index) => {
+          {validation.preview?.edges?.map((edge, index) => {
             const edgeId = `${edge.from_node}-${edge.to_node}`;
             const isSelected = selectedEdges.has(edgeId);
 
