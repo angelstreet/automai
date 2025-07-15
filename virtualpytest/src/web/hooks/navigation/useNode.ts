@@ -279,10 +279,8 @@ export const useNode = (props?: UseNodeProps) => {
           `[@hook:useNode:executeNavigation] Executed ${result.transitions_executed}/${result.total_transitions} transitions, ${result.actions_executed}/${result.total_actions} actions`,
         );
 
-        // Use the message from NavigationExecutor or construct one
-        const successMessage =
-          result.message ||
-          `Navigation completed successfully! Executed ${result.transitions_executed}/${result.total_transitions} transitions, ${result.actions_executed}/${result.total_actions} actions`;
+        // Simple success message with duration
+        const successMessage = `Navigation to ${selectedNode.data.label} completed successfully`;
         setExecutionMessage(successMessage);
         setIsExecuting(false);
 
