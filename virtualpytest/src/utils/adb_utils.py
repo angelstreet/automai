@@ -468,9 +468,7 @@ class ADBUtils:
             print(f"[@lib:adbUtils:_parse_ui_elements] Invalid XML format received")
             return elements
             
-        # Try different regex patterns to find nodes (same as TypeScript version)
-        print(f"[@lib:adbUtils:_parse_ui_elements] Testing different regex patterns...")
-        
+       
         # Pattern 1: Self-closing nodes
         self_closing_pattern = r'<node[^>]*\/>'
         self_closing_matches = re.findall(self_closing_pattern, xml_data, re.DOTALL)
@@ -493,13 +491,7 @@ class ADBUtils:
             print(f"[@lib:adbUtils:_parse_ui_elements] Using self-closing pattern (found more matches)")
         
         print(f"[@lib:adbUtils:_parse_ui_elements] Selected {len(matches)} total node elements for processing")
-        
-        # Log first few matches for debugging (same as TypeScript)
-        print(f"[@lib:adbUtils:_parse_ui_elements] First 3 node matches:")
-        for i in range(min(3, len(matches))):
-            preview = matches[i][:200] + "..." if len(matches[i]) > 200 else matches[i]
-            print(f"[@lib:adbUtils:_parse_ui_elements] Node {i + 1}: {preview}")
-        
+            
         element_counter = 0
         filtered_out_count = 0
         
@@ -518,18 +510,7 @@ class ADBUtils:
                 bounds = get_attr('bounds')
                 clickable = get_attr('clickable') == 'true'
                 enabled = get_attr('enabled') == 'true'
-                
-                # Log details of first 10 elements for debugging (same as TypeScript)
-                if i < 10:
-                    print(f"[@lib:adbUtils:_parse_ui_elements] Element {i + 1} details:")
-                    print(f"  - Class: \"{class_name}\"")
-                    print(f"  - Text: \"{text}\"")
-                    print(f"  - Resource-ID: \"{resource_id}\"")
-                    print(f"  - Content-Desc: \"{content_desc}\"")
-                    print(f"  - Clickable: {clickable}")
-                    print(f"  - Enabled: {enabled}")
-                    print(f"  - Bounds: \"{bounds}\"")
-                
+                 
                 # Apply filtering logic (same as TypeScript version)
                 should_filter = False
                 filter_reason = ''

@@ -131,6 +131,8 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             path_has_home = target_node_id == home_node
     
     # SYSTEMATICALLY add entry→home when home is in any transition
+    # This ensures we always start from home when home is involved in navigation
+    entry_to_home_added = False
     if entry_node and home_node and entry_node != home_node and path_has_home and G.has_edge(entry_node, home_node):
         entry_info = get_node_info(G, entry_node)
         home_info = get_node_info(G, home_node)
@@ -152,6 +154,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         
         navigation_transitions.append(entry_transition)
         transition_number += 1
+        entry_to_home_added = True
         print(f"[@navigation:pathfinding:find_shortest_path] Added entry→home transition (home involved in navigation)")
     
     # If target is home and we just added entry→home, we're done
@@ -160,8 +163,11 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         return navigation_transitions
     
     # Now find the path from home (or actual start) to target
-    # Use the actual start node for pathfinding, but we've already added entry→home context
-    path_start = actual_start_node
+    # IMPORTANT: If we added entry→home, start pathfinding from home_node
+    # Otherwise, use the actual_start_node
+    path_start = home_node if entry_to_home_added else actual_start_node
+    
+    print(f"[@navigation:pathfinding:find_shortest_path] Using path_start: {path_start} (entry_to_home_added: {entry_to_home_added})")
     
     try:
         # Use NetworkX shortest path algorithm
