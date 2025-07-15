@@ -39,6 +39,7 @@ export function useValidationUI(treeId: string, selectedHost?: any, selectedDevi
     runValidation: baseRunValidation,
     exportReport: baseExportReport,
     updateProgressCallback,
+    currentSessionId,
   } = useValidation();
 
   const openPreview = useCallback(async () => {
@@ -194,6 +195,7 @@ export function useValidationUI(treeId: string, selectedHost?: any, selectedDevi
     results,
     lastResult,
     progress,
+    currentSessionId,
 
     // Actions
     openPreview,

@@ -23,6 +23,7 @@ export const useValidation = () => {
     ((progress: ValidationProgress) => void) | null
   >(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
 
   const updateProgressCallback = useCallback(
     (callback: ((progress: ValidationProgress) => void) | null) => {
@@ -139,6 +140,7 @@ export const useValidation = () => {
 
       // Generate a unique session ID for this validation run
       const sessionId = `validation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      setCurrentSessionId(sessionId);
 
       try {
         // Start Server-Sent Events connection for progress updates if callback is set
@@ -188,6 +190,9 @@ export const useValidation = () => {
         // Close progress stream on error
         closeProgressStream();
         throw error;
+      } finally {
+        // Clear session ID when validation completes
+        setCurrentSessionId(null);
       }
     },
     [progressCallback, setupProgressStream, closeProgressStream],
@@ -260,6 +265,7 @@ export const useValidation = () => {
       downloadBlob,
       updateProgressCallback,
       closeProgressStream,
+      currentSessionId,
       cleanup,
     }),
     [
@@ -269,6 +275,7 @@ export const useValidation = () => {
       downloadBlob,
       updateProgressCallback,
       closeProgressStream,
+      currentSessionId,
       cleanup,
     ],
   );

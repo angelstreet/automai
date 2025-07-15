@@ -34,7 +34,7 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({
     selectedHost || undefined,
     selectedDeviceId || undefined,
   );
-  const { isValidating, progress, showProgress } = validation;
+  const { isValidating, progress, showProgress, currentSessionId } = validation;
   const { resetForNewValidation } = useValidationColors();
   const {
     setCurrentTestingNode,
@@ -49,8 +49,6 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({
   const autoSaveTriggeredRef = useRef(false);
   // Track previous validation state to detect completion
   const prevIsValidatingRef = useRef(false);
-  // Track current session ID for stopping
-  const currentSessionIdRef = useRef<string | null>(null);
 
   // Helper function to update edge confidence with validation results
   const updateEdgeConfidence = useCallback(
@@ -116,16 +114,16 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({
 
   // Function to stop validation
   const stopValidation = async () => {
-    if (!currentSessionIdRef.current || isStoppingValidation) return;
+    if (!currentSessionId || isStoppingValidation) return;
 
     setIsStoppingValidation(true);
 
     try {
       console.log(
-        `[@component:ValidationProgressClient] Stopping validation session: ${currentSessionIdRef.current}`,
+        `[@component:ValidationProgressClient] Stopping validation session: ${currentSessionId}`,
       );
 
-      const response = await fetch(`/server/validation/stop/${currentSessionIdRef.current}`, {
+      const response = await fetch(`/server/validation/stop/${currentSessionId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,18 +142,12 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({
     }
   };
 
-  // Extract session ID from progress data
+  // Reset isStoppingValidation when validation stops
   useEffect(() => {
-    if (isValidating && progress) {
-      // Try to extract session ID from progress data or generate one
-      // In a real implementation, this should come from the validation service
-      const sessionId = `validation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      currentSessionIdRef.current = sessionId;
-    } else if (!isValidating) {
-      currentSessionIdRef.current = null;
+    if (!isValidating) {
       setIsStoppingValidation(false);
     }
-  }, [isValidating, progress]);
+  }, [isValidating]);
 
   // Reset auto-save flag when validation starts
   useEffect(() => {

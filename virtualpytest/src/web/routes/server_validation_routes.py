@@ -173,6 +173,9 @@ class ValidationService:
         # Register session for stopping capability
         if session_id:
             validation_sessions[session_id] = {'should_stop': False, 'tree_id': tree_id}
+            print(f"[@service:validation:run_comprehensive_validation] Registered session: {session_id}")
+        else:
+            print(f"[@service:validation:run_comprehensive_validation] No session_id provided - SSE progress updates disabled")
         
         if skipped_edges:
             print(f"[@service:validation:run_comprehensive_validation] Will skip {len(skipped_edges)} user-selected edges")
@@ -698,6 +701,10 @@ def run_comprehensive_validation(tree_id):
         device_id = data.get('device_id')
         session_id = data.get('session_id') # Get session_id from request
         
+        print(f"[@validation:run] Received request for tree {tree_id}")
+        print(f"[@validation:run] Session ID: {session_id}")
+        print(f"[@validation:run] Skipped edges: {len(skipped_edges) if skipped_edges else 0}")
+        
         result = validation_service.run_comprehensive_validation(tree_id, team_id, skipped_edges, host, device_id, session_id)
         return jsonify({
             'success': True,
@@ -750,10 +757,14 @@ def get_optimal_path(tree_id):
 def get_validation_progress(session_id):
     """Server-Sent Events endpoint for real-time validation progress"""
     
+    print(f"[@validation:progress] SSE connection requested for session: {session_id}")
+    
     def generate_progress_events():
         # Create a queue for this session
         progress_queue = queue.Queue()
         sse_connections[session_id] = progress_queue
+        
+        print(f"[@validation:progress] SSE connection established for session: {session_id}")
         
         try:
             # Send initial heartbeat
@@ -767,6 +778,7 @@ def get_validation_progress(session_id):
                     if data is None:  # Signal to close connection
                         break
                     
+                    print(f"[@validation:progress] Sending progress update: {data}")
                     # Send progress update
                     yield f"data: {json.dumps(data)}\n\n"
                     
@@ -780,6 +792,7 @@ def get_validation_progress(session_id):
             # Clean up connection
             if session_id in sse_connections:
                 del sse_connections[session_id]
+                print(f"[@validation:progress] SSE connection closed for session: {session_id}")
     
     return Response(
         generate_progress_events(),
