@@ -104,7 +104,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         print(f"[@navigation:pathfinding:find_shortest_path] Already at target node {target_node_id}")
         return []
     
-    # ALWAYS include entry→home transition when it exists (for execution context)
+    # ALWAYS include entry→home transition when home is involved (for execution context)
     navigation_transitions = []
     transition_number = 1
     
@@ -121,8 +121,22 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             home_node = node_id
             break
     
-    # ALWAYS include entry→home transition when it exists (represents actual execution flow)
-    if entry_node and home_node and entry_node != home_node and G.has_edge(entry_node, home_node):
+    # Check if home is involved in this navigation (either as target or in the path)
+    home_involved = False
+    if home_node:
+        # Home is involved if it's the target OR if we need to go through home to reach target
+        if target_node_id == home_node:
+            home_involved = True
+        else:
+            # Check if home is in the path from actual start to target
+            try:
+                path_check = nx.shortest_path(G, actual_start_node, target_node_id)
+                home_involved = home_node in path_check
+            except:
+                home_involved = False
+    
+    # ALWAYS include entry→home transition when home is involved
+    if entry_node and home_node and entry_node != home_node and home_involved and G.has_edge(entry_node, home_node):
         entry_info = get_node_info(G, entry_node)
         home_info = get_node_info(G, home_node)
         entry_edge_data = G.edges[entry_node, home_node]
@@ -143,7 +157,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         
         navigation_transitions.append(entry_transition)
         transition_number += 1
-        print(f"[@navigation:pathfinding:find_shortest_path] Added entry→home transition (execution context)")
+        print(f"[@navigation:pathfinding:find_shortest_path] Added entry→home transition (home involved in navigation)")
     
     # If target is home and we just added entry→home, we're done
     if home_node and target_node_id == home_node and navigation_transitions:
