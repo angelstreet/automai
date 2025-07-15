@@ -393,7 +393,11 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             nodeHook.isLoadingPreview ||
             !nodeHook.navigationTransitions ||
             nodeHook.navigationTransitions.length === 0 ||
-            nodeHook.navigationError !== null
+            nodeHook.navigationError !== null ||
+            // Disable if any transition has no actions defined
+            nodeHook.navigationTransitions.some((transition: any) => 
+              !transition.actions || transition.actions.length === 0
+            )
           }
           fullWidth
           sx={{ fontSize: '0.875rem' }}

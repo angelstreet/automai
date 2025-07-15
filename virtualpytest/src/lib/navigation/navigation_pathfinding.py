@@ -121,22 +121,17 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             home_node = node_id
             break
     
-    # Check if home is involved in this navigation (either as target or in the path)
-    home_involved = False
+    # Get the full path first to check if home is involved
+    path_has_home = False
     if home_node:
-        # Home is involved if it's the target OR if we need to go through home to reach target
-        if target_node_id == home_node:
-            home_involved = True
-        else:
-            # Check if home is in the path from actual start to target
-            try:
-                path_check = nx.shortest_path(G, actual_start_node, target_node_id)
-                home_involved = home_node in path_check
-            except:
-                home_involved = False
+        try:
+            path_check = nx.shortest_path(G, actual_start_node, target_node_id)
+            path_has_home = home_node in path_check or target_node_id == home_node
+        except:
+            path_has_home = target_node_id == home_node
     
-    # ALWAYS include entry→home transition when home is involved
-    if entry_node and home_node and entry_node != home_node and home_involved and G.has_edge(entry_node, home_node):
+    # SYSTEMATICALLY add entry→home when home is in any transition
+    if entry_node and home_node and entry_node != home_node and path_has_home and G.has_edge(entry_node, home_node):
         entry_info = get_node_info(G, entry_node)
         home_info = get_node_info(G, home_node)
         entry_edge_data = G.edges[entry_node, home_node]
