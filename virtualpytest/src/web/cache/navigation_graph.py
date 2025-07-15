@@ -174,6 +174,24 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
     if home_node_id:
         entry_id = 'node-entry'
         
+        # Find existing entry→home edge from original edges data
+        entry_home_edge = None
+        for edge in edges:
+            source_id = edge.get('source_id') or edge.get('from_node_id')
+            target_id = edge.get('target_id') or edge.get('to_node_id')
+            
+            # Look for edge that goes to home and has entry-related source
+            if target_id == home_node_id:
+                # Check if source node is entry type
+                source_node = next((n for n in nodes if n.get('id') == source_id), None)
+                if source_node and (
+                    source_node.get('node_type') == 'entry' or 
+                    source_node.get('label', '').lower() == 'entry' or
+                    'entry' in source_node.get('label', '').lower()
+                ):
+                    entry_home_edge = edge
+                    break
+        
         # Add entry node if not exists
         if entry_id not in G.nodes:
             G.add_node(entry_id, 
@@ -183,21 +201,27 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
                       description='App launch entry point')
             print(f"[@navigation:graph:create_networkx_graph] Added entry node: {entry_id}")
         
-        # Add entry→home edge if not exists
+        # Add entry→home edge using existing edge data if found
         if not G.has_edge(entry_id, home_node_id):
             home_label = G.nodes[home_node_id].get('label', 'Home')
-            G.add_edge(entry_id, home_node_id,
-                      actions=[
-                          {'command': 'launch_app', 'params': {'app_id': 'com.example.app'}},
-                          {'command': 'wait', 'params': {'duration': 3000}}
-                      ],
-                      retryActions=[],
-                      finalWaitTime=2000,
-                      go_action='launch_app',
-                      edge_type='entry',
-                      description=f'Launch app and navigate to {home_label}',
-                      weight=1)
-            print(f"[@navigation:graph:create_networkx_graph] Added entry→home edge: {entry_id} → {home_node_id}")
+            
+            if entry_home_edge:
+                # Use actions from existing entry→home edge
+                edge_actions = entry_home_edge.get('actions', [])
+                edge_retry_actions = entry_home_edge.get('retryActions', [])
+                edge_final_wait = entry_home_edge.get('finalWaitTime', 0)
+                
+                G.add_edge(entry_id, home_node_id,
+                          actions=edge_actions,
+                          retryActions=edge_retry_actions,
+                          finalWaitTime=edge_final_wait,
+                          go_action=edge_actions[0].get('command') if edge_actions else None,
+                          edge_type='entry',
+                          description=f'Entry to {home_label}',
+                          weight=1)
+                print(f"[@navigation:graph:create_networkx_graph] Added entry→home edge using existing edge actions: {entry_id} → {home_node_id}")
+            else:
+                print(f"[@navigation:graph:create_networkx_graph] Warning: No existing entry→home edge found, skipping injection")
     
     # Log all possible transitions summary
     print(f"[@navigation:graph:create_networkx_graph] ===== ALL POSSIBLE TRANSITIONS SUMMARY =====")
