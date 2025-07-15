@@ -410,9 +410,9 @@ export const useNavigationEditor = () => {
             await saveToConfig(navigation.userInterface.id, stateForSaving);
             console.log('[@useNavigationEditor:handleEdgeFormSubmit] Tree saved successfully');
 
-            // Invalidate navigation cache after successful save
+            // Force refresh navigation cache after successful save (invalidate + rebuild)
             try {
-              const cacheResponse = await fetch('/server/pathfinding/cache/clear', {
+              const cacheResponse = await fetch('/server/pathfinding/cache/refresh', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -424,16 +424,16 @@ export const useNavigationEditor = () => {
 
               if (cacheResponse.ok) {
                 console.log(
-                  '[@useNavigationEditor:handleEdgeFormSubmit] Navigation cache invalidated successfully',
+                  '[@useNavigationEditor:handleEdgeFormSubmit] Navigation cache refreshed successfully',
                 );
               } else {
                 console.warn(
-                  '[@useNavigationEditor:handleEdgeFormSubmit] Failed to invalidate navigation cache',
+                  '[@useNavigationEditor:handleEdgeFormSubmit] Failed to refresh navigation cache',
                 );
               }
             } catch (cacheError) {
               console.warn(
-                '[@useNavigationEditor:handleEdgeFormSubmit] Cache invalidation failed:',
+                '[@useNavigationEditor:handleEdgeFormSubmit] Cache refresh failed:',
                 cacheError,
               );
             }

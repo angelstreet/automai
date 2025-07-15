@@ -220,6 +220,57 @@ def clear_navigation_cache():
             'error_code': 'API_ERROR'
         }), 500
 
+@server_pathfinding_bp.route('/cache/refresh', methods=['POST'])
+def refresh_navigation_cache():
+    """API endpoint for refreshing navigation cache (invalidate + rebuild)"""
+    try:
+        print(f"[@pathfinding:refresh_cache] Request to refresh navigation cache")
+        
+        data = request.get_json() or {}
+        tree_id = data.get('tree_id')
+        team_id = data.get('team_id') or get_team_id()
+        
+        if not tree_id:
+            return jsonify({
+                'success': False,
+                'error': 'tree_id is required for cache refresh',
+                'error_code': 'MISSING_TREE_ID'
+            }), 400
+        
+        try:
+            from src.web.cache.navigation_cache import force_refresh_cache
+            
+            refresh_success = force_refresh_cache(tree_id, team_id)
+            
+            if refresh_success:
+                message = f"Cache refreshed for tree {tree_id}"
+                return jsonify({
+                    'success': True,
+                    'message': message
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': f'Failed to refresh cache for tree {tree_id}',
+                    'error_code': 'REFRESH_FAILED'
+                }), 500
+            
+        except ImportError as e:
+            print(f"[@pathfinding:refresh_cache] Cache modules not available: {e}")
+            return jsonify({
+                'success': False,
+                'error': 'Navigation cache modules not available',
+                'error_code': 'MODULES_UNAVAILABLE'
+            }), 503
+        
+    except Exception as e:
+        print(f"[@pathfinding:refresh_cache] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_code': 'API_ERROR'
+        }), 500
+
 @server_pathfinding_bp.route('/cache/stats', methods=['GET'])
 def get_cache_stats():
     """API endpoint for navigation cache statistics"""

@@ -409,9 +409,9 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           state.setInitialState({ nodes: [...state.nodes], edges: [...state.edges] });
           state.setHasUnsavedChanges(false);
 
-          // Invalidate navigation cache after successful save
+          // Force refresh navigation cache after successful save (invalidate + rebuild)
           try {
-            const cacheResponse = await fetch('/server/pathfinding/cache/clear', {
+            const cacheResponse = await fetch('/server/pathfinding/cache/refresh', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -423,16 +423,16 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
             if (cacheResponse.ok) {
               console.log(
-                '[@context:NavigationConfigProvider:saveToConfig] Navigation cache invalidated successfully',
+                '[@context:NavigationConfigProvider:saveToConfig] Navigation cache refreshed successfully',
               );
             } else {
               console.warn(
-                '[@context:NavigationConfigProvider:saveToConfig] Failed to invalidate navigation cache',
+                '[@context:NavigationConfigProvider:saveToConfig] Failed to refresh navigation cache',
               );
             }
           } catch (cacheError) {
             console.warn(
-              '[@context:NavigationConfigProvider:saveToConfig] Cache invalidation failed:',
+              '[@context:NavigationConfigProvider:saveToConfig] Cache refresh failed:',
               cacheError,
             );
           }
