@@ -148,30 +148,6 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           },
         }}
       >
-        {/* Error Display */}
-        {nodeHook.navigationError && (
-          <Alert
-            severity="error"
-            icon={<ErrorIcon />}
-            sx={{
-              mb: 1,
-              fontSize: '0.875rem',
-              color: 'error.main',
-              backgroundColor: 'error.light',
-              '& .MuiAlert-icon': {
-                color: 'error.main',
-              },
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, color: 'error.main' }}>
-              Navigation Failed
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'error.main' }}>
-              {nodeHook.navigationError}
-            </Typography>
-          </Alert>
-        )}
-
         {/* Node Information */}
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 2 }}>
           <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
@@ -431,8 +407,27 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           </Box>
         )}
 
-        {/* Success Display */}
-        {nodeHook.executionMessage && (
+        {/* Status Display */}
+        {nodeHook.navigationError && (
+          <Alert
+            severity="error"
+            icon={<ErrorIcon />}
+            sx={{
+              mt: 0.5,
+              fontSize: '0.875rem',
+              color: 'error.main',
+              backgroundColor: 'error.light',
+              '& .MuiAlert-icon': {
+                color: 'error.main',
+              },
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5, color: 'error.main' }}>
+              {nodeHook.navigationError}
+            </Typography>
+          </Alert>
+        )}
+        {!nodeHook.navigationError && nodeHook.executionMessage && (
           <Alert severity="success" sx={{ mt: 0.5, fontSize: '0.875rem' }}>
             <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
               {nodeHook.executionMessage}
