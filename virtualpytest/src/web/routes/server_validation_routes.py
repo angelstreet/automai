@@ -55,10 +55,10 @@ def get_validation_preview(tree_id: str):
         for i, edge_data in enumerate(validation_sequence):
             edge_info = {
                 'step_number': i + 1,
-                'from_node': edge_data['from_node'],
-                'to_node': edge_data['to_node'],
-                'from_name': edge_data['from_name'],
-                'to_name': edge_data['to_name'],
+                'from_node': edge_data['from_node_id'],
+                'to_node': edge_data['to_node_id'],
+                'from_name': edge_data['from_node_label'],
+                'to_name': edge_data['to_node_label'],
                 'selected': True,  # All edges selected by default
                 'actions': edge_data.get('actions', []),
                 'has_verifications': bool(edge_data.get('target_node_verifications', []))
@@ -68,6 +68,7 @@ def get_validation_preview(tree_id: str):
         return jsonify(preview)
         
     except Exception as e:
+        print(f"[@route:get_validation_preview] Error: {str(e)}")
         return jsonify({
             'success': False,
             'error': f'Failed to get validation preview: {str(e)}'
@@ -119,8 +120,8 @@ def run_validation(tree_id: str):
         failed_count = 0
         
         for i, edge_data in enumerate(edges_to_validate):
-            from_node = edge_data['from_node']
-            to_node = edge_data['to_node']
+            from_node = edge_data['from_node_id']
+            to_node = edge_data['to_node_id']
             
             print(f"[@route:run_validation] Step {i+1}/{len(edges_to_validate)}: Validating {from_node} → {to_node}")
             
@@ -143,8 +144,8 @@ def run_validation(tree_id: str):
             result_entry = {
                 'from_node': from_node,
                 'to_node': to_node,
-                'from_name': edge_data['from_name'],
-                'to_name': edge_data['to_name'],
+                'from_name': edge_data['from_node_label'],
+                'to_name': edge_data['to_node_label'],
                 'success': success,
                 'skipped': False,
                 'step_number': i + 1,
