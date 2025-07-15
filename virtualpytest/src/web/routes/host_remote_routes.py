@@ -6,6 +6,7 @@ Host-side remote control endpoints that execute remote commands using instantiat
 
 from flask import Blueprint, request, jsonify, current_app
 from src.utils.host_utils import get_controller, get_device_by_id
+import time
 
 # Create blueprint
 host_remote_bp = Blueprint('host_remote', __name__, url_prefix='/host/remote')
@@ -282,8 +283,11 @@ def execute_command():
         command = data.get('command')
         params = data.get('params', {})
         device_id = data.get('device_id', 'device1')
+        wait_time = data.get('wait_time', 0)  # Get wait_time from request
         
         print(f"[@route:host_remote:execute_command] Executing command: {command} with params: {params} for device: {device_id}")
+        if wait_time > 0:
+            print(f"[@route:host_remote:execute_command] Will wait {wait_time}ms after command execution")
         
         if not command:
             return jsonify({
@@ -463,6 +467,11 @@ def execute_command():
             }), 400
         
         if success:
+            # Wait for the specified time after successful command execution
+            if wait_time > 0:
+                print(f"[@route:host_remote:execute_command] Waiting {wait_time}ms after successful command execution")
+                time.sleep(wait_time / 1000.0)  # Convert ms to seconds
+                
             return jsonify({
                 'success': True,
                 'message': f'Command {command} executed successfully',

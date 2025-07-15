@@ -8,6 +8,7 @@ using the database instead of JSON files.
 from flask import Blueprint, request, jsonify
 import os
 import sys
+import time
 
 # Add the parent directory to the path so we can import from src
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -92,6 +93,11 @@ def action_execute_batch():
         if execution_records:
             print(f"[@route:server_actions:action_execute_batch] Recording {len(execution_records)} executions to database")
             record_executions_to_database(execution_records)
+        
+        # Apply final wait time after all actions are completed
+        if final_wait_time > 0:
+            print(f"[@route:server_actions:action_execute_batch] Applying final wait time: {final_wait_time}ms")
+            time.sleep(final_wait_time / 1000.0)  # Convert ms to seconds
         
         # Return aggregated results (same format as verification)
         overall_success = passed_count >= len(actions)  # Main actions must pass
