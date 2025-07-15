@@ -256,7 +256,7 @@ export const useNode = (props?: UseNodeProps) => {
    * Execute navigation using NavigationExecutor API
    */
   const executeNavigation = useCallback(
-    async (selectedNode: UINavigationNode, allNodes?: UINavigationNode[]) => {
+    async (selectedNode: UINavigationNode) => {
       if (!props?.treeId) return;
 
       setIsExecuting(true);
@@ -321,12 +321,10 @@ export const useNode = (props?: UseNodeProps) => {
           }
         }
 
-        // Reload preview with minimap updates to show navigation route
-        const updatedTransitions = await loadNavigationPreview(selectedNode, allNodes, true);
-
-        // Set edges to green for successful navigation transitions using the returned transitions
-        if (updatedTransitions && updatedTransitions.length > 0) {
-          setNavigationEdgesSuccess(updatedTransitions);
+        // Set edges to green for successful navigation transitions using the current transitions
+        // No need to reload preview since we just completed the navigation successfully
+        if (navigationTransitions && navigationTransitions.length > 0) {
+          setNavigationEdgesSuccess(navigationTransitions);
         }
       } catch (error: any) {
         console.error(`[@hook:useNode:executeNavigation] Navigation failed:`, error);
@@ -335,36 +333,23 @@ export const useNode = (props?: UseNodeProps) => {
         setNavigationError(errorMessage);
         setIsExecuting(false);
 
-        // Get fresh transitions to determine which one failed
-        try {
-          const failureTransitions = await loadNavigationPreview(selectedNode, allNodes, true);
+        // Set edges to red for failed navigation using the current transitions
+        if (navigationTransitions && navigationTransitions.length > 0) {
+          // Try to extract failed transition index from error message or response
+          let failedTransitionIndex: number | undefined;
 
-          if (failureTransitions && failureTransitions.length > 0) {
-            // Try to extract failed transition index from error message or response
-            let failedTransitionIndex: number | undefined;
-
-            // Check if the error contains transition failure information
-            if (error.response?.data?.failed_transition) {
-              failedTransitionIndex = error.response.data.failed_transition - 1; // Convert to 0-based index
-            } else if (error.message?.includes('transition')) {
-              // Try to parse transition number from error message
-              const match = error.message.match(/transition (\d+)/i);
-              if (match) {
-                failedTransitionIndex = parseInt(match[1]) - 1; // Convert to 0-based index
-              }
+          // Check if the error contains transition failure information
+          if (error.response?.data?.failed_transition) {
+            failedTransitionIndex = error.response.data.failed_transition - 1; // Convert to 0-based index
+          } else if (error.message?.includes('transition')) {
+            // Try to parse transition number from error message
+            const match = error.message.match(/transition (\d+)/i);
+            if (match) {
+              failedTransitionIndex = parseInt(match[1]) - 1; // Convert to 0-based index
             }
+          }
 
-            setNavigationEdgesFailure(failureTransitions, failedTransitionIndex);
-          }
-        } catch (previewError) {
-          console.error(
-            `[@hook:useNode:executeNavigation] Failed to load preview for failure coloring:`,
-            previewError,
-          );
-          // Fallback to using old transitions if preview fails
-          if (navigationTransitions && navigationTransitions.length > 0) {
-            setNavigationEdgesFailure(navigationTransitions);
-          }
+          setNavigationEdgesFailure(navigationTransitions, failedTransitionIndex);
         }
       }
     },
@@ -374,7 +359,6 @@ export const useNode = (props?: UseNodeProps) => {
       props?.selectedDeviceId,
       currentNodeId,
       updateCurrentPosition,
-      loadNavigationPreview,
       navigationTransitions,
       resetNavigationEdgeColors,
       setNavigationEdgesSuccess,

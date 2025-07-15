@@ -395,7 +395,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           onClick={() => {
             // Reset edge colors before starting new navigation
             resetNavigationEdgeColors();
-            nodeHook.executeNavigation(selectedNode, nodes);
+            nodeHook.executeNavigation(selectedNode);
           }}
           disabled={
             nodeHook.isExecuting ||
