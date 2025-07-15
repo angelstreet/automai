@@ -412,7 +412,13 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             )
           }
           onClick={() => nodeHook.executeNavigation(selectedNode, nodes)}
-          disabled={nodeHook.isExecuting}
+          disabled={
+            nodeHook.isExecuting ||
+            nodeHook.isLoadingPreview ||
+            !nodeHook.navigationSteps ||
+            nodeHook.navigationSteps.length === 0 ||
+            nodeHook.navigationError !== null
+          }
           fullWidth
           sx={{ fontSize: '0.875rem' }}
         >
