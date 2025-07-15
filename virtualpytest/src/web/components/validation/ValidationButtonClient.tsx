@@ -39,7 +39,7 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
   const handleRunValidation = () => {
     handleClose();
     setShowPreview(true);
-    validation.loadPreview(); // Load the preview data
+    // ValidationPreviewClient will handle loading preview data automatically
   };
 
   return (
