@@ -88,7 +88,7 @@ def _register_server_routes(app):
             module = __import__(f'src.web.routes.{module_name}', fromlist=[blueprint_name])
             blueprint = getattr(module, blueprint_name)
             
-            # Register with proper URL prefix for server routes
+            # Register blueprint (URL prefixes are defined in blueprint definitions)
             app.register_blueprint(blueprint)
             print(f"   ✅ {module_name} -> {blueprint_name}")
             

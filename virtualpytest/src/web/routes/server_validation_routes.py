@@ -17,7 +17,7 @@ from src.utils.app_utils import get_team_id
 from src.lib.navigation.navigation_execution import NavigationExecutor
 
 # Create blueprint
-server_validation_bp = Blueprint('server_validation', __name__)
+server_validation_bp = Blueprint('server_validation', __name__, url_prefix='/server/validation')
 
 @server_validation_bp.route('/preview/<tree_id>', methods=['GET'])
 def get_validation_preview(tree_id: str):
