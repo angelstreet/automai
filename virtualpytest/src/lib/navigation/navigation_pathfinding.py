@@ -43,7 +43,15 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
                 return None
             actual_start_node = nodes[0]
         else:
-            actual_start_node = entry_points[0]
+            # Prioritize dedicated entry node over home node
+            dedicated_entry = None
+            for entry_id in entry_points:
+                entry_info = get_node_info(G, entry_id)
+                if entry_info and entry_info.get('node_type') == 'entry':
+                    dedicated_entry = entry_id
+                    break
+            
+            actual_start_node = dedicated_entry if dedicated_entry else entry_points[0]
     
     # Check if start node exists
     if actual_start_node not in G.nodes:
