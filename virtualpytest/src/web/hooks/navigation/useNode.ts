@@ -249,6 +249,8 @@ export const useNode = (props?: UseNodeProps) => {
       setIsExecuting(true);
       setNavigationError(null);
 
+      const startTime = Date.now();
+
       try {
         console.log(
           `[@hook:useNode:executeNavigation] Starting navigation to ${selectedNode.id} using NavigationExecutor`,
@@ -274,13 +276,16 @@ export const useNode = (props?: UseNodeProps) => {
           throw new Error(result.error || 'Navigation execution failed');
         }
 
+        const duration = Date.now() - startTime;
+        const durationSeconds = (duration / 1000).toFixed(1);
+
         console.log(`[@hook:useNode:executeNavigation] Navigation completed successfully`);
         console.log(
           `[@hook:useNode:executeNavigation] Executed ${result.transitions_executed}/${result.total_transitions} transitions, ${result.actions_executed}/${result.total_actions} actions`,
         );
 
         // Simple success message with duration
-        const successMessage = `Navigation to ${selectedNode.data.label} completed successfully`;
+        const successMessage = `Navigation to ${selectedNode.data.label} completed successfully (${durationSeconds}s)`;
         setExecutionMessage(successMessage);
         setIsExecuting(false);
 
