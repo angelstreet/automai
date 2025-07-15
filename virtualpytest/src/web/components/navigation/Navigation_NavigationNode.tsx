@@ -217,7 +217,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           style={{
             position: 'absolute',
             top: '4px',
-            [isRootNode ? 'right' : 'left']: isRootNode ? '50px' : '4px', // Position to right of ROOT badge for root nodes
+            left: isRootNode ? '50px' : '4px', // Always 50px from left for root nodes, 4px for others
             backgroundColor: '#2196f3',
             color: 'white',
             fontSize: '14px',
@@ -242,7 +242,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           style={{
             position: 'absolute',
             top: '4px',
-            right: '4px',
+            left: '4px', // Always stay in top-left position
             backgroundColor: UI_BADGE_COLORS.root.background,
             color: UI_BADGE_COLORS.root.textColor,
             fontSize: '10px',

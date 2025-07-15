@@ -103,7 +103,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           style={{
             position: 'absolute',
             top: '4px',
-            [data.is_root ? 'right' : 'left']: data.is_root ? '50px' : '4px', // Position to right of ROOT badge for root nodes
+            left: data.is_root ? '50px' : '4px', // Always 50px from left for root nodes, 4px for others
             backgroundColor: '#2196f3',
             color: 'white',
             fontSize: '14px',
@@ -146,7 +146,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
           style={{
             position: 'absolute',
             top: '4px',
-            left: isCurrentPosition ? '60px' : '4px', // Adjust position if current position indicator is shown
+            left: '4px', // Always stay in top-left position
             backgroundColor: UI_BADGE_COLORS.root.background,
             color: UI_BADGE_COLORS.root.textColor,
             fontSize: '10px',
