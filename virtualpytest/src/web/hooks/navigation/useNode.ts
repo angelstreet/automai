@@ -176,16 +176,51 @@ export const useNode = (props?: UseNodeProps) => {
 
   /**
    * Get full path for navigation (NodeGotoPanel)
+   * Shows the actual navigation path from current position, not hierarchical structure
    */
   const getFullPath = useCallback(
     (selectedNode: UINavigationNode, nodes: UINavigationNode[]): string => {
+      // If we have navigation transitions, use them to show the actual path
+      if (navigationTransitions && navigationTransitions.length > 0) {
+        const pathSegments: string[] = [];
+
+        // Add the starting position from the first transition
+        const firstTransition = navigationTransitions[0] as any;
+        if (firstTransition?.from_node_label) {
+          pathSegments.push(firstTransition.from_node_label);
+        }
+
+        // Add each transition target
+        navigationTransitions.forEach((transition: any) => {
+          if (transition?.to_node_label) {
+            pathSegments.push(transition.to_node_label);
+          }
+        });
+
+        return pathSegments.join(' → ');
+      }
+
+      // If we have a current position, show current → target
+      if (currentNodeId) {
+        const currentNode = nodes.find((node) => node.id === currentNodeId);
+        const currentLabel = currentNode?.data.label || 'Current';
+
+        // If already at target, just show the target
+        if (currentNodeId === selectedNode.id) {
+          return selectedNode.data.label;
+        }
+
+        return `${currentLabel} → ${selectedNode.data.label}`;
+      }
+
+      // Fallback to hierarchical structure if no current position
       const parentNames = getParentNames(selectedNode.data.parent || [], nodes);
       if (parentNames === 'None') {
         return selectedNode.data.label;
       }
       return `${parentNames} → ${selectedNode.data.label}`;
     },
-    [getParentNames],
+    [getParentNames, navigationTransitions, currentNodeId],
   );
 
   /**
