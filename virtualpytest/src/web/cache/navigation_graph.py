@@ -162,6 +162,43 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
     print(f"[@navigation:graph:create_networkx_graph] Successfully created graph with {len(G.nodes)} nodes and {len(G.edges)} edges")
     print(f"[@navigation:graph:create_networkx_graph] Edge processing summary: {edges_added} added, {edges_skipped} skipped")
     
+    # Dynamically add entry node and entry→home edge
+    home_node_id = None
+    for node_id, node_data in G.nodes(data=True):
+        if (node_data.get('is_root') or 
+            node_data.get('label', '').lower() == 'home' or
+            node_id == 'node-1'):  # Common home node ID
+            home_node_id = node_id
+            break
+    
+    if home_node_id:
+        entry_id = 'node-entry'
+        
+        # Add entry node if not exists
+        if entry_id not in G.nodes:
+            G.add_node(entry_id, 
+                      label='Entry', 
+                      node_type='entry', 
+                      is_entry_point=True,
+                      description='App launch entry point')
+            print(f"[@navigation:graph:create_networkx_graph] Added entry node: {entry_id}")
+        
+        # Add entry→home edge if not exists
+        if not G.has_edge(entry_id, home_node_id):
+            home_label = G.nodes[home_node_id].get('label', 'Home')
+            G.add_edge(entry_id, home_node_id,
+                      actions=[
+                          {'command': 'launch_app', 'params': {'app_id': 'com.example.app'}},
+                          {'command': 'wait', 'params': {'duration': 3000}}
+                      ],
+                      retryActions=[],
+                      finalWaitTime=2000,
+                      go_action='launch_app',
+                      edge_type='entry',
+                      description=f'Launch app and navigate to {home_label}',
+                      weight=1)
+            print(f"[@navigation:graph:create_networkx_graph] Added entry→home edge: {entry_id} → {home_node_id}")
+    
     # Log all possible transitions summary
     print(f"[@navigation:graph:create_networkx_graph] ===== ALL POSSIBLE TRANSITIONS SUMMARY =====")
     for i, (from_node, to_node, edge_data) in enumerate(G.edges(data=True), 1):
