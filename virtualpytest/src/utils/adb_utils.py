@@ -472,26 +472,20 @@ class ADBUtils:
         # Pattern 1: Self-closing nodes
         self_closing_pattern = r'<node[^>]*\/>'
         self_closing_matches = re.findall(self_closing_pattern, xml_data, re.DOTALL)
-        print(f"[@lib:adbUtils:_parse_ui_elements] Self-closing nodes found: {len(self_closing_matches)}")
         
         # Pattern 2: Open/close nodes
         open_close_pattern = r'<node[^>]*>.*?<\/node>'
         open_close_matches = re.findall(open_close_pattern, xml_data, re.DOTALL)
-        print(f"[@lib:adbUtils:_parse_ui_elements] Open/close nodes found: {len(open_close_matches)}")
         
         # Pattern 3: All nodes (both patterns combined)
         all_nodes_pattern = r'<node[^>]*(?:\/>|>.*?<\/node>)'
         all_matches = re.findall(all_nodes_pattern, xml_data, re.DOTALL)
-        print(f"[@lib:adbUtils:_parse_ui_elements] All nodes found: {len(all_matches)}")
         
         # Use the pattern that finds the most nodes (same logic as TypeScript)
         matches = all_matches
         if len(self_closing_matches) > len(all_matches):
             matches = self_closing_matches
-            print(f"[@lib:adbUtils:_parse_ui_elements] Using self-closing pattern (found more matches)")
-        
-        print(f"[@lib:adbUtils:_parse_ui_elements] Selected {len(matches)} total node elements for processing")
-            
+           
         element_counter = 0
         filtered_out_count = 0
         
@@ -535,8 +529,6 @@ class ADBUtils:
                 
                 if should_filter:
                     filtered_out_count += 1
-                    if i < 10:
-                        print(f"[@lib:adbUtils:_parse_ui_elements]   -> FILTERED OUT: {filter_reason}")
                     continue
                 
                 element_counter += 1
@@ -554,26 +546,12 @@ class ADBUtils:
                 
                 elements.append(element)
                 
-                if i < 10:
-                    print(f"[@lib:adbUtils:_parse_ui_elements]   -> KEPT: Element ID {element_counter}")
-                
             except Exception as e:
                 print(f"[@lib:adbUtils:_parse_ui_elements] Error parsing element {i+1}: {e}")
                 filtered_out_count += 1
         
-        print(f"[@lib:adbUtils:_parse_ui_elements] Processing complete:")
-        print(f"[@lib:adbUtils:_parse_ui_elements] - Total nodes found: {len(matches)}")
-        print(f"[@lib:adbUtils:_parse_ui_elements] - Useful elements: {len(elements)}")
-        print(f"[@lib:adbUtils:_parse_ui_elements] - Filtered out: {filtered_out_count}")
-        
-        # Log all kept elements for debugging (same as TypeScript)
-        print(f"[@lib:adbUtils:_parse_ui_elements] Final kept elements (OVERLAY NUMBERS):")
-        print(f"[@lib:adbUtils:_parse_ui_elements] ===============================================")
         for index, el in enumerate(elements):
             overlay_number = index + 1
-            print(f"[@lib:adbUtils:_parse_ui_elements] {overlay_number}.element{overlay_number} | ID={el.id} | Class={el.tag} | Text=\"{el.text}\" | ResourceID=\"{el.resource_id}\" | ContentDesc=\"{el.content_desc}\" | Bounds={el.bounds}")
-        print(f"[@lib:adbUtils:_parse_ui_elements] ===============================================")
-        
         return elements
         
     def click_element(self, device_id: str, element: AndroidElement) -> bool:
