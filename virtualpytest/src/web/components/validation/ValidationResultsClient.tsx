@@ -24,10 +24,12 @@ import {
   Paper,
   Alert,
   Divider,
+  IconButton,
 } from '@mui/material';
 import React from 'react';
 
 import { useValidationUI } from '../../hooks/validation';
+import { useValidationStore } from '../../components/store/validationStore';
 
 interface ValidationResultsClientProps {
   treeId: string;
@@ -35,12 +37,17 @@ interface ValidationResultsClientProps {
 
 const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeId }) => {
   const validation = useValidationUI(treeId);
+  const { showResults, setShowResults } = useValidationStore();
 
-  if (!validation.showResults || !validation.results) {
+  const handleClose = () => {
+    setShowResults(false);
+  };
+
+  if (!showResults || !validation.validationResults) {
     return null;
   }
 
-  const { summary, edgeResults } = validation.results;
+  const { summary, edgeResults } = validation.validationResults;
 
   const getHealthColor = (health: string) => {
     switch (health) {
@@ -72,11 +79,11 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
   };
 
   return (
-    <Dialog open={validation.showResults} onClose={validation.closeResults} maxWidth="lg" fullWidth>
+    <Dialog open={showResults} onClose={handleClose} maxWidth="lg" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6">Validation Results</Typography>
-          <IconButton onClick={validation.closeResults} size="small">
+          <IconButton onClick={handleClose} size="small">
             <CloseIcon />
           </IconButton>
         </Box>
@@ -114,6 +121,10 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
               variant="outlined"
             />
           </Box>
+
+          <Typography variant="body2" color="text.secondary">
+            Total execution time: {summary.executionTime.toFixed(1)}s
+          </Typography>
         </Box>
 
         <Divider sx={{ mb: 3 }} />
@@ -157,9 +168,9 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
                     </TableCell>
                     <TableCell>
                       {result.errors && result.errors.length > 0 ? (
-                        <Alert severity="error" sx={{ py: 0 }}>
+                        <Typography variant="body2" color="error.main" sx={{ fontSize: '0.75rem' }}>
                           {result.errors[0]}
-                        </Alert>
+                        </Typography>
                       ) : (
                         '-'
                       )}
@@ -170,10 +181,18 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
             </Table>
           </TableContainer>
         </Box>
+
+        {/* Additional Info */}
+        <Box sx={{ mt: 3 }}>
+          <Typography variant="body2" color="text.secondary">
+            Each edge was validated using NavigationExecutor with automatic node verification.
+            Results include both navigation execution and target node verification outcomes.
+          </Typography>
+        </Box>
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={validation.closeResults} color="primary">
+        <Button onClick={handleClose} color="primary">
           Close
         </Button>
       </DialogActions>
