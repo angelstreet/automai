@@ -412,53 +412,6 @@ def get_alternative_paths(tree_id, node_id):
             'error_code': 'API_ERROR'
         }), 500
 
-# =====================================================
-# CACHE MANAGEMENT ROUTES
-# =====================================================
-
-@server_pathfinding_bp.route('/cache/clear', methods=['POST'])
-def clear_navigation_cache():
-    """API endpoint for clearing navigation cache"""
-    try:
-        print(f"[@pathfinding:clear_cache] Request to clear navigation cache")
-        
-        data = request.get_json() or {}
-        tree_id = data.get('tree_id')
-        team_id = data.get('team_id') or get_team_id()
-        
-        try:
-            from src.web.cache.navigation_cache import invalidate_cache, clear_all_cache
-            
-            if tree_id:
-                invalidate_cache(tree_id, team_id)
-                message = f"Cache cleared for tree {tree_id}"
-            else:
-                clear_all_cache()
-                message = "All navigation cache cleared"
-            
-            return jsonify({
-                'success': True,
-                'message': message
-            })
-        except ImportError:
-            return jsonify({
-                'success': False,
-                'error': 'Cache management not available'
-            }), 503
-        except Exception as cache_error:
-            return jsonify({
-                'success': False,
-                'error': f'Cache clear failed: {str(cache_error)}'
-            }), 500
-            
-    except Exception as e:
-        print(f"[@pathfinding:clear_cache] Error: {e}")
-        return jsonify({
-            'success': False,
-            'error': str(e),
-            'error_code': 'API_ERROR'
-        }), 500
-
 @server_pathfinding_bp.route('/cache/refresh', methods=['POST'])
 def refresh_navigation_cache():
     """API endpoint for refreshing navigation cache (clear + rebuild)"""
