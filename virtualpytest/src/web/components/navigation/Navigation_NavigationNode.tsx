@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Handle, Position, NodeProps } from 'reactflow';
+import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 
 import { NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../../config/validationColors';
 import { useNavigation } from '../../contexts/navigation/NavigationContext';
+import { useValidationColors } from '../../hooks/validation/useValidationColors';
 import type { UINavigationNode as UINavigationNodeType } from '../../types/pages/Navigation_Types';
 import { getZIndex } from '../../utils/zIndexUtils';
 
@@ -14,6 +15,9 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   const { currentNodeId } = useNavigation();
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
   const [imageKey, setImageKey] = useState<string | number>(0); // Key to force image refresh
+  const { getEdges } = useReactFlow();
+  const currentEdges = getEdges();
+  const { getNodeColors } = useValidationColors(currentEdges);
 
   // Use screenshot URL with aggressive cache-busting
   const screenshotUrl = React.useMemo(() => {
@@ -56,6 +60,9 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   const isEntryNode = data.type === 'entry';
   // Check if this is the current position
   const isCurrentPosition = currentNodeId === id;
+
+  // Get dynamic colors based on validation status
+  const nodeColors = getNodeColors(id, data.type, isRootNode);
 
   // Entry node styling - small circular point
   if (isEntryNode) {
@@ -148,23 +155,6 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
     }
   };
 
-  const getNodeBorderColor = (type: string) => {
-    switch (type) {
-      case 'screen':
-        return '#2196f3';
-      case 'dialog':
-        return '#9c27b0';
-      case 'popup':
-        return '#ff9800';
-      case 'overlay':
-        return '#4caf50';
-      case 'menu':
-        return '#ffc107';
-      default:
-        return '#757575';
-    }
-  };
-
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent node double-click from triggering
     e.preventDefault(); // Prevent default double-click behavior
@@ -186,10 +176,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
       style={{
         background: isRootNode ? rootNodeStyle.background : getNodeColor(data.type),
         border: isCurrentPosition
-          ? currentPositionStyle.border
-          : isRootNode
-            ? rootNodeStyle.border
-            : `1px solid ${getNodeBorderColor(data.type)}`,
+          ? currentPositionStyle.border // Blue border for current position (highest priority)
+          : `1px solid ${nodeColors.border}`, // Use validation colors for border (includes verification results)
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -201,15 +189,15 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           ? currentPositionStyle.boxShadow
           : isRootNode
             ? rootNodeStyle.boxShadow
-            : selected
-              ? '0 4px 12px rgba(0,0,0,0.2)'
-              : '0 2px 4px rgba(0,0,0,0.1)',
+            : nodeColors.boxShadow ||
+              (selected ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'),
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
         animation: isCurrentPosition ? currentPositionStyle.animation : 'none',
       }}
+      className={nodeColors.className || ''}
     >
       {/* Current Position Indicator */}
       {isCurrentPosition && (

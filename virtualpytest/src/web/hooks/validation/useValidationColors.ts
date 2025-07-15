@@ -501,6 +501,38 @@ export const useValidationColors = (edges?: UINavigationEdge[]) => {
     edgeValidationStatus.clear();
   }, [edgeValidationStatus]);
 
+  // Node verification coloring
+  const setNodeVerificationSuccess = useCallback(
+    (nodeId: string) => {
+      nodeValidationStatus.set(nodeId, {
+        status: 'high', // Green for success
+        confidence: 1.0,
+        lastTested: new Date(),
+      });
+    },
+    [nodeValidationStatus],
+  );
+
+  const setNodeVerificationFailure = useCallback(
+    (nodeId: string) => {
+      nodeValidationStatus.set(nodeId, {
+        status: 'low', // Red for failure
+        confidence: 0.0,
+        lastTested: new Date(),
+      });
+    },
+    [nodeValidationStatus],
+  );
+
+  const resetNodeVerificationColors = useCallback(
+    (_currentNodeId?: string | null) => {
+      // Clear all node validation status
+      // The current position (blue border) is handled separately via isCurrentPosition logic
+      nodeValidationStatus.clear();
+    },
+    [nodeValidationStatus],
+  );
+
   // Memoized values for performance
   const validationState = useMemo(
     () => ({
@@ -556,5 +588,10 @@ export const useValidationColors = (edges?: UINavigationEdge[]) => {
     setNavigationEdgesSuccess,
     setNavigationEdgesFailure,
     resetNavigationEdgeColors,
+
+    // Node verification coloring
+    setNodeVerificationSuccess,
+    setNodeVerificationFailure,
+    resetNodeVerificationColors,
   };
 };

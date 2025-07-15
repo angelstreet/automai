@@ -24,8 +24,14 @@ export const useNode = (props?: UseNodeProps) => {
   const { getModelReferences, referencesLoading } = useDeviceData();
   const { currentNodeId, updateCurrentPosition, updateNodesWithMinimapIndicators } =
     useNavigation();
-  const { setNavigationEdgesSuccess, setNavigationEdgesFailure, resetNavigationEdgeColors } =
-    useValidationColors();
+  const {
+    setNavigationEdgesSuccess,
+    setNavigationEdgesFailure,
+    resetNavigationEdgeColors,
+    setNodeVerificationSuccess,
+    setNodeVerificationFailure,
+    resetNodeVerificationColors,
+  } = useValidationColors();
 
   // Get the selected device from the host's devices array
   const selectedDevice = useMemo(() => {
@@ -255,6 +261,9 @@ export const useNode = (props?: UseNodeProps) => {
       // Reset edge colors to grey before starting new navigation
       resetNavigationEdgeColors();
 
+      // Reset node verification colors before starting new navigation
+      resetNodeVerificationColors(currentNodeId);
+
       const startTime = Date.now();
 
       try {
@@ -303,6 +312,16 @@ export const useNode = (props?: UseNodeProps) => {
           setNavigationEdgesSuccess(navigationTransitions);
         }
 
+        // Handle node verification results if present
+        if (result.verification_results && result.verification_results.length > 0) {
+          const verificationSuccess = result.verification_results.every((vr: any) => vr.success);
+          if (verificationSuccess) {
+            setNodeVerificationSuccess(selectedNode.id);
+          } else {
+            setNodeVerificationFailure(selectedNode.id);
+          }
+        }
+
         // Reload preview with minimap updates to show navigation route
         await loadNavigationPreview(selectedNode, allNodes, true);
       } catch (error: any) {
@@ -343,6 +362,9 @@ export const useNode = (props?: UseNodeProps) => {
       resetNavigationEdgeColors,
       setNavigationEdgesSuccess,
       setNavigationEdgesFailure,
+      resetNodeVerificationColors,
+      setNodeVerificationSuccess,
+      setNodeVerificationFailure,
     ],
   );
 
