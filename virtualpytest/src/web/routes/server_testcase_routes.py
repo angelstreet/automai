@@ -22,7 +22,7 @@ from src.lib.supabase.testcase_db import (
 from src.utils.app_utils import check_supabase
 
 # Create blueprint with abstract server testcases prefix
-server_testcase_bp = Blueprint('testcase', __name__, url_prefix='/server/testcases')
+server_testcase_bp = Blueprint('server_testcase', __name__, url_prefix='/server/testcases')
 
 # Helper functions (these should be imported from a shared module)
 def get_user_id():

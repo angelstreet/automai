@@ -10,7 +10,7 @@ from src.utils.build_url_utils import buildHostImageUrl
 import os
 
 # Create blueprint
-verification_image_host_bp = Blueprint('verification_image_host', __name__, url_prefix='/host/verification/image')
+host_verification_image_bp = Blueprint('host_verification_image', __name__, url_prefix='/host/verification/image')
 
 def get_verification_controller(device_id: str, controller_type: str, check_device: bool = False):
     """
@@ -45,7 +45,7 @@ def get_verification_controller(device_id: str, controller_type: str, check_devi
     
     return controller, device, None
 
-@verification_image_host_bp.route('/cropImage', methods=['POST'])
+@host_verification_image_bp.route('/cropImage', methods=['POST'])
 def crop_area():
     """Crop area from image for verification"""
     try:
@@ -77,7 +77,7 @@ def crop_area():
             'error': f'Host cropping error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/processImage', methods=['POST'])
+@host_verification_image_bp.route('/processImage', methods=['POST'])
 def process_area():
     """Process image for verification"""
     try:
@@ -108,7 +108,7 @@ def process_area():
             'error': f'Host processing error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/saveImage', methods=['POST'])
+@host_verification_image_bp.route('/saveImage', methods=['POST'])
 def save_resource():
     """Save image verification reference"""
     try:
@@ -133,7 +133,7 @@ def save_resource():
             'error': f'Image save error: {str(e)}'
         }), 500
 
-@verification_image_host_bp.route('/execute', methods=['POST'])
+@host_verification_image_bp.route('/execute', methods=['POST'])
 def execute_image_verification():
     """Execute single image verification on host"""
     try:

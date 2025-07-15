@@ -15,7 +15,7 @@ from src.lib.navigation.navigation_execution import NavigationExecutor
 from src.utils.app_utils import get_team_id
 
 # Create blueprint
-server_navigation_execution_bp = Blueprint('navigation_execution', __name__, url_prefix='/server/navigation')
+server_navigation_execution_bp = Blueprint('server_navigation_execution', __name__, url_prefix='/server/navigation')
 
 
 @server_navigation_execution_bp.route('/execute/<tree_id>/<node_id>', methods=['POST'])

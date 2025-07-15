@@ -16,7 +16,7 @@ from flask import Blueprint, request, jsonify
 from src.utils.app_utils import check_supabase, get_team_id
 
 # Create blueprint
-server_pathfinding_bp = Blueprint('pathfinding', __name__, url_prefix='/server/pathfinding')
+server_pathfinding_bp = Blueprint('server_pathfinding', __name__, url_prefix='/server/pathfinding')
 
 # In-memory session tracking for take control mode
 take_control_sessions = {}

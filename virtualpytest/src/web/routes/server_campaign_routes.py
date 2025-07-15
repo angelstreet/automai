@@ -21,7 +21,7 @@ from src.lib.supabase.campaign_db import (
 from src.utils.app_utils import check_supabase
 
 # Create blueprint with abstract server campaign prefix
-server_campaign_bp = Blueprint('campaign', __name__, url_prefix='/server/campaigns')
+server_campaign_bp = Blueprint('server_campaign', __name__, url_prefix='/server/campaigns')
 
 # Helper functions (these should be imported from a shared module)
 def get_user_id():

@@ -18,7 +18,7 @@ from src.controllers.controller_config_factory import create_controller_configs_
 
 from src.utils.host_utils import get_host_manager
 
-server_system_bp = Blueprint('system', __name__, url_prefix='/server/system')
+server_system_bp = Blueprint('server_system', __name__, url_prefix='/server/system')
 
 @server_system_bp.route('/register', methods=['POST'])
 def register_host():

@@ -10,7 +10,7 @@ from src.utils.build_url_utils import buildHostImageUrl
 import os
 
 # Create blueprint
-verification_text_host_bp = Blueprint('verification_text_host', __name__, url_prefix='/host/verification/text')
+host_verification_text_bp = Blueprint('host_verification_text', __name__, url_prefix='/host/verification/text')
 
 def get_verification_controller(device_id: str, controller_type: str, check_device: bool = False):
     """
@@ -45,7 +45,7 @@ def get_verification_controller(device_id: str, controller_type: str, check_devi
     
     return controller, device, None
 
-@verification_text_host_bp.route('/detectText', methods=['POST'])
+@host_verification_text_bp.route('/detectText', methods=['POST'])
 def detect_text():
     """Auto-detect text elements in the current screen"""
     try:
@@ -77,7 +77,7 @@ def detect_text():
             'error': f'Text detection error: {str(e)}'
         }), 500
 
-@verification_text_host_bp.route('/saveText', methods=['POST'])
+@host_verification_text_bp.route('/saveText', methods=['POST'])
 def save_text():
     """Save text verification reference"""
     try:
@@ -102,7 +102,7 @@ def save_text():
             'error': f'Text save error: {str(e)}'
         }), 500
 
-@verification_text_host_bp.route('/execute', methods=['POST'])
+@host_verification_text_bp.route('/execute', methods=['POST'])
 def execute_text_verification():
     """Execute single text verification on host"""
     try:

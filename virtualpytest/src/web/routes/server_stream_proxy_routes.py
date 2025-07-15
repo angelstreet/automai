@@ -9,9 +9,9 @@ import json
 from src.utils.build_url_utils import buildHostUrl
 from src.utils.host_utils import get_host_manager
 
-server_stream_proxy_routes = Blueprint('server_stream_proxy', __name__, url_prefix='/server/stream')
+server_stream_proxy_bp = Blueprint('server_stream_proxy', __name__, url_prefix='/server/stream')
 
-@server_stream_proxy_routes.route('/av/screenshot', methods=['POST'])
+@server_stream_proxy_bp.route('/av/screenshot', methods=['POST'])
 def proxy_screenshot():
     """Proxy screenshot request to appropriate host"""
     try:
@@ -54,7 +54,7 @@ def proxy_screenshot():
         print(f"❌ [PROXY] Error proxying screenshot: {e}")
         return jsonify({'error': str(e)}), 500
 
-@server_stream_proxy_routes.route('/av/streamUrl', methods=['POST'])
+@server_stream_proxy_bp.route('/av/streamUrl', methods=['POST'])
 def proxy_stream_url():
     """Proxy stream URL request to appropriate host"""
     try:
@@ -97,7 +97,7 @@ def proxy_stream_url():
         print(f"❌ [PROXY] Error proxying stream URL: {e}")
         return jsonify({'error': str(e)}), 500
 
-@server_stream_proxy_routes.route('/verification/execute', methods=['POST'])
+@server_stream_proxy_bp.route('/verification/execute', methods=['POST'])
 def proxy_verification():
     """Proxy verification request to appropriate host"""
     try:

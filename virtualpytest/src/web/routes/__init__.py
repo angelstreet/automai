@@ -57,7 +57,7 @@ def _register_server_routes(app):
     server_route_modules = [
         ('server_remote_routes', 'server_remote_bp'),
         ('server_av_routes', 'server_av_bp'),  # ✅ AV proxy routes
-        ('server_stream_proxy_routes', 'server_stream_proxy_routes'),  # ✅ HTTP to HTTPS stream proxy
+        ('server_stream_proxy_routes', 'server_stream_proxy_bp'),  # ✅ HTTP to HTTPS stream proxy
         ('server_navigation_routes', 'server_navigation_bp'),
         ('server_navigation_execution_routes', 'server_navigation_execution_bp'),  # ✅ Standardized navigation execution
         ('server_campaign_routes', 'server_campaign_bp'),
@@ -111,12 +111,12 @@ def _register_host_routes(app):
     # Host-only routes (for host device operations)
     host_route_modules = [
         ('host_remote_routes', 'host_remote_bp'),  # ✅ Remote device control
-        ('host_aiagent_routes', 'aiagent_host_bp'),  # ✅ AI agent execution
-        ('host_verification_image_routes', 'verification_image_host_bp'),  # ✅ Image verification
-        ('host_verification_text_routes', 'verification_text_host_bp'),  # ✅ Text verification
-        ('host_verification_adb_routes', 'verification_adb_host_bp'),  # ✅ ADB verification
+        ('host_aiagent_routes', 'host_aiagent_bp'),  # ✅ AI agent execution
+        ('host_verification_image_routes', 'host_verification_image_bp'),  # ✅ Image verification
+        ('host_verification_text_routes', 'host_verification_text_bp'),  # ✅ Text verification
+        ('host_verification_adb_routes', 'host_verification_adb_bp'),  # ✅ ADB verification
         ('host_verification_video', 'host_verification_video_bp'),  # ✅ Video verification
-        ('host_verification_routes', 'verification_host_bp'),  # ✅ General verification
+        ('host_verification_routes', 'host_verification_bp'),  # ✅ General verification
         ('host_script_routes', 'host_script_bp'),  # ✅ Script execution
         ('host_av_routes', 'host_av_bp'),  # ✅ Audio/Video operations
         ('host_control_routes', 'host_control_bp'),  # ✅ Control operations

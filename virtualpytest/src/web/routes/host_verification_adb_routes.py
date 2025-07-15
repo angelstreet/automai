@@ -13,7 +13,7 @@ import json
 from src.utils.host_utils import get_controller, get_device_by_id
 
 # Create blueprint
-verification_adb_host_bp = Blueprint('verification_adb_host', __name__, url_prefix='/host/verification/adb')
+host_verification_adb_bp = Blueprint('host_verification_adb', __name__, url_prefix='/host/verification/adb')
 
 def get_verification_controller(device_id: str, controller_type: str, check_device: bool = False):
     """
@@ -52,7 +52,7 @@ def get_verification_controller(device_id: str, controller_type: str, check_devi
 # HOST-SIDE ADB VERIFICATION ENDPOINTS
 # =====================================================
 
-@verification_adb_host_bp.route('/execute', methods=['POST'])
+@host_verification_adb_bp.route('/execute', methods=['POST'])
 def execute_adb_verification():
     """Execute single ADB verification on host"""
     try:
@@ -102,7 +102,7 @@ def execute_adb_verification():
             'error': f'ADB verification execution error: {str(e)}'
         }), 500
 
-@verification_adb_host_bp.route('/waitForElementToAppear', methods=['POST'])
+@host_verification_adb_bp.route('/waitForElementToAppear', methods=['POST'])
 def wait_for_element_to_appear():
     """Execute ADB waitForElementToAppear verification"""
     try:
@@ -161,7 +161,7 @@ def wait_for_element_to_appear():
             'error': f'ADB waitForElementToAppear error: {str(e)}'
         }), 500
 
-@verification_adb_host_bp.route('/waitForElementToDisappear', methods=['POST'])
+@host_verification_adb_bp.route('/waitForElementToDisappear', methods=['POST'])
 def wait_for_element_to_disappear():
     """Execute ADB waitForElementToDisappear verification"""
     try:

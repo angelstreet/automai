@@ -32,7 +32,7 @@ from src.lib.supabase.userinterface_db import (
 from src.utils.app_utils import check_supabase, get_team_id
 
 # Create blueprint with abstract server navigation prefix
-server_navigation_bp = Blueprint('navigation', __name__, url_prefix='/server/navigation')
+server_navigation_bp = Blueprint('server_navigation', __name__, url_prefix='/server/navigation')
 
 # =====================================================
 # NAVIGATION TREE MANAGEMENT ENDPOINTS

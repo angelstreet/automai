@@ -12,13 +12,13 @@ from flask import Blueprint, request, jsonify, current_app
 from src.utils.host_utils import get_controller, get_device_by_id
 
 # Create blueprint
-verification_host_bp = Blueprint('verification_host', __name__, url_prefix='/host/verification')
+host_verification_bp = Blueprint('host_verification', __name__, url_prefix='/host/verification')
 
 # =====================================================
 # HOST-SIDE VERIFICATION ENDPOINTS
 # =====================================================
 
-@verification_host_bp.route('/getStatus', methods=['GET'])
+@host_verification_bp.route('/getStatus', methods=['GET'])
 def verification_status():
     """Get verification system status."""
     try:

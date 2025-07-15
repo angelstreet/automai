@@ -8,9 +8,9 @@ from flask import Blueprint, request, jsonify
 from src.utils.host_utils import get_controller, get_device_by_id
 
 # Create blueprint
-aiagent_host_bp = Blueprint('host_aiagent', __name__, url_prefix='/host/aiagent')
+host_aiagent_bp = Blueprint('host_aiagent', __name__, url_prefix='/host/aiagent')
 
-@aiagent_host_bp.route('/executeTask', methods=['POST'])
+@host_aiagent_bp.route('/executeTask', methods=['POST'])
 def execute_task():
     """Execute AI task using AI agent controller."""
     try:
@@ -113,7 +113,7 @@ def execute_task():
             'error': f'AI task execution error: {str(e)}'
         }), 500
 
-@aiagent_host_bp.route('/getStatus', methods=['GET'])
+@host_aiagent_bp.route('/getStatus', methods=['GET'])
 def get_status():
     """Get AI agent execution status."""
     try:
@@ -143,7 +143,7 @@ def get_status():
             'error': f'AI status error: {str(e)}'
         }), 500
 
-@aiagent_host_bp.route('/stopExecution', methods=['POST'])
+@host_aiagent_bp.route('/stopExecution', methods=['POST'])
 def stop_execution():
     """Stop AI agent execution."""
     try:

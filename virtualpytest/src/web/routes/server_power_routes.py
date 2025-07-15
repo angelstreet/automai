@@ -8,7 +8,7 @@ Routes work with any power controller type (USB, network, etc.)
 from flask import Blueprint, request, jsonify, current_app
 import os
 
-server_power_bp = Blueprint('power', __name__, url_prefix='/server/power')
+server_power_bp = Blueprint('server_power', __name__, url_prefix='/server/power')
 
 @server_power_bp.route('/takeControl', methods=['POST'])
 def power_take_control():

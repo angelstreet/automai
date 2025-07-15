@@ -7,7 +7,7 @@ from flask import Blueprint, request, jsonify
 import logging
 
 # Create blueprint for frontend routes
-server_frontend_bp = Blueprint('frontend', __name__)
+server_frontend_bp = Blueprint('server_frontend', __name__)
 
 # Set up logging
 logger = logging.getLogger(__name__)

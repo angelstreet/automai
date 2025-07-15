@@ -17,7 +17,7 @@ from src.lib.supabase.execution_results_db import (
 )
 
 # Create blueprint for execution results routes
-server_execution_results_bp = Blueprint('execution_results', __name__)
+server_execution_results_bp = Blueprint('server_execution_results', __name__)
 
 # TODO: Get team_id from authentication context
 DEFAULT_TEAM_ID = "2211d930-8f20-4654-a0ca-699084e7917f"
