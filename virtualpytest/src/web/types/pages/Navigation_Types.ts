@@ -137,11 +137,17 @@ export interface NavigationPreviewResponse {
 export interface NavigationExecuteResponse {
   success: boolean;
   error?: string;
-  steps_executed: number;
-  total_steps: number;
-  execution_time: number;
+  message?: string;
+  tree_id: string;
   target_node_id: string;
   current_node_id?: string;
+  transitions_executed: number;
+  total_transitions: number;
+  actions_executed: number;
+  total_actions: number;
+  execution_time: number;
+  verification_results?: any[];
+  navigation_path?: string[];
 }
 
 export interface ActionExecutionResult {

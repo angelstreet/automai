@@ -216,10 +216,10 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           </Typography>
 
           {!nodeHook.isLoadingPreview &&
-            nodeHook.navigationSteps &&
-            nodeHook.navigationSteps.length > 0 && (
+            nodeHook.navigationTransitions &&
+            nodeHook.navigationTransitions.length > 0 && (
               <Box>
-                {nodeHook.navigationSteps.map((transition, index) => {
+                {nodeHook.navigationTransitions.map((transition, index) => {
                   const transitionData = transition as any;
                   return (
                     <Box
@@ -305,7 +305,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
             )}
 
           {!nodeHook.isLoadingPreview &&
-            (!nodeHook.navigationSteps || nodeHook.navigationSteps.length === 0) && (
+            (!nodeHook.navigationTransitions || nodeHook.navigationTransitions.length === 0) && (
               <Typography variant="body2" color="text.secondary">
                 No navigation path available
               </Typography>
@@ -415,8 +415,8 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           disabled={
             nodeHook.isExecuting ||
             nodeHook.isLoadingPreview ||
-            !nodeHook.navigationSteps ||
-            nodeHook.navigationSteps.length === 0 ||
+            !nodeHook.navigationTransitions ||
+            nodeHook.navigationTransitions.length === 0 ||
             nodeHook.navigationError !== null
           }
           fullWidth

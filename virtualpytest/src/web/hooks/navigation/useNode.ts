@@ -48,7 +48,7 @@ export const useNode = (props?: UseNodeProps) => {
   );
 
   // Navigation state for NodeGotoPanel
-  const [navigationSteps, setNavigationSteps] = useState<NavigationStep[]>([]);
+  const [navigationTransitions, setNavigationTransitions] = useState<NavigationStep[]>([]);
   const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
   const [navigationError, setNavigationError] = useState<string | null>(null);
@@ -180,37 +180,12 @@ export const useNode = (props?: UseNodeProps) => {
   );
 
   /**
-   * Find the home root node (entry point) from the tree
-   */
-  const findHomeRootNode = useCallback((nodes: UINavigationNode[]): string | undefined => {
-    // First, try to find a node marked as isRoot
-    const rootNode = nodes.find((node) => node.data.is_root === true);
-    if (rootNode) {
-      return rootNode.id;
-    }
-
-    // Fallback: find a node with label "home" (case insensitive)
-    const homeNode = nodes.find((node) => node.data.label?.toLowerCase() === 'home');
-    if (homeNode) {
-      return homeNode.id;
-    }
-
-    // Last fallback: find the first non-entry node
-    const nonEntryNode = nodes.find((node) => node.data.type !== 'entry');
-    if (nonEntryNode) {
-      return nonEntryNode.id;
-    }
-
-    return undefined;
-  }, []);
-
-  /**
    * Load navigation preview for NodeGotoPanel
    */
   const loadNavigationPreview = useCallback(
     async (
       selectedNode: UINavigationNode,
-      allNodes?: UINavigationNode[],
+      _allNodes?: UINavigationNode[],
       shouldUpdateMinimap: boolean = false,
     ) => {
       if (!props?.treeId) return;
@@ -243,12 +218,12 @@ export const useNode = (props?: UseNodeProps) => {
 
         if (result.success) {
           // Use the correct property name from server response
-          const steps = result.transitions || [];
-          setNavigationSteps(steps);
+          const transitions = result.transitions || [];
+          setNavigationTransitions(transitions);
 
           // Only update minimap indicators if explicitly requested (during execution)
           if (shouldUpdateMinimap) {
-            updateNodesWithMinimapIndicators(steps);
+            updateNodesWithMinimapIndicators(transitions);
           }
         } else {
           setNavigationError(result.error || 'Failed to load navigation preview');
@@ -265,7 +240,7 @@ export const useNode = (props?: UseNodeProps) => {
   );
 
   /**
-   * Execute navigation for NodeGotoPanel using standardized action/verification execution
+   * Execute navigation using NavigationExecutor API
    */
   const executeNavigation = useCallback(
     async (selectedNode: UINavigationNode, allNodes?: UINavigationNode[]) => {
@@ -275,125 +250,39 @@ export const useNode = (props?: UseNodeProps) => {
       setNavigationError(null);
 
       try {
-        // Use only context currentNodeId - no fallbacks
-        const startingNodeId = currentNodeId;
-
-        // 1. Get navigation path using existing pathfinding preview
-        const url = new URL(
-          `/server/pathfinding/preview/${props.treeId}/${selectedNode.id}`,
-          window.location.origin,
-        );
-
-        if (startingNodeId) {
-          url.searchParams.append('current_node_id', startingNodeId);
-        }
-
-        const previewResponse = await fetch(url.toString());
-        const previewResult = await previewResponse.json();
-
-        if (!previewResult.success) {
-          throw new Error(previewResult.error || 'Failed to get navigation path');
-        }
-
-        const transitions = previewResult.transitions || [];
-
-        if (transitions.length === 0) {
-          throw new Error('No navigation path available');
-        }
-
         console.log(
-          `[@hook:useNode:executeNavigation] Found ${transitions.length} transitions to execute`,
+          `[@hook:useNode:executeNavigation] Starting navigation to ${selectedNode.id} using NavigationExecutor`,
         );
 
-        // 2. Execute each transition using standardized action executor
-        let transitionsExecuted = 0;
-        let actionsExecuted = 0;
-        const totalActions = transitions.reduce((sum, t) => sum + (t.actions?.length || 0), 0);
-
-        for (let i = 0; i < transitions.length; i++) {
-          const transition = transitions[i];
-          const actions = transition.actions || [];
-          const retryActions = transition.retryActions || [];
-          const finalWaitTime = transition.finalWaitTime || 2000;
-
-          console.log(
-            `[@hook:useNode:executeNavigation] Executing transition ${i + 1}/${transitions.length}: ${transition.description}`,
-          );
-
-          if (actions.length > 0) {
-            // Use standardized action execution via API (same as useAction hook)
-            const actionResponse = await fetch('/server/action/executeBatch', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                host: props.selectedHost,
-                device_id: props.selectedDeviceId,
-                actions: actions,
-                retry_actions: retryActions,
-                final_wait_time: finalWaitTime,
-              }),
-            });
-
-            const actionResult = await actionResponse.json();
-
-            if (!actionResult.success) {
-              throw new Error(
-                `Action execution failed in transition ${i + 1}: ${actionResult.error || 'Unknown error'}`,
-              );
-            }
-
-            actionsExecuted += actionResult.passed_count || 0;
-            console.log(
-              `[@hook:useNode:executeNavigation] Transition ${i + 1} actions completed: ${actionResult.passed_count}/${actions.length} passed`,
-            );
-          }
-
-          transitionsExecuted++;
-        }
-
-        // 3. Execute target node verifications using standardized verification executor
-        const nodeVerifications = selectedNode.data.verifications || [];
-        let verificationResults = [];
-
-        if (nodeVerifications.length > 0) {
-          console.log(
-            `[@hook:useNode:executeNavigation] Executing ${nodeVerifications.length} target node verifications`,
-          );
-
-          // Get device model for verification context
-          const device = props.selectedHost?.devices?.find(
-            (d) => d.device_id === props.selectedDeviceId,
-          );
-          const deviceModel = device?.device_model || 'unknown';
-
-          // Use standardized verification execution via API (same as useVerification hook)
-          const verificationResponse = await fetch('/server/verification/executeBatch', {
+        // Use NavigationExecutor API endpoint
+        const response = await fetch(
+          `/server/navigation/execute/${props.treeId}/${selectedNode.id}`,
+          {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               host: props.selectedHost,
               device_id: props.selectedDeviceId,
-              verifications: nodeVerifications,
-              model: deviceModel,
+              current_node_id: currentNodeId,
             }),
-          });
+          },
+        );
 
-          const verificationResult = await verificationResponse.json();
-          verificationResults = verificationResult.results || [];
+        const result: NavigationExecuteResponse = await response.json();
 
-          if (!verificationResult.success) {
-            throw new Error(
-              `Target node verification failed: ${verificationResult.error || 'Unknown error'}`,
-            );
-          }
-
-          console.log(
-            `[@hook:useNode:executeNavigation] Target node verifications completed: ${verificationResult.passed_count}/${nodeVerifications.length} passed`,
-          );
+        if (!result.success) {
+          throw new Error(result.error || 'Navigation execution failed');
         }
 
-        // 4. Navigation completed successfully
-        const successMessage = `Navigation completed successfully! Executed ${transitionsExecuted}/${transitions.length} transitions, ${actionsExecuted}/${totalActions} actions`;
+        console.log(`[@hook:useNode:executeNavigation] Navigation completed successfully`);
+        console.log(
+          `[@hook:useNode:executeNavigation] Executed ${result.transitions_executed}/${result.total_transitions} transitions, ${result.actions_executed}/${result.total_actions} actions`,
+        );
+
+        // Use the message from NavigationExecutor or construct one
+        const successMessage =
+          result.message ||
+          `Navigation completed successfully! Executed ${result.transitions_executed}/${result.total_transitions} transitions, ${result.actions_executed}/${result.total_actions} actions`;
         setExecutionMessage(successMessage);
         setIsExecuting(false);
 
@@ -402,12 +291,11 @@ export const useNode = (props?: UseNodeProps) => {
 
         // Reload preview with minimap updates to show navigation route
         await loadNavigationPreview(selectedNode, allNodes, true);
-
-        console.log(`[@hook:useNode:executeNavigation] Navigation completed successfully`);
       } catch (error: any) {
         console.error(`[@hook:useNode:executeNavigation] Navigation failed:`, error);
         const errorMessage = error.message || 'Navigation failed';
         setExecutionMessage(`Navigation failed: ${errorMessage}`);
+        setNavigationError(errorMessage);
         setIsExecuting(false);
       }
     },
@@ -498,7 +386,7 @@ export const useNode = (props?: UseNodeProps) => {
     deviceModel,
 
     // NodeGotoPanel operations
-    navigationSteps,
+    navigationTransitions,
     isLoadingPreview,
     isExecuting,
     navigationError,
