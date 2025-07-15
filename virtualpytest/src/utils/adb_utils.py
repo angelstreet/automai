@@ -498,10 +498,10 @@ class ADBUtils:
                     return attr_match.group(1) if attr_match else ''
                 
                 text = get_attr('text').strip()
-                resource_id = get_attr('resource-id')
-                content_desc = get_attr('content-desc')
-                class_name = get_attr('class')
-                bounds = get_attr('bounds')
+                resource_id = get_attr('resource-id').strip()
+                content_desc = get_attr('content-desc').strip()
+                class_name = get_attr('class').strip()
+                bounds = get_attr('bounds').strip()
                 clickable = get_attr('clickable') == 'true'
                 enabled = get_attr('enabled') == 'true'
                  

@@ -402,6 +402,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
           disabled={
             nodeHook.isExecuting ||
             nodeHook.isLoadingPreview ||
+            currentNodeId === selectedNode.id || // Disable if already at destination
             !nodeHook.navigationTransitions ||
             nodeHook.navigationTransitions.length === 0 ||
             nodeHook.navigationError !== null ||
