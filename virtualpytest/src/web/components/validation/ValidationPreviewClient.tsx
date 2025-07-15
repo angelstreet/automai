@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { PlayArrow as PlayArrowIcon, Visibility as VisibilityIcon } from '@mui/icons-material';
 import {
   Dialog,
   DialogTitle,
@@ -20,12 +20,7 @@ import {
   ListItemText,
   ListItemSecondaryAction,
 } from '@mui/material';
-import {
-  PlayArrow as PlayArrowIcon,
-  Visibility as VisibilityIcon,
-  CheckCircle as CheckCircleIcon,
-  Cancel as CancelIcon,
-} from '@mui/icons-material';
+import { useState, useEffect } from 'react';
 
 import { useValidationUI } from '../../hooks/validation';
 
@@ -36,8 +31,6 @@ interface ValidationPreviewClientProps {
 export default function ValidationPreviewClient({ treeId }: ValidationPreviewClientProps) {
   const validation = useValidationUI(treeId);
   const [selectedEdges, setSelectedEdges] = useState<Set<string>>(new Set());
-
-
 
   // Auto-select all edges when preview loads
   useEffect(() => {
