@@ -102,7 +102,7 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
       <Dialog open={true} maxWidth="md" fullWidth>
         <DialogTitle>Validation Preview</DialogTitle>
         <DialogContent>
-          <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+          <Box display="flex" justifyContent="center" alignItems="center" py={1}>
             <CircularProgress size={24} sx={{ mr: 2 }} />
             <Typography>Loading validation preview...</Typography>
           </Box>
@@ -117,7 +117,7 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
   return (
     <Dialog open={true} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Box display="flex" alignItems="center" gap={2}>
+        <Box display="flex" alignItems="center" gap={1}>
           <VisibilityIcon />
           <Typography variant="h6">Validation Preview</Typography>
           <Chip
@@ -138,7 +138,7 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
           </Button>
         </Box>
 
-        <Divider sx={{ my: 1 }} />
+        <Divider sx={{ my: 0 }} />
 
         <List dense>
           {validation.preview?.edges?.map((edge, index) => {
@@ -149,8 +149,8 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
               <ListItem key={edgeId} divider>
                 <ListItemText
                   primary={
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Typography variant="body2" fontWeight="bold">
+                    <Box display="flex" alignItems="center" gap={0.5}>
+                      <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '10px' }}>
                         {index + 1}. {edge.from_name} → {edge.to_name}
                       </Typography>
                       {edge.has_verifications && (
