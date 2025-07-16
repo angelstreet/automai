@@ -303,7 +303,9 @@ export const useNode = (props?: UseNodeProps) => {
       resetNavigationEdgeColors();
 
       // Reset node verification colors before starting new navigation
-      resetNodeVerificationColors(currentNodeId);
+      if (currentNodeId) {
+        resetNodeVerificationColors(currentNodeId);
+      }
 
       const startTime = Date.now();
 

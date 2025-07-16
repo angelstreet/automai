@@ -71,10 +71,13 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
   useEffect(() => {
     // Don't reload if we're already at the destination
     if (currentNodeId === selectedNode.id) return;
-    
+
     // Don't reload if we're currently executing navigation
     if (nodeHook.isExecuting) return;
-    
+
+    // Don't reload if we have an error or execution message (prevent clearing error state)
+    if (nodeHook.navigationError || nodeHook.executionMessage) return;
+
     clearNavigationMessages();
     loadNavigationPreview(selectedNode, nodes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -84,6 +87,7 @@ export const NodeGotoPanel: React.FC<NodeGotoPanelProps> = ({
     currentNodeId,
     // Removed selectedNode, clearNavigationMessages, loadNavigationPreview to prevent reloading on success
     // Only reload when the actual IDs change, not when node data updates
+    // Don't include nodeHook.navigationError or nodeHook.executionMessage in deps to prevent clearing them
   ]);
 
   return (
