@@ -129,12 +129,6 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
       </DialogTitle>
 
       <DialogContent>
-        <Box sx={{ mb: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            This validation will test {totalCount} transitions using NavigationExecutor.
-          </Typography>
-        </Box>
-
         <Box sx={{ mb: 1, display: 'flex', gap: 1 }}>
           <Button size="small" onClick={handleSelectAll}>
             Select All

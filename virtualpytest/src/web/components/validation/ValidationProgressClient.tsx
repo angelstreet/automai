@@ -1,4 +1,9 @@
 import {
+  CheckCircle as CheckCircleIcon,
+  Error as ErrorIcon,
+  PlayArrow as PlayArrowIcon,
+} from '@mui/icons-material';
+import {
   Dialog,
   DialogTitle,
   DialogContent,
@@ -8,11 +13,6 @@ import {
   LinearProgress,
   Chip,
 } from '@mui/material';
-import {
-  CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon,
-  PlayArrow as PlayArrowIcon,
-} from '@mui/icons-material';
 import React, { useEffect } from 'react';
 
 import { useValidation } from '../../hooks/validation';
@@ -88,7 +88,6 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
     <Dialog open={validation.isValidating} disableEscapeKeyDown maxWidth="sm" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CircularProgress size={24} />
           <Typography variant="h6">Running Validation</Typography>
           <Chip
             label={`${currentStep}/${totalSteps}`}
@@ -100,22 +99,16 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
       </DialogTitle>
 
       <DialogContent>
-        <Box sx={{ py: 2 }}>
+        <Box sx={{ py: 1 }}>
           {/* Current Step Display */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="body1" gutterBottom>
-              {isRunning
-                ? `Testing navigation path ${currentStep} of ${totalSteps}...`
-                : `Validation completed: ${currentStep}/${totalSteps} steps`}
-            </Typography>
+          <Box sx={{ mb: 1 }}>
 
             {/* Current Step Details */}
             {currentStepData && (
               <Box
                 sx={{
-                  mt: 2,
-                  p: 2,
-                  bgcolor: 'grey.50',
+                  mt: 1,
+                  p: 1,
                   borderRadius: 1,
                   border: '1px solid',
                   borderColor: 'grey.200',
