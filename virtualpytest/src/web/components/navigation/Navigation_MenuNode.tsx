@@ -78,7 +78,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
     <div
       style={{
         background: nodeColors.background,
-        border: isCurrentPosition ? '3px solid #2196f3' : `1px solid ${nodeColors.border}`,
+        border: isCurrentPosition ? '3px solid #9c27b0' : `1px solid ${nodeColors.border}`,
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -87,7 +87,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         fontSize: '12px',
         color: '#333',
         boxShadow: isCurrentPosition
-          ? '0 0 15px rgba(33, 150, 243, 0.6), 0 0 25px rgba(33, 150, 243, 0.4), 0 2px 8px rgba(33, 150, 243, 0.3)'
+          ? '0 0 15px rgba(156, 39, 176, 0.6), 0 0 25px rgba(156, 39, 176, 0.4), 0 2px 8px rgba(156, 39, 176, 0.3)'
           : nodeColors.boxShadow,
         position: 'relative',
         display: 'flex',
@@ -104,7 +104,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
             position: 'absolute',
             top: '4px',
             left: data.is_root ? '50px' : '4px', // Always 50px from left for root nodes, 4px for others
-            backgroundColor: '#2196f3',
+            backgroundColor: '#9c27b0',
             color: 'white',
             fontSize: '10px',
             fontWeight: 'bold',
