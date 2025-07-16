@@ -53,7 +53,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
   }, [id]);
 
   // Get dynamic colors based on validation status
-  const nodeColors = getNodeColors(id, 'menu', false);
+  const nodeColors = getNodeColors('menu');
 
   const handleScreenshotDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent node double-click from triggering

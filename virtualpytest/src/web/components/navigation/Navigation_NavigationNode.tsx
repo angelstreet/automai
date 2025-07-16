@@ -62,7 +62,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   const isCurrentPosition = currentNodeId === id;
 
   // Get dynamic colors based on validation status
-  const nodeColors = getNodeColors(id, data.type, isRootNode);
+  const nodeColors = getNodeColors(data.type);
 
   // Entry node styling - small circular point
   if (isEntryNode) {

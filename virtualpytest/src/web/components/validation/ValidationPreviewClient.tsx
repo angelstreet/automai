@@ -129,14 +129,13 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
           </Alert>
         )}
 
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            This validation will test {totalCount} edge transitions using NavigationExecutor. Each
-            edge will be executed and target node verification will be performed automatically.
+            This validation will test {totalCount} transitions using NavigationExecutor.
           </Typography>
         </Box>
 
-        <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+        <Box sx={{ mb: 1, display: 'flex', gap: 1 }}>
           <Button size="small" onClick={handleSelectAll}>
             Select All
           </Button>
@@ -168,17 +167,13 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
                           variant="outlined"
                         />
                       )}
-                    </Box>
-                  }
-                  secondary={
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        {edge.from_node} → {edge.to_node}
-                      </Typography>
                       {edge.actions && edge.actions.length > 0 && (
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                          • {edge.actions.length} actions
-                        </Typography>
+                        <Chip
+                          label={`${edge.actions.length} actions`}
+                          size="small"
+                          color="default"
+                          variant="outlined"
+                        />
                       )}
                     </Box>
                   }
@@ -209,7 +204,7 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
           onClick={handleRunValidation}
           disabled={selectedCount === 0 || validation.isValidating}
         >
-          {validation.isValidating ? 'Running...' : `Run Validation (${selectedCount})`}
+          {validation.isValidating ? 'Running...' : `Run`}
         </Button>
       </DialogActions>
     </Dialog>
