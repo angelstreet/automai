@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { useDeviceData } from '../../contexts/device/DeviceDataContext';
+import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import { Host } from '../../types/common/Host_Types';
 import { Actions } from '../../types/controller/Action_Types';
 import { UINavigationEdge, EdgeAction, EdgeForm } from '../../types/pages/Navigation_Types';
@@ -20,6 +21,9 @@ export const useEdge = (props?: UseEdgeProps) => {
     selectedHost: props?.selectedHost || null,
     deviceId: props?.selectedDeviceId,
   });
+
+  // Navigation context for current position updates
+  const { updateCurrentPosition } = useNavigation();
 
   // Device data hook (no longer needed for individual resolution)
 
@@ -178,6 +182,13 @@ export const useEdge = (props?: UseEdgeProps) => {
 
         const formattedResult = formatRunResult(actionHook.formatExecutionResults(result));
         setRunResult(formattedResult);
+
+        // Update current position to the target node if execution was successful
+        // This follows the same pattern as executeNavigation in useNode.ts
+        if (result && result.success !== false && edge.target) {
+          updateCurrentPosition(edge.target, null);
+        }
+
         return result;
       } catch (err: any) {
         const errorResult = `❌ Network error: ${err.message}`;
@@ -193,6 +204,7 @@ export const useEdge = (props?: UseEdgeProps) => {
       formatRunResult,
       props?.isControlActive,
       props?.selectedHost,
+      updateCurrentPosition,
     ],
   );
 

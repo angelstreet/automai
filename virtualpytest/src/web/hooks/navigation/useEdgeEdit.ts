@@ -1,5 +1,6 @@
 import { useCallback, useState, useEffect } from 'react';
 
+import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import { Host } from '../../types/common/Host_Types';
 import { EdgeForm, EdgeAction, UINavigationEdge } from '../../types/pages/Navigation_Types';
 import { useAction } from '../actions';
@@ -27,6 +28,9 @@ export const useEdgeEdit = ({
     selectedHost,
     isControlActive,
   });
+
+  // Navigation context for current position updates
+  const { updateCurrentPosition } = useNavigation();
 
   // Edge hook for loading actions from IDs
   const edgeHook = useEdge({
@@ -192,6 +196,13 @@ export const useEdgeEdit = ({
 
         const formattedResult = actionHook.formatExecutionResults(result);
         setActionResult(formattedResult);
+
+        // Update current position to the target node if execution was successful
+        // This follows the same pattern as executeNavigation in useNode.ts
+        if (result && result.success !== false && selectedEdge?.target) {
+          updateCurrentPosition(selectedEdge.target, null);
+        }
+
         return result;
       } catch (err: any) {
         const errorResult = `❌ Network error: ${err.message}`;
@@ -199,7 +210,7 @@ export const useEdgeEdit = ({
         throw err;
       }
     },
-    [actionHook, localActions, localRetryActions, convertToControllerAction],
+    [actionHook, localActions, localRetryActions, convertToControllerAction, updateCurrentPosition, selectedEdge],
   );
 
   // Validate form

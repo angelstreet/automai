@@ -3,6 +3,7 @@ import React from 'react';
 
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useHostManager } from '../../hooks/useHostManager';
+import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import { useToast } from '../../hooks/useToast';
 
 import NavigationEditorActionButtons from './Navigation_NavigationEditor_ActionButtons';
@@ -68,6 +69,9 @@ export const NavigationEditorHeader: React.FC<{
   // Get toast notifications
   const { showError } = useToast();
 
+  // Get navigation context for current position updates
+  const { updateCurrentPosition } = useNavigation();
+
   // Get device locking functionality from HostManager
   const { isDeviceLocked } = useHostManager();
 
@@ -86,18 +90,33 @@ export const NavigationEditorHeader: React.FC<{
     autoCleanup: true, // Auto-release on unmount
   });
 
+  // Function to reset current node ID
+  const resetCurrentNodeId = React.useCallback(() => {
+    console.log('[@component:NavigationEditorHeader] Resetting current node ID');
+    updateCurrentPosition(null, null);
+  }, [updateCurrentPosition]);
+
+  // Enhanced reset focus handler that also resets current node ID
+  const handleResetFocus = React.useCallback(() => {
+    console.log('[@component:NavigationEditorHeader] Resetting focus and current node ID');
+    onResetFocus(); // Reset the focus/filter
+    resetCurrentNodeId(); // Reset the current node ID
+  }, [onResetFocus, resetCurrentNodeId]);
+
   // Device control handler (only controls physical device, not navigation tree)
   const handleDeviceControl = React.useCallback(async () => {
     if (isControlActive) {
       // Release device control only
       console.log('[@component:NavigationEditorHeader] Releasing device control');
       await handleReleaseControl();
+      // Reset current node ID when control is released
+      resetCurrentNodeId();
     } else {
       // Take device control only
       console.log('[@component:NavigationEditorHeader] Taking device control');
       await handleTakeControl();
     }
-  }, [isControlActive, handleTakeControl, handleReleaseControl]);
+  }, [isControlActive, handleTakeControl, handleReleaseControl, resetCurrentNodeId]);
 
   // Sync control state with parent component (only device control)
   React.useEffect(() => {
@@ -169,7 +188,7 @@ export const NavigationEditorHeader: React.FC<{
               visibleNodes={visibleNodes}
               onFocusNodeChange={onFocusNodeChange}
               onDepthChange={onDepthChange}
-              onResetFocus={onResetFocus}
+              onResetFocus={handleResetFocus}
             />
 
             {/* Section 3: Action Buttons */}
