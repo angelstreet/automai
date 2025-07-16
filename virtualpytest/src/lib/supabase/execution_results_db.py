@@ -117,64 +117,38 @@ def record_node_execution(
         return None
 
 def get_edge_metrics(team_id: str, edge_id: str) -> Dict:
-    """Get metrics for a specific edge."""
+    """Get pre-calculated metrics for a specific edge."""
     try:
         supabase = get_supabase()
         
-        result = supabase.table('execution_results').select(
-            'success', 'execution_time_ms', 'executed_at'
-        ).eq('team_id', team_id).eq('edge_id', edge_id).eq(
-            'execution_type', 'action'
-        ).order('executed_at', desc=True).limit(50).execute()
+        result = supabase.table('edge_metrics').select('*').eq('team_id', team_id).eq('edge_id', edge_id).single().execute()
         
-        if not result.data:
-            return {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0}
-        
-        executions = result.data
-        volume = len(executions)
-        successful = sum(1 for ex in executions if ex['success'])
-        success_rate = successful / volume if volume > 0 else 0.0
-        
-        valid_times = [ex['execution_time_ms'] for ex in executions if ex['execution_time_ms']]
-        avg_execution_time = sum(valid_times) / len(valid_times) if valid_times else 0
-        
-        return {
-            'volume': volume,
-            'success_rate': success_rate,
-            'avg_execution_time': int(avg_execution_time)
-        }
+        if result.data:
+            return {
+                'volume': result.data['total_executions'],
+                'success_rate': float(result.data['success_rate']),
+                'avg_execution_time': result.data['avg_execution_time_ms']
+            }
+        return {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0}
         
     except Exception as e:
         print(f"[@db:execution_results:get_edge_metrics] Error: {str(e)}")
         return {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0}
 
 def get_node_metrics(team_id: str, node_id: str) -> Dict:
-    """Get metrics for a specific node."""
+    """Get pre-calculated metrics for a specific node."""
     try:
         supabase = get_supabase()
         
-        result = supabase.table('execution_results').select(
-            'success', 'execution_time_ms', 'executed_at'
-        ).eq('team_id', team_id).eq('node_id', node_id).eq(
-            'execution_type', 'verification'
-        ).order('executed_at', desc=True).limit(50).execute()
+        result = supabase.table('node_metrics').select('*').eq('team_id', team_id).eq('node_id', node_id).single().execute()
         
-        if not result.data:
-            return {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0}
-        
-        executions = result.data
-        volume = len(executions)
-        successful = sum(1 for ex in executions if ex['success'])
-        success_rate = successful / volume if volume > 0 else 0.0
-        
-        valid_times = [ex['execution_time_ms'] for ex in executions if ex['execution_time_ms']]
-        avg_execution_time = sum(valid_times) / len(valid_times) if valid_times else 0
-        
-        return {
-            'volume': volume,
-            'success_rate': success_rate,
-            'avg_execution_time': int(avg_execution_time)
-        }
+        if result.data:
+            return {
+                'volume': result.data['total_executions'],
+                'success_rate': float(result.data['success_rate']),
+                'avg_execution_time': result.data['avg_execution_time_ms']
+            }
+        return {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0}
         
     except Exception as e:
         print(f"[@db:execution_results:get_node_metrics] Error: {str(e)}")
