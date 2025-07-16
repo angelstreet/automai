@@ -429,7 +429,7 @@ def execute_navigation_step_directly(host, device, transition: Dict[str, Any], t
                 'error': f'No remote controller found for device {device.device_id}'
             }
         
-        # Use controller execute_sequence with retry_actions
+        # Use controller execute_sequence with retry actions
         success = remote_controller.execute_sequence(actions, retry_actions, final_wait_time)
         
         return {

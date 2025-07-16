@@ -46,31 +46,69 @@ class RemoteControllerInterface(BaseController):
         Execute a sequence of commands with optional retry actions.
         
         Args:
-            commands: List of command dictionaries with 'action', 'params'
+            commands: List of command dictionaries with 'action', 'params', and optional 'delay'
             retry_actions: Retry actions to execute if main commands fail (can be empty/None)
             final_wait_time: Wait time in milliseconds after sequence completion
-            
-        Returns:
-            bool: True if main commands succeeded OR retry actions succeeded
         """
         if not self.is_connected:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
+        print(f"Remote[{self.device_type.upper()}]: Executing sequence of {len(commands)} commands")
+        
         # Execute main commands
-        main_success = self._execute_command_sequence(commands)
+        main_success = True
+        for i, command in enumerate(commands):
+            action = command.get('action')
+            params = command.get('params', {})
+            wait_time = params.get('wait_time', 0)  # Extract wait_time from params
+            
+            # Remove wait_time from params - base controller handles timing
+            action_params = {k: v for k, v in params.items() if k != 'wait_time'}
+            
+            print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {action}")
+            
+            success = self.execute_command(action, action_params)
+            
+            if not success:
+                print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
+                main_success = False
+                break
+                
+            # Handle wait time after each successful action
+            if wait_time > 0:
+                self._handle_wait_time(wait_time, f"action {action}")
         
-        # Only do retry if main failed AND retry_actions exist
+        # Execute retry actions if main commands failed
         if not main_success and retry_actions:
-            print(f"Remote[{self.device_type.upper()}]: Main sequence failed, executing retry actions")
-            retry_success = self._execute_command_sequence(retry_actions)
-            if retry_success:
-                main_success = True
+            print(f"Remote[{self.device_type.upper()}]: Main commands failed, trying {len(retry_actions)} retry actions")
+            for i, retry_command in enumerate(retry_actions):
+                action = retry_command.get('action')
+                params = retry_command.get('params', {})
+                wait_time = params.get('wait_time', 0)
+                
+                # Remove wait_time from params - base controller handles timing
+                action_params = {k: v for k, v in params.items() if k != 'wait_time'}
+                
+                print(f"Remote[{self.device_type.upper()}]: Retry step {i+1}: {action}")
+                
+                success = self.execute_command(action, action_params)
+                
+                if success:
+                    print(f"Remote[{self.device_type.upper()}]: Retry action succeeded")
+                    main_success = True
+                    
+                    # Handle wait time after successful retry action
+                    if wait_time > 0:
+                        self._handle_wait_time(wait_time, f"retry action {action}")
+                    break
         
-        # Handle final wait time
-        if main_success and final_wait_time:
+        # Handle final wait time after sequence completion
+        if final_wait_time > 0:
             self._handle_wait_time(final_wait_time, "sequence completion")
-        
+                
+        result_msg = "succeeded" if main_success else "failed"
+        print(f"Remote[{self.device_type.upper()}]: Sequence {result_msg}")
         return main_success
     
     def _handle_wait_time(self, wait_time: int, action_name: str = "action") -> None:
