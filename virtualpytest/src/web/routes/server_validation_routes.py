@@ -15,48 +15,44 @@ server_validation_bp = Blueprint('server_validation', __name__, url_prefix='/ser
 @server_validation_bp.route('/preview/<tree_id>', methods=['GET'])
 def get_validation_preview(tree_id: str):
     """
-    Get validation preview - shows which edges will be validated
+    Get validation preview - shows which edges will be validated using optimal depth-first sequence
     """
     try:
         team_id = get_team_id()
         
-        # Get cached graph
-        G = get_cached_graph(tree_id, team_id)
-        if not G:
+        # Use optimal edge validation sequence instead of simple graph iteration
+        from src.lib.navigation.navigation_pathfinding import find_optimal_edge_validation_sequence
+        
+        validation_sequence = find_optimal_edge_validation_sequence(tree_id, team_id)
+        
+        if not validation_sequence:
             return jsonify({
                 'success': False,
-                'error': 'Navigation graph not found'
+                'error': 'No validation sequence found'
             }), 400
         
-        # Get all edges from graph
+        # Convert validation sequence to preview format
         edges = []
-        for i, (from_node, to_node, edge_data) in enumerate(G.edges(data=True)):
-            from_info = G.nodes[from_node]
-            to_info = G.nodes[to_node]
-            
+        for validation_step in validation_sequence:
             edge_info = {
-                'step_number': i + 1,
-                'from_node': from_node,
-                'to_node': to_node,
-                'from_name': from_info.get('label', from_node),
-                'to_name': to_info.get('label', to_node),
+                'step_number': validation_step['step_number'],
+                'from_node': validation_step['from_node_id'],
+                'to_node': validation_step['to_node_id'],
+                'from_name': validation_step['from_node_label'],
+                'to_name': validation_step['to_node_label'],
                 'selected': True,
-                'actions': edge_data.get('actions', []),
-                'has_verifications': bool(to_info.get('verifications', []))
+                'actions': validation_step.get('actions', []),
+                'has_verifications': validation_step.get('total_verifications', 0) > 0,
+                'step_type': validation_step.get('step_type', 'unknown')
             }
             edges.append(edge_info)
-        
-        if not edges:
-            return jsonify({
-                'success': False,
-                'error': 'No edges found for validation'
-            }), 400
         
         return jsonify({
             'success': True,
             'tree_id': tree_id,
             'total_edges': len(edges),
-            'edges': edges
+            'edges': edges,
+            'algorithm': 'depth_first_traversal'
         })
         
     except Exception as e:
