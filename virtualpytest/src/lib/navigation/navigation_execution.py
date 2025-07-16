@@ -101,7 +101,6 @@ class NavigationExecutor:
                 
                 actions = transition.get('actions', [])
                 retry_actions = transition.get('retryActions', [])
-                final_wait_time = transition.get('finalWaitTime', 2000)
                 
                 if actions:
                     # Initialize action executor with navigation context
@@ -116,8 +115,7 @@ class NavigationExecutor:
                     
                     result = action_executor.execute_actions(
                         actions=actions,
-                        retry_actions=retry_actions,
-                        final_wait_time=final_wait_time
+                        retry_actions=retry_actions
                     )
                     
                     if not result.get('success'):

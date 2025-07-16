@@ -191,7 +191,6 @@ export const useEdgeEdit = ({
         const result = await actionHook.executeActions(
           localActions.map(convertToControllerAction),
           localRetryActions.map(convertToControllerAction),
-          form?.finalWaitTime || 2000,
         );
 
         const formattedResult = actionHook.formatExecutionResults(result);
@@ -210,7 +209,14 @@ export const useEdgeEdit = ({
         throw err;
       }
     },
-    [actionHook, localActions, localRetryActions, convertToControllerAction, updateCurrentPosition, selectedEdge],
+    [
+      actionHook,
+      localActions,
+      localRetryActions,
+      convertToControllerAction,
+      updateCurrentPosition,
+      selectedEdge,
+    ],
   );
 
   // Validate form

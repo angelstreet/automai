@@ -44,7 +44,6 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
     async (
       actions: EdgeAction[],
       retryActions: EdgeAction[] = [],
-      finalWaitTime: number = 2000,
     ): Promise<ActionExecutionResult> => {
       if (!selectedHost) {
         const errorMsg = 'No host selected for action execution';
@@ -115,7 +114,6 @@ export const useAction = ({ selectedHost, deviceId }: UseActionProps) => {
         const batchPayload = {
           actions: validActions,
           retry_actions: validRetryActions,
-          final_wait_time: finalWaitTime,
         };
 
         console.log('[useAction] Batch payload:', batchPayload);

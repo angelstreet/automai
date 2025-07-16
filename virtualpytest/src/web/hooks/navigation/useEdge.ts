@@ -177,7 +177,6 @@ export const useEdge = (props?: UseEdgeProps) => {
         const result = await actionHook.executeActions(
           actions.map(convertToControllerAction),
           retryActions.map(convertToControllerAction),
-          edge.data?.finalWaitTime || 2000,
         );
 
         const formattedResult = formatRunResult(actionHook.formatExecutionResults(result));
