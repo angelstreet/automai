@@ -249,6 +249,36 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                 >
                   {successRateText}
                 </Typography>
+                {/* Show average time in seconds */}
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    color: '#666',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                  }}
+                >
+                  {nodeMetrics.avg_execution_time > 0
+                    ? `${(nodeMetrics.avg_execution_time / 1000).toFixed(1)}s`
+                    : '0s'}
+                </Typography>
+                {/* Show execution count */}
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    color: '#666',
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                  }}
+                >
+                  #{nodeMetrics.volume}
+                </Typography>
               </Box>
               <IconButton size="small" onClick={handleCloseClick} sx={{ p: 0.25 }}>
                 <CloseIcon fontSize="small" />
@@ -260,21 +290,6 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
               <Typography variant="caption" display="block">
                 <strong>Parent:</strong> {parentNames} - <strong>Depth:</strong>{' '}
                 {selectedNode.data.depth || 0}
-              </Typography>
-            </Box>
-
-            {/* Metrics Display */}
-            <Box
-              sx={{ mb: 1, display: 'flex', gap: 2, fontSize: '0.75rem', color: 'text.secondary' }}
-            >
-              <Typography variant="caption">
-                <strong>Volume:</strong> {nodeMetrics.volume}
-              </Typography>
-              <Typography variant="caption">
-                <strong>Success:</strong> {successRateText}
-              </Typography>
-              <Typography variant="caption">
-                <strong>Avg Time:</strong> {nodeMetrics.avg_execution_time}ms
               </Typography>
             </Box>
 

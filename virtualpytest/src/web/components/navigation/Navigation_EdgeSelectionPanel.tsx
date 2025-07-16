@@ -150,6 +150,36 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
               >
                 {successRateText}
               </Typography>
+              {/* Show average time in seconds */}
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  color: '#666',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                }}
+              >
+                {edgeMetrics.avg_execution_time > 0
+                  ? `${(edgeMetrics.avg_execution_time / 1000).toFixed(1)}s`
+                  : '0s'}
+              </Typography>
+              {/* Show execution count */}
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  color: '#666',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                }}
+              >
+                #{edgeMetrics.volume}
+              </Typography>
             </Box>
             <IconButton
               size="small"
@@ -179,21 +209,6 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
               sx={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#4caf50' }}
             >
               {toLabel}
-            </Typography>
-          </Box>
-
-          {/* Metrics Display */}
-          <Box
-            sx={{ mb: 1, display: 'flex', gap: 2, fontSize: '0.75rem', color: 'text.secondary' }}
-          >
-            <Typography variant="caption">
-              <strong>Volume:</strong> {edgeMetrics.volume}
-            </Typography>
-            <Typography variant="caption">
-              <strong>Success:</strong> {successRateText}
-            </Typography>
-            <Typography variant="caption">
-              <strong>Avg Time:</strong> {edgeMetrics.avg_execution_time}ms
             </Typography>
           </Box>
 
