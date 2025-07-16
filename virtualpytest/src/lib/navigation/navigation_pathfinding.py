@@ -579,6 +579,7 @@ def _create_validation_step(G, from_node: str, to_node: str, edge_data: Dict, st
     
     # Get actions and verifications
     actions = edge_data.get('actions', [])
+    retry_actions = edge_data.get('retryActions', [])
     verifications = edge_data.get('verifications', [])
     
     validation_step = {
@@ -589,8 +590,10 @@ def _create_validation_step(G, from_node: str, to_node: str, edge_data: Dict, st
         'from_node_label': from_info.get('label', from_node),
         'to_node_label': to_info.get('label', to_node),
         'actions': actions,
+        'retryActions': retry_actions,
         'verifications': verifications,
         'total_actions': len(actions),
+        'total_retry_actions': len(retry_actions),
         'total_verifications': len(verifications),
         'finalWaitTime': edge_data.get('finalWaitTime', 2000),
         'description': f"Validate transition: {from_info.get('label', from_node)} → {to_info.get('label', to_node)}"
