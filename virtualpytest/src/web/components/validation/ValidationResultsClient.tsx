@@ -27,22 +27,20 @@ import {
 } from '@mui/material';
 import React from 'react';
 
-import { useValidationUI } from '../../hooks/validation';
-import { useValidationStore } from '../store/validationStore';
+import { useValidation } from '../../hooks/validation';
 
 interface ValidationResultsClientProps {
   treeId: string;
 }
 
 const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeId }) => {
-  const validation = useValidationUI(treeId);
-  const { showResults, setShowResults } = useValidationStore();
+  const validation = useValidation(treeId);
 
   const handleClose = () => {
-    setShowResults(false);
+    validation.setShowResults(false);
   };
 
-  if (!showResults || !validation.validationResults) {
+  if (!validation.showResults || !validation.validationResults) {
     return null;
   }
 
@@ -78,7 +76,7 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
   };
 
   return (
-    <Dialog open={showResults} onClose={handleClose} maxWidth="lg" fullWidth>
+    <Dialog open={validation.showResults} onClose={handleClose} maxWidth="lg" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6">Validation Results</Typography>

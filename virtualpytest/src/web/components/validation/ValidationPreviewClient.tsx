@@ -22,7 +22,7 @@ import {
 } from '@mui/material';
 import { useState, useEffect } from 'react';
 
-import { useValidationUI } from '../../hooks/validation';
+import { useValidation } from '../../hooks/validation';
 
 interface ValidationPreviewClientProps {
   treeId: string;
@@ -30,7 +30,7 @@ interface ValidationPreviewClientProps {
 }
 
 export default function ValidationPreviewClient({ treeId, onClose }: ValidationPreviewClientProps) {
-  const validation = useValidationUI(treeId);
+  const validation = useValidation(treeId);
   const [selectedEdges, setSelectedEdges] = useState<Set<string>>(new Set());
 
   // Load preview data when component mounts if not already loaded

@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import React, { useState } from 'react';
 
-import { useValidationUI } from '../../hooks/validation';
+import { useValidation } from '../../hooks/validation';
 import ValidationPreviewClient from './ValidationPreviewClient';
 import ValidationResultsClient from './ValidationResultsClient';
 import ValidationProgressClient from './ValidationProgressClient';
@@ -23,7 +23,7 @@ interface ValidationButtonClientProps {
 }
 
 export default function ValidationButtonClient({ treeId, disabled }: ValidationButtonClientProps) {
-  const validation = useValidationUI(treeId);
+  const validation = useValidation(treeId);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [showPreview, setShowPreview] = useState(false);
 
