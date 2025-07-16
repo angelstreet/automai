@@ -12,7 +12,6 @@ import {
   Chip,
   Divider,
   CircularProgress,
-  Alert,
   Checkbox,
   FormControlLabel,
   List,
@@ -49,6 +48,13 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
       setSelectedEdges(new Set(allEdgeIds));
     }
   }, [validation.preview]);
+
+  // Close preview when validation starts
+  useEffect(() => {
+    if (validation.isValidating && onClose) {
+      onClose();
+    }
+  }, [validation.isValidating, onClose]);
 
   const handleEdgeToggle = (edgeId: string) => {
     setSelectedEdges((prev) => {
@@ -123,12 +129,6 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
       </DialogTitle>
 
       <DialogContent>
-        {validation.validationError && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {validation.validationError}
-          </Alert>
-        )}
-
         <Box sx={{ mb: 1 }}>
           <Typography variant="body2" color="text.secondary">
             This validation will test {totalCount} transitions using NavigationExecutor.
@@ -144,7 +144,7 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
           </Button>
         </Box>
 
-        <Divider sx={{ my: 2 }} />
+        <Divider sx={{ my: 1 }} />
 
         <List dense>
           {validation.preview?.edges?.map((edge, index) => {
@@ -203,9 +203,9 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
           variant="contained"
           startIcon={<PlayArrowIcon />}
           onClick={handleRunValidation}
-          disabled={selectedCount === 0 || validation.isValidating}
+          disabled={selectedCount === 0}
         >
-          {validation.isValidating ? 'Running...' : `Run`}
+          Run
         </Button>
       </DialogActions>
     </Dialog>
