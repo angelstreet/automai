@@ -9,7 +9,17 @@ Examples:
 """
 
 import sys
+import os
 import uuid
+
+# Add project root to path so we can import src as a package
+current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/test_scripts
+src_dir = os.path.dirname(current_dir)  # /src
+project_root = os.path.dirname(src_dir)  # /virtualpytest
+
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
 from src.utils.host_utils import list_available_devices
 from src.utils.lock_utils import is_device_locked, lock_device, unlock_device
 from src.lib.navigation.navigation_pathfinding import find_optimal_edge_validation_sequence
