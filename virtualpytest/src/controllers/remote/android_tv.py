@@ -178,18 +178,16 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Text input error: {e}")
             return False
             
-    def execute_sequence(self, commands: List[Dict[str, Any]], final_wait_time: int = 0) -> bool:
+    def _execute_command_sequence(self, commands: List[Dict[str, Any]]) -> bool:
         """
         Execute a sequence of commands.
         
         Args:
-            commands: List of command dictionaries with 'action', 'params', and optional 'delay'
-            final_wait_time: Wait time in milliseconds after sequence completion
-        """
-        if not self.is_connected or not self.adb_utils:
-            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
-            return False
+            commands: List of command dictionaries with 'action', 'params'
             
+        Returns:
+            bool: True if all commands succeeded
+        """
         print(f"Remote[{self.device_type.upper()}]: Executing sequence of {len(commands)} commands")
         
         for i, command in enumerate(commands):
@@ -219,9 +217,6 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             if not success:
                 print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
                 return False
-        
-        # Handle final wait time after sequence completion
-        self._handle_wait_time(final_wait_time, "sequence completion")
                 
         print(f"Remote[{self.device_type.upper()}]: Sequence completed successfully")
         return True
@@ -702,14 +697,13 @@ class AndroidTVRemoteController(RemoteControllerInterface):
         """Get device-specific capture path for screenshots."""
         return self.device_config['video_capture_path']
 
-    def execute_command(self, command: str, params: Dict[str, Any] = None, wait_time: int = 0) -> bool:
+    def execute_command(self, command: str, params: Dict[str, Any] = None) -> bool:
         """
         Execute Android TV specific command with proper abstraction.
         
         Args:
             command: Command to execute ('press_key', 'input_text', etc.)
-            params: Command parameters
-            wait_time: Wait time in milliseconds after execution
+            params: Command parameters (including wait_time)
             
         Returns:
             bool: True if command executed successfully
@@ -717,35 +711,46 @@ class AndroidTVRemoteController(RemoteControllerInterface):
         if params is None:
             params = {}
         
+        # Extract wait_time from params
+        wait_time = params.get('wait_time', 0)
+        
         print(f"Remote[{self.device_type.upper()}]: Executing command '{command}' with params: {params}")
+        
+        result = False
         
         if command == 'press_key':
             key = params.get('key')
-            return self.press_key(key, wait_time) if key else False
+            result = self.press_key(key, wait_time) if key else False
         
         elif command == 'input_text':
             text = params.get('text')
-            return self.input_text(text, wait_time) if text else False
+            result = self.input_text(text, wait_time) if text else False
         
         elif command == 'launch_app':
             package = params.get('package')
-            return self.launch_app(package, wait_time) if package else False
+            result = self.launch_app(package, wait_time) if package else False
         
         elif command == 'close_app':
             package = params.get('package')
-            return self.close_app(package, wait_time) if package else False
+            result = self.close_app(package, wait_time) if package else False
         
         elif command == 'tap_coordinates':
             x, y = params.get('x'), params.get('y')
-            return self.tap_coordinates(int(x), int(y), wait_time) if x is not None and y is not None else False
+            result = self.tap_coordinates(int(x), int(y), wait_time) if x is not None and y is not None else False
         
         elif command == 'get_installed_apps':
             # Android TV specific
             apps = self.get_installed_apps()
-            return len(apps) > 0
+            result = len(apps) > 0
         
         # Android TV doesn't have click_element or UI dump capabilities
         
         else:
             print(f"Remote[{self.device_type.upper()}]: Unknown command: {command}")
-            return False
+            result = False
+        
+        # Use base controller's wait handling after successful command
+        if result and wait_time > 0:
+            self._handle_wait_time(wait_time, command)
+        
+        return result

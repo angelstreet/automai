@@ -421,38 +421,20 @@ def execute_navigation_step_directly(host, device, transition: Dict[str, Any], t
         
         print(f"[@script_utils:execute_navigation_step_directly] Executing transition with {len(actions)} actions")
         
-        # Execute main actions
-        main_success = True
-        for action in actions:
-            result = execute_action_directly(host, device, action)
-            if not result['success']:
-                print(f"[@script_utils:execute_navigation_step_directly] Main action failed: {result.get('error')}")
-                main_success = False
-                break
+        # Get the remote controller for this device
+        remote_controller = get_controller(device.device_id, 'remote')
+        if not remote_controller:
+            return {
+                'success': False,
+                'error': f'No remote controller found for device {device.device_id}'
+            }
         
-        # Execute retry actions if main actions failed
-        if not main_success and retry_actions:
-            print(f"[@script_utils:execute_navigation_step_directly] Executing {len(retry_actions)} retry actions")
-            for retry_action in retry_actions:
-                result = execute_action_directly(host, device, retry_action)
-                if result['success']:
-                    main_success = True
-                    break
-        
-        # Execute final wait time directly (no dummy actions)
-        if main_success and final_wait_time:
-            # Convert to int if it's a string
-            final_wait_time_ms = int(final_wait_time) if isinstance(final_wait_time, str) else final_wait_time
-            if final_wait_time_ms > 0:
-                print(f"[@script_utils:execute_navigation_step_directly] Executing final wait time: {final_wait_time_ms}ms")
-                # Use controller base class timing method directly
-                remote_controller = get_controller(device.device_id, 'remote')
-                if remote_controller:
-                    remote_controller._handle_wait_time(final_wait_time_ms, "navigation step completion")
+        # Use controller execute_sequence with retry_actions
+        success = remote_controller.execute_sequence(actions, retry_actions, final_wait_time)
         
         return {
-            'success': main_success,
-            'message': 'Navigation step completed successfully' if main_success else 'Navigation step failed'
+            'success': success,
+            'message': 'Navigation step completed successfully' if success else 'Navigation step failed'
         }
         
     except Exception as e:
