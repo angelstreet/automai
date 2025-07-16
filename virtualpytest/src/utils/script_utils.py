@@ -419,6 +419,12 @@ def execute_navigation_step_directly(host, device, transition: Dict[str, Any], t
         retry_actions = transition.get('retryActions', [])
         final_wait_time = transition.get('wait_final_time', 0)
         
+        # Ensure final_wait_time is an integer (handle string inputs)
+        try:
+            final_wait_time = int(final_wait_time) if final_wait_time else 0
+        except (ValueError, TypeError):
+            final_wait_time = 0
+        
         print(f"[@script_utils:execute_navigation_step_directly] Executing transition with {len(actions)} actions")
         
         # Get the remote controller for this device

@@ -63,6 +63,12 @@ class RemoteControllerInterface(BaseController):
             params = action.get('params', {})
             wait_time = params.get('wait_time', 0)  # Extract wait_time from params
             
+            # Ensure wait_time is an integer (handle string inputs)
+            try:
+                wait_time = int(wait_time) if wait_time else 0
+            except (ValueError, TypeError):
+                wait_time = 0
+            
             # Remove wait_time from params - base controller handles timing
             action_params = {k: v for k, v in params.items() if k != 'wait_time'}
             
@@ -87,6 +93,12 @@ class RemoteControllerInterface(BaseController):
                 params = retry_action.get('params', {})
                 wait_time = params.get('wait_time', 0)
                 
+                # Ensure wait_time is an integer (handle string inputs)
+                try:
+                    wait_time = int(wait_time) if wait_time else 0
+                except (ValueError, TypeError):
+                    wait_time = 0
+                
                 # Remove wait_time from params - base controller handles timing
                 action_params = {k: v for k, v in params.items() if k != 'wait_time'}
                 
@@ -104,6 +116,12 @@ class RemoteControllerInterface(BaseController):
                     break
         
         # Handle final wait time after sequence completion
+        # Ensure final_wait_time is an integer (handle string inputs)
+        try:
+            final_wait_time = int(final_wait_time) if final_wait_time else 0
+        except (ValueError, TypeError):
+            final_wait_time = 0
+            
         if final_wait_time > 0:
             self._handle_wait_time(final_wait_time, "sequence completion")
                 
