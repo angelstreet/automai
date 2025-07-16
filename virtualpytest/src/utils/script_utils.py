@@ -19,13 +19,12 @@ if project_root not in sys.path:
 from .app_utils import load_environment_variables
 from .host_utils import get_host_instance, list_available_devices
 from .lock_utils import is_device_locked, lock_device, unlock_device
-import requests
 
 
 def load_navigation_tree(userinterface_name: str, script_name: str = "script") -> Dict[str, Any]:
     """
-    Load navigation tree from server to populate cache (like web interface does).
-    This is required before calling pathfinding functions.
+    Load navigation tree using direct database access (no HTTP requests).
+    This populates the cache and is required before calling pathfinding functions.
     
     Args:
         userinterface_name: Name of the userinterface (e.g., 'horizon_android_mobile')
@@ -37,17 +36,19 @@ def load_navigation_tree(userinterface_name: str, script_name: str = "script") -
     try:
         print(f"🔄 [{script_name}] Loading navigation tree for: {userinterface_name}")
         
-        # Get userinterface by name first
-        userinterface_response = requests.get(
-            f"http://localhost:3000/server/navigation/userinterfaces"
-        )
+        # Use hardcoded team_id (same as other script functions)
+        team_id = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
         
-        if not userinterface_response.ok:
-            error_msg = f"Failed to get userinterfaces: {userinterface_response.status_code}"
+        # Get userinterface by name using direct database access
+        from src.lib.supabase.userinterface_db import get_all_userinterfaces
+        
+        userinterfaces_result = get_all_userinterfaces(team_id)
+        if not userinterfaces_result.get('success'):
+            error_msg = f"Failed to get userinterfaces: {userinterfaces_result.get('error', 'Unknown error')}"
             print(f"❌ [{script_name}] {error_msg}")
             return {'success': False, 'error': error_msg}
         
-        userinterfaces = userinterface_response.json()
+        userinterfaces = userinterfaces_result['userinterfaces']
         userinterface = None
         
         for ui in userinterfaces:
@@ -63,29 +64,24 @@ def load_navigation_tree(userinterface_name: str, script_name: str = "script") -
         userinterface_id = userinterface['id']
         print(f"✅ [{script_name}] Found userinterface ID: {userinterface_id}")
         
-        # Load tree by userinterface_id (this populates the cache)
-        tree_response = requests.get(
-            f"http://localhost:3000/server/navigationTrees/getTreeByUserInterfaceId/{userinterface_id}"
-        )
+        # Load tree by userinterface_id using direct database access
+        from src.lib.supabase.navigation_trees_db import get_navigation_trees
         
-        if not tree_response.ok:
-            error_msg = f"Failed to load tree: {tree_response.status_code}"
+        success, message, trees = get_navigation_trees(team_id, userinterface_id)
+        
+        if not success or not trees:
+            error_msg = f"Failed to load tree: {message}"
             print(f"❌ [{script_name}] {error_msg}")
             return {'success': False, 'error': error_msg}
         
-        tree_data = tree_response.json()
-        
-        if not tree_data.get('success'):
-            error_msg = f"Failed to load tree: {tree_data.get('message', 'Unknown error')}"
-            print(f"❌ [{script_name}] {error_msg}")
-            return {'success': False, 'error': error_msg}
-        
-        tree = tree_data['tree']
+        tree = trees[0]  # Get the first (and should be only) tree for this userinterface
         tree_id = tree['id']
-        nodes = tree['metadata']['nodes']
-        edges = tree['metadata']['edges']
+        tree_metadata = tree.get('metadata', {})
+        nodes = tree_metadata.get('nodes', [])
+        edges = tree_metadata.get('edges', [])
         
         print(f"✅ [{script_name}] Loaded tree with {len(nodes)} nodes and {len(edges)} edges")
+        print(f"📋 [{script_name}] Cache automatically populated during database load")
         
         return {
             'success': True,
