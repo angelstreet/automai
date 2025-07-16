@@ -6,7 +6,7 @@ Execution results track edge actions and node verifications with metrics.
 """
 
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 from uuid import uuid4
 
 from src.utils.supabase_utils import get_supabase_client
@@ -89,12 +89,11 @@ def record_node_execution(
             'executed_at': datetime.now().isoformat()
         }
         
-        # Log the actual values being used in the request
-        print(f"[@db:execution_results:record_node_execution] ACTUAL REQUEST DATA:")
+        print(f"[@db:execution_results:record_node_execution] Recording execution:")
+        print(f"  - execution_id: {execution_id}")
         print(f"  - team_id: {team_id}")
         print(f"  - tree_id: {tree_id}")
         print(f"  - node_id: {node_id}")
-        print(f"  - execution_type: verification")
         print(f"  - host_name: {host_name}")
         print(f"  - device_model: {device_model}")
         print(f"  - success: {success}")
@@ -116,40 +115,54 @@ def record_node_execution(
         print(f"[@db:execution_results:record_node_execution] Error: {str(e)}")
         return None
 
-def get_edge_metrics(team_id: str, edge_id: str) -> Dict:
-    """Get pre-calculated metrics for a specific edge."""
+def get_tree_metrics(team_id: str, node_ids: List[str], edge_ids: List[str]) -> Dict:
+    """Get all metrics for a tree in a single bulk query with defaults for missing metrics."""
     try:
         supabase = get_supabase()
         
-        result = supabase.table('edge_metrics').select('*').eq('team_id', team_id).eq('edge_id', edge_id).single().execute()
+        # Get all node metrics in one query
+        node_metrics = {}
+        if node_ids:
+            node_result = supabase.table('node_metrics').select('*').eq('team_id', team_id).in_('node_id', node_ids).execute()
+            for metric in node_result.data:
+                node_metrics[metric['node_id']] = {
+                    'volume': metric['total_executions'],
+                    'success_rate': float(metric['success_rate']),
+                    'avg_execution_time': metric['avg_execution_time_ms']
+                }
         
-        if result.data:
-            return {
-                'volume': result.data['total_executions'],
-                'success_rate': float(result.data['success_rate']),
-                'avg_execution_time': result.data['avg_execution_time_ms']
-            }
-        return {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0}
+        # Get all edge metrics in one query
+        edge_metrics = {}
+        if edge_ids:
+            edge_result = supabase.table('edge_metrics').select('*').eq('team_id', team_id).in_('edge_id', edge_ids).execute()
+            for metric in edge_result.data:
+                edge_metrics[metric['edge_id']] = {
+                    'volume': metric['total_executions'],
+                    'success_rate': float(metric['success_rate']),
+                    'avg_execution_time': metric['avg_execution_time_ms']
+                }
+        
+        # Fill in defaults for missing metrics
+        default_metrics = {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0}
+        
+        for node_id in node_ids:
+            if node_id not in node_metrics:
+                node_metrics[node_id] = default_metrics
+        
+        for edge_id in edge_ids:
+            if edge_id not in edge_metrics:
+                edge_metrics[edge_id] = default_metrics
+        
+        return {
+            'nodes': node_metrics,
+            'edges': edge_metrics
+        }
         
     except Exception as e:
-        print(f"[@db:execution_results:get_edge_metrics] Error: {str(e)}")
-        return {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0}
-
-def get_node_metrics(team_id: str, node_id: str) -> Dict:
-    """Get pre-calculated metrics for a specific node."""
-    try:
-        supabase = get_supabase()
-        
-        result = supabase.table('node_metrics').select('*').eq('team_id', team_id).eq('node_id', node_id).single().execute()
-        
-        if result.data:
-            return {
-                'volume': result.data['total_executions'],
-                'success_rate': float(result.data['success_rate']),
-                'avg_execution_time': result.data['avg_execution_time_ms']
-            }
-        return {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0}
-        
-    except Exception as e:
-        print(f"[@db:execution_results:get_node_metrics] Error: {str(e)}")
-        return {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0} 
+        print(f"[@db:execution_results:get_tree_metrics] Error: {str(e)}")
+        # Return defaults for all requested IDs on error
+        default_metrics = {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0}
+        return {
+            'nodes': {node_id: default_metrics for node_id in node_ids},
+            'edges': {edge_id: default_metrics for edge_id in edge_ids}
+        } 

@@ -246,12 +246,20 @@ def get_tree_by_userinterface_id(userinterface_id):
                         resolved_tree_data = get_cached_tree_data(userinterface_name, team_id)
                 
                 if resolved_tree_data:
-                    # Add metrics to nodes and edges
-                    from src.lib.supabase.execution_results_db import get_node_metrics, get_edge_metrics
+                    # Get all metrics in one bulk query
+                    from src.lib.supabase.execution_results_db import get_tree_metrics
                     
+                    # Collect all node and edge IDs
+                    node_ids = [node['id'] for node in resolved_tree_data['nodes']]
+                    edge_ids = [edge['id'] for edge in resolved_tree_data['edges']]
+                    
+                    # Single bulk query for all metrics
+                    all_metrics = get_tree_metrics(team_id, node_ids, edge_ids)
+                    
+                    # Attach metrics to nodes in memory
                     nodes_with_metrics = []
                     for node in resolved_tree_data['nodes']:
-                        node_metrics = get_node_metrics(team_id, node['id'])
+                        node_metrics = all_metrics['nodes'].get(node['id'], {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0})
                         nodes_with_metrics.append({
                             **node,
                             'data': {
@@ -260,9 +268,10 @@ def get_tree_by_userinterface_id(userinterface_id):
                             }
                         })
                     
+                    # Attach metrics to edges in memory
                     edges_with_metrics = []
                     for edge in resolved_tree_data['edges']:
-                        edge_metrics = get_edge_metrics(team_id, edge['id'])
+                        edge_metrics = all_metrics['edges'].get(edge['id'], {'volume': 0, 'success_rate': 0.0, 'avg_execution_time': 0})
                         edges_with_metrics.append({
                             **edge,
                             'data': {
