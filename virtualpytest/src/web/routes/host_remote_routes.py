@@ -283,11 +283,8 @@ def execute_command():
         command = data.get('command')
         params = data.get('params', {})
         device_id = data.get('device_id', 'device1')
-        wait_time = data.get('wait_time', 0)  # Get wait_time from request
         
         print(f"[@route:host_remote:execute_command] Executing command: {command} with params: {params} for device: {device_id}")
-        if wait_time > 0:
-            print(f"[@route:host_remote:execute_command] Will wait {wait_time}ms after command execution")
         
         if not command:
             return jsonify({
@@ -315,7 +312,7 @@ def execute_command():
         print(f"[@route:host_remote:execute_command] Using remote controller: {type(remote_controller).__name__}")
         
         # Use controller-specific abstraction - single line!
-        success = remote_controller.execute_command(command, params, wait_time)
+        success = remote_controller.execute_command(command, params)
         
         return jsonify({
             'success': success,
