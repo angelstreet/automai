@@ -21,16 +21,24 @@ class ActionExecutor:
     across Python code and API endpoints.
     """
     
-    def __init__(self, host: Dict[str, Any], device_id: Optional[str] = None):
+    def __init__(self, host: Dict[str, Any], device_id: Optional[str] = None, tree_id: str = None, edge_id: str = None, team_id: str = None):
         """
         Initialize ActionExecutor
         
         Args:
             host: Host configuration dict with host_name, devices, etc.
             device_id: Optional device ID for multi-device hosts
+            tree_id: Tree ID for navigation context
+            edge_id: Edge ID for navigation context
+            team_id: Team ID for database context
         """
         self.host = host
         self.device_id = device_id
+        self.tree_id = tree_id
+        self.edge_id = edge_id
+        
+        # team_id is required
+        self.team_id = team_id
         
         # Validate host configuration
         if not host or not host.get('host_name'):
@@ -80,7 +88,6 @@ class ActionExecutor:
         
         results = []
         passed_count = 0
-        execution_records = []
         execution_order = 1
         
         # Execute main actions
@@ -90,8 +97,6 @@ class ActionExecutor:
             results.append(result)
             if result.get('success'):
                 passed_count += 1
-            if result.get('execution_record'):
-                execution_records.append(result.get('execution_record'))
             execution_order += 1
             
             # Small delay between actions
@@ -107,8 +112,6 @@ class ActionExecutor:
                 results.append(result)
                 if result.get('success'):
                     passed_count += 1
-                if result.get('execution_record'):
-                    execution_records.append(result.get('execution_record'))
                 execution_order += 1
                 
                 # Small delay between retry actions
@@ -119,10 +122,7 @@ class ActionExecutor:
         if final_wait_time > 0:
             time.sleep(final_wait_time / 1000)
         
-        # Record executions to database
-        if execution_records:
-            print(f"[@lib:action_executor:execute_actions] Recording {len(execution_records)} executions to database")
-            self._record_executions_to_database(execution_records)
+
         
         # Calculate overall success (main actions must pass)
         overall_success = passed_count >= len(valid_actions)
@@ -175,23 +175,13 @@ class ActionExecutor:
             
             print(f"[@lib:action_executor:_execute_single_action] Action {action_number} result: success={success}, time={execution_time}ms")
             
-            # Create execution record for database
-            execution_record = {
-                'execution_category': 'action',
-                'execution_type': 'remote_action',
-                'initiator_type': 'navigation',
-                'initiator_id': action.get('id', 'unknown'),
-                'initiator_name': action.get('label', action.get('command', 'Unknown Action')),
-                'host_name': self.host.get('host_name'),
-                'device_model': self.host.get('device_model', 'unknown'),
-                'command': action.get('command'),
-                'parameters': action.get('params', {}),
-                'execution_order': execution_order,
-                'success': success,
-                'execution_time_ms': execution_time,
-                'message': response_data.get('message') if success else response_data.get('error'),
-                'error_details': None if success else {'error': response_data.get('error')}
-            }
+            # Record execution directly to database
+            self._record_execution_to_database(
+                success=success,
+                execution_time_ms=execution_time,
+                message=response_data.get('message') if success else response_data.get('error'),
+                error_details=None if success else {'error': response_data.get('error')}
+            )
             
             # Return standardized result (same format as API)
             return {
@@ -201,12 +191,20 @@ class ActionExecutor:
                 'resultType': 'PASS' if success else 'FAIL',
                 'execution_time_ms': execution_time,
                 'action_category': action_category,
-                'execution_record': execution_record
+
             }
             
         except Exception as e:
-            execution_time = int((time.time() - start_time) * 1000)
+                        execution_time = int((time.time() - start_time) * 1000)
             print(f"[@lib:action_executor:_execute_single_action] Action {action_number} error: {str(e)}")
+            
+            # Record failed execution directly to database
+            self._record_execution_to_database(
+                success=False,
+                execution_time_ms=execution_time,
+                message=str(e),
+                error_details={'error': str(e)}
+            )
             
             return {
                 'success': False,
@@ -214,43 +212,25 @@ class ActionExecutor:
                 'error': str(e),
                 'resultType': 'FAIL',
                 'execution_time_ms': execution_time,
-                'action_category': action_category,
-                'execution_record': {
-                    'execution_category': 'action',
-                    'execution_type': 'remote_action',
-                    'initiator_type': 'navigation',
-                    'initiator_id': action.get('id', 'unknown'),
-                    'initiator_name': action.get('label', action.get('command', 'Unknown Action')),
-                    'host_name': self.host.get('host_name'),
-                    'device_model': self.host.get('device_model', 'unknown'),
-                    'command': action.get('command'),
-                    'parameters': action.get('params', {}),
-                    'execution_order': execution_order,
-                    'success': False,
-                    'execution_time_ms': execution_time,
-                    'message': str(e),
-                    'error_details': {'error': str(e)}
-                }
+                'action_category': action_category
             }
     
-    def _record_executions_to_database(self, execution_records: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Record action executions to database"""
+    def _record_execution_to_database(self, success: bool, execution_time_ms: int, message: str, error_details: Optional[Dict] = None):
+        """Record single execution directly to database"""
         try:
-            print(f"[@lib:action_executor:_record_executions_to_database] Recording {len(execution_records)} executions")
+            from src.lib.supabase.execution_results_db import record_edge_execution
             
-            from src.utils.build_url_utils import buildServerUrl
-            url = buildServerUrl('server/execution-results/record-batch')
-            response = requests.post(url, 
-                                   json={'executions': execution_records},
-                                   timeout=10)
+            record_edge_execution(
+                team_id=self.team_id,
+                tree_id=self.tree_id,
+                edge_id=self.edge_id,
+                host_name=self.host.get('host_name'),
+                device_model=self.host.get('device_model'),
+                success=success,
+                execution_time_ms=execution_time_ms,
+                message=message,
+                error_details=error_details
+            )
             
-            result = response.json()
-            if result.get('success'):
-                print(f"[@lib:action_executor:_record_executions_to_database] Successfully recorded executions")
-            else:
-                print(f"[@lib:action_executor:_record_executions_to_database] Database recording failed: {result.get('error')}")
-            
-            return result
         except Exception as e:
-            print(f"[@lib:action_executor:_record_executions_to_database] Database recording error: {e}")
-            return {'success': False, 'error': str(e)} 
+            print(f"[@lib:action_executor:_record_execution_to_database] Database recording error: {e}") 

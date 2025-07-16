@@ -79,6 +79,25 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
     // Check if edge can be deleted using hook function
     const isProtectedEdge = edgeHook.isProtectedEdge(selectedEdge);
 
+    // Get metrics from edge data (loaded once with tree)
+    const edgeMetrics = useMemo(() => {
+      return selectedEdge.data?.metrics || { volume: 0, success_rate: 0.0, avg_execution_time: 0 };
+    }, [selectedEdge.data?.metrics]);
+
+    // Format success rate as percentage
+    const successRateText = useMemo(() => {
+      if (edgeMetrics.volume === 0) return 'No data';
+      return `${Math.round(edgeMetrics.success_rate * 100)}%`;
+    }, [edgeMetrics.volume, edgeMetrics.success_rate]);
+
+    // Get success rate color
+    const successRateColor = useMemo(() => {
+      if (edgeMetrics.volume === 0) return '#666';
+      if (edgeMetrics.success_rate >= 0.7) return '#4caf50'; // Green for 70%+
+      if (edgeMetrics.success_rate >= 0.5) return '#ff9800'; // Orange for 50-70%
+      return '#f44336'; // Red for <50%
+    }, [edgeMetrics.volume, edgeMetrics.success_rate]);
+
     const handleEdit = () => {
       // Create edge form using hook function
       const edgeForm = edgeHook.createEdgeForm(selectedEdge);
@@ -117,6 +136,20 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
               <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
                 Edge Selection
               </Typography>
+              {/* Show success rate percentage with color coding */}
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  color: successRateColor,
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(255,255,255,0.1)',
+                }}
+              >
+                {successRateText}
+              </Typography>
             </Box>
             <IconButton
               size="small"
@@ -146,6 +179,21 @@ export const EdgeSelectionPanel: React.FC<EdgeSelectionPanelProps> = React.memo(
               sx={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#4caf50' }}
             >
               {toLabel}
+            </Typography>
+          </Box>
+
+          {/* Metrics Display */}
+          <Box
+            sx={{ mb: 1, display: 'flex', gap: 2, fontSize: '0.75rem', color: 'text.secondary' }}
+          >
+            <Typography variant="caption">
+              <strong>Volume:</strong> {edgeMetrics.volume}
+            </Typography>
+            <Typography variant="caption">
+              <strong>Success:</strong> {successRateText}
+            </Typography>
+            <Typography variant="caption">
+              <strong>Avg Time:</strong> {edgeMetrics.avg_execution_time}ms
             </Typography>
           </Box>
 

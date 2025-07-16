@@ -159,9 +159,24 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
       [nodeHook, selectedNode.data.parent, nodes],
     );
 
-    // ❌ REMOVED: Confidence calculation moved to database
-    // TODO: Replace with database query in Step 2
-    const confidenceInfo = useMemo(() => ({ score: null, text: 'unknown' }), []);
+    // Get metrics from node data (loaded once with tree)
+    const nodeMetrics = useMemo(() => {
+      return selectedNode.data.metrics || { volume: 0, success_rate: 0.0, avg_execution_time: 0 };
+    }, [selectedNode.data.metrics]);
+
+    // Format success rate as percentage
+    const successRateText = useMemo(() => {
+      if (nodeMetrics.volume === 0) return 'No data';
+      return `${Math.round(nodeMetrics.success_rate * 100)}%`;
+    }, [nodeMetrics.volume, nodeMetrics.success_rate]);
+
+    // Get success rate color
+    const successRateColor = useMemo(() => {
+      if (nodeMetrics.volume === 0) return '#666';
+      if (nodeMetrics.success_rate >= 0.7) return '#4caf50'; // Green for 70%+
+      if (nodeMetrics.success_rate >= 0.5) return '#ff9800'; // Orange for 50-70%
+      return '#f44336'; // Red for <50%
+    }, [nodeMetrics.volume, nodeMetrics.success_rate]);
 
     // Memoize event handlers to prevent unnecessary re-renders
     const handleCloseClick = useCallback(
@@ -220,26 +235,20 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
                 <Typography variant="h6" sx={{ margin: 0, fontSize: '1rem' }}>
                   {selectedNode.data.label}
                 </Typography>
-                {/* Show confidence percentage with color coding if available */}
-                {confidenceInfo.score !== null && (
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontSize: '0.75rem',
-                      fontWeight: 'bold',
-                      color:
-                        confidenceInfo.score >= 0.7
-                          ? '#4caf50' // Green for 70%+
-                          : confidenceInfo.score >= 0.5
-                            ? '#ff9800' // Orange for 50-70%
-                            : '#f44336', // Red for <50%
-                      padding: '2px 6px',
-                      borderRadius: '4px',
-                    }}
-                  >
-                    {confidenceInfo.text}
-                  </Typography>
-                )}
+                {/* Show success rate percentage with color coding */}
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    color: successRateColor,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    backgroundColor: 'rgba(255,255,255,0.1)',
+                  }}
+                >
+                  {successRateText}
+                </Typography>
               </Box>
               <IconButton size="small" onClick={handleCloseClick} sx={{ p: 0.25 }}>
                 <CloseIcon fontSize="small" />
@@ -251,6 +260,21 @@ export const NodeSelectionPanel: React.FC<NodeSelectionPanelProps> = React.memo(
               <Typography variant="caption" display="block">
                 <strong>Parent:</strong> {parentNames} - <strong>Depth:</strong>{' '}
                 {selectedNode.data.depth || 0}
+              </Typography>
+            </Box>
+
+            {/* Metrics Display */}
+            <Box
+              sx={{ mb: 1, display: 'flex', gap: 2, fontSize: '0.75rem', color: 'text.secondary' }}
+            >
+              <Typography variant="caption">
+                <strong>Volume:</strong> {nodeMetrics.volume}
+              </Typography>
+              <Typography variant="caption">
+                <strong>Success:</strong> {successRateText}
+              </Typography>
+              <Typography variant="caption">
+                <strong>Avg Time:</strong> {nodeMetrics.avg_execution_time}ms
               </Typography>
             </Box>
 

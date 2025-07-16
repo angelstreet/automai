@@ -37,9 +37,9 @@ class NavigationExecutor:
         self.device_id = device_id
         self.team_id = team_id or get_team_id()
         
-        # Initialize standardized executors
-        self.action_executor = ActionExecutor(host, device_id)
-        self.verification_executor = VerificationExecutor(host, device_id)
+        # Initialize standardized executors (will be updated with navigation context per execution)
+        self.action_executor = None
+        self.verification_executor = None
         
         # Validate host configuration
         if not host or not host.get('host_name'):
@@ -104,7 +104,17 @@ class NavigationExecutor:
                 final_wait_time = transition.get('finalWaitTime', 2000)
                 
                 if actions:
-                    result = self.action_executor.execute_actions(
+                    # Initialize action executor with navigation context
+                    edge_id = transition.get('edge_id', f"edge_{i}")
+                    action_executor = ActionExecutor(
+                        host=self.host,
+                        device_id=self.device_id,
+                        tree_id=tree_id,
+                        edge_id=edge_id,
+                        team_id=self.team_id
+                    )
+                    
+                    result = action_executor.execute_actions(
                         actions=actions,
                         retry_actions=retry_actions,
                         final_wait_time=final_wait_time
@@ -150,10 +160,19 @@ class NavigationExecutor:
             if target_node_verifications:
                 print(f"[@lib:navigation_execution:execute_navigation] Executing {len(target_node_verifications)} target node verifications")
                 
-                # Get device model for verification context
-                device_model = self.host.get('device_model', 'unknown')
+                # Initialize verification executor with navigation context
+                verification_executor = VerificationExecutor(
+                    host=self.host,
+                    device_id=self.device_id,
+                    tree_id=tree_id,
+                    node_id=target_node_id,
+                    team_id=self.team_id
+                )
                 
-                result = self.verification_executor.execute_verifications(
+                # Get device model for verification context
+                device_model = self.host.get('device_model')
+                
+                result = verification_executor.execute_verifications(
                     verifications=target_node_verifications,
                     image_source_url=image_source_url,
                     model=device_model

@@ -246,12 +246,37 @@ def get_tree_by_userinterface_id(userinterface_id):
                         resolved_tree_data = get_cached_tree_data(userinterface_name, team_id)
                 
                 if resolved_tree_data:
-                    # Return tree with resolved data (verification objects, action objects)
+                    # Add metrics to nodes and edges
+                    from src.lib.supabase.execution_results_db import get_node_metrics, get_edge_metrics
+                    
+                    nodes_with_metrics = []
+                    for node in resolved_tree_data['nodes']:
+                        node_metrics = get_node_metrics(team_id, node['id'])
+                        nodes_with_metrics.append({
+                            **node,
+                            'data': {
+                                **node.get('data', {}),
+                                'metrics': node_metrics
+                            }
+                        })
+                    
+                    edges_with_metrics = []
+                    for edge in resolved_tree_data['edges']:
+                        edge_metrics = get_edge_metrics(team_id, edge['id'])
+                        edges_with_metrics.append({
+                            **edge,
+                            'data': {
+                                **edge.get('data', {}),
+                                'metrics': edge_metrics
+                            }
+                        })
+                    
+                    # Return tree with resolved data (verification objects, action objects) and metrics
                     resolved_tree = {
                         **raw_tree,  # Keep database metadata (id, name, created_at, etc.)
                         'metadata': {
-                            'nodes': resolved_tree_data['nodes'],  # Resolved nodes with verification objects
-                            'edges': resolved_tree_data['edges']   # Resolved edges with action objects
+                            'nodes': nodes_with_metrics,  # Resolved nodes with verification objects and metrics
+                            'edges': edges_with_metrics   # Resolved edges with action objects and metrics
                         }
                     }
                     

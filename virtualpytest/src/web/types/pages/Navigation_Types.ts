@@ -36,6 +36,13 @@ export interface UINavigationNodeData {
   // Verification support
   verifications?: Verification[]; // Array of full verification objects for UI display (loaded from DB via verification_ids)
   verification_ids?: string[]; // Array of verification database IDs for persistence (saved to tree)
+
+  // Execution metrics
+  metrics?: {
+    volume: number;
+    success_rate: number;
+    avg_execution_time: number;
+  };
 }
 
 // Define the navigation node type using ReactFlow's Node with our data type
@@ -58,6 +65,13 @@ export interface UINavigationEdgeData {
   from?: string; // Source node label
   to?: string; // Target node label
   edgeType?: 'horizontal' | 'vertical'; // For edge coloring: horizontal=siblings, vertical=parent-child
+
+  // Execution metrics
+  metrics?: {
+    volume: number;
+    success_rate: number;
+    avg_execution_time: number;
+  };
 }
 
 // Use ReactFlow's Edge type with our custom data

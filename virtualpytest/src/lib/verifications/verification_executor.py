@@ -20,16 +20,24 @@ class VerificationExecutor:
     across Python code and API endpoints.
     """
     
-    def __init__(self, host: Dict[str, Any], device_id: Optional[str] = None):
+    def __init__(self, host: Dict[str, Any], device_id: Optional[str] = None, tree_id: str = None, node_id: str = None, team_id: str = None):
         """
         Initialize VerificationExecutor
         
         Args:
             host: Host configuration dict with host_name, devices, etc.
             device_id: Optional device ID for multi-device hosts
+            tree_id: Tree ID for navigation context
+            node_id: Node ID for navigation context
+            team_id: Team ID for database context
         """
         self.host = host
         self.device_id = device_id
+        self.tree_id = tree_id
+        self.node_id = node_id
+        
+        # team_id is required
+        self.team_id = team_id
         
         # Validate host configuration
         if not host or not host.get('host_name'):
@@ -46,6 +54,7 @@ class VerificationExecutor:
             verifications: List of verification dictionaries
             image_source_url: Optional source image URL for image/text verifications
             model: Optional device model for verification context
+
             
         Returns:
             Dict with success status, results, and execution statistics
@@ -54,6 +63,8 @@ class VerificationExecutor:
         print(f"[@lib:verification_executor:execute_verifications] Processing {len(verifications)} verifications")
         print(f"[@lib:verification_executor:execute_verifications] Host: {self.host.get('host_name')}")
         print(f"[@lib:verification_executor:execute_verifications] Source: {image_source_url}")
+        
+
         
         # Validate inputs
         if not verifications:
@@ -86,12 +97,27 @@ class VerificationExecutor:
             
             print(f"[@lib:verification_executor:execute_verifications] Processing verification {i+1}/{len(valid_verifications)}: {verification_type}")
             
+            start_time = time.time()
             result = self._execute_single_verification(verification, image_source_url, model)
+            execution_time = int((time.time() - start_time) * 1000)
+            
+                        # Add execution time to result
+            result['execution_time_ms'] = execution_time
             results.append(result)
             
             # Count successful verifications
             if result.get('success'):
                 passed_count += 1
+            
+            # Record execution directly to database
+            self._record_verification_to_database(
+                success=result.get('success', False),
+                execution_time_ms=execution_time,
+                message=result.get('message', ''),
+                error_details={'error': result.get('error')} if result.get('error') else None
+            )
+        
+
         
         # Calculate overall success
         overall_success = passed_count == len(valid_verifications)
@@ -226,4 +252,24 @@ class VerificationExecutor:
                 'error': str(e),
                 'verification_type': verification.get('verification_type', 'unknown'),
                 'resultType': 'FAIL'
-            } 
+            }
+    
+    def _record_verification_to_database(self, success: bool, execution_time_ms: int, message: str, error_details: Optional[Dict] = None):
+        """Record single verification directly to database"""
+        try:
+            from src.lib.supabase.execution_results_db import record_node_execution
+            
+            record_node_execution(
+                team_id=self.team_id,
+                tree_id=self.tree_id,
+                node_id=self.node_id,
+                host_name=self.host.get('host_name'),
+                device_model=self.host.get('device_model'),
+                success=success,
+                execution_time_ms=execution_time_ms,
+                message=message,
+                error_details=error_details
+            )
+            
+        except Exception as e:
+            print(f"[@lib:verification_executor:_record_verification_to_database] Database recording error: {e}") 
