@@ -20,11 +20,12 @@ project_root = os.path.dirname(src_dir)  # /virtualpytest
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from src.utils.host_utils import list_available_devices
+# Import required modules
+from src.controllers.controller_manager import get_host
 from src.utils.lock_utils import is_device_locked, lock_device, unlock_device
 from src.lib.navigation.navigation_pathfinding import find_optimal_edge_validation_sequence
 from src.lib.navigation.navigation_execution import NavigationExecutor
-from src.utils.app_utils import get_team_id
+from src.utils.app_utils import get_team_id, load_environment_variables
 from src.lib.supabase.userinterface_db import get_userinterface_by_name
 from src.lib.supabase.navigation_trees_db import get_root_tree_for_interface
 
@@ -41,66 +42,92 @@ def main():
     device_id = sys.argv[2] if len(sys.argv) > 2 else None
     
     print(f"Starting validation for interface: {userinterface_name}")
-    if device_id:
-        print(f"Target device: {device_id}")
     
-    # 2. Get available devices on current host
-    print("Getting available devices...")
-    available_devices = list_available_devices()
+    # 2. Load environment variables (like during host registration)
+    print("Loading environment variables...")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    env_path = os.path.join(script_dir, '..', 'web', '.env.host')
+    if os.path.exists(env_path):
+        load_environment_variables(mode='host', calling_script_dir=os.path.dirname(env_path))
+    else:
+        print("⚠️ No .env.host file found, using existing environment")
     
-    if not available_devices:
-        print("No devices available on this host")
+    # 3. Get host instance (creates devices from environment variables)
+    print("Creating host instance from environment...")
+    try:
+        host = get_host()
+        print(f"Host created: {host.host_name}")
+        print(f"Available devices: {host.get_device_count()}")
+        
+        # Display available devices
+        if host.get_device_count() == 0:
+            print("❌ No devices configured in environment variables")
+            print("Please configure devices in .env.host file:")
+            print("  DEVICE1_NAME=MyDevice")
+            print("  DEVICE1_MODEL=horizon_android_mobile")
+            print("  DEVICE1_IP=192.168.1.100")
+            print("  DEVICE1_PORT=5555")
+            sys.exit(1)
+        
+        for device in host.get_devices():
+            print(f"  - {device.device_name} ({device.device_model}) [{device.device_id}]")
+            
+    except Exception as e:
+        print(f"❌ Failed to create host: {e}")
         sys.exit(1)
     
-    print(f"Found {len(available_devices)} devices:")
-    for device in available_devices:
-        locked_status = "LOCKED" if is_device_locked(device['device_id']) else "AVAILABLE"
-        print(f"  - {device['device_id']}: {device['name']} ({device['model']}) [{locked_status}]")
-    
-    # 3. Select device (provided or first available unlocked)
-    selected_device = None
-    
+    # 4. Select device
+    print("Selecting device...")
     if device_id:
-        # Check if provided device exists and is available
-        if not any(d['device_id'] == device_id for d in available_devices):
-            print(f"Device {device_id} not found")
-            sys.exit(1)
-        if is_device_locked(device_id):
-            print(f"Device {device_id} is locked")
-            sys.exit(1)
-        selected_device = device_id
-    else:
-        # Find first available unlocked device
-        for device in available_devices:
-            if not is_device_locked(device['device_id']):
-                selected_device = device['device_id']
+        # Use specified device
+        selected_device = None
+        for device in host.get_devices():
+            if device.device_id == device_id:
+                selected_device = device
                 break
         
         if not selected_device:
-            print("No available devices")
+            print(f"❌ Device {device_id} not found")
+            available_devices = [d.device_id for d in host.get_devices()]
+            print(f"Available devices: {available_devices}")
             sys.exit(1)
+    else:
+        # Use first available device
+        devices = host.get_devices()
+        if not devices:
+            print("❌ No devices available")
+            sys.exit(1)
+        selected_device = devices[0]
     
-    print(f"Selected device: {selected_device}")
+    print(f"Selected device: {selected_device.device_name} ({selected_device.device_id})")
     
-    # 4. Take control of device
-    print("Taking control of device...")
-    session_id = str(uuid.uuid4())
+    # 5. Check device lock status
+    print("Checking device lock status...")
+    device_key = f"{host.host_name}:{selected_device.device_id}"
     
-    if not lock_device(selected_device, session_id):
-        print("Take control failed")
+    if is_device_locked(device_key):
+        print(f"❌ Device {selected_device.device_id} is locked by another process")
         sys.exit(1)
     
-    print(f"Successfully took control (session: {session_id})")
+    # 6. Take control of device
+    print(f"Taking control of device {selected_device.device_id}...")
+    session_id = str(uuid.uuid4())
+    
+    if not lock_device(device_key, session_id):
+        print(f"❌ Failed to take control of device {selected_device.device_id}")
+        sys.exit(1)
+    
+    print(f"✅ Successfully took control of device {selected_device.device_id}")
     
     try:
-        # 5. Get tree_id from userinterface_name
+        # 7. Get tree_id from userinterface_name
         print("Getting tree ID from userinterface name...")
         team_id = get_team_id()
         
         # First, get the userinterface by name
         userinterface = get_userinterface_by_name(userinterface_name, team_id)
         if not userinterface:
-            print(f"User interface '{userinterface_name}' not found")
+            print(f"❌ User interface '{userinterface_name}' not found")
             sys.exit(1)
         
         userinterface_id = userinterface['id']
@@ -108,34 +135,37 @@ def main():
         # Get the root tree for this interface
         root_tree = get_root_tree_for_interface(userinterface_id, team_id)
         if not root_tree:
-            print(f"No root tree found for interface '{userinterface_name}'")
+            print(f"❌ No root tree found for interface '{userinterface_name}'")
             sys.exit(1)
         
         tree_id = root_tree['id']
-        print(f"Found tree ID: {tree_id} for interface: {userinterface_name}")
+        print(f"Found tree ID: {tree_id}")
         
-        # Get validation sequence
+        # 8. Get validation sequence
         print("Getting validation sequence...")
         validation_sequence = find_optimal_edge_validation_sequence(tree_id, team_id)
         
         if not validation_sequence:
-            print("No validation sequence found for this interface")
+            print("❌ No validation sequence found")
             sys.exit(1)
         
-        print(f"Found validation sequence with {len(validation_sequence)} steps")
+        print(f"Found {len(validation_sequence)} validation steps")
         
-        # 6. Execute validation using NavigationExecutor
+        # 9. Execute validation using NavigationExecutor
         print("Initializing navigation executor...")
         
-        # Create minimal host configuration for script execution
-        host = {
-            "host_name": "script_host",
-            "device_model": "script_device"
+        # Create host dictionary for NavigationExecutor (matching the expected format)
+        host_dict = {
+            'host_name': host.host_name,
+            'host_url': getattr(host, 'host_url', f"http://{host.host_ip}:{host.host_port}"),
+            'host_ip': host.host_ip,
+            'host_port': host.host_port,
+            'devices': [device.to_dict() for device in host.get_devices()]
         }
         
-        executor = NavigationExecutor(host, selected_device, team_id)
+        executor = NavigationExecutor(host_dict, session_id)
         
-        print(f"Starting validation on device {selected_device}")
+        print(f"Starting validation on device {selected_device.device_id}")
         
         for i, step in enumerate(validation_sequence, 1):
             print(f"Executing step {i}/{len(validation_sequence)}: {step.get('description', 'Unknown step')}")
@@ -148,22 +178,22 @@ def main():
             )
             
             if not result.get('success'):
-                print(f"Validation failed at step {i}: {result.get('error', 'Unknown error')}")
+                print(f"❌ Validation failed at step {i}: {result.get('error', 'Unknown error')}")
                 sys.exit(1)
             
-            print(f"Step {i} completed successfully")
+            print(f"✅ Step {i} completed successfully")
         
-        print("✅ Validation completed successfully!")
+        print("🎉 All validation steps completed successfully!")
         
     except Exception as e:
-        print(f"❌ Validation error: {str(e)}")
+        print(f"❌ Validation error: {e}")
         sys.exit(1)
         
     finally:
-        # 7. Release control
-        print("Releasing device control...")
-        unlock_device(selected_device, session_id)
-        print("Device control released")
+        # 10. Release control of device
+        print(f"Releasing control of device {selected_device.device_id}...")
+        unlock_device(device_key, session_id)
+        print("✅ Device control released")
 
 if __name__ == "__main__":
     main() 

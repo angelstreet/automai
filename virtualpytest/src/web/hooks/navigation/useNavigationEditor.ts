@@ -1,9 +1,10 @@
 import { useMemo, useCallback, useContext } from 'react';
-import { MarkerType } from 'reactflow';
+import { MarkerType, addEdge, Connection } from 'reactflow';
 
 import { useNavigationConfig } from '../../contexts/navigation/NavigationConfigContext';
 import NavigationContext from '../../contexts/navigation/NavigationContext';
 import { useHostManager } from '../useHostManager';
+import { UINavigationEdge } from '../../types/pages/Navigation_Types';
 
 export const useNavigationEditor = () => {
   // Get the navigation config context (save/load functionality)
@@ -63,10 +64,88 @@ export const useNavigationEditor = () => {
   );
 
   // Simple event handlers
-  const onConnect = useCallback((connection: any) => {
-    console.log('Connection attempt:', connection);
-    // TODO: Implement connection logic
-  }, []);
+  const onConnect = useCallback(
+    async (connection: Connection) => {
+      console.log('Connection attempt:', connection);
+
+      // Validate connection parameters
+      if (!connection.source || !connection.target) {
+        console.error(
+          '[@useNavigationEditor:onConnect] Invalid connection: missing source or target',
+        );
+        return;
+      }
+
+      // Find source and target nodes
+      const sourceNode = navigation.nodes.find((n) => n.id === connection.source);
+      const targetNode = navigation.nodes.find((n) => n.id === connection.target);
+
+      if (!sourceNode || !targetNode) {
+        console.error('[@useNavigationEditor:onConnect] Source or target node not found');
+        return;
+      }
+
+      // Prevent self-connections
+      if (connection.source === connection.target) {
+        console.warn('[@useNavigationEditor:onConnect] Cannot connect node to itself');
+        return;
+      }
+
+      // Create new edge with proper UINavigationEdge structure
+      const newEdge: UINavigationEdge = {
+        id: `edge-${connection.source}-${connection.target}-${Date.now()}`,
+        source: connection.source,
+        target: connection.target,
+        sourceHandle: connection.sourceHandle || undefined,
+        targetHandle: connection.targetHandle || undefined,
+        type: 'uiNavigation',
+        animated: false,
+        style: {
+          stroke: '#555',
+          strokeWidth: 2,
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: '#555',
+        },
+        data: {
+          edgeType: 'horizontal',
+          description: `${sourceNode.data.label} → ${targetNode.data.label}`,
+          from: sourceNode.data.label,
+          to: targetNode.data.label,
+        },
+      };
+
+      console.log('[@useNavigationEditor:onConnect] Creating edge:', newEdge);
+
+      // Add edge to current edges using ReactFlow's addEdge utility
+      const updatedEdges = addEdge(newEdge, navigation.edges);
+
+      // Update edges in navigation context
+      navigation.setEdges(updatedEdges);
+
+      // Mark as having unsaved changes
+      navigation.setHasUnsavedChanges(true);
+
+      // Auto-save if userInterface is available
+      if (navigation.userInterface?.id) {
+        console.log(
+          '[@useNavigationEditor:onConnect] Auto-saving navigation tree after edge creation',
+        );
+
+        try {
+          await saveToConfig(navigation.userInterface.id, { edges: updatedEdges });
+          console.log('[@useNavigationEditor:onConnect] Tree saved successfully');
+        } catch (saveError) {
+          console.error('[@useNavigationEditor:onConnect] Failed to auto-save tree:', saveError);
+          navigation.setError(
+            'Edge created but failed to save navigation tree. Please save manually.',
+          );
+        }
+      }
+    },
+    [navigation, saveToConfig],
+  );
 
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: any) => {
