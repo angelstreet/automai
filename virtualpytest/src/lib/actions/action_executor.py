@@ -54,7 +54,7 @@ class ActionExecutor:
         Args:
             actions: List of action dictionaries with command, params, etc.
             retry_actions: Optional list of retry actions to execute if main actions fail
-            final_wait_time: Wait time in milliseconds after execution
+            final_wait_time: Wait time in milliseconds after execution (passed to controllers)
             
         Returns:
             Dict with success status, results, and execution statistics
@@ -98,32 +98,28 @@ class ActionExecutor:
             if result.get('success'):
                 passed_count += 1
             execution_order += 1
-            
-            # Small delay between actions
-            if i < len(valid_actions) - 1:
-                time.sleep(0.5)
         
         # Execute retry actions if main actions failed
         main_actions_failed = passed_count < len(valid_actions)
         if main_actions_failed and valid_retry_actions:
             print(f"[@lib:action_executor:execute_actions] Main actions failed, executing {len(valid_retry_actions)} retry actions")
             for i, retry_action in enumerate(valid_retry_actions):
-                result = self._execute_single_action(retry_action, execution_order, i+1, 'retry')
+                # Add final_wait_time to the last retry action
+                if i == len(valid_retry_actions) - 1 and final_wait_time > 0:
+                    retry_action_with_wait = retry_action.copy()
+                    retry_action_with_wait['waitTime'] = (retry_action_with_wait.get('waitTime', 0) + final_wait_time)
+                    result = self._execute_single_action(retry_action_with_wait, execution_order, i+1, 'retry')
+                else:
+                    result = self._execute_single_action(retry_action, execution_order, i+1, 'retry')
                 results.append(result)
                 if result.get('success'):
                     passed_count += 1
                 execution_order += 1
-                
-                # Small delay between retry actions
-                if i < len(valid_retry_actions) - 1:
-                    time.sleep(0.5)
-        
-        # Final wait time
-        if final_wait_time > 0:
-            time.sleep(final_wait_time / 1000)
-        
+        elif final_wait_time > 0:
+            # Handle final wait time after all actions complete
+            print(f"[@lib:action_executor:execute_actions] Applying final wait time: {final_wait_time}ms")
+            time.sleep(final_wait_time / 1000.0)
 
-        
         # Calculate overall success (main actions must pass)
         overall_success = passed_count >= len(valid_actions)
         
@@ -163,11 +159,15 @@ class ActionExecutor:
         try:
             print(f"[@lib:action_executor:_execute_single_action] Executing {action_category} action {action_number}: {action.get('command')} with params {action.get('params', {})}")
             
+            # Prepare parameters with timing information
+            params = action.get('params', {})
+            if action.get('waitTime'):
+                params['wait_time'] = action.get('waitTime')
+            
             # Proxy to host remote command endpoint (same as API)
             response_data, status_code = proxy_to_host('/host/remote/executeCommand', 'POST', {
                 'command': action.get('command'),
-                'params': action.get('params', {}),
-                'wait_time': action.get('waitTime', 0)
+                'params': params
             })
             
             execution_time = int((time.time() - start_time) * 1000)
@@ -191,7 +191,6 @@ class ActionExecutor:
                 'resultType': 'PASS' if success else 'FAIL',
                 'execution_time_ms': execution_time,
                 'action_category': action_category,
-
             }
             
         except Exception as e:

@@ -6,6 +6,7 @@ Controllers implement their own specific functionality.
 """
 
 from typing import Dict, Any, Optional, List
+import time
 
 
 class BaseController:
@@ -39,6 +40,19 @@ class RemoteControllerInterface(BaseController):
     def __init__(self, device_name: str = "Unknown Device", device_type: str = "generic"):
         super().__init__("remote", device_name)
         self.device_type = device_type
+    
+    def _handle_wait_time(self, wait_time: int, action_name: str = "action") -> None:
+        """
+        Handle wait time after action execution.
+        
+        Args:
+            wait_time: Wait time in milliseconds
+            action_name: Name of action for logging
+        """
+        if wait_time > 0:
+            wait_seconds = wait_time / 1000.0
+            print(f"Remote[{self.device_type.upper()}]: Waiting {wait_seconds}s after {action_name}")
+            time.sleep(wait_seconds)
 
 
 class AVControllerInterface(BaseController):

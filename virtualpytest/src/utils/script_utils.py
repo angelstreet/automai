@@ -326,7 +326,7 @@ def execute_script(script_name: str, device_id: str) -> Dict[str, Any]:
 
 def execute_action_directly(host, device, action: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Execute an action directly using the host's device controllers.
+    Execute an action directly using controller-specific abstraction.
     
     Args:
         host: Host instance
@@ -350,76 +350,13 @@ def execute_action_directly(host, device, action: Dict[str, Any]) -> Dict[str, A
                 'error': f'No remote controller found for device {device.device_id}'
             }
         
-        # Execute the action based on command type
-        if command == 'click_element':
-            element_id = params.get('element_id')
-            if not element_id:
-                return {'success': False, 'error': 'element_id required for click_element'}
-            
-            success = remote_controller.click_element(element_id)
-            return {
-                'success': success,
-                'message': f'Clicked element: {element_id}' if success else f'Failed to click element: {element_id}'
-            }
-            
-        elif command == 'launch_app':
-            package = params.get('package')
-            if not package:
-                return {'success': False, 'error': 'package required for launch_app'}
-            
-            success = remote_controller.launch_app(package)
-            return {
-                'success': success,
-                'message': f'Launched app: {package}' if success else f'Failed to launch app: {package}'
-            }
-            
-        elif command == 'close_app':
-            package = params.get('package')
-            if not package:
-                return {'success': False, 'error': 'package required for close_app'}
-            
-            success = remote_controller.close_app(package)
-            return {
-                'success': success,
-                'message': f'Closed app: {package}' if success else f'Failed to close app: {package}'
-            }
-            
-        elif command == 'press_key':
-            key = params.get('key')
-            if not key:
-                return {'success': False, 'error': 'key required for press_key'}
-            
-            success = remote_controller.press_key(key)
-            return {
-                'success': success,
-                'message': f'Pressed key: {key}' if success else f'Failed to press key: {key}'
-            }
-            
-        elif command == 'input_text':
-            text = params.get('text')
-            if not text:
-                return {'success': False, 'error': 'text required for input_text'}
-            
-            success = remote_controller.input_text(text)
-            return {
-                'success': success,
-                'message': f'Input text: {text}' if success else f'Failed to input text: {text}'
-            }
-            
-        elif command == 'tap_coordinates':
-            x = params.get('x')
-            y = params.get('y')
-            if x is None or y is None:
-                return {'success': False, 'error': 'x and y coordinates required for tap_coordinates'}
-            
-            success = remote_controller.tap_coordinates(int(x), int(y))
-            return {
-                'success': success,
-                'message': f'Tapped coordinates: ({x}, {y})' if success else f'Failed to tap coordinates: ({x}, {y})'
-            }
-            
-        else:
-            return {'success': False, 'error': f'Unknown command: {command}'}
+        # Use controller-specific abstraction - controller handles wait_time internally
+        success = remote_controller.execute_command(command, params)
+        
+        return {
+            'success': success,
+            'message': f'{"Successfully executed" if success else "Failed to execute"} {command}'
+        }
             
     except Exception as e:
         return {'success': False, 'error': f'Action execution error: {str(e)}'}
@@ -427,7 +364,7 @@ def execute_action_directly(host, device, action: Dict[str, Any]) -> Dict[str, A
 
 def execute_verification_directly(host, device, verification: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Execute a verification directly using the host's device controllers.
+    Execute a verification directly using controller-specific abstraction.
     
     Args:
         host: Host instance
@@ -450,54 +387,15 @@ def execute_verification_directly(host, device, verification: Dict[str, Any]) ->
                 'error': f'No {verification_type} verification controller found for device {device.device_id}'
             }
         
-        # Execute verification based on type
-        if verification_type == 'adb':
-            search_term = verification.get('search_term')
-            if not search_term:
-                return {'success': False, 'error': 'search_term required for adb verification'}
-            
-            # Call the ADB verification method
-            result = verification_controller.waitForElementToAppear(search_term, timeout=5)
-            
-            return {
-                'success': result.get('success', False),
-                'message': result.get('message', 'ADB verification completed'),
-                'verification_type': verification_type,
-                'resultType': 'PASS' if result.get('success') else 'FAIL'
-            }
-            
-        elif verification_type == 'text':
-            expected_text = verification.get('expected_text')
-            if not expected_text:
-                return {'success': False, 'error': 'expected_text required for text verification'}
-            
-            # Call the text verification method
-            result = verification_controller.verify_text(expected_text)
-            
-            return {
-                'success': result.get('success', False),
-                'message': result.get('message', 'Text verification completed'),
-                'verification_type': verification_type,
-                'resultType': 'PASS' if result.get('success') else 'FAIL'
-            }
-            
-        elif verification_type == 'image':
-            reference_image = verification.get('reference_image')
-            if not reference_image:
-                return {'success': False, 'error': 'reference_image required for image verification'}
-            
-            # Call the image verification method
-            result = verification_controller.verify_image(reference_image)
-            
-            return {
-                'success': result.get('success', False),
-                'message': result.get('message', 'Image verification completed'),
-                'verification_type': verification_type,
-                'resultType': 'PASS' if result.get('success') else 'FAIL'
-            }
-            
-        else:
-            return {'success': False, 'error': f'Unknown verification type: {verification_type}'}
+        # Use controller-specific abstraction - single line!
+        result = verification_controller.execute_verification(verification)
+        
+        return {
+            'success': result.get('success', False),
+            'message': result.get('message', 'Verification completed'),
+            'verification_type': verification_type,
+            'resultType': 'PASS' if result.get('success') else 'FAIL'
+        }
             
     except Exception as e:
         return {'success': False, 'error': f'Verification execution error: {str(e)}'}
@@ -519,6 +417,7 @@ def execute_navigation_step_directly(host, device, transition: Dict[str, Any], t
     try:
         actions = transition.get('actions', [])
         retry_actions = transition.get('retryActions', [])
+        final_wait_time = transition.get('wait_final_time', 0)
         
         print(f"[@script_utils:execute_navigation_step_directly] Executing transition with {len(actions)} actions")
         
@@ -539,6 +438,17 @@ def execute_navigation_step_directly(host, device, transition: Dict[str, Any], t
                 if result['success']:
                     main_success = True
                     break
+        
+        # Execute final wait time directly (no dummy actions)
+        if main_success and final_wait_time:
+            # Convert to int if it's a string
+            final_wait_time_ms = int(final_wait_time) if isinstance(final_wait_time, str) else final_wait_time
+            if final_wait_time_ms > 0:
+                print(f"[@script_utils:execute_navigation_step_directly] Executing final wait time: {final_wait_time_ms}ms")
+                # Use controller base class timing method directly
+                remote_controller = get_controller(device.device_id, 'remote')
+                if remote_controller:
+                    remote_controller._handle_wait_time(final_wait_time_ms, "navigation step completion")
         
         return {
             'success': main_success,

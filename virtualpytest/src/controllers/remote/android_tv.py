@@ -116,12 +116,13 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             self.is_connected = False
             return False
             
-    def press_key(self, key: str) -> bool:
+    def press_key(self, key: str, wait_time: int = 0) -> bool:
         """
         Send a key press to the Android TV.
         
         Args:
             key: Key name (e.g., "UP", "DOWN", "OK", "HOME")
+            wait_time: Wait time in milliseconds after action execution
         """
         if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
@@ -136,6 +137,9 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                 print(f"Remote[{self.device_type.upper()}]: Successfully pressed key '{key}'")
             else:
                 print(f"Remote[{self.device_type.upper()}]: Failed to press key '{key}'")
+            
+            # Handle timing in controller
+            self._handle_wait_time(wait_time, "key press")
                 
             return success
             
@@ -143,40 +147,44 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Key press error: {e}")
             return False
             
-    def input_text(self, text: str) -> bool:
+    def input_text(self, text: str, wait_time: int = 0) -> bool:
         """
         Send text input to the Android TV.
         
         Args:
             text: Text to input
+            wait_time: Wait time in milliseconds after action execution
         """
         if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
         try:
-            print(f"Remote[{self.device_type.upper()}]: Sending text: '{text}'")
+            print(f"Remote[{self.device_type.upper()}]: Inputting text: '{text}'")
             
-            # Use ADB text input command directly
             success = self.adb_utils.input_text(self.android_device_id, text)
             
             if success:
-                print(f"Remote[{self.device_type.upper()}]: Successfully sent text: '{text}'")
-                return True
+                print(f"Remote[{self.device_type.upper()}]: Successfully input text")
             else:
-                print(f"Remote[{self.device_type.upper()}]: Text input failed")
-                return False
+                print(f"Remote[{self.device_type.upper()}]: Failed to input text")
+            
+            # Handle timing in controller
+            self._handle_wait_time(wait_time, "text input")
                 
+            return success
+            
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: Text input error: {e}")
             return False
             
-    def execute_sequence(self, commands: List[Dict[str, Any]]) -> bool:
+    def execute_sequence(self, commands: List[Dict[str, Any]], final_wait_time: int = 0) -> bool:
         """
         Execute a sequence of commands.
         
         Args:
             commands: List of command dictionaries with 'action', 'params', and optional 'delay'
+            final_wait_time: Wait time in milliseconds after sequence completion
         """
         if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
@@ -187,23 +195,23 @@ class AndroidTVRemoteController(RemoteControllerInterface):
         for i, command in enumerate(commands):
             action = command.get('action')
             params = command.get('params', {})
-            delay = command.get('delay', 0.5)
+            wait_time = params.get('wait_time', 0)  # Extract wait_time from params
             
             print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {action}")
             
             success = False
             if action == 'press_key':
-                success = self.press_key(params.get('key', 'OK'))
+                success = self.press_key(params.get('key', 'OK'), wait_time)
             elif action == 'input_text':
-                success = self.input_text(params.get('text', ''))
+                success = self.input_text(params.get('text', ''), wait_time)
             elif action == 'launch_app':
-                success = self.launch_app(params.get('package', ''))
+                success = self.launch_app(params.get('package', ''), wait_time)
             elif action == 'tap':
                 x = params.get('x', 0)
                 y = params.get('y', 0)
-                success = self.tap_coordinates(x, y)
+                success = self.tap_coordinates(x, y, wait_time)
             elif action == 'close_app':
-                success = self.close_app(params.get('package', ''))
+                success = self.close_app(params.get('package', ''), wait_time)
             else:
                 print(f"Remote[{self.device_type.upper()}]: Unknown action: {action}")
                 return False
@@ -211,87 +219,71 @@ class AndroidTVRemoteController(RemoteControllerInterface):
             if not success:
                 print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
                 return False
-                
-            # Add delay between commands (except for the last one)
-            if delay > 0 and i < len(commands) - 1:
-                time.sleep(delay)
+        
+        # Handle final wait time after sequence completion
+        self._handle_wait_time(final_wait_time, "sequence completion")
                 
         print(f"Remote[{self.device_type.upper()}]: Sequence completed successfully")
         return True
         
-    def launch_app(self, package_name: str) -> bool:
+    def launch_app(self, package_name: str, wait_time: int = 0) -> bool:
         """
         Launch an app by package name.
         
         Args:
-            package_name: Android package name (e.g., "com.netflix.ninja")
+            package_name: Android package name (e.g., "com.android.settings")
+            wait_time: Wait time in milliseconds after action execution
         """
-        if not self.is_connected:
+        if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
         try:
-            launch_command = [
-                "adb", "-s", self.android_device_id, "shell", "monkey", 
-                "-p", package_name, "-c", "android.intent.category.LAUNCHER", "1"
-            ]
             print(f"Remote[{self.device_type.upper()}]: Launching app: {package_name}")
             
-            result = subprocess.run(
-                launch_command,
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            success = self.adb_utils.launch_app(self.android_device_id, package_name)
             
-            if result.returncode == 0:
+            if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully launched {package_name}")
-                return True
             else:
-                print(f"Remote[{self.device_type.upper()}]: App launch failed: {result.stderr}")
-                return False
+                print(f"Remote[{self.device_type.upper()}]: Failed to launch {package_name}")
+            
+            # Handle timing in controller
+            self._handle_wait_time(wait_time, "app launch")
                 
-        except subprocess.TimeoutExpired:
-            print(f"Remote[{self.device_type.upper()}]: App launch timeout")
-            return False
+            return success
+            
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: App launch error: {e}")
             return False
             
-    def close_app(self, package_name: str) -> bool:
+    def close_app(self, package_name: str, wait_time: int = 0) -> bool:
         """
         Close/stop an app by package name.
         
         Args:
-            package_name: Android package name (e.g., "com.netflix.ninja")
+            package_name: Android package name (e.g., "com.android.settings")
+            wait_time: Wait time in milliseconds after action execution
         """
-        if not self.is_connected:
+        if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
         try:
-            close_command = [
-                "adb", "-s", self.android_device_id, "shell", "am", "force-stop", package_name
-            ]
             print(f"Remote[{self.device_type.upper()}]: Closing app: {package_name}")
             
-            result = subprocess.run(
-                close_command,
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            success = self.adb_utils.close_app(self.android_device_id, package_name)
             
-            if result.returncode == 0:
+            if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully closed {package_name}")
-                return True
             else:
-                print(f"Remote[{self.device_type.upper()}]: App close failed: {result.stderr}")
-                return False
+                print(f"Remote[{self.device_type.upper()}]: Failed to close {package_name}")
+            
+            # Handle timing in controller
+            self._handle_wait_time(wait_time, "app close")
                 
-        except subprocess.TimeoutExpired:
-            print(f"Remote[{self.device_type.upper()}]: App close timeout")
-            return False
+            return success
+            
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: App close error: {e}")
             return False
@@ -305,41 +297,36 @@ class AndroidTVRemoteController(RemoteControllerInterface):
         """
         return self.close_app(package_name)
             
-    def tap_coordinates(self, x: int, y: int) -> bool:
+    def tap_coordinates(self, x: int, y: int, wait_time: int = 0) -> bool:
         """
-        Tap at specific screen coordinates.
+        Tap at specific coordinates on the screen.
         
         Args:
             x: X coordinate
             y: Y coordinate
+            wait_time: Wait time in milliseconds after action execution
         """
-        if not self.is_connected:
+        if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
         try:
-            tap_command = ["adb", "-s", self.android_device_id, "shell", "input", "tap", str(x), str(y)]
             print(f"Remote[{self.device_type.upper()}]: Tapping at coordinates ({x}, {y})")
             
-            result = subprocess.run(
-                tap_command,
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
+            success = self.adb_utils.tap_coordinates(self.android_device_id, x, y)
             
-            if result.returncode == 0:
+            if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully tapped at ({x}, {y})")
-                return True
             else:
-                print(f"Remote[{self.device_type.upper()}]: Tap failed: {result.stderr}")
-                return False
+                print(f"Remote[{self.device_type.upper()}]: Failed to tap at ({x}, {y})")
+            
+            # Handle timing in controller
+            self._handle_wait_time(wait_time, "coordinate tap")
                 
-        except subprocess.TimeoutExpired:
-            print(f"Remote[{self.device_type.upper()}]: Tap timeout")
-            return False
+            return success
+            
         except Exception as e:
-            print(f"Remote[{self.device_type.upper()}]: Tap error: {e}")
+            print(f"Remote[{self.device_type.upper()}]: Coordinate tap error: {e}")
             return False
             
     def get_installed_apps(self) -> List[Dict[str, str]]:
@@ -714,3 +701,51 @@ class AndroidTVRemoteController(RemoteControllerInterface):
     def get_device_capture_path(self) -> str:
         """Get device-specific capture path for screenshots."""
         return self.device_config['video_capture_path']
+
+    def execute_command(self, command: str, params: Dict[str, Any] = None, wait_time: int = 0) -> bool:
+        """
+        Execute Android TV specific command with proper abstraction.
+        
+        Args:
+            command: Command to execute ('press_key', 'input_text', etc.)
+            params: Command parameters
+            wait_time: Wait time in milliseconds after execution
+            
+        Returns:
+            bool: True if command executed successfully
+        """
+        if params is None:
+            params = {}
+        
+        print(f"Remote[{self.device_type.upper()}]: Executing command '{command}' with params: {params}")
+        
+        if command == 'press_key':
+            key = params.get('key')
+            return self.press_key(key, wait_time) if key else False
+        
+        elif command == 'input_text':
+            text = params.get('text')
+            return self.input_text(text, wait_time) if text else False
+        
+        elif command == 'launch_app':
+            package = params.get('package')
+            return self.launch_app(package, wait_time) if package else False
+        
+        elif command == 'close_app':
+            package = params.get('package')
+            return self.close_app(package, wait_time) if package else False
+        
+        elif command == 'tap_coordinates':
+            x, y = params.get('x'), params.get('y')
+            return self.tap_coordinates(int(x), int(y), wait_time) if x is not None and y is not None else False
+        
+        elif command == 'get_installed_apps':
+            # Android TV specific
+            apps = self.get_installed_apps()
+            return len(apps) > 0
+        
+        # Android TV doesn't have click_element or UI dump capabilities
+        
+        else:
+            print(f"Remote[{self.device_type.upper()}]: Unknown command: {command}")
+            return False

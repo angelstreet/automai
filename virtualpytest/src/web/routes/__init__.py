@@ -112,6 +112,8 @@ def _register_host_routes(app):
         ('host_verification_image_routes', 'host_verification_image_bp'),  # ✅ Image verification
         ('host_verification_text_routes', 'host_verification_text_bp'),  # ✅ Text verification
         ('host_verification_adb_routes', 'host_verification_adb_bp'),  # ✅ ADB verification
+        ('host_verification_appium_routes', 'host_verification_appium_bp'),  # ✅ Appium verification
+        ('host_verification_audio_routes', 'host_verification_audio_bp'),  # ✅ Audio verification
         ('host_verification_video', 'host_verification_video_bp'),  # ✅ Video verification
         ('host_verification_routes', 'host_verification_bp'),  # ✅ General verification
         ('host_script_routes', 'host_script_bp'),  # ✅ Script execution

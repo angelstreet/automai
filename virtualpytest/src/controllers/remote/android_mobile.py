@@ -120,12 +120,13 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             self.is_connected = False
             return False
             
-    def press_key(self, key: str) -> bool:
+    def press_key(self, key: str, wait_time: int = 0) -> bool:
         """
         Send a key press to the Android device.
         
         Args:
             key: Key name (e.g., "UP", "DOWN", "HOME", "BACK")
+            wait_time: Wait time in milliseconds after action execution
         """
         if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
@@ -140,6 +141,9 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 print(f"Remote[{self.device_type.upper()}]: Successfully pressed key '{key}'")
             else:
                 print(f"Remote[{self.device_type.upper()}]: Failed to press key '{key}'")
+            
+            # Handle timing in controller
+            self._handle_wait_time(wait_time, "key press")
                 
             return success
             
@@ -147,48 +151,46 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Key press error: {e}")
             return False
             
-    def input_text(self, text: str) -> bool:
+    def input_text(self, text: str, wait_time: int = 0) -> bool:
         """
-        Send text input to the Android device directly (assumes focus is already on input field).
+        Send text input to the Android device.
         
         Args:
             text: Text to input
+            wait_time: Wait time in milliseconds after action execution
         """
         if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
             return False
             
         try:
-            print(f"Remote[{self.device_type.upper()}]: Sending text: '{text}'")
+            print(f"Remote[{self.device_type.upper()}]: Inputting text: '{text}'")
             
-            # Use direct ADB text input command (assumes field is already focused)
-            import subprocess
+            success = self.adb_utils.input_text(self.android_device_id, text)
             
-            # Escape special characters for shell
-            escaped_text = text.replace('"', '\\"').replace("'", "\\'").replace(' ', '\\ ')
-            input_command = f"adb -s {self.android_device_id} shell input text \"{escaped_text}\""
-            
-            success, stdout, stderr, exit_code = self.adb_utils.execute_command(input_command)
-            
-            if success and exit_code == 0:
-                print(f"Remote[{self.device_type.upper()}]: Successfully sent text: '{text}'")
-                return True
+            if success:
+                print(f"Remote[{self.device_type.upper()}]: Successfully input text")
             else:
-                print(f"Remote[{self.device_type.upper()}]: Text input failed: {stderr}")
-                return False
+                print(f"Remote[{self.device_type.upper()}]: Failed to input text")
+            
+            # Handle timing in controller
+            self._handle_wait_time(wait_time, "text input")
                 
+            return success
+            
         except Exception as e:
             print(f"Remote[{self.device_type.upper()}]: Text input error: {e}")
             return False
             
 
             
-    def execute_sequence(self, commands: List[Dict[str, Any]]) -> bool:
+    def execute_sequence(self, commands: List[Dict[str, Any]], final_wait_time: int = 0) -> bool:
         """
         Execute a sequence of commands.
         
         Args:
             commands: List of command dictionaries with 'action', 'params', and optional 'delay'
+            final_wait_time: Wait time in milliseconds after sequence completion
         """
         if not self.is_connected:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
@@ -199,24 +201,24 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         for i, command in enumerate(commands):
             action = command.get('action')
             params = command.get('params', {})
-            delay = command.get('delay', 0.5)
+            wait_time = params.get('wait_time', 0)  # Extract wait_time from params
             
             print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {action}")
             
             success = False
             if action == 'press_key':
-                success = self.press_key(params.get('key', 'HOME'))
+                success = self.press_key(params.get('key', 'HOME'), wait_time)
             elif action == 'input_text':
-                success = self.input_text(params.get('text', ''))
+                success = self.input_text(params.get('text', ''), wait_time)
             elif action == 'launch_app':
-                success = self.launch_app(params.get('package', ''))
+                success = self.launch_app(params.get('package', ''), wait_time)
             elif action == 'close_app':
-                success = self.close_app(params.get('package', ''))
+                success = self.close_app(params.get('package', ''), wait_time)
             elif action == 'click_element':
                 element_id = params.get('element_id')
                 if element_id:
                     # Use the low-level direct click method
-                    success = self.click_element(element_id)
+                    success = self.click_element(element_id, wait_time)
                 else:
                     print(f"Remote[{self.device_type.upper()}]: No element ID provided")
                     return False
@@ -233,6 +235,14 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 else:
                     print(f"Remote[{self.device_type.upper()}]: No element ID provided or no UI elements available")
                     return False
+            elif action == 'tap_coordinates':
+                x = params.get('x')
+                y = params.get('y')
+                if x is not None and y is not None:
+                    success = self.tap_coordinates(int(x), int(y), wait_time)
+                else:
+                    print(f"Remote[{self.device_type.upper()}]: x and y coordinates required for tap_coordinates")
+                    return False
             elif action == 'dump_ui':
                 success, elements, error = self.dump_ui_elements()
                 if not success:
@@ -245,20 +255,20 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             if not success:
                 print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
                 return False
-                
-            # Add delay between commands (except for the last one)
-            if delay > 0 and i < len(commands) - 1:
-                time.sleep(delay)
+        
+        # Handle final wait time after sequence completion
+        self._handle_wait_time(final_wait_time, "sequence completion")
                 
         print(f"Remote[{self.device_type.upper()}]: Sequence completed successfully")
         return True
         
-    def launch_app(self, package_name: str) -> bool:
+    def launch_app(self, package_name: str, wait_time: int = 0) -> bool:
         """
         Launch an app by package name.
         
         Args:
             package_name: Android package name (e.g., "com.android.settings")
+            wait_time: Wait time in milliseconds after action execution
         """
         if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
@@ -273,6 +283,9 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 print(f"Remote[{self.device_type.upper()}]: Successfully launched {package_name}")
             else:
                 print(f"Remote[{self.device_type.upper()}]: Failed to launch {package_name}")
+            
+            # Handle timing in controller
+            self._handle_wait_time(wait_time, "app launch")
                 
             return success
             
@@ -280,12 +293,13 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: App launch error: {e}")
             return False
             
-    def close_app(self, package_name: str) -> bool:
+    def close_app(self, package_name: str, wait_time: int = 0) -> bool:
         """
         Close/stop an app by package name.
         
         Args:
             package_name: Android package name (e.g., "com.android.settings")
+            wait_time: Wait time in milliseconds after action execution
         """
         if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
@@ -300,6 +314,9 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 print(f"Remote[{self.device_type.upper()}]: Successfully closed {package_name}")
             else:
                 print(f"Remote[{self.device_type.upper()}]: Failed to close {package_name}")
+            
+            # Handle timing in controller
+            self._handle_wait_time(wait_time, "app close")
                 
             return success
             
@@ -391,12 +408,13 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Element click error: {e}")
             return False
             
-    def click_element(self, element_identifier: str) -> bool:
+    def click_element(self, element_identifier: str, wait_time: int = 0) -> bool:
         """
         Click element directly by text, resource_id, or content_desc using simple ADB command.
         
         Args:
             element_identifier: Text, resource ID, or content description to click
+            wait_time: Wait time in milliseconds after action execution
             
         Returns:
             bool: True if click successful
@@ -415,6 +433,9 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 print(f"Remote[{self.device_type.upper()}]: Successfully clicked element: '{element_identifier}'")
             else:
                 print(f"Remote[{self.device_type.upper()}]: Failed to click element: '{element_identifier}'")
+            
+            # Handle timing in controller
+            self._handle_wait_time(wait_time, "element click")
                 
             return success
             
@@ -559,16 +580,14 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         except Exception as e:
             return {'success': False, 'error': f'Failed to check ADB status: {str(e)}'}
 
-    def tap_coordinates(self, x: int, y: int) -> bool:
+    def tap_coordinates(self, x: int, y: int, wait_time: int = 0) -> bool:
         """
-        Tap at specific screen coordinates.
+        Tap at specific coordinates on the screen.
         
         Args:
             x: X coordinate
-            y: Y coordinate
-            
-        Returns:
-            bool: True if tap successful
+            y: Y coordinate  
+            wait_time: Wait time in milliseconds after action execution
         """
         if not self.is_connected or not self.adb_utils:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
@@ -577,18 +596,20 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
         try:
             print(f"Remote[{self.device_type.upper()}]: Tapping at coordinates ({x}, {y})")
             
-            # Use ADB utils to execute tap command
             success = self.adb_utils.tap_coordinates(self.android_device_id, x, y)
             
             if success:
                 print(f"Remote[{self.device_type.upper()}]: Successfully tapped at ({x}, {y})")
-                return True
             else:
-                print(f"Remote[{self.device_type.upper()}]: Tap failed")
-                return False
+                print(f"Remote[{self.device_type.upper()}]: Failed to tap at ({x}, {y})")
+            
+            # Handle timing in controller
+            self._handle_wait_time(wait_time, "coordinate tap")
                 
+            return success
+            
         except Exception as e:
-            print(f"Remote[{self.device_type.upper()}]: Tap error: {e}")
+            print(f"Remote[{self.device_type.upper()}]: Coordinate tap error: {e}")
             return False
     
     def get_available_actions(self) -> Dict[str, Any]:
@@ -674,3 +695,66 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
                 }  
             ]
         }
+
+    def execute_command(self, command: str, params: Dict[str, Any] = None, wait_time: int = 0) -> bool:
+        """
+        Execute Android Mobile specific command with proper abstraction.
+        
+        Args:
+            command: Command to execute ('press_key', 'input_text', etc.)
+            params: Command parameters
+            wait_time: Wait time in milliseconds after execution
+            
+        Returns:
+            bool: True if command executed successfully
+        """
+        if params is None:
+            params = {}
+        
+        print(f"Remote[{self.device_type.upper()}]: Executing command '{command}' with params: {params}")
+        
+        if command == 'press_key':
+            key = params.get('key')
+            return self.press_key(key, wait_time) if key else False
+        
+        elif command == 'input_text':
+            text = params.get('text')
+            return self.input_text(text, wait_time) if text else False
+        
+        elif command == 'launch_app':
+            package = params.get('package')
+            return self.launch_app(package, wait_time) if package else False
+        
+        elif command == 'close_app':
+            package = params.get('package')
+            return self.close_app(package, wait_time) if package else False
+        
+        elif command == 'click_element':
+            element_id = params.get('element_id')
+            return self.click_element(element_id, wait_time) if element_id else False
+        
+        elif command == 'tap_coordinates':
+            x, y = params.get('x'), params.get('y')
+            return self.tap_coordinates(int(x), int(y), wait_time) if x is not None and y is not None else False
+        
+        elif command == 'click_element_by_id':
+            # Android Mobile specific - uses UI dump
+            element_id = params.get('element_id')
+            if element_id and self.last_ui_elements:
+                element = next((el for el in self.last_ui_elements if str(el.id) == str(element_id)), None)
+                return self.click_element_by_id(element) if element else False
+            return False
+        
+        elif command == 'dump_ui_elements':
+            # Android Mobile specific
+            success, _, _ = self.dump_ui_elements()
+            return success
+        
+        elif command == 'get_installed_apps':
+            # Android Mobile specific
+            apps = self.get_installed_apps()
+            return len(apps) > 0
+        
+        else:
+            print(f"Remote[{self.device_type.upper()}]: Unknown command: {command}")
+            return False

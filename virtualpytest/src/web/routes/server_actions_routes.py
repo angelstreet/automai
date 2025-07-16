@@ -67,10 +67,6 @@ def action_execute_batch():
             if result.get('execution_record'):
                 execution_records.append(result.get('execution_record'))
             execution_order += 1
-            
-            # Small delay between actions
-            if i < len(actions) - 1:
-                time.sleep(0.5)
         
         # Execute retry actions if main actions failed
         main_actions_failed = passed_count < len(actions)
@@ -84,20 +80,22 @@ def action_execute_batch():
                 if result.get('execution_record'):
                     execution_records.append(result.get('execution_record'))
                 execution_order += 1
-                
-                # Small delay between retry actions
-                if i < len(retry_actions) - 1:
-                    time.sleep(0.5)
         
         # Record to database (like verification)
         if execution_records:
             print(f"[@route:server_actions:action_execute_batch] Recording {len(execution_records)} executions to database")
             record_executions_to_database(execution_records)
         
-        # Apply final wait time after all actions are completed
+        # Apply final wait time through controller if needed
         if final_wait_time > 0:
             print(f"[@route:server_actions:action_execute_batch] Applying final wait time: {final_wait_time}ms")
-            time.sleep(final_wait_time / 1000.0)  # Convert ms to seconds
+            # Create a dummy action to handle final wait time via controller
+            final_wait_action = {
+                'command': 'press_key',
+                'params': {'key': 'HOME'},
+                'waitTime': final_wait_time
+            }
+            execute_single_action(final_wait_action, host, execution_order, 0, 'final_wait')
         
         # Return aggregated results (same format as verification)
         overall_success = passed_count >= len(actions)  # Main actions must pass
