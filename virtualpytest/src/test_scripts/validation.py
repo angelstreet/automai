@@ -78,6 +78,10 @@ def main():
             print(f"❌ [validation] Tree loading failed: {tree_result['error']}")
             sys.exit(1)
         
+        # Get the actual tree ID from the loaded tree data
+        tree_id = tree_result['tree_id']
+        print(f"📋 [validation] Using tree ID: {tree_id}")
+        
         # 6. Get validation sequence (use userinterface_name directly like web does)
         print("📋 [validation] Getting validation sequence...")
         validation_sequence = find_optimal_edge_validation_sequence(userinterface_name, team_id)
@@ -93,7 +97,7 @@ def main():
         
         # Create host dictionary for NavigationExecutor (centralized)
         host_dict = create_host_dict_for_executor(host)
-        executor = NavigationExecutor(host_dict, session_id)
+        executor = NavigationExecutor(host_dict, selected_device.device_id, team_id)
         
         print(f"🎮 [validation] Starting validation on device {selected_device.device_id}")
         
@@ -102,7 +106,7 @@ def main():
             
             # Execute navigation to target node for this validation step
             result = executor.execute_navigation(
-                tree_id=userinterface_name,
+                tree_id=tree_id,
                 target_node_id=step.get('to_node_id'),
                 current_node_id=step.get('from_node_id')
             )

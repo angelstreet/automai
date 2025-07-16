@@ -42,13 +42,11 @@ def load_navigation_tree(userinterface_name: str, script_name: str = "script") -
         # Get userinterface by name using direct database access
         from src.lib.supabase.userinterface_db import get_all_userinterfaces
         
-        userinterfaces_result = get_all_userinterfaces(team_id)
-        if not userinterfaces_result.get('success'):
-            error_msg = f"Failed to get userinterfaces: {userinterfaces_result.get('error', 'Unknown error')}"
+        userinterfaces = get_all_userinterfaces(team_id)
+        if not userinterfaces:
+            error_msg = "Failed to get userinterfaces or no userinterfaces found"
             print(f"❌ [{script_name}] {error_msg}")
             return {'success': False, 'error': error_msg}
-        
-        userinterfaces = userinterfaces_result['userinterfaces']
         userinterface = None
         
         for ui in userinterfaces:
@@ -133,10 +131,7 @@ def setup_script_environment(script_name: str = "script") -> Dict[str, Any]:
         if host.get_device_count() == 0:
             print(f"❌ [{script_name}] No devices configured in environment variables")
             print(f"💡 [{script_name}] Please configure devices in .env.host file:")
-            print(f"     DEVICE1_NAME=MyDevice")
-            print(f"     DEVICE1_MODEL=horizon_android_mobile")
-            print(f"     DEVICE1_IP=192.168.1.100")
-            print(f"     DEVICE1_PORT=5555")
+
             return {'success': False, 'error': 'No devices configured'}
         
         for device in host.get_devices():
