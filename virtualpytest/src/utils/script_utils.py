@@ -427,6 +427,12 @@ def execute_navigation_step_directly(host, device, transition: Dict[str, Any], t
         
         print(f"[@script_utils:execute_navigation_step_directly] Executing transition with {len(actions)} actions")
         
+        # Debug: Check what retry actions are available
+        print(f"[@script_utils:execute_navigation_step_directly] Retry actions available: {len(retry_actions)}")
+        if retry_actions:
+            for i, retry_action in enumerate(retry_actions):
+                print(f"[@script_utils:execute_navigation_step_directly] Retry action {i+1}: {retry_action.get('command')} with params {retry_action.get('params', {})}")
+        
         # Get the remote controller for this device
         remote_controller = get_controller(device.device_id, 'remote')
         if not remote_controller:
