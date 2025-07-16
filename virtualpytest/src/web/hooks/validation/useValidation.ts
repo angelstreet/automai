@@ -54,8 +54,8 @@ export const useValidation = (treeId: string) => {
    */
   const runValidation = useCallback(
     async (skippedEdges: string[] = []) => {
-      if (!treeId || !selectedHost) {
-        setValidationError('Tree ID and host are required');
+      if (!treeId || !selectedHost || !preview) {
+        setValidationError('Tree ID, host, and preview data are required');
         return;
       }
 
@@ -67,6 +67,11 @@ export const useValidation = (treeId: string) => {
       try {
         console.log(`[@hook:useValidation] Starting validation for tree ${treeId}`);
 
+        // Filter out skipped edges to get edges to validate
+        const edgesToValidate = preview.edges.filter(
+          edge => !skippedEdges.includes(`${edge.from_node}-${edge.to_node}`)
+        );
+
         // Call simplified validation endpoint - it handles sequential execution
         const response = await fetch(`/server/validation/run/${treeId}`, {
           method: 'POST',
@@ -76,7 +81,7 @@ export const useValidation = (treeId: string) => {
           body: JSON.stringify({
             host: selectedHost,
             device_id: selectedDeviceId,
-            skipped_edges: skippedEdges,
+            edges_to_validate: edgesToValidate,
           }),
         });
 
@@ -127,7 +132,7 @@ export const useValidation = (treeId: string) => {
         setIsValidating(false);
       }
     },
-    [treeId, selectedHost, selectedDeviceId],
+    [treeId, selectedHost, selectedDeviceId, preview],
   );
 
   /**

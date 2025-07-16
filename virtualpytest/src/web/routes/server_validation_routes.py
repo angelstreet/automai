@@ -76,7 +76,7 @@ def run_validation(tree_id: str):
         # Get host and device information
         host = data.get('host')
         device_id = data.get('device_id')
-        skipped_edges = data.get('skipped_edges', [])
+        edges_to_validate = data.get('edges_to_validate', [])
         
         if not host:
             return jsonify({
@@ -84,18 +84,11 @@ def run_validation(tree_id: str):
                 'error': 'Host configuration is required'
             }), 400
         
-        # Get preview to know what edges we're testing
-        preview_response = get_validation_preview(tree_id)
-        preview_data = preview_response[0].get_json()
-        
-        if not preview_data.get('success'):
-            return jsonify(preview_data), 400
-        
-        # Filter out skipped edges
-        edges_to_validate = [
-            edge for edge in preview_data['edges']
-            if f"{edge['from_node']}-{edge['to_node']}" not in skipped_edges
-        ]
+        if not edges_to_validate:
+            return jsonify({
+                'success': False,
+                'error': 'No edges provided for validation'
+            }), 400
         
         print(f"[@route:run_validation] Validating {len(edges_to_validate)} edges")
         

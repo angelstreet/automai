@@ -38,7 +38,7 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
     if (!validation.preview && !validation.isLoadingPreview) {
       validation.loadPreview();
     }
-  }, [validation.preview, validation.isLoadingPreview, validation.loadPreview]);
+  }, [validation]);
 
   // Auto-select all edges when preview loads
   useEffect(() => {
@@ -177,6 +177,7 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
                       )}
                     </Box>
                   }
+                  primaryTypographyProps={{ component: 'div' }}
                 />
                 <ListItemSecondaryAction>
                   <FormControlLabel
