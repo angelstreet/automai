@@ -73,10 +73,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
     nodeEdit.handleSave(onSubmit);
   };
 
-  const handleRunGoto = () => {
-    nodeEdit.runGoto();
-  };
-
   const buttonVisibility = nodeEdit.getButtonVisibility();
 
   return (
@@ -228,21 +224,6 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           }}
         >
           {nodeEdit.verification.loading ? 'Running...' : 'Run'}
-        </Button>
-        <Button
-          onClick={handleRunGoto}
-          variant="contained"
-          color="primary"
-          disabled={!buttonVisibility.canRunGoto || nodeEdit.isRunningGoto}
-          sx={{
-            opacity: !buttonVisibility.canRunGoto || nodeEdit.isRunningGoto ? 0.5 : 1,
-            bgcolor: 'primary.main',
-            '&:hover': {
-              bgcolor: 'primary.dark',
-            },
-          }}
-        >
-          {nodeEdit.isRunningGoto ? 'Going...' : 'Go To'}
         </Button>
       </DialogActions>
     </Dialog>
