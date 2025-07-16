@@ -1,9 +1,9 @@
 import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 import React from 'react';
 
+import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useHostManager } from '../../hooks/useHostManager';
-import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import { useToast } from '../../hooks/useToast';
 
 import NavigationEditorActionButtons from './Navigation_NavigationEditor_ActionButtons';
