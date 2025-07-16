@@ -79,8 +79,7 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
           <MenuItem
             onClick={() => {
               handleClose();
-              // Results are automatically shown when validation completes
-              // If we need to show previous results, we can add that functionality
+              validation.setShowResults(true);
             }}
           >
             <ListItemIcon>
