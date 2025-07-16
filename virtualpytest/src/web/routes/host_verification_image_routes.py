@@ -208,7 +208,7 @@ def execute_image_verification():
         print(f"[@route:host_verification_image:execute] Verification result: {verification_result}")
         
         # Build URLs from file paths if verification generated images
-        if verification_result.get('success') and 'source_image_path' in verification_result.get('details', {}):
+        if 'source_image_path' in verification_result.get('details', {}):
             from src.utils.build_url_utils import buildVerificationResultUrl
             
             # Get host info for URL building
