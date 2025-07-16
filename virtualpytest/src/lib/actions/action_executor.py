@@ -159,10 +159,8 @@ class ActionExecutor:
         try:
             print(f"[@lib:action_executor:_execute_single_action] Executing {action_category} action {action_number}: {action.get('command')} with params {action.get('params', {})}")
             
-            # Prepare parameters with timing information
+            # Use action params directly - wait_time is already in params from database
             params = action.get('params', {})
-            if action.get('waitTime'):
-                params['wait_time'] = action.get('waitTime')
             
             # Proxy to host remote command endpoint (same as API)
             response_data, status_code = proxy_to_host('/host/remote/executeCommand', 'POST', {
