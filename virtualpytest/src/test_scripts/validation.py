@@ -25,7 +25,8 @@ from src.utils.script_utils import (
     select_device,
     take_device_control,
     release_device_control,
-    create_host_dict_for_executor
+    create_host_dict_for_executor,
+    load_navigation_tree
 )
 from src.lib.navigation.navigation_pathfinding import find_optimal_edge_validation_sequence
 from src.lib.navigation.navigation_execution import NavigationExecutor
@@ -71,7 +72,13 @@ def main():
     device_key = control_result['device_key']
     
     try:
-        # 5. Get validation sequence (use userinterface_name directly like web does)
+        # 5. Load navigation tree first (centralized function)
+        tree_result = load_navigation_tree(userinterface_name, "validation")
+        if not tree_result['success']:
+            print(f"❌ [validation] Tree loading failed: {tree_result['error']}")
+            sys.exit(1)
+        
+        # 6. Get validation sequence (use userinterface_name directly like web does)
         print("📋 [validation] Getting validation sequence...")
         validation_sequence = find_optimal_edge_validation_sequence(userinterface_name, team_id)
         

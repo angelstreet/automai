@@ -26,7 +26,8 @@ from src.utils.script_utils import (
     select_device,
     take_device_control,
     release_device_control,
-    create_host_dict_for_executor
+    create_host_dict_for_executor,
+    load_navigation_tree
 )
 
 def main():
@@ -64,6 +65,11 @@ def main():
     try:
         # 5. Do your script work here
         print("🎯 [example] Doing script work...")
+        
+        # Example: Load navigation tree (optional)
+        # tree_result = load_navigation_tree("horizon_android_mobile", "example")
+        # if tree_result['success']:
+        #     print(f"📋 [example] Loaded tree with {len(tree_result['nodes'])} nodes")
         
         # Example: Get device capabilities
         capabilities = selected_device.get_capabilities()

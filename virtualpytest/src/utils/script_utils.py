@@ -19,6 +19,87 @@ if project_root not in sys.path:
 from .app_utils import load_environment_variables
 from .host_utils import get_host_instance, list_available_devices
 from .lock_utils import is_device_locked, lock_device, unlock_device
+import requests
+
+
+def load_navigation_tree(userinterface_name: str, script_name: str = "script") -> Dict[str, Any]:
+    """
+    Load navigation tree from server to populate cache (like web interface does).
+    This is required before calling pathfinding functions.
+    
+    Args:
+        userinterface_name: Name of the userinterface (e.g., 'horizon_android_mobile')
+        script_name: Name of the script for logging
+        
+    Returns:
+        Dictionary with success status and tree data or error
+    """
+    try:
+        print(f"🔄 [{script_name}] Loading navigation tree for: {userinterface_name}")
+        
+        # Get userinterface by name first
+        userinterface_response = requests.get(
+            f"http://localhost:3000/server/navigation/userinterfaces"
+        )
+        
+        if not userinterface_response.ok:
+            error_msg = f"Failed to get userinterfaces: {userinterface_response.status_code}"
+            print(f"❌ [{script_name}] {error_msg}")
+            return {'success': False, 'error': error_msg}
+        
+        userinterfaces = userinterface_response.json()
+        userinterface = None
+        
+        for ui in userinterfaces:
+            if ui['name'] == userinterface_name:
+                userinterface = ui
+                break
+        
+        if not userinterface:
+            error_msg = f"User interface '{userinterface_name}' not found"
+            print(f"❌ [{script_name}] {error_msg}")
+            return {'success': False, 'error': error_msg}
+        
+        userinterface_id = userinterface['id']
+        print(f"✅ [{script_name}] Found userinterface ID: {userinterface_id}")
+        
+        # Load tree by userinterface_id (this populates the cache)
+        tree_response = requests.get(
+            f"http://localhost:3000/server/navigationTrees/getTreeByUserInterfaceId/{userinterface_id}"
+        )
+        
+        if not tree_response.ok:
+            error_msg = f"Failed to load tree: {tree_response.status_code}"
+            print(f"❌ [{script_name}] {error_msg}")
+            return {'success': False, 'error': error_msg}
+        
+        tree_data = tree_response.json()
+        
+        if not tree_data.get('success'):
+            error_msg = f"Failed to load tree: {tree_data.get('message', 'Unknown error')}"
+            print(f"❌ [{script_name}] {error_msg}")
+            return {'success': False, 'error': error_msg}
+        
+        tree = tree_data['tree']
+        tree_id = tree['id']
+        nodes = tree['metadata']['nodes']
+        edges = tree['metadata']['edges']
+        
+        print(f"✅ [{script_name}] Loaded tree with {len(nodes)} nodes and {len(edges)} edges")
+        
+        return {
+            'success': True,
+            'tree': tree,
+            'tree_id': tree_id,
+            'userinterface_id': userinterface_id,
+            'nodes': nodes,
+            'edges': edges
+        }
+        
+    except Exception as e:
+        error_msg = f"Error loading navigation tree: {str(e)}"
+        print(f"❌ [{script_name}] {error_msg}")
+        return {'success': False, 'error': error_msg}
 
 
 def setup_script_environment(script_name: str = "script") -> Dict[str, Any]:
