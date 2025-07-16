@@ -252,7 +252,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
               params: {
                 ...baseParams,
                 image_path: selectedRef.name || internalKey, // Use original name for backend lookup
-                reference_name: selectedRef.name, // Store display name for UI
+                reference_name: internalKey, // Store internalKey for UI select component
               },
             });
             console.log(
@@ -265,7 +265,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
                 updatedParams: {
                   ...baseParams,
                   image_path: selectedRef.name || internalKey,
-                  reference_name: selectedRef.name,
+                  reference_name: internalKey,
                 },
               },
             );
@@ -275,7 +275,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
               params: {
                 ...baseParams,
                 text: selectedRef.text || '',
-                reference_name: selectedRef.name || internalKey, // Use original name for backend lookup
+                reference_name: internalKey, // Store internalKey for UI select component
               },
             });
             console.log(
@@ -289,7 +289,7 @@ export const VerificationsList: React.FC<VerificationsListProps> = React.memo(
                 updatedParams: {
                   ...baseParams,
                   text: selectedRef.text || '',
-                  reference_name: selectedRef.name || internalKey,
+                  reference_name: internalKey,
                 },
               },
             );
