@@ -149,8 +149,8 @@ export default function ValidationPreviewClient({ treeId, onClose }: ValidationP
               <ListItem key={edgeId} divider>
                 <ListItemText
                   primary={
-                    <Box display="flex" alignItems="center" gap={0.5}>
-                      <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '10px' }}>
+                    <Box display="flex" alignItems="center" gap={0}>
+                      <Typography variant="body2" fontWeight="bold" sx={{ fontSize: '14px' }}>
                         {index + 1}. {edge.from_name} → {edge.to_name}
                       </Typography>
                       {edge.has_verifications && (
