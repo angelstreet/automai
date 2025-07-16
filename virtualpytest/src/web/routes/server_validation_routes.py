@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify
 
 from src.web.cache.navigation_cache import get_cached_graph
 from src.utils.app_utils import get_team_id
+from src.lib.navigation.navigation_execution import NavigationExecutor
 
 # Create blueprint
 server_validation_bp = Blueprint('server_validation', __name__, url_prefix='/server/validation')
@@ -68,7 +69,7 @@ def get_validation_preview(tree_id: str):
 @server_validation_bp.route('/run/<tree_id>', methods=['POST'])
 def run_validation(tree_id: str):
     """
-    Run validation by calling NavigationExecutor for each target node sequentially
+    Run validation by calling NavigationExecutor directly for each target node sequentially
     """
     try:
         data = request.get_json() or {}
@@ -92,7 +93,13 @@ def run_validation(tree_id: str):
         
         print(f"[@route:run_validation] Validating {len(edges_to_validate)} edges")
         
-        # Execute validation by calling navigation execute endpoint for each target
+        # Get team_id
+        team_id = get_team_id()
+        
+        # Initialize NavigationExecutor once for all validations
+        executor = NavigationExecutor(host, device_id, team_id)
+        
+        # Execute validation by calling NavigationExecutor directly for each target
         results = []
         successful_count = 0
         failed_count = 0
@@ -103,19 +110,12 @@ def run_validation(tree_id: str):
             
             print(f"[@route:run_validation] Step {i+1}/{len(edges_to_validate)}: Navigating to {to_node}")
             
-            # Call the same NavigationExecutor API that goto uses
-            execute_url = f"/server/navigation/execute/{tree_id}/{to_node}"
-            execute_payload = {
-                'host': host,
-                'device_id': device_id,
-                'current_node_id': current_node_id
-            }
-            
-            # Make internal request to navigation execute endpoint
-            from flask import current_app
-            with current_app.test_client() as client:
-                response = client.post(execute_url, json=execute_payload)
-                result = response.get_json()
+            # Call NavigationExecutor directly - no HTTP overhead
+            result = executor.execute_navigation(
+                tree_id=tree_id,
+                target_node_id=to_node,
+                current_node_id=current_node_id
+            )
             
             success = result.get('success', False)
             if success:
@@ -171,7 +171,7 @@ def run_validation(tree_id: str):
                 'totalTested': total_tested,
                 'successful': successful_count,
                 'failed': failed_count,
-                'skipped': len(skipped_edges),
+                'skipped': 0,  # No skipping logic exists
                 'overallHealth': overall_health,
                 'healthPercentage': health_percentage
             },
