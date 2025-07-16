@@ -106,11 +106,8 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
 
       <DialogContent>
         {/* Summary */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Summary
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+        <Box sx={{ mb: 0.5 }}>
+          <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
             <Chip
               icon={getHealthIcon(summary.overallHealth)}
               label={`Overall Health: ${summary.overallHealth.toUpperCase()}`}
@@ -138,18 +135,15 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
           </Box>
 
           <Typography variant="body2" color="text.secondary">
-            Total execution time: {summary.executionTime.toFixed(1)}s
+            Total execution time: {summary.executionTime.toFixed(1)}s Total edges:{' '}
+            {edgeResults.length}
           </Typography>
         </Box>
 
-        <Divider sx={{ mb: 3 }} />
+        <Divider sx={{ mb: 0.5 }} />
 
         {/* Edge Results */}
         <Box>
-          <Typography variant="h6" gutterBottom>
-            Edge Test Results ({edgeResults.length})
-          </Typography>
-
           <TableContainer component={Paper} variant="outlined">
             <Table size="small">
               <TableHead>
@@ -195,14 +189,6 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
               </TableBody>
             </Table>
           </TableContainer>
-        </Box>
-
-        {/* Additional Info */}
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="body2" color="text.secondary">
-            Each edge was validated using NavigationExecutor with automatic node verification.
-            Results include both navigation execution and target node verification outcomes.
-          </Typography>
         </Box>
       </DialogContent>
 

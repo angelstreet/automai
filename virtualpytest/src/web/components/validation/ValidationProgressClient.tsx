@@ -6,18 +6,12 @@ import {
   Box,
   CircularProgress,
   LinearProgress,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   Chip,
-  Divider,
 } from '@mui/material';
 import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
   PlayArrow as PlayArrowIcon,
-  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import React, { useEffect } from 'react';
 
@@ -66,59 +60,35 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
   const { progress } = validation;
   const { currentStep, totalSteps, steps, isRunning } = progress;
 
+  // Get the current step being executed
+  const currentStepData = steps.find((step) => step.status === 'running') || steps[currentStep - 1];
+
   // Calculate progress percentage
   const progressPercentage = totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0;
 
-  // Get status icon for each step
-  const getStatusIcon = (status: string) => {
-    switch (status) {
+  // Get status icon and color for current step
+  const getStatusDisplay = () => {
+    if (!currentStepData) return { icon: <PlayArrowIcon />, color: 'primary' };
+
+    switch (currentStepData.status) {
       case 'success':
-        return <CheckCircleIcon sx={{ color: 'success.main', fontSize: 20 }} />;
+        return { icon: <CheckCircleIcon />, color: 'success' };
       case 'failed':
-        return <ErrorIcon sx={{ color: 'error.main', fontSize: 20 }} />;
+        return { icon: <ErrorIcon />, color: 'error' };
       case 'running':
-        return <CircularProgress size={20} sx={{ color: 'primary.main' }} />;
-      case 'pending':
+        return { icon: <CircularProgress size={20} />, color: 'primary' };
       default:
-        return <ScheduleIcon sx={{ color: 'text.secondary', fontSize: 20 }} />;
+        return { icon: <PlayArrowIcon />, color: 'primary' };
     }
   };
 
-  // Get status color for step text
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'success':
-        return 'success.main';
-      case 'failed':
-        return 'error.main';
-      case 'running':
-        return 'primary.main';
-      case 'pending':
-      default:
-        return 'text.secondary';
-    }
-  };
-
-  // Get status text
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'success':
-        return 'SUCCESS';
-      case 'failed':
-        return 'FAILED';
-      case 'running':
-        return 'RUNNING';
-      case 'pending':
-      default:
-        return 'PENDING';
-    }
-  };
+  const statusDisplay = getStatusDisplay();
 
   return (
-    <Dialog open={validation.isValidating} disableEscapeKeyDown maxWidth="md" fullWidth>
+    <Dialog open={validation.isValidating} disableEscapeKeyDown maxWidth="sm" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {isRunning ? <CircularProgress size={24} /> : <PlayArrowIcon />}
+          <CircularProgress size={24} />
           <Typography variant="h6">Running Validation</Typography>
           <Chip
             label={`${currentStep}/${totalSteps}`}
@@ -131,93 +101,67 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
 
       <DialogContent>
         <Box sx={{ py: 2 }}>
-          {/* Overall Progress */}
+          {/* Current Step Display */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="body1" gutterBottom>
               {isRunning
                 ? `Testing navigation path ${currentStep} of ${totalSteps}...`
                 : `Validation completed: ${currentStep}/${totalSteps} steps`}
             </Typography>
-            <Box sx={{ mt: 2 }}>
-              <LinearProgress
-                variant="determinate"
-                value={progressPercentage}
-                sx={{ height: 8, borderRadius: 4 }}
-              />
-            </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+
+            {/* Current Step Details */}
+            {currentStepData && (
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  bgcolor: 'grey.50',
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'grey.200',
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                  {statusDisplay.icon}
+                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                    {currentStepData.fromName} → {currentStepData.toName}
+                  </Typography>
+                  <Chip
+                    label={currentStepData.status.toUpperCase()}
+                    size="small"
+                    color={statusDisplay.color as any}
+                    variant="outlined"
+                  />
+                </Box>
+
+                {/* Error message if failed */}
+                {currentStepData.error && (
+                  <Typography variant="body2" color="error.main" sx={{ fontSize: '0.875rem' }}>
+                    Error: {currentStepData.error}
+                  </Typography>
+                )}
+
+                {/* Execution time if completed */}
+                {currentStepData.executionTime && (
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                    Execution time: {currentStepData.executionTime.toFixed(1)}s
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </Box>
+
+          {/* Progress Bar */}
+          <Box sx={{ mt: 2 }}>
+            <LinearProgress
+              variant="determinate"
+              value={progressPercentage}
+              sx={{ height: 8, borderRadius: 4 }}
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
               {progressPercentage.toFixed(1)}% complete
             </Typography>
           </Box>
-
-          <Divider sx={{ mb: 2 }} />
-
-          {/* Step-by-step Progress */}
-          <Typography variant="h6" gutterBottom>
-            Validation Steps
-          </Typography>
-
-          <List dense sx={{ maxHeight: 400, overflow: 'auto' }}>
-            {steps.map((step, index) => (
-              <ListItem key={index} divider>
-                <ListItemIcon sx={{ minWidth: 40 }}>{getStatusIcon(step.status)}</ListItemIcon>
-                <ListItemText
-                  primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: step.status === 'running' ? 'bold' : 'normal',
-                          color: getStatusColor(step.status),
-                        }}
-                      >
-                        {step.stepNumber}. {step.fromName} → {step.toName}
-                      </Typography>
-                      <Chip
-                        label={getStatusText(step.status)}
-                        size="small"
-                        color={
-                          step.status === 'success'
-                            ? 'success'
-                            : step.status === 'failed'
-                              ? 'error'
-                              : step.status === 'running'
-                                ? 'primary'
-                                : 'default'
-                        }
-                        variant="outlined"
-                        sx={{ fontSize: '0.7rem', height: 20 }}
-                      />
-                    </Box>
-                  }
-                  secondary={
-                    step.error ? (
-                      <Typography variant="body2" color="error.main" sx={{ fontSize: '0.75rem' }}>
-                        Error: {step.error}
-                      </Typography>
-                    ) : step.executionTime ? (
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ fontSize: '0.75rem' }}
-                      >
-                        Execution time: {step.executionTime.toFixed(1)}s
-                      </Typography>
-                    ) : null
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-
-          {/* Current Step Highlight */}
-          {isRunning && (
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'primary.light', borderRadius: 1, opacity: 0.1 }}>
-              <Typography variant="body2" color="primary.main">
-                Currently executing step {currentStep} of {totalSteps}
-              </Typography>
-            </Box>
-          )}
         </Box>
       </DialogContent>
     </Dialog>
