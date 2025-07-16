@@ -25,6 +25,9 @@ interface NavigationConfigContextType {
   listAvailableUserInterfaces: () => Promise<any[]>;
   createEmptyTree: (userInterfaceId: string, state: NavigationConfigState) => Promise<void>;
 
+  // Tree data
+  actualTreeId: string | null;
+
   // User identification
   sessionId: string;
   userId: string;
@@ -41,6 +44,7 @@ interface NavigationConfigState {
   setHasUnsavedChanges: (hasChanges: boolean) => void;
   setIsLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  setActualTreeId: (treeId: string | null) => void;
 }
 
 interface NavigationConfigProviderProps {
@@ -64,6 +68,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
   const [lockInfo, setLockInfo] = useState<any>(null);
   const [isCheckingLock, setIsCheckingLock] = useState(false);
   const [showReadOnlyOverlay, setShowReadOnlyOverlay] = useState(false);
+  const [actualTreeId, setActualTreeId] = useState<string | null>(null);
 
   // ========================================
   // LOCK MANAGEMENT
@@ -287,6 +292,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
 
           const nodes = treeData.nodes || [];
           const edges = treeData.edges || [];
+          const actualTreeId = tree.id || null;
 
           console.log(
             `[@context:NavigationConfigProvider:loadFromConfig] Loaded tree for userInterface: ${userInterfaceId} with ${nodes.length} nodes and ${edges.length} edges`,
@@ -296,6 +302,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           // No need for additional ID resolution here
           state.setNodes(nodes);
           state.setEdges(edges);
+          setActualTreeId(actualTreeId);
 
           console.log(
             `[@context:NavigationConfigProvider:loadFromConfig] Set resolved tree data with ${nodes.length} nodes and ${edges.length} edges`,
@@ -310,6 +317,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
           // Create empty tree structure
           state.setNodes([]);
           state.setEdges([]);
+          setActualTreeId(null);
           state.setInitialState({ nodes: [], edges: [] });
           state.setHasUnsavedChanges(false);
           state.setError(data.error || 'Failed to load tree');
@@ -323,6 +331,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         // Create empty tree structure on error
         state.setNodes([]);
         state.setEdges([]);
+        setActualTreeId(null);
         state.setInitialState({ nodes: [], edges: [] });
         state.setHasUnsavedChanges(false);
       } finally {
@@ -484,6 +493,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
         if (data.success) {
           state.setNodes([]);
           state.setEdges([]);
+          setActualTreeId(null);
           state.setInitialState({ nodes: [], edges: [] });
           state.setHasUnsavedChanges(false);
           console.log(
@@ -525,6 +535,9 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       listAvailableUserInterfaces,
       createEmptyTree,
 
+      // Tree data
+      actualTreeId,
+
       // User identification
       sessionId,
       userId,
@@ -545,6 +558,7 @@ export const NavigationConfigProvider: React.FC<NavigationConfigProviderProps> =
       saveToConfig,
       listAvailableUserInterfaces,
       createEmptyTree,
+      actualTreeId,
     ],
   );
 

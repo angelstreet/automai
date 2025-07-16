@@ -38,7 +38,10 @@ import { NodeSelectionPanel } from '../components/navigation/Navigation_NodeSele
 import { useTheme } from '../contexts/ThemeContext';
 import { useDeviceData } from '../contexts/device/DeviceDataContext';
 import { useHostManager } from '../contexts/index';
-import { NavigationConfigProvider } from '../contexts/navigation/NavigationConfigContext';
+import {
+  NavigationConfigProvider,
+  useNavigationConfig,
+} from '../contexts/navigation/NavigationConfigContext';
 import { useNavigation } from '../contexts/navigation/NavigationContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
 import { useNavigationEditor } from '../hooks/navigation/useNavigationEditor';
@@ -147,6 +150,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
 
     // Get current node ID from NavigationContext
     const { currentNodeId } = useNavigation();
+
+    // Get the actual tree ID from NavigationConfigContext
+    const { actualTreeId } = useNavigationConfig();
 
     // Dynamic miniMapStyle based on theme - black background in dark mode, white in light mode
     const miniMapStyle = useMemo(
@@ -699,7 +705,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                         isControlActive={isControlActive}
                         selectedHost={selectedHost || undefined}
                         selectedDeviceId={selectedDeviceId || undefined}
-                        treeId={treeId || ''}
+                        treeId={actualTreeId || treeId || ''}
                         currentNodeId={currentNodeId || undefined}
                         onOpenGotoPanel={handleOpenGotoPanel}
                       />
@@ -758,11 +764,11 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         {showAVPanel && selectedHost && selectedDeviceId && <HDMIStream {...hdmiStreamProps} />}
 
         {/* Node Goto Panel */}
-        {showGotoPanel && selectedNodeForGoto && treeId && (
+        {showGotoPanel && selectedNodeForGoto && (actualTreeId || treeId) && (
           <NodeGotoPanel
             selectedNode={selectedNodeForGoto}
             nodes={nodes}
-            treeId={treeId}
+            treeId={actualTreeId || treeId || ''}
             onClose={handleCloseGotoPanel}
             currentNodeId={currentNodeId || undefined}
             selectedHost={selectedHost || undefined}

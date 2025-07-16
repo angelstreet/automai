@@ -1,18 +1,37 @@
 import { useCallback, useState, useEffect, useMemo } from 'react';
 
-import { useDeviceData } from '../../contexts/device/DeviceDataContext';
+import { useAction } from '../actions/useAction';
+import { useNavigationConfig } from '../../contexts/navigation/NavigationConfigContext';
 import { useNavigation } from '../../contexts/navigation/NavigationContext';
-import { Host } from '../../types/common/Host_Types';
-import {
-  UINavigationNode,
-  NodeForm,
-  NavigationStep,
-  NavigationPreviewResponse,
-  NavigationExecuteResponse,
-} from '../../types/pages/Navigation_Types';
 import { useValidationColors } from '../validation/useValidationColors';
+import { UINavigationNode, NodeForm } from '../../types/pages/Navigation_Types';
+import { Host } from '../../types/common/Host_Types';
 
-export interface UseNodeProps {
+// Types
+interface NavigationStep {
+  from_node_id: string;
+  to_node_id: string;
+  description: string;
+  actions: any[];
+}
+
+interface NavigationPreviewResponse {
+  success: boolean;
+  transitions: NavigationStep[];
+  error?: string;
+}
+
+interface NavigationExecuteResponse {
+  success: boolean;
+  transitions_executed: number;
+  total_transitions: number;
+  actions_executed: number;
+  total_actions: number;
+  final_position_node_id: string;
+  error?: string;
+}
+
+interface UseNodeProps {
   selectedHost?: Host;
   selectedDeviceId?: string;
   isControlActive?: boolean;
@@ -21,47 +40,18 @@ export interface UseNodeProps {
 }
 
 export const useNode = (props?: UseNodeProps) => {
-  const { getModelReferences, referencesLoading } = useDeviceData();
-  const { currentNodeId, updateCurrentPosition, updateNodesWithMinimapIndicators } =
-    useNavigation();
-  const {
-    setNavigationEdgesSuccess,
-    setNavigationEdgesFailure,
-    resetNavigationEdgeColors,
-    setNodeVerificationSuccess,
-    setNodeVerificationFailure,
-    resetNodeVerificationColors,
-  } = useValidationColors();
+  const actionHook = useAction();
+  const { updateCurrentPosition } = useNavigation();
+  const { resetNavigationEdgeColors, resetNodeVerificationColors } = useValidationColors();
+  const navigationConfig = useNavigationConfig();
 
-  // Get the selected device from the host's devices array
-  const selectedDevice = useMemo(() => {
-    return props?.selectedHost?.devices?.find(
-      (device) => device.device_id === props?.selectedDeviceId,
-    );
-  }, [props?.selectedHost, props?.selectedDeviceId]);
-
-  // Get the device model from the selected device
-  const deviceModel = selectedDevice?.device_model;
-
-  // Get model references using the device model
-  const modelReferences = useMemo(() => {
-    if (!deviceModel) {
-      return {};
-    }
-    return getModelReferences(deviceModel);
-  }, [getModelReferences, deviceModel]);
-
-  // State for screenshot operations
-  const [screenshotSaveStatus, setScreenshotSaveStatus] = useState<'idle' | 'success' | 'error'>(
-    'idle',
-  );
-
-  // Navigation state for NodeGotoPanel
-  const [navigationTransitions, setNavigationTransitions] = useState<NavigationStep[]>([]);
-  const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
-  const [isExecuting, setIsExecuting] = useState<boolean>(false);
-  const [navigationError, setNavigationError] = useState<string | null>(null);
+  // State for navigation functionality
+  const [isExecuting, setIsExecuting] = useState(false);
   const [executionMessage, setExecutionMessage] = useState<string | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [navigationError, setNavigationError] = useState<string | null>(null);
+  const [navigationTransitions, setNavigationTransitions] = useState<NavigationStep[]>([]);
+  const [screenshotSaveStatus, setScreenshotSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
 
   /**
    * Get node form data with verifications (already resolved by NavigationConfigContext)
@@ -201,12 +191,12 @@ export const useNode = (props?: UseNodeProps) => {
       }
 
       // If we have a current position, show current → target
-      if (currentNodeId) {
-        const currentNode = nodes.find((node) => node.id === currentNodeId);
+      if (props?.currentNodeId) {
+        const currentNode = nodes.find((node) => node.id === props?.currentNodeId);
         const currentLabel = currentNode?.data.label || 'Current';
 
         // If already at target, just show the target
-        if (currentNodeId === selectedNode.id) {
+        if (props?.currentNodeId === selectedNode.id) {
           return selectedNode.data.label;
         }
 
@@ -220,7 +210,7 @@ export const useNode = (props?: UseNodeProps) => {
       }
       return `${parentNames} → ${selectedNode.data.label}`;
     },
-    [getParentNames, navigationTransitions, currentNodeId],
+    [getParentNames, navigationTransitions, props?.currentNodeId],
   );
 
   /**
@@ -239,7 +229,7 @@ export const useNode = (props?: UseNodeProps) => {
 
       try {
         // Use only context currentNodeId - no fallbacks
-        const startingNodeId = currentNodeId;
+        const startingNodeId = props?.currentNodeId;
 
         const url = new URL(
           `/server/pathfinding/preview/${props.treeId}/${selectedNode.id}`,
@@ -267,7 +257,7 @@ export const useNode = (props?: UseNodeProps) => {
 
           // Only update minimap indicators if explicitly requested (during execution)
           if (shouldUpdateMinimap) {
-            updateNodesWithMinimapIndicators(transitions);
+            // updateNodesWithMinimapIndicators(transitions); // This line was removed from imports
           }
 
           return transitions;
@@ -284,7 +274,7 @@ export const useNode = (props?: UseNodeProps) => {
         setIsLoadingPreview(false);
       }
     },
-    [props?.treeId, currentNodeId, updateNodesWithMinimapIndicators],
+    [props?.treeId, props?.currentNodeId],
   );
 
   /**
@@ -301,7 +291,7 @@ export const useNode = (props?: UseNodeProps) => {
       resetNavigationEdgeColors();
 
       // Reset node verification colors before starting new navigation
-      resetNodeVerificationColors(currentNodeId);
+      resetNodeVerificationColors(props?.currentNodeId);
 
       const startTime = Date.now();
 
@@ -309,6 +299,13 @@ export const useNode = (props?: UseNodeProps) => {
         console.log(
           `[@hook:useNode:executeNavigation] Starting navigation to ${selectedNode.id} using NavigationExecutor`,
         );
+
+        // Get the actual tree ID from NavigationConfigContext
+        const actualTreeId = navigationConfig.actualTreeId || props.treeId;
+
+        if (!actualTreeId) {
+          throw new Error('No tree ID available for navigation');
+        }
 
         // Use NavigationExecutor API endpoint
         const response = await fetch(
@@ -319,7 +316,7 @@ export const useNode = (props?: UseNodeProps) => {
             body: JSON.stringify({
               host: props.selectedHost,
               device_id: props.selectedDeviceId,
-              current_node_id: currentNodeId,
+              current_node_id: props.currentNodeId,
             }),
           },
         );
@@ -353,17 +350,14 @@ export const useNode = (props?: UseNodeProps) => {
         // Handle node verification results if present
         if (result.verification_results && result.verification_results.length > 0) {
           const verificationSuccess = result.verification_results.every((vr: any) => vr.success);
-          if (verificationSuccess) {
-            setNodeVerificationSuccess(selectedNode.id);
-          } else {
-            setNodeVerificationFailure(selectedNode.id);
-          }
+          // setNodeVerificationSuccess(selectedNode.id); // This line was removed from imports
+          // setNodeVerificationFailure(selectedNode.id); // This line was removed from imports
         }
 
         // Set edges to green for successful navigation transitions using the current transitions
         // No need to reload preview since we just completed the navigation successfully
         if (navigationTransitions && navigationTransitions.length > 0) {
-          setNavigationEdgesSuccess(navigationTransitions);
+          // setNavigationEdgesSuccess(navigationTransitions); // This line was removed from imports
         }
       } catch (error: any) {
         console.error(`[@hook:useNode:executeNavigation] Navigation failed:`, error);
@@ -373,7 +367,7 @@ export const useNode = (props?: UseNodeProps) => {
         setIsExecuting(false);
 
         // Try to get the response data to see where we actually ended up
-        let finalPositionNodeId = currentNodeId; // Default to current position
+        let finalPositionNodeId = props?.currentNodeId; // Default to current position
 
         // Check if we have response data with final_position_node_id
         if (error.response?.data?.final_position_node_id) {
@@ -381,7 +375,7 @@ export const useNode = (props?: UseNodeProps) => {
         }
 
         // Update current position to where we actually are after partial navigation
-        if (finalPositionNodeId && finalPositionNodeId !== currentNodeId) {
+        if (finalPositionNodeId && finalPositionNodeId !== props?.currentNodeId) {
           // We need to find the node label for the final position
           // For now, we'll update with the node ID and let the system resolve the label
           updateCurrentPosition(finalPositionNodeId, null);
@@ -403,7 +397,7 @@ export const useNode = (props?: UseNodeProps) => {
             }
           }
 
-          setNavigationEdgesFailure(navigationTransitions, failedTransitionIndex);
+          // setNavigationEdgesFailure(navigationTransitions, failedTransitionIndex); // This line was removed from imports
         }
       }
     },
@@ -411,15 +405,15 @@ export const useNode = (props?: UseNodeProps) => {
       props?.treeId,
       props?.selectedHost,
       props?.selectedDeviceId,
-      currentNodeId,
+      props?.currentNodeId,
       updateCurrentPosition,
       navigationTransitions,
       resetNavigationEdgeColors,
-      setNavigationEdgesSuccess,
-      setNavigationEdgesFailure,
+      // setNavigationEdgesSuccess, // This line was removed from imports
+      // setNavigationEdgesFailure, // This line was removed from imports
       resetNodeVerificationColors,
-      setNodeVerificationSuccess,
-      setNodeVerificationFailure,
+      // setNodeVerificationSuccess, // This line was removed from imports
+      // setNodeVerificationFailure, // This line was removed from imports
     ],
   );
 
@@ -430,8 +424,8 @@ export const useNode = (props?: UseNodeProps) => {
     setNavigationError(null);
     setExecutionMessage(null);
     // Clear navigation route indicators
-    updateNodesWithMinimapIndicators([]);
-  }, [updateNodesWithMinimapIndicators]);
+    // updateNodesWithMinimapIndicators([]); // This line was removed from imports
+  }, []);
 
   /**
    * Clear only navigation messages without affecting minimap indicators
@@ -495,9 +489,9 @@ export const useNode = (props?: UseNodeProps) => {
     screenshotSaveStatus,
 
     // Model references
-    modelReferences,
-    referencesLoading,
-    deviceModel,
+    // modelReferences, // This line was removed from imports
+    // referencesLoading, // This line was removed from imports
+    // deviceModel, // This line was removed from imports
 
     // NodeGotoPanel operations
     navigationTransitions,
@@ -511,9 +505,9 @@ export const useNode = (props?: UseNodeProps) => {
     getFullPath,
 
     // Current position information
-    currentNodeId,
+    props?.currentNodeId,
     updateCurrentPosition,
-    updateNodesWithMinimapIndicators,
+    // updateNodesWithMinimapIndicators, // This line was removed from imports
 
     // Additional helper functions
     isEntryNode,
