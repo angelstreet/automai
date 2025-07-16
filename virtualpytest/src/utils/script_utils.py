@@ -16,7 +16,7 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 # Import existing utilities
-from .app_utils import load_environment_variables, get_team_id
+from .app_utils import load_environment_variables
 from .host_utils import get_host_instance, list_available_devices
 from .lock_utils import is_device_locked, lock_device, unlock_device
 
