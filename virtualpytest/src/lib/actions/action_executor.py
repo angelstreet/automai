@@ -195,7 +195,7 @@ class ActionExecutor:
             }
             
         except Exception as e:
-                        execution_time = int((time.time() - start_time) * 1000)
+            execution_time = int((time.time() - start_time) * 1000)
             print(f"[@lib:action_executor:_execute_single_action] Action {action_number} error: {str(e)}")
             
             # Record failed execution directly to database
