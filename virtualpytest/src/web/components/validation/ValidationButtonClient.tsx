@@ -96,8 +96,8 @@ export default function ValidationButtonClient({ treeId, disabled }: ValidationB
       )}
 
       {/* Global validation dialogs - these manage their own visibility */}
-      <ValidationResultsClient treeId={treeId} />
-      <ValidationProgressClient treeId={treeId} />
+      {validation.showResults && <ValidationResultsClient treeId={treeId} />}
+      {validation.isValidating && <ValidationProgressClient treeId={treeId} />}
     </>
   );
 }
