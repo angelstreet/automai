@@ -148,6 +148,7 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
             <Table size="small">
               <TableHead>
                 <TableRow>
+                  <TableCell>#</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell>From</TableCell>
                   <TableCell>To</TableCell>
@@ -167,11 +168,23 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
                     }}
                   >
                     <TableCell>
+                      <Typography variant="body2" color="text.secondary">
+                        {index + 1}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
                       <Chip
                         icon={result.success ? <CheckCircleIcon /> : <ErrorIcon />}
                         label={result.success ? 'SUCCESS' : 'FAILED'}
                         color={result.success ? 'success' : 'error'}
                         size="small"
+                        sx={{
+                          height: '20px',
+                          fontSize: '0.65rem',
+                          '& .MuiChip-icon': {
+                            fontSize: '0.75rem',
+                          },
+                        }}
                       />
                     </TableCell>
                     <TableCell>{result.fromName}</TableCell>
