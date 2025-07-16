@@ -4,7 +4,7 @@
  * This hook provides state management for validation operations.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import {
   ValidationResults,
@@ -13,16 +13,65 @@ import {
 } from '../../types/features/Validation_Types';
 import { useHostManager } from '../useHostManager';
 
+// Shared state store for validation
+const validationStore: Record<
+  string,
+  {
+    isValidating: boolean;
+    results: ValidationResults | null;
+    showResults: boolean;
+    preview: ValidationPreviewData | null;
+    isLoadingPreview: boolean;
+    validationError: string | null;
+    listeners: Set<() => void>;
+  }
+> = {};
+
+const getValidationState = (treeId: string) => {
+  if (!validationStore[treeId]) {
+    validationStore[treeId] = {
+      isValidating: false,
+      results: null,
+      showResults: false,
+      preview: null,
+      isLoadingPreview: false,
+      validationError: null,
+      listeners: new Set(),
+    };
+  }
+  return validationStore[treeId];
+};
+
+const updateValidationState = (
+  treeId: string,
+  updates: Partial<(typeof validationStore)[string]>,
+) => {
+  const state = getValidationState(treeId);
+  Object.assign(state, updates);
+  // Notify all listeners
+  state.listeners.forEach((listener) => listener());
+};
+
 export const useValidation = (treeId: string) => {
   const { selectedHost, selectedDeviceId } = useHostManager();
+  const [, forceUpdate] = useState({});
 
-  // Local state - no more store needed
-  const [isValidating, setIsValidating] = useState(false);
-  const [results, setResults] = useState<ValidationResults | null>(null);
-  const [showResults, setShowResults] = useState(false);
-  const [preview, setPreview] = useState<ValidationPreviewData | null>(null);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
+  // Force re-render when state changes
+  const rerender = useCallback(() => {
+    forceUpdate({});
+  }, []);
+
+  // Subscribe to state changes
+  useEffect(() => {
+    const state = getValidationState(treeId);
+    state.listeners.add(rerender);
+
+    return () => {
+      state.listeners.delete(rerender);
+    };
+  }, [treeId, rerender]);
+
+  const state = getValidationState(treeId);
 
   /**
    * Load validation preview
@@ -30,22 +79,26 @@ export const useValidation = (treeId: string) => {
   const loadPreview = useCallback(async () => {
     if (!treeId) return;
 
-    setIsLoadingPreview(true);
+    updateValidationState(treeId, { isLoadingPreview: true });
     try {
       const response = await fetch(`/server/validation/preview/${treeId}`);
       const data: ValidationPreviewData = await response.json();
 
       if (data.success) {
-        setPreview(data);
+        updateValidationState(treeId, { preview: data });
       } else {
         console.error('Failed to load validation preview:', data.error);
-        setValidationError(data.error || 'Failed to load validation preview');
+        updateValidationState(treeId, {
+          validationError: data.error || 'Failed to load validation preview',
+        });
       }
     } catch (error) {
       console.error('Error loading validation preview:', error);
-      setValidationError(error instanceof Error ? error.message : 'Unknown error');
+      updateValidationState(treeId, {
+        validationError: error instanceof Error ? error.message : 'Unknown error',
+      });
     } finally {
-      setIsLoadingPreview(false);
+      updateValidationState(treeId, { isLoadingPreview: false });
     }
   }, [treeId]);
 
@@ -54,22 +107,26 @@ export const useValidation = (treeId: string) => {
    */
   const runValidation = useCallback(
     async (skippedEdges: string[] = []) => {
-      if (!treeId || !selectedHost || !preview) {
-        setValidationError('Tree ID, host, and preview data are required');
+      if (!treeId || !selectedHost || !state.preview) {
+        updateValidationState(treeId, {
+          validationError: 'Tree ID, host, and preview data are required',
+        });
         return;
       }
 
       console.log('[@hook:useValidation] Setting isValidating to true');
-      setIsValidating(true);
-      setValidationError(null);
-      setResults(null);
-      setShowResults(false);
+      updateValidationState(treeId, {
+        isValidating: true,
+        validationError: null,
+        results: null,
+        showResults: false,
+      });
 
       try {
         console.log(`[@hook:useValidation] Starting validation for tree ${treeId}`);
 
         // Filter out skipped edges to get edges to validate
-        const edgesToValidate = preview.edges.filter(
+        const edgesToValidate = state.preview.edges.filter(
           (edge) => !skippedEdges.includes(`${edge.from_node}-${edge.to_node}`),
         );
 
@@ -121,41 +178,57 @@ export const useValidation = (treeId: string) => {
         };
 
         console.log('[@hook:useValidation] Setting results and showResults to true');
-        setResults(validationResults);
-        setShowResults(true);
+        updateValidationState(treeId, {
+          results: validationResults,
+          showResults: true,
+        });
 
         console.log(
           `[@hook:useValidation] Validation completed: ${result.summary.successful}/${result.summary.totalTested} successful`,
         );
       } catch (error) {
         console.error('[@hook:useValidation] Error running validation:', error);
-        setValidationError(error instanceof Error ? error.message : 'Unknown error');
+        updateValidationState(treeId, {
+          validationError: error instanceof Error ? error.message : 'Unknown error',
+        });
       } finally {
         console.log('[@hook:useValidation] Setting isValidating to false');
-        setIsValidating(false);
+        updateValidationState(treeId, { isValidating: false });
       }
     },
-    [treeId, selectedHost, selectedDeviceId, preview],
+    [treeId, selectedHost, selectedDeviceId, state.preview],
   );
 
   /**
    * Clear validation state
    */
   const clearValidation = useCallback(() => {
-    setResults(null);
-    setShowResults(false);
-    setPreview(null);
-    setValidationError(null);
-  }, []);
+    updateValidationState(treeId, {
+      results: null,
+      showResults: false,
+      preview: null,
+      validationError: null,
+    });
+  }, [treeId]);
+
+  /**
+   * Set show results
+   */
+  const setShowResults = useCallback(
+    (show: boolean) => {
+      updateValidationState(treeId, { showResults: show });
+    },
+    [treeId],
+  );
 
   return {
     // State
-    isValidating,
-    validationResults: results,
-    validationError,
-    preview,
-    isLoadingPreview,
-    showResults,
+    isValidating: state.isValidating,
+    validationResults: state.results,
+    validationError: state.validationError,
+    preview: state.preview,
+    isLoadingPreview: state.isLoadingPreview,
+    showResults: state.showResults,
 
     // Actions
     loadPreview,
@@ -164,7 +237,7 @@ export const useValidation = (treeId: string) => {
     setShowResults,
 
     // Computed
-    hasResults: !!results,
-    canRunValidation: !isValidating && !!selectedHost && !!treeId,
+    hasResults: !!state.results,
+    canRunValidation: !state.isValidating && !!selectedHost && !!treeId,
   };
 };

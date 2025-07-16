@@ -28,21 +28,22 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
     };
   }, [treeId]);
 
-  // Debug logging
-  console.log('[@ValidationProgressClient] Render state:', {
+  // Debug logging with shared state info
+  console.log('[@ValidationProgressClient] Render state (SHARED):', {
     treeId,
     isValidating: validation.isValidating,
     shouldShow: validation.isValidating,
     timestamp: new Date().toISOString(),
+    hookInstance: 'SHARED_STATE',
   });
 
   // Only show progress dialog when validation is running
   if (!validation.isValidating) {
-    console.log('[@ValidationProgressClient] Not showing - isValidating is false');
+    console.log('[@ValidationProgressClient] Not showing - isValidating is false (SHARED)');
     return null;
   }
 
-  console.log('[@ValidationProgressClient] Showing progress dialog');
+  console.log('[@ValidationProgressClient] Showing progress dialog (SHARED)');
 
   return (
     <Dialog open={validation.isValidating} disableEscapeKeyDown maxWidth="sm" fullWidth>
