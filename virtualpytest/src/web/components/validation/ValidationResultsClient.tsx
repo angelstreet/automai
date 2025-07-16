@@ -158,7 +158,14 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
               </TableHead>
               <TableBody>
                 {edgeResults.map((result, index) => (
-                  <TableRow key={index}>
+                  <TableRow
+                    key={index}
+                    sx={{
+                      '&:hover': {
+                        backgroundColor: 'transparent !important',
+                      },
+                    }}
+                  >
                     <TableCell>
                       <Chip
                         icon={result.success ? <CheckCircleIcon /> : <ErrorIcon />}
