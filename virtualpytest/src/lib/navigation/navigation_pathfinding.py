@@ -139,6 +139,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
                 'to_node_id': to_node,
                 'from_node_label': from_node_info.get('label', '') if from_node_info else '',
                 'to_node_label': to_node_info.get('label', '') if to_node_info else '',
+                'edge_id': edge_data.get('edge_id'),  # Include actual edge ID for metrics
                 'actions': actions_list,
                 'retryActions': retry_actions_list,
                 'total_actions': len(actions_list),

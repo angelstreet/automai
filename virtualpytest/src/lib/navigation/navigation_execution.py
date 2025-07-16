@@ -105,7 +105,7 @@ class NavigationExecutor:
                 
                 if actions:
                     # Initialize action executor with navigation context
-                    edge_id = transition.get('edge_id', f"edge_{i}")
+                    edge_id = transition.get('edge_id') 
                     action_executor = ActionExecutor(
                         host=self.host,
                         device_id=self.device_id,

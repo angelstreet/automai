@@ -126,6 +126,7 @@ def create_networkx_graph(nodes: List[Dict], edges: List[Dict]) -> nx.DiGraph:
         
         # Add edge with resolved actions
         G.add_edge(source_id, target_id, **{
+            'edge_id': edge.get('id'),  # Store the actual edge ID for metrics
             'go_action': primary_action,
             'actions': actions_list,
             'retryActions': retry_actions_list,
