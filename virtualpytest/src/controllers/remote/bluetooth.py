@@ -236,48 +236,6 @@ class BluetoothRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Text input error: {e}")
             return False
             
-    def execute_sequence(self, commands: List[Dict[str, Any]]) -> bool:
-        """
-        Execute a sequence of Bluetooth commands.
-        
-        Args:
-            commands: List of command dictionaries with 'action', 'params', and optional 'delay'
-        """
-        if not self.is_connected:
-            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to Bluetooth device")
-            return False
-            
-        print(f"Remote[{self.device_type.upper()}]: Executing sequence of {len(commands)} commands")
-        
-        for i, command in enumerate(commands):
-            action = command.get('action')
-            params = command.get('params', {})
-            delay = command.get('delay', 0.5)
-            
-            print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {action}")
-            
-            success = False
-            if action == 'press_key':
-                success = self.press_key(params.get('key', 'OK'))
-            elif action == 'input_text':
-                success = self.input_text(params.get('text', ''))
-            elif action == 'pair_device':
-                success = self.pair_device(params.get('pin', self.pairing_pin))
-            else:
-                print(f"Remote[{self.device_type.upper()}]: Unknown action: {action}")
-                return False
-                
-            if not success:
-                print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
-                return False
-                
-            # Add delay between commands (except for the last one)
-            if delay > 0 and i < len(commands) - 1:
-                time.sleep(delay)
-                
-        print(f"Remote[{self.device_type.upper()}]: Sequence completed successfully")
-        return True
-        
     def pair_device(self, pin: str = None) -> bool:
         """
         Pair with Bluetooth device.

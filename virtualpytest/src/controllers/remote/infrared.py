@@ -252,54 +252,6 @@ class IRRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Text input error: {e}")
             return False
             
-    def execute_sequence(self, commands: List[Dict[str, Any]]) -> bool:
-        """
-        Execute a sequence of IR commands.
-        
-        Args:
-            commands: List of command dictionaries with 'action', 'params', and optional 'delay'
-        """
-        if not self.is_connected:
-            print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to IR device")
-            return False
-            
-        print(f"Remote[{self.device_type.upper()}]: Executing sequence of {len(commands)} commands")
-        
-        for i, command in enumerate(commands):
-            action = command.get('action')
-            params = command.get('params', {})
-            delay = command.get('delay', 0.5)
-            
-            print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {action}")
-            
-            success = False
-            if action == 'press_key':
-                success = self.press_key(params.get('key', 'OK'))
-            elif action == 'input_text':
-                success = self.input_text(params.get('text', ''))
-            elif action == 'power_on':
-                success = self.power_on()
-            elif action == 'power_off':
-                success = self.power_off()
-            elif action == 'change_channel':
-                success = self.change_channel(params.get('channel', 1))
-            elif action == 'set_volume':
-                success = self.set_volume(params.get('level', 50))
-            else:
-                print(f"Remote[{self.device_type.upper()}]: Unknown action: {action}")
-                return False
-                
-            if not success:
-                print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
-                return False
-                
-            # Add delay between commands (except for the last one)
-            if delay > 0 and i < len(commands) - 1:
-                time.sleep(delay)
-                
-        print(f"Remote[{self.device_type.upper()}]: Sequence completed successfully")
-        return True
-        
     def power_on(self) -> bool:
         """Turn device on using IR power command."""
         return self.press_key("POWER")
