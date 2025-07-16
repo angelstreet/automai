@@ -243,9 +243,7 @@ export const AndroidMobileRemote = React.memo(
     };
 
     return (
-      <Box
-        sx={{ ...sx, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}
-      >
+      <>
         <Box
           sx={{
             p: 2,
@@ -578,7 +576,7 @@ export const AndroidMobileRemote = React.memo(
               document.body,
             )
           : null}
-      </Box>
+      </>
     );
   },
   (prevProps, nextProps) => {
