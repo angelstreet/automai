@@ -29,8 +29,6 @@ from src.utils.script_utils import (
 )
 from src.lib.navigation.navigation_pathfinding import find_optimal_edge_validation_sequence
 from src.lib.navigation.navigation_execution import NavigationExecutor
-from src.lib.supabase.userinterface_db import get_userinterface_by_name
-from src.lib.supabase.navigation_trees_db import get_root_tree_for_interface
 
 def main():
     # 1. Parse arguments
@@ -73,29 +71,9 @@ def main():
     device_key = control_result['device_key']
     
     try:
-        # 5. Get tree_id from userinterface_name
-        print("🔍 [validation] Getting tree ID from userinterface name...")
-        
-        # First, get the userinterface by name
-        userinterface = get_userinterface_by_name(userinterface_name, team_id)
-        if not userinterface:
-            print(f"❌ [validation] User interface '{userinterface_name}' not found")
-            sys.exit(1)
-        
-        userinterface_id = userinterface['id']
-        
-        # Get the root tree for this interface
-        root_tree = get_root_tree_for_interface(userinterface_id, team_id)
-        if not root_tree:
-            print(f"❌ [validation] No root tree found for interface '{userinterface_name}'")
-            sys.exit(1)
-        
-        tree_id = root_tree['id']
-        print(f"✅ [validation] Found tree ID: {tree_id}")
-        
-        # 6. Get validation sequence
+        # 5. Get validation sequence (use userinterface_name directly like web does)
         print("📋 [validation] Getting validation sequence...")
-        validation_sequence = find_optimal_edge_validation_sequence(tree_id, team_id)
+        validation_sequence = find_optimal_edge_validation_sequence(userinterface_name, team_id)
         
         if not validation_sequence:
             print("❌ [validation] No validation sequence found")
@@ -117,7 +95,7 @@ def main():
             
             # Execute navigation to target node for this validation step
             result = executor.execute_navigation(
-                tree_id=tree_id,
+                tree_id=userinterface_name,
                 target_node_id=step.get('to_node_id'),
                 current_node_id=step.get('from_node_id')
             )
