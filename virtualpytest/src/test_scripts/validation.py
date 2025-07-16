@@ -23,8 +23,10 @@ if project_root not in sys.path:
 from src.utils.host_utils import list_available_devices
 from src.utils.lock_utils import is_device_locked, lock_device, unlock_device
 from src.lib.navigation.navigation_pathfinding import find_optimal_edge_validation_sequence
-from src.lib.navigation.navigation_executor import NavigationExecutor
+from src.lib.navigation.navigation_execution import NavigationExecutor
 from src.utils.app_utils import get_team_id
+from src.lib.supabase.userinterface_db import get_userinterface_by_name
+from src.lib.supabase.navigation_trees_db import get_root_tree_for_interface
 
 def main():
     # 1. Parse arguments
@@ -91,12 +93,30 @@ def main():
     print(f"Successfully took control (session: {session_id})")
     
     try:
-        # 5. Get validation sequence
-        print("Getting validation sequence...")
+        # 5. Get tree_id from userinterface_name
+        print("Getting tree ID from userinterface name...")
         team_id = get_team_id()
-        validation_sequence = find_optimal_edge_validation_sequence(
-            userinterface_name, team_id
-        )
+        
+        # First, get the userinterface by name
+        userinterface = get_userinterface_by_name(userinterface_name, team_id)
+        if not userinterface:
+            print(f"User interface '{userinterface_name}' not found")
+            sys.exit(1)
+        
+        userinterface_id = userinterface['id']
+        
+        # Get the root tree for this interface
+        root_tree = get_root_tree_for_interface(userinterface_id, team_id)
+        if not root_tree:
+            print(f"No root tree found for interface '{userinterface_name}'")
+            sys.exit(1)
+        
+        tree_id = root_tree['id']
+        print(f"Found tree ID: {tree_id} for interface: {userinterface_name}")
+        
+        # Get validation sequence
+        print("Getting validation sequence...")
+        validation_sequence = find_optimal_edge_validation_sequence(tree_id, team_id)
         
         if not validation_sequence:
             print("No validation sequence found for this interface")
@@ -106,14 +126,26 @@ def main():
         
         # 6. Execute validation using NavigationExecutor
         print("Initializing navigation executor...")
-        executor = NavigationExecutor(selected_device, session_id)
+        
+        # Create minimal host configuration for script execution
+        host = {
+            "host_name": "script_host",
+            "device_model": "script_device"
+        }
+        
+        executor = NavigationExecutor(host, selected_device, team_id)
         
         print(f"Starting validation on device {selected_device}")
         
         for i, step in enumerate(validation_sequence, 1):
             print(f"Executing step {i}/{len(validation_sequence)}: {step.get('description', 'Unknown step')}")
             
-            result = executor.execute_step(step)
+            # Execute navigation to target node for this validation step
+            result = executor.execute_navigation(
+                tree_id=tree_id,
+                target_node_id=step.get('to_node_id'),
+                current_node_id=step.get('from_node_id')
+            )
             
             if not result.get('success'):
                 print(f"Validation failed at step {i}: {result.get('error', 'Unknown error')}")
