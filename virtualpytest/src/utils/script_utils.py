@@ -2,8 +2,204 @@
 Script execution utilities following existing patterns from adb_utils and appium_utils
 """
 import os
+import sys
 import subprocess
-from typing import Tuple, Dict, Any
+import uuid
+from typing import Tuple, Dict, Any, Optional, List
+
+# Add project root to path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/utils
+src_dir = os.path.dirname(current_dir)  # /src
+project_root = os.path.dirname(src_dir)  # /virtualpytest
+
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Import existing utilities
+from .app_utils import load_environment_variables, get_team_id
+from .host_utils import get_host_instance, list_available_devices
+from .lock_utils import is_device_locked, lock_device, unlock_device
+
+
+def setup_script_environment(script_name: str = "script") -> Dict[str, Any]:
+    """
+    Setup script environment by loading configuration and creating host instance.
+    Reuses existing host_utils and app_utils infrastructure.
+    
+    Args:
+        script_name: Name of the script for logging
+        
+    Returns:
+        Dictionary containing host, team_id, and other configuration
+    """
+    print(f"🔧 [{script_name}] Setting up script environment...")
+    
+    # 1. Load environment variables (reuse app_utils pattern)
+    print(f"📋 [{script_name}] Loading environment variables...")
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    env_path = os.path.join(script_dir, '..', 'web', '.env.host')
+    
+    if os.path.exists(env_path):
+        load_environment_variables(mode='host', calling_script_dir=os.path.dirname(env_path))
+        print(f"✅ [{script_name}] Loaded environment from: {env_path}")
+    else:
+        print(f"⚠️ [{script_name}] No .env.host file found, using existing environment")
+    
+    # 2. Get host instance (reuse host_utils)
+    print(f"🏠 [{script_name}] Creating host instance...")
+    try:
+        host = get_host_instance()
+        print(f"✅ [{script_name}] Host created: {host.host_name}")
+        print(f"📱 [{script_name}] Available devices: {host.get_device_count()}")
+        
+        # Display available devices
+        if host.get_device_count() == 0:
+            print(f"❌ [{script_name}] No devices configured in environment variables")
+            print(f"💡 [{script_name}] Please configure devices in .env.host file:")
+            print(f"     DEVICE1_NAME=MyDevice")
+            print(f"     DEVICE1_MODEL=horizon_android_mobile")
+            print(f"     DEVICE1_IP=192.168.1.100")
+            print(f"     DEVICE1_PORT=5555")
+            return {'success': False, 'error': 'No devices configured'}
+        
+        for device in host.get_devices():
+            print(f"  - {device.device_name} ({device.device_model}) [{device.device_id}]")
+            
+    except Exception as e:
+        print(f"❌ [{script_name}] Failed to create host: {e}")
+        return {'success': False, 'error': f'Failed to create host: {e}'}
+    
+    # 3. Get team_id (reuse app_utils)
+    try:
+        team_id = get_team_id()
+        print(f"👥 [{script_name}] Team ID: {team_id}")
+    except Exception as e:
+        print(f"❌ [{script_name}] Failed to get team_id: {e}")
+        return {'success': False, 'error': f'Failed to get team_id: {e}'}
+    
+    # 4. Return configuration
+    return {
+        'success': True,
+        'host': host,
+        'team_id': team_id,
+        'script_name': script_name
+    }
+
+
+def select_device(host, device_id: Optional[str] = None, script_name: str = "script") -> Dict[str, Any]:
+    """
+    Select a device from the host, either specified or first available.
+    
+    Args:
+        host: Host instance
+        device_id: Optional specific device ID to select
+        script_name: Name of the script for logging
+        
+    Returns:
+        Dictionary with selected device or error
+    """
+    print(f"📱 [{script_name}] Selecting device...")
+    
+    if device_id:
+        # Use specified device
+        selected_device = None
+        for device in host.get_devices():
+            if device.device_id == device_id:
+                selected_device = device
+                break
+        
+        if not selected_device:
+            available_devices = [d.device_id for d in host.get_devices()]
+            error_msg = f"Device {device_id} not found. Available: {available_devices}"
+            print(f"❌ [{script_name}] {error_msg}")
+            return {'success': False, 'error': error_msg}
+    else:
+        # Use first available device
+        devices = host.get_devices()
+        if not devices:
+            error_msg = "No devices available"
+            print(f"❌ [{script_name}] {error_msg}")
+            return {'success': False, 'error': error_msg}
+        selected_device = devices[0]
+    
+    print(f"✅ [{script_name}] Selected device: {selected_device.device_name} ({selected_device.device_id})")
+    return {'success': True, 'device': selected_device}
+
+
+def take_device_control(host, device, script_name: str = "script") -> Dict[str, Any]:
+    """
+    Take control of a device using existing lock_utils.
+    
+    Args:
+        host: Host instance
+        device: Device instance
+        script_name: Name of the script for logging
+        
+    Returns:
+        Dictionary with session_id or error
+    """
+    print(f"🔒 [{script_name}] Taking control of device {device.device_id}...")
+    
+    # Check device lock status
+    device_key = f"{host.host_name}:{device.device_id}"
+    
+    if is_device_locked(device_key):
+        error_msg = f"Device {device.device_id} is locked by another process"
+        print(f"❌ [{script_name}] {error_msg}")
+        return {'success': False, 'error': error_msg}
+    
+    # Take control
+    session_id = str(uuid.uuid4())
+    
+    if not lock_device(device_key, session_id):
+        error_msg = f"Failed to take control of device {device.device_id}"
+        print(f"❌ [{script_name}] {error_msg}")
+        return {'success': False, 'error': error_msg}
+    
+    print(f"✅ [{script_name}] Successfully took control of device {device.device_id}")
+    return {'success': True, 'session_id': session_id, 'device_key': device_key}
+
+
+def release_device_control(device_key: str, session_id: str, script_name: str = "script") -> bool:
+    """
+    Release control of a device using existing lock_utils.
+    
+    Args:
+        device_key: Device key in format "hostname:device_id"
+        session_id: Session ID from take_device_control
+        script_name: Name of the script for logging
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    print(f"🔓 [{script_name}] Releasing control of device...")
+    
+    try:
+        unlock_device(device_key, session_id)
+        print(f"✅ [{script_name}] Device control released")
+        return True
+    except Exception as e:
+        print(f"❌ [{script_name}] Failed to release device control: {e}")
+        return False
+
+
+def create_host_dict_for_executor(host) -> Dict[str, Any]:
+    """
+    Create host dictionary for NavigationExecutor (matching expected format).
+    
+    Args:
+        host: Host instance
+        
+    Returns:
+        Dictionary in format expected by NavigationExecutor
+    """
+    return {
+        'host_name': host.host_name,
+        'host_url': getattr(host, 'host_url', f"http://{host.host_ip}:{host.host_port}"),
+        'host_ip': host.host_ip,
+        'host_port': host.host_port,
+        'devices': [device.to_dict() for device in host.get_devices()]
+    }
 
 
 def get_script_path(script_name: str) -> str:
