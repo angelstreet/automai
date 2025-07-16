@@ -39,7 +39,6 @@ def action_execute_batch():
         data = request.get_json() or {}
         actions = data.get('actions', [])  # Array of EdgeAction objects
         host = data.get('host', {})
-        final_wait_time = data.get('final_wait_time', 0)
         retry_actions = data.get('retry_actions', [])
         
         print(f"[@route:server_actions:action_execute_batch] Processing {len(actions)} main actions, {len(retry_actions)} retry actions")
@@ -80,9 +79,6 @@ def action_execute_batch():
                 if result.get('execution_record'):
                     execution_records.append(result.get('execution_record'))
                 execution_order += 1
-        
-        if final_wait_time > 0:
-            print(f"[@route:server_actions:action_execute_batch] Applying final wait time: {final_wait_time}ms")
         
         # Return aggregated results (same format as verification)
         overall_success = passed_count >= len(actions)  # Main actions must pass

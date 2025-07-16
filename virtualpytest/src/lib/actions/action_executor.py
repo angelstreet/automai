@@ -46,15 +46,13 @@ class ActionExecutor:
     
     def execute_actions(self, 
                        actions: List[Dict[str, Any]], 
-                       retry_actions: Optional[List[Dict[str, Any]]] = None, 
-                       final_wait_time: int = 2000) -> Dict[str, Any]:
+                       retry_actions: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """
         Execute batch of actions with retry logic
         
         Args:
             actions: List of action dictionaries with command, params, etc.
             retry_actions: Optional list of retry actions to execute if main actions fail
-            final_wait_time: Wait time in milliseconds after execution (passed to controllers)
             
         Returns:
             Dict with success status, results, and execution statistics
@@ -104,21 +102,11 @@ class ActionExecutor:
         if main_actions_failed and valid_retry_actions:
             print(f"[@lib:action_executor:execute_actions] Main actions failed, executing {len(valid_retry_actions)} retry actions")
             for i, retry_action in enumerate(valid_retry_actions):
-                # Add final_wait_time to the last retry action
-                if i == len(valid_retry_actions) - 1 and final_wait_time > 0:
-                    retry_action_with_wait = retry_action.copy()
-                    retry_action_with_wait['waitTime'] = (retry_action_with_wait.get('waitTime', 0) + final_wait_time)
-                    result = self._execute_single_action(retry_action_with_wait, execution_order, i+1, 'retry')
-                else:
-                    result = self._execute_single_action(retry_action, execution_order, i+1, 'retry')
+                result = self._execute_single_action(retry_action, execution_order, i+1, 'retry')
                 results.append(result)
                 if result.get('success'):
                     passed_count += 1
                 execution_order += 1
-        elif final_wait_time > 0:
-            # Handle final wait time after all actions complete
-            print(f"[@lib:action_executor:execute_actions] Applying final wait time: {final_wait_time}ms")
-            time.sleep(final_wait_time / 1000.0)
 
         # Calculate overall success (main actions must pass)
         overall_success = passed_count >= len(valid_actions)

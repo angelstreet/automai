@@ -41,14 +41,13 @@ class RemoteControllerInterface(BaseController):
         super().__init__("remote", device_name)
         self.device_type = device_type
     
-    def execute_sequence(self, commands: List[Dict[str, Any]], retry_actions: List[Dict[str, Any]], final_wait_time: int = 0) -> bool:
+    def execute_sequence(self, commands: List[Dict[str, Any]], retry_actions: List[Dict[str, Any]]) -> bool:
         """
         Execute a sequence of commands with optional retry actions.
         
         Args:
             commands: List of command dictionaries with 'command', 'params', and optional 'delay'
             retry_actions: Retry actions to execute if main commands fail (can be empty/None)
-            final_wait_time: Wait time in milliseconds after sequence completion
         """
         if not self.is_connected:
             print(f"Remote[{self.device_type.upper()}]: ERROR - Not connected to device")
@@ -119,16 +118,6 @@ class RemoteControllerInterface(BaseController):
             # Set overall success if all retries completed successfully
             if retry_success:
                 main_success = True
-        
-        # Handle final wait time after sequence completion
-        # Ensure final_wait_time is an integer (handle string inputs)
-        try:
-            final_wait_time = int(final_wait_time) if final_wait_time else 0
-        except (ValueError, TypeError):
-            final_wait_time = 0
-            
-        if final_wait_time > 0:
-            self._handle_wait_time(final_wait_time, "sequence completion")
                 
         result_msg = "succeeded" if main_success else "failed"
         print(f"Remote[{self.device_type.upper()}]: Sequence {result_msg}")

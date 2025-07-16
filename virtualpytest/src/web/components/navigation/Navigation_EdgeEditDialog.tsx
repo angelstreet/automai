@@ -166,7 +166,9 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               <Select
                 value={edgeForm?.priority || 'p3'}
                 label="Priority"
-                onChange={(e) => setEdgeForm({ ...edgeForm, priority: e.target.value as 'p1' | 'p2' | 'p3' })}
+                onChange={(e) =>
+                  setEdgeForm({ ...edgeForm, priority: e.target.value as 'p1' | 'p2' | 'p3' })
+                }
               >
                 <MenuItem value="p1">P1 Critical</MenuItem>
                 <MenuItem value="p2">P2 Major</MenuItem>
@@ -298,24 +300,6 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
               </Typography>
             )}
           </Box>
-
-          {/* Final Wait Time */}
-          <TextField
-            label="Final Wait Time (ms)"
-            type="number"
-            value={edgeForm.finalWaitTime ?? 0}
-            onChange={(e) => {
-              const value = parseInt(e.target.value);
-              setEdgeForm({
-                ...edgeForm,
-                finalWaitTime: isNaN(value) ? 0 : value,
-              });
-            }}
-            fullWidth
-            margin="dense"
-            size="small"
-            inputProps={{ step: 100, min: 0 }}
-          />
 
           {/* Action Result Display */}
           {edgeEdit.actionResult && (
