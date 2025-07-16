@@ -59,6 +59,7 @@ export const useValidation = (treeId: string) => {
         return;
       }
 
+      console.log('[@hook:useValidation] Setting isValidating to true');
       setIsValidating(true);
       setValidationError(null);
       setResults(null);
@@ -69,7 +70,7 @@ export const useValidation = (treeId: string) => {
 
         // Filter out skipped edges to get edges to validate
         const edgesToValidate = preview.edges.filter(
-          edge => !skippedEdges.includes(`${edge.from_node}-${edge.to_node}`)
+          (edge) => !skippedEdges.includes(`${edge.from_node}-${edge.to_node}`),
         );
 
         // Call simplified validation endpoint - it handles sequential execution
@@ -119,6 +120,7 @@ export const useValidation = (treeId: string) => {
           })),
         };
 
+        console.log('[@hook:useValidation] Setting results and showResults to true');
         setResults(validationResults);
         setShowResults(true);
 
@@ -129,6 +131,7 @@ export const useValidation = (treeId: string) => {
         console.error('[@hook:useValidation] Error running validation:', error);
         setValidationError(error instanceof Error ? error.message : 'Unknown error');
       } finally {
+        console.log('[@hook:useValidation] Setting isValidating to false');
         setIsValidating(false);
       }
     },

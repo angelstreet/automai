@@ -7,7 +7,7 @@ import {
   CircularProgress,
   LinearProgress,
 } from '@mui/material';
-import React from 'react';
+import React, { useEffect } from 'react';
 
 import { useValidation } from '../../hooks/validation';
 
@@ -20,10 +20,29 @@ interface ValidationProgressClientProps {
 const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ treeId }) => {
   const validation = useValidation(treeId);
 
+  // Log component lifecycle
+  useEffect(() => {
+    console.log('[@ValidationProgressClient] Component mounted for treeId:', treeId);
+    return () => {
+      console.log('[@ValidationProgressClient] Component unmounting for treeId:', treeId);
+    };
+  }, [treeId]);
+
+  // Debug logging
+  console.log('[@ValidationProgressClient] Render state:', {
+    treeId,
+    isValidating: validation.isValidating,
+    shouldShow: validation.isValidating,
+    timestamp: new Date().toISOString(),
+  });
+
   // Only show progress dialog when validation is running
   if (!validation.isValidating) {
+    console.log('[@ValidationProgressClient] Not showing - isValidating is false');
     return null;
   }
+
+  console.log('[@ValidationProgressClient] Showing progress dialog');
 
   return (
     <Dialog open={validation.isValidating} disableEscapeKeyDown maxWidth="sm" fullWidth>
