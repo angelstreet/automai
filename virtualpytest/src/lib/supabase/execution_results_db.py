@@ -89,6 +89,19 @@ def record_node_execution(
             'executed_at': datetime.now().isoformat()
         }
         
+        # Log the actual values being used in the request
+        print(f"[@db:execution_results:record_node_execution] ACTUAL REQUEST DATA:")
+        print(f"  - team_id: {team_id}")
+        print(f"  - tree_id: {tree_id}")
+        print(f"  - node_id: {node_id}")
+        print(f"  - execution_type: verification")
+        print(f"  - host_name: {host_name}")
+        print(f"  - device_model: {device_model}")
+        print(f"  - success: {success}")
+        print(f"  - execution_time_ms: {execution_time_ms}")
+        print(f"  - message: {message}")
+        print(f"  - error_details: {error_details}")
+        
         supabase = get_supabase()
         result = supabase.table('execution_results').insert(execution_data).execute()
         
