@@ -119,7 +119,7 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
           </FormControl>
         </Box>
 
-        {/* Depth and Parent below in columns */}
+        {/* Depth, Priority and Parent below in columns */}
         <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
           <TextField
             label="Depth"
@@ -130,6 +130,20 @@ export const NodeEditDialog: React.FC<NodeEditDialogProps> = ({
             margin="dense"
             size="small"
           />
+          <FormControl fullWidth margin="dense" size="small">
+            <InputLabel>Priority</InputLabel>
+            <Select
+              value={nodeForm?.priority || 'p3'}
+              label="Priority"
+              onChange={(e) =>
+                setNodeForm({ ...nodeForm, priority: e.target.value as 'p1' | 'p2' | 'p3' })
+              }
+            >
+              <MenuItem value="p1">P1 Critical</MenuItem>
+              <MenuItem value="p2">P2 Major</MenuItem>
+              <MenuItem value="p3">P3 Minor</MenuItem>
+            </Select>
+          </FormControl>
           <TextField
             label="Parent"
             value={nodeEdit.getParentNames(nodeForm?.parent || [], nodes)}

@@ -36,7 +36,7 @@ export const useNodeEdit = ({
     if (isOpen && nodeForm?.verifications) {
       verification.handleVerificationsChange(nodeForm.verifications);
     }
-  }, [isOpen, nodeForm?.verifications, verification.handleVerificationsChange]);
+  }, [isOpen, nodeForm?.verifications, verification]);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -45,7 +45,7 @@ export const useNodeEdit = ({
       setGotoResult('');
       verification.handleVerificationsChange([]);
     }
-  }, [isOpen]);
+  }, [isOpen, verification]);
 
   // Handle verification changes
   const handleVerificationsChange = useCallback(
@@ -58,7 +58,7 @@ export const useNodeEdit = ({
       });
       verification.handleVerificationsChange(newVerifications);
     },
-    [nodeForm, setNodeForm, verification.handleVerificationsChange],
+    [nodeForm, setNodeForm, verification],
   );
 
   // Handle save operation

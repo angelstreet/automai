@@ -222,6 +222,8 @@ export const useEdge = (props?: UseEdgeProps) => {
         actions: actions,
         retryActions: retryActions,
         finalWaitTime: edge.data?.finalWaitTime ?? 2000,
+        priority: edge.data?.priority || 'p3', // Default to p3 if not set
+        threshold: edge.data?.threshold ?? 0, // Default to 0 if not set
       };
     },
     [getActionsFromEdge, getRetryActionsFromEdge],

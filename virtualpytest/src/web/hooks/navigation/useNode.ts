@@ -77,6 +77,7 @@ export const useNode = (props?: UseNodeProps) => {
       depth: node.data.depth || 0,
       parent: node.data.parent || [],
       menu_type: node.data.menu_type,
+      priority: node.data.priority || 'p3', // Default to p3 if not set
       verifications: node.data.verifications || [], // Already resolved
       verification_ids: node.data.verification_ids || [],
     };

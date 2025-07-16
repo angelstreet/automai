@@ -33,6 +33,9 @@ export interface UINavigationNodeData {
   child_count?: number; // Number of direct children
   menu_type?: 'main' | 'submenu' | 'leaf'; // Type of menu node
 
+  // Priority field
+  priority?: 'p1' | 'p2' | 'p3'; // Priority level (default: p3)
+
   // Verification support
   verifications?: Verification[]; // Array of full verification objects for UI display (loaded from DB via verification_ids)
   verification_ids?: string[]; // Array of verification database IDs for persistence (saved to tree)
@@ -65,6 +68,10 @@ export interface UINavigationEdgeData {
   from?: string; // Source node label
   to?: string; // Target node label
   edgeType?: 'horizontal' | 'vertical'; // For edge coloring: horizontal=siblings, vertical=parent-child
+
+  // Priority and threshold fields
+  priority?: 'p1' | 'p2' | 'p3'; // Priority level (default: p3)
+  threshold?: number; // Threshold in milliseconds (default: 0)
 
   // Execution metrics
   metrics?: {
@@ -104,6 +111,9 @@ export interface NodeForm {
   parent?: string[];
   menu_type?: 'main' | 'submenu' | 'leaf';
 
+  // Priority field
+  priority?: 'p1' | 'p2' | 'p3'; // Priority level (default: p3)
+
   // Verifications field to preserve during editing
   verifications?: Verification[];
   verification_ids?: string[]; // Database IDs for persistence
@@ -116,6 +126,10 @@ export interface EdgeForm {
   retryActions: EdgeAction[];
   finalWaitTime: number;
   description: string;
+
+  // Priority and threshold fields
+  priority?: 'p1' | 'p2' | 'p3'; // Priority level (default: p3)
+  threshold?: number; // Threshold in milliseconds (default: 0)
 }
 
 // =====================================================
