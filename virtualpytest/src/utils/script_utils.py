@@ -69,13 +69,9 @@ def setup_script_environment(script_name: str = "script") -> Dict[str, Any]:
         print(f"❌ [{script_name}] Failed to create host: {e}")
         return {'success': False, 'error': f'Failed to create host: {e}'}
     
-    # 3. Get team_id (reuse app_utils)
-    try:
-        team_id = get_team_id()
-        print(f"👥 [{script_name}] Team ID: {team_id}")
-    except Exception as e:
-        print(f"❌ [{script_name}] Failed to get team_id: {e}")
-        return {'success': False, 'error': f'Failed to get team_id: {e}'}
+    # 3. Get team_id (hardcoded for scripts)
+    team_id = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
+    print(f"👥 [{script_name}] Team ID: {team_id}")
     
     # 4. Return configuration
     return {
