@@ -81,21 +81,8 @@ def action_execute_batch():
                     execution_records.append(result.get('execution_record'))
                 execution_order += 1
         
-        # Record to database (like verification)
-        if execution_records:
-            print(f"[@route:server_actions:action_execute_batch] Recording {len(execution_records)} executions to database")
-            record_executions_to_database(execution_records)
-        
-        # Apply final wait time through controller if needed
         if final_wait_time > 0:
             print(f"[@route:server_actions:action_execute_batch] Applying final wait time: {final_wait_time}ms")
-            # Create a dummy action to handle final wait time via controller
-            final_wait_action = {
-                'command': 'press_key',
-                'params': {'key': 'HOME'},
-                'waitTime': final_wait_time
-            }
-            execute_single_action(final_wait_action, host, execution_order, 0, 'final_wait')
         
         # Return aggregated results (same format as verification)
         overall_success = passed_count >= len(actions)  # Main actions must pass
@@ -192,27 +179,6 @@ def execute_single_action(action, host, execution_order, action_number, action_c
             }
         }
 
-def record_executions_to_database(execution_records):
-    """Record action executions to database (same as verification)"""
-    try:
-        print(f"[@route:server_actions:record_executions_to_database] Recording {len(execution_records)} executions")
-        
-        from src.utils.build_url_utils import buildServerUrl
-        url = buildServerUrl('server/execution-results/record-batch')
-        response = requests.post(url, 
-                               json={'executions': execution_records},
-                               timeout=10)
-        
-        result = response.json()
-        if result.get('success'):
-            print(f"[@route:server_actions:record_executions_to_database] Successfully recorded executions")
-        else:
-            print(f"[@route:server_actions:record_executions_to_database] Database recording failed: {result.get('error')}")
-        
-        return result
-    except Exception as e:
-        print(f"[@route:server_actions:record_executions_to_database] Database recording error: {e}")
-        return {'success': False, 'error': str(e)}
 
 # =====================================================
 # EXISTING ENDPOINTS
