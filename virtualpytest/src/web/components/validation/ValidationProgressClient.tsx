@@ -99,15 +99,14 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
       </DialogTitle>
 
       <DialogContent>
-        <Box sx={{ py: 1 }}>
+        <Box sx={{ py: 0 }}>
           {/* Current Step Display */}
-          <Box sx={{ mb: 1 }}>
-
+          <Box sx={{ mb: 0.5 }}>
             {/* Current Step Details */}
             {currentStepData && (
               <Box
                 sx={{
-                  mt: 1,
+                  mt: 0.5,
                   p: 1,
                   borderRadius: 1,
                   border: '1px solid',

@@ -6,11 +6,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 
-import {
-  ValidationResults,
-  ValidationResult,
-  ValidationPreviewData,
-} from '../../types/features/Validation_Types';
+import { ValidationResults, ValidationPreviewData } from '../../types/features/Validation_Types';
 import { useHostManager } from '../useHostManager';
 
 // Progress tracking types
@@ -266,7 +262,7 @@ export const useValidation = (treeId: string) => {
             results.push(result_entry);
 
             // Small delay to show progress
-            await new Promise((resolve) => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 2000));
           } catch (stepError) {
             console.error(`[@hook:useValidation] Error in step ${i + 1}:`, stepError);
             failed_count++;
