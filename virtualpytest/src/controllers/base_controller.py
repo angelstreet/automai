@@ -46,7 +46,7 @@ class RemoteControllerInterface(BaseController):
         Execute a sequence of commands with optional retry actions.
         
         Args:
-            commands: List of command dictionaries with 'action', 'params', and optional 'delay'
+            commands: List of command dictionaries with 'command', 'params', and optional 'delay'
             retry_actions: Retry actions to execute if main commands fail (can be empty/None)
             final_wait_time: Wait time in milliseconds after sequence completion
         """
@@ -58,17 +58,17 @@ class RemoteControllerInterface(BaseController):
         
         # Execute main commands
         main_success = True
-        for i, command in enumerate(commands):
-            action = command.get('action')
-            params = command.get('params', {})
+        for i, action in enumerate(commands):
+            command = action.get('command')
+            params = action.get('params', {})
             wait_time = params.get('wait_time', 0)  # Extract wait_time from params
             
             # Remove wait_time from params - base controller handles timing
             action_params = {k: v for k, v in params.items() if k != 'wait_time'}
             
-            print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {action}")
+            print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {command}")
             
-            success = self.execute_command(action, action_params)
+            success = self.execute_command(command, action_params)
             
             if not success:
                 print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
@@ -77,22 +77,22 @@ class RemoteControllerInterface(BaseController):
                 
             # Handle wait time after each successful action
             if wait_time > 0:
-                self._handle_wait_time(wait_time, f"action {action}")
+                self._handle_wait_time(wait_time, f"command {command}")
         
         # Execute retry actions if main commands failed
         if not main_success and retry_actions:
             print(f"Remote[{self.device_type.upper()}]: Main commands failed, trying {len(retry_actions)} retry actions")
-            for i, retry_command in enumerate(retry_actions):
-                action = retry_command.get('action')
-                params = retry_command.get('params', {})
+            for i, retry_action in enumerate(retry_actions):
+                command = retry_action.get('command')
+                params = retry_action.get('params', {})
                 wait_time = params.get('wait_time', 0)
                 
                 # Remove wait_time from params - base controller handles timing
                 action_params = {k: v for k, v in params.items() if k != 'wait_time'}
                 
-                print(f"Remote[{self.device_type.upper()}]: Retry step {i+1}: {action}")
+                print(f"Remote[{self.device_type.upper()}]: Retry step {i+1}: {command}")
                 
-                success = self.execute_command(action, action_params)
+                success = self.execute_command(command, action_params)
                 
                 if success:
                     print(f"Remote[{self.device_type.upper()}]: Retry action succeeded")
@@ -100,7 +100,7 @@ class RemoteControllerInterface(BaseController):
                     
                     # Handle wait time after successful retry action
                     if wait_time > 0:
-                        self._handle_wait_time(wait_time, f"retry action {action}")
+                        self._handle_wait_time(wait_time, f"retry command {command}")
                     break
         
         # Handle final wait time after sequence completion
