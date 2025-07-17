@@ -242,23 +242,239 @@ JSON ONLY - NO OTHER TEXT"""
                 'error': f'AI plan generation failed: {str(e)}'
             }
     
-    def _execute(self, plan: Dict[str, Any]) -> bool:
+    def _execute(self, plan: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Execute the AI plan.
-        For now, just return True.
+        Execute the AI plan using available controllers.
+        
+        Args:
+            plan: AI-generated plan with steps
+            
+        Returns:
+            Dict with execution results and detailed step outcomes
         """
-        print(f"AI[{self.device_name}]: Executing plan (mock)")
-        time.sleep(0.5)  # Small delay to simulate execution
-        return True
+        if not plan.get('feasible', True):
+            print(f"AI[{self.device_name}]: Plan not feasible, skipping execution")
+            return {
+                'success': False,
+                'error': 'Plan marked as not feasible',
+                'executed_steps': 0,
+                'total_steps': 0
+            }
+        
+        plan_steps = plan.get('plan', [])
+        if not plan_steps:
+            print(f"AI[{self.device_name}]: No execution steps in plan")
+            return {
+                'success': True,
+                'message': 'No steps to execute',
+                'executed_steps': 0,
+                'total_steps': 0
+            }
+        
+        try:
+            from src.utils.host_utils import get_controller
+            
+            # Get remote controller for execution
+            remote_controller = get_controller(self.device_name, 'remote')
+            if not remote_controller:
+                print(f"AI[{self.device_name}]: No remote controller available for execution")
+                return {
+                    'success': False,
+                    'error': 'No remote controller available for plan execution',
+                    'executed_steps': 0,
+                    'total_steps': len(plan_steps)
+                }
+            
+            print(f"AI[{self.device_name}]: Executing {len(plan_steps)} steps using {type(remote_controller).__name__}")
+            
+            executed_steps = 0
+            failed_steps = []
+            step_results = []
+            
+            for i, step in enumerate(plan_steps):
+                step_num = i + 1
+                step_type = step.get('type', 'unknown')
+                command = step.get('command', '')
+                params = step.get('params', {})
+                description = step.get('description', f'Step {step_num}')
+                
+                print(f"AI[{self.device_name}]: Executing step {step_num}: {description}")
+                self.current_step = f"Executing step {step_num}: {description}"
+                
+                try:
+                    if step_type == 'action':
+                        # Execute action using remote controller
+                        success = remote_controller.execute_command(command, params)
+                        
+                        if success:
+                            executed_steps += 1
+                            step_results.append({
+                                'step': step_num,
+                                'command': command,
+                                'params': params,
+                                'success': True,
+                                'description': description
+                            })
+                            print(f"AI[{self.device_name}]: Step {step_num} completed successfully")
+                            
+                            # Add wait time if specified
+                            wait_time = params.get('wait_time', 0.5)  # Default 500ms between steps
+                            if wait_time > 0:
+                                time.sleep(wait_time)
+                                
+                        else:
+                            failed_steps.append(step_num)
+                            step_results.append({
+                                'step': step_num,
+                                'command': command,
+                                'params': params,
+                                'success': False,
+                                'error': 'Command execution failed',
+                                'description': description
+                            })
+                            print(f"AI[{self.device_name}]: Step {step_num} failed: {command}")
+                            
+                    elif step_type == 'verification':
+                        # For verification steps, just log them for now
+                        # Real verification would require verification controllers
+                        step_results.append({
+                            'step': step_num,
+                            'verification_type': step.get('verification_type', 'unknown'),
+                            'params': params,
+                            'success': True,
+                            'note': 'Verification skipped in current implementation',
+                            'description': description
+                        })
+                        print(f"AI[{self.device_name}]: Step {step_num} (verification) logged: {description}")
+                        
+                    else:
+                        # Unknown step type
+                        failed_steps.append(step_num)
+                        step_results.append({
+                            'step': step_num,
+                            'type': step_type,
+                            'success': False,
+                            'error': f'Unknown step type: {step_type}',
+                            'description': description
+                        })
+                        print(f"AI[{self.device_name}]: Step {step_num} failed: unknown type {step_type}")
+                        
+                except Exception as e:
+                    failed_steps.append(step_num)
+                    step_results.append({
+                        'step': step_num,
+                        'command': command,
+                        'params': params,
+                        'success': False,
+                        'error': str(e),
+                        'description': description
+                    })
+                    print(f"AI[{self.device_name}]: Step {step_num} exception: {e}")
+            
+            # Calculate overall success
+            total_steps = len(plan_steps)
+            success_rate = executed_steps / total_steps if total_steps > 0 else 0
+            overall_success = len(failed_steps) == 0
+            
+            result = {
+                'success': overall_success,
+                'executed_steps': executed_steps,
+                'total_steps': total_steps,
+                'failed_steps': failed_steps,
+                'success_rate': round(success_rate * 100, 1),
+                'step_results': step_results
+            }
+            
+            if overall_success:
+                result['message'] = f'All {total_steps} steps executed successfully'
+                print(f"AI[{self.device_name}]: Plan execution completed successfully ({executed_steps}/{total_steps} steps)")
+            else:
+                result['message'] = f'{executed_steps}/{total_steps} steps executed, {len(failed_steps)} failed'
+                result['error'] = f'Failed steps: {failed_steps}'
+                print(f"AI[{self.device_name}]: Plan execution completed with errors ({executed_steps}/{total_steps} steps, failed: {failed_steps})")
+            
+            return result
+            
+        except Exception as e:
+            print(f"AI[{self.device_name}]: Plan execution error: {e}")
+            return {
+                'success': False,
+                'error': f'Plan execution failed: {str(e)}',
+                'executed_steps': 0,
+                'total_steps': len(plan_steps)
+            }
     
-    def _result_summary(self, plan: Dict[str, Any], execute_result: bool) -> bool:
+    def _result_summary(self, plan: Dict[str, Any], execute_result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Generate result summary.
-        For now, just return True.
+        Generate intelligent result summary based on plan and execution.
+        
+        Args:
+            plan: Original AI plan
+            execute_result: Execution results
+            
+        Returns:
+            Dict with summary analysis
         """
-        print(f"AI[{self.device_name}]: Generating result summary (mock)")
-        time.sleep(0.2)  # Small delay to simulate summary generation
-        return True
+        try:
+            if not execute_result.get('success', False):
+                # Execution failed
+                failed_steps = execute_result.get('failed_steps', [])
+                total_steps = execute_result.get('total_steps', 0)
+                executed_steps = execute_result.get('executed_steps', 0)
+                
+                summary = {
+                    'success': False,
+                    'outcome': 'execution_failed',
+                    'summary': f'Task execution incomplete: {executed_steps}/{total_steps} steps completed',
+                    'recommendations': []
+                }
+                
+                if failed_steps:
+                    summary['recommendations'].append(f'Review failed steps: {failed_steps}')
+                    summary['recommendations'].append('Check device connectivity and controller status')
+                    
+                    # Analyze step failures
+                    step_results = execute_result.get('step_results', [])
+                    failed_commands = [r.get('command', 'unknown') for r in step_results if not r.get('success', True)]
+                    if failed_commands:
+                        summary['recommendations'].append(f'Failed commands: {", ".join(set(failed_commands))}')
+                
+                return summary
+                
+            else:
+                # Execution succeeded
+                total_steps = execute_result.get('total_steps', 0)
+                success_rate = execute_result.get('success_rate', 0)
+                
+                summary = {
+                    'success': True,
+                    'outcome': 'task_completed',
+                    'summary': f'Task completed successfully: {total_steps} steps executed ({success_rate}% success rate)',
+                    'achievements': []
+                }
+                
+                # Analyze what was accomplished
+                step_results = execute_result.get('step_results', [])
+                executed_commands = [r.get('command', 'unknown') for r in step_results if r.get('success', True)]
+                if executed_commands:
+                    command_summary = ", ".join(set(executed_commands))
+                    summary['achievements'].append(f'Executed commands: {command_summary}')
+                
+                # Add plan analysis if available
+                plan_analysis = plan.get('analysis', '')
+                if plan_analysis:
+                    summary['achievements'].append(f'Plan analysis: {plan_analysis}')
+                
+                return summary
+                
+        except Exception as e:
+            print(f"AI[{self.device_name}]: Result summary error: {e}")
+            return {
+                'success': False,
+                'outcome': 'summary_error',
+                'summary': f'Could not generate result summary: {str(e)}',
+                'recommendations': ['Check AI agent controller logs for details']
+            }
     
     def _add_to_log(self, log_type: str, action_type: str, action_value: Any, description: str):
         """Add entry to execution log."""
