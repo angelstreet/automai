@@ -37,16 +37,12 @@ if project_root not in sys.path:
 
 # Import utilities
 from src.utils.script_utils import (
-    setup_script_environment,
-    select_device,
-    take_device_control,
-    release_device_control,
-    load_navigation_tree,
+    create_host_from_environment, 
+    select_device_from_host,
     execute_navigation_step_directly,
-    execute_verification_directly,
-    capture_validation_screenshot,
-    create_host_dict_for_executor
+    capture_validation_screenshot
 )
+from src.utils.build_url_utils import capture_screenshot, download_screenshot
 
 # Import pathfinding for validation sequence
 from src.lib.navigation.navigation_pathfinding import find_optimal_edge_validation_sequence
@@ -166,92 +162,155 @@ def main():
         else:
             print("⚠️ [validation] Failed to capture initial screenshot, continuing...")
         
-        # 8. Execute validation steps directly using host controllers
+        # 8. Execute validation steps using NavigationExecutor (same as web interface)
         print("🎮 [validation] Starting validation on device", selected_device.device_id)
         
+        # Import NavigationExecutor
+        from src.lib.navigation.navigation_execution import NavigationExecutor
+        
+        # Initialize NavigationExecutor with host configuration
+        host_config = {
+            'host_name': host.host_name,
+            'device_model': selected_device.device_model,  # Add device model for verification context
+        }
+        navigator = NavigationExecutor(host_config, selected_device.device_id, team_id)
+        
         current_node = None
+        successful_steps = 0
+        failed_steps = 0
         for i, step in enumerate(validation_sequence):
             step_num = i + 1
             from_node = step.get('from_node_label', 'unknown')
             to_node = step.get('to_node_label', 'unknown')
+            target_node_id = step.get('to_node_id', 'unknown')
             
             print(f"⚡ [validation] Executing step {step_num}/{len(validation_sequence)}: Validate transition: {from_node} → {to_node}")
             
-            # Execute the navigation step directly
-            step_start_time = time.time()
-            step_start_timestamp = datetime.now().strftime('%H:%M:%S')
-            result = execute_navigation_step_directly(host, selected_device, step, team_id)
-            step_end_timestamp = datetime.now().strftime('%H:%M:%S')
-            step_execution_time = int((time.time() - step_start_time) * 1000)
-            
-            # Capture screenshot after step execution
-            step_screenshot = capture_validation_screenshot(host_dict, selected_device, f"step_{step_num}", "validation")
-            if step_screenshot:
-                screenshot_paths.append(step_screenshot)
-            
-            # Get actions from step data
-            actions = step.get('actions', [])
-            verifications = step.get('verifications', [])
-            
-            # Record step result
-            step_result = {
-                'step_number': step_num,
-                'success': result['success'],
-                'screenshot_path': step_screenshot,
-                'message': f"Transition: {from_node} → {to_node}",
-                'execution_time_ms': step_execution_time,
-                'start_time': step_start_timestamp,
-                'end_time': step_end_timestamp,
-                'from_node': from_node,
-                'to_node': to_node,
-                'actions': actions,
-                'verifications': verifications
-            }
-            step_results.append(step_result)
-            
-            if not result['success']:
-                error_message = f"Validation failed at step {step_num}: {result.get('error', 'Unknown error')}"
-                print(f"❌ [validation] {error_message}")
-                break
-            
-            print(f"✅ [validation] Step {step_num} completed successfully")
-            current_node = step.get('to_node_id')
-            
-            # Execute verifications for this transition if they exist
-            step_verifications = step.get('verifications', [])
-            if step_verifications:
-                print(f"🔍 [validation] Executing {len(step_verifications)} verifications for this transition...")
+            try:
+                # Execute complete navigation including verifications using NavigationExecutor
+                # This matches exactly what the web interface does
+                result = navigator.execute_navigation(
+                    tree_id=tree_id,
+                    target_node_id=target_node_id,
+                    current_node_id=current_node
+                )
                 
-                for verification in step_verifications:
-                    verify_result = execute_verification_directly(host, selected_device, verification)
+                # Extract step timing information
+                step_start_time = datetime.now()
+                step_end_time = datetime.now()
+                
+                if result.get('success'):
+                    print(f"✅ [validation] Step {step_num} completed successfully")
+                    current_node = target_node_id  # Update current position
                     
-                    if not verify_result['success']:
-                        error_message = f"Verification failed: {verify_result.get('error', 'Unknown error')}"
-                        print(f"❌ [validation] {error_message}")
-                        break
-                    
-                    print(f"✅ [validation] Verification passed: {verify_result.get('message', 'Success')}")
+                    # Check for verification results
+                    verification_results = result.get('verification_results', [])
+                    if verification_results:
+                        print(f"✅ [validation] Executed {len(verification_results)} verifications")
+                        for ver_result in verification_results:
+                            if ver_result.get('success'):
+                                print(f"  ✅ Verification passed: {ver_result.get('verification_name', 'unknown')}")
+                            else:
+                                print(f"  ❌ Verification failed: {ver_result.get('verification_name', 'unknown')} - {ver_result.get('error', 'unknown error')}")
+                    else:
+                        print("ℹ️ [validation] No verifications defined for this transition")
                 else:
-                    continue  # All verifications passed, continue to next step
-                break  # Verification failed, exit loop
-            else:
-                print(f"ℹ️ [validation] No verifications defined for this transition")
-        else:
-            print("🎉 [validation] All validation steps completed successfully!")
-            overall_success = True
+                    print(f"❌ [validation] Step {step_num} failed: {result.get('error', 'Unknown error')}")
+                    current_node = result.get('final_position_node_id', current_node)  # Update to actual position
+                
+                # Capture screenshot after each step
+                step_screenshot_path = None
+                try:
+                    print(f"📸 [validation] Capturing screenshot: step_{step_num}")
+                    screenshot_data = capture_screenshot(host, selected_device)
+                    if screenshot_data:
+                        step_screenshot_path = download_screenshot(screenshot_data, f"step_{step_num}")
+                        print(f"✅ [validation] Screenshot saved: {step_screenshot_path}")
+                except Exception as screenshot_error:
+                    print(f"⚠️ [validation] Screenshot capture failed: {screenshot_error}")
+                
+                # Record step result with enhanced data
+                step_result = {
+                    'step_number': step_num,
+                    'from_node': from_node,
+                    'to_node': to_node,
+                    'success': result.get('success', False),
+                    'error_message': result.get('error') if not result.get('success') else None,
+                    'screenshot_path': step_screenshot_path,
+                    'step_start_time': step_start_time,
+                    'step_end_time': step_end_time,
+                    'execution_time': result.get('execution_time', 0),
+                    'transitions_executed': result.get('transitions_executed', 0),
+                    'total_transitions': result.get('total_transitions', 0),
+                    'actions_executed': result.get('actions_executed', 0),
+                    'total_actions': result.get('total_actions', 0),
+                    'verification_results': result.get('verification_results', []),
+                    'actions': step.get('actions', []),
+                    'verifications': step.get('verifications', [])  # Include step verifications for reporting
+                }
+                step_results.append(step_result)
+                
+                if result.get('success'):
+                    successful_steps += 1
+                else:
+                    failed_steps += 1
+                    
+            except Exception as e:
+                print(f"❌ [validation] Step {step_num} failed with exception: {str(e)}")
+                
+                # Capture screenshot even on failure
+                step_screenshot_path = None
+                try:
+                    print(f"📸 [validation] Capturing screenshot: step_{step_num}_failed")
+                    screenshot_data = capture_screenshot(host, selected_device)
+                    if screenshot_data:
+                        step_screenshot_path = download_screenshot(screenshot_data, f"step_{step_num}_failed")
+                        print(f"✅ [validation] Screenshot saved: {step_screenshot_path}")
+                except Exception as screenshot_error:
+                    print(f"⚠️ [validation] Screenshot capture failed: {screenshot_error}")
+                
+                step_result = {
+                    'step_number': step_num,
+                    'from_node': from_node,
+                    'to_node': to_node,
+                    'success': False,
+                    'error_message': str(e),
+                    'screenshot_path': step_screenshot_path,
+                    'step_start_time': datetime.now(),
+                    'step_end_time': datetime.now(),
+                    'execution_time': 0,
+                    'transitions_executed': 0,
+                    'total_transitions': 0,
+                    'actions_executed': 0,
+                    'total_actions': 0,
+                    'verification_results': [],
+                    'actions': step.get('actions', []),
+                    'verifications': step.get('verifications', [])
+                }
+                step_results.append(step_result)
+                failed_steps += 1
         
         # 9. Capture final state screenshot
-        print("📸 [validation] Capturing final state screenshot...")
-        final_screenshot = capture_validation_screenshot(host_dict, selected_device, "final_state", "validation")
-        if final_screenshot:
-            screenshot_paths.append(final_screenshot)
-            print(f"✅ [validation] Final screenshot captured: {final_screenshot}")
-        else:
-            print("⚠️ [validation] Failed to capture final screenshot, continuing...")
+        print("📸 [validation] Capturing final state...")
+        final_screenshot = None
+        try:
+            screenshot_data = capture_screenshot(host, selected_device)
+            if screenshot_data:
+                final_screenshot = download_screenshot(screenshot_data, "final_state")
+                print(f"✅ [validation] Final screenshot captured: {final_screenshot}")
+        except Exception as e:
+            print(f"⚠️ [validation] Failed to capture final screenshot: {e}")
         
-        # 10. Generate execution timestamp and calculate total time
+        # 10. Calculate overall success and generate execution summary
+        overall_success = failed_steps == 0
         execution_timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
         total_execution_time = int((time.time() - start_time) * 1000)
+        
+        print(f"🎯 [validation] Validation completed!")
+        print(f"   ✅ Successful steps: {successful_steps}")
+        print(f"   ❌ Failed steps: {failed_steps}")
+        print(f"   📊 Success rate: {(successful_steps/(successful_steps+failed_steps)*100):.1f}%" if (successful_steps+failed_steps) > 0 else "   📊 Success rate: 0%")
+        print(f"   ⏱️ Total execution time: {total_execution_time/1000:.1f}s")
         
         # 11. Generate HTML report
         print("📄 [validation] Generating HTML report...")
@@ -273,12 +332,12 @@ def main():
                 'steps': [step['screenshot_path'] for step in step_results if step['screenshot_path']],
                 'final': final_screenshot if final_screenshot else None
             },
-            'error_msg': error_message,
+            'error_msg': None if overall_success else f"{failed_steps} steps failed",
             'timestamp': execution_timestamp,
             'userinterface_name': userinterface_name,
             'total_steps': len(validation_sequence),
-            'passed_steps': sum(1 for step in step_results if step.get('success', False)),
-            'failed_steps': sum(1 for step in step_results if not step.get('success', True))
+            'passed_steps': successful_steps,
+            'failed_steps': failed_steps
         }
         
         html_content = generate_validation_report(report_data)
