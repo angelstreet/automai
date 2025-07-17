@@ -299,30 +299,51 @@ Navigation Tree Available: {context['has_navigation_tree']}
 Available Actions:
 {action_context}{navigation_context}
 
-INSTRUCTIONS:
-1. Analyze the task and determine what needs to be accomplished
-2. Look at the available actions and choose the most appropriate ones
-3. Use ONLY the commands and parameters shown in the available actions
-4. Fill in the parameter values based on the task requirements
+CRITICAL COMMAND DISTINCTIONS:
+
+NAVIGATION COMMANDS (use execute_navigation):
+- "goto X", "go to X", "navigate to X", "navigate X" = NAVIGATE to location/screen X in the app
+- Examples: "goto home", "go to home", "navigate to settings", "navigate home"
+- These move between screens/pages within the application using the navigation tree
+
+INTERACTION COMMANDS (use click_element):
+- "click X", "tap X", "select X" = INTERACT with UI element X
+- Examples: "click home_button", "tap settings", "select menu"
+- These interact with visible UI elements on the current screen
+
+SYSTEM COMMANDS (use press_key):
+- "go back", "go home" (without "to") = SYSTEM-level actions
+- "go back" = Android back button → press_key with key="BACK"
+- "go home" = Android home screen → press_key with key="HOME"
+- "press up", "press down" = Directional keys → press_key with key="UP"/"DOWN"
 
 IMPORTANT EXAMPLES:
-- Task: "click home_replay" → Use click_element command with element_id parameter set to "home_replay"
-- Task: "goto home_replay" → Use execute_navigation command with target_node parameter set to "home_replay" (if navigation tree available)
-- Task: "go to settings" → Use execute_navigation command with target_node parameter set to "settings" (if navigation tree available)
-- Task: "press up arrow" → Use press_key command with key parameter set to "UP"  
-- Task: "type hello" → Use input_text command with text parameter set to "hello"
-- Task: "go home" → Use press_key command with key parameter set to "HOME" (system home)
-- Task: "go back" → Use press_key command with key parameter set to "BACK" (system back)
-
-CRITICAL DISTINCTIONS:
-- "goto X" or "go to X" = NAVIGATION to location/screen X → use execute_navigation with target_node="X"
-- "go home" = SYSTEM HOME → use press_key with key="HOME" 
-- "go back" = SYSTEM BACK → use press_key with key="BACK"
-- "click X" = INTERACT with element X → use click_element with element_id="X"
+- "goto home" → execute_navigation with target_node="home" (navigate within app)
+- "go to home" → execute_navigation with target_node="home" (navigate within app)  
+- "navigate to settings" → execute_navigation with target_node="settings" (navigate within app)
+- "go home" → press_key with key="HOME" (Android home screen)
+- "go back" → press_key with key="BACK" (Android back button)
+- "click home_replay" → click_element with element_id="home_replay" (interact with element)
+- "press up arrow" → press_key with key="UP" (directional navigation)
 
 The available actions are TEMPLATES - you fill in the parameter values based on what the task asks for.
 
 CRITICAL: Respond with ONLY valid JSON. No other text.
+
+Required JSON format for navigation:
+{{
+  "analysis": "brief analysis of the task and chosen approach",
+  "feasible": true,
+  "plan": [
+    {{
+      "step": 1,
+      "type": "action",
+      "command": "execute_navigation",
+      "params": {{"target_node": "home"}},
+      "description": "Navigate to the home location within the app"
+    }}
+  ]
+}}
 
 Required JSON format for interaction:
 {{
@@ -339,7 +360,7 @@ Required JSON format for interaction:
   ]
 }}
 
-Required JSON format for navigation:
+Required JSON format for system commands:
 {{
   "analysis": "brief analysis of the task and chosen approach",
   "feasible": true,
@@ -347,9 +368,9 @@ Required JSON format for navigation:
     {{
       "step": 1,
       "type": "action",
-      "command": "execute_navigation",
-      "params": {{"target_node": "home_replay"}},
-      "description": "Navigate to the home_replay location"
+      "command": "press_key",
+      "params": {{"key": "HOME"}},
+      "description": "Press Android home button to go to home screen"
     }}
   ]
 }}
