@@ -177,7 +177,7 @@ def main():
             from_node = step.get('from_node_label', 'unknown')
             to_node = step.get('to_node_label', 'unknown')
             
-            print(f"⚡ [validation] Executing step {step_num}/{len(validation_sequence)}: Validate transition: {from_node} → {to_node}")
+            print(f"⚡ [validation] Executing step {step_num}/{len(validation_sequence)}:  Transition: {from_node} → {to_node}")
             
             # Execute the navigation step directly
             step_start_time = time.time()
@@ -203,7 +203,7 @@ def main():
                 'step_number': step_num,
                 'success': result['success'],
                 'screenshot_path': step_screenshot,
-                'message': f"Transition: {from_node} → {to_node}",
+                'message': f"{from_node} → {to_node}",
                 'execution_time_ms': step_execution_time,
                 'start_time': step_start_timestamp,
                 'end_time': step_end_timestamp,

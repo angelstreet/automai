@@ -81,8 +81,8 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
     steps_html = ['<div class="step-list">']
     step_screenshots = screenshots.get('steps', [])
     
-    for i, step in enumerate(step_results):
-        step_number = step.get('step_number', i + 1)
+    for step_index, step in enumerate(step_results):
+        step_number = step.get('step_number', step_index + 1)
         success = step.get('success', False)
         message = step.get('message', 'No message')
         execution_time = step.get('execution_time_ms', 0)
@@ -103,7 +103,7 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
         actions_html = ""
         if actions:
             actions_html = "<div><strong>Actions:</strong></div>"
-            for i, action in enumerate(actions, 1):
+            for action_index, action in enumerate(actions, 1):
                 command = action.get('command', 'unknown')
                 params = action.get('params', {})
                 label = action.get('label', '')
@@ -114,9 +114,9 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
                 
                 # Create action line with label if available
                 if label:
-                    action_line = f"{i}. {label}: {command}({params_str})" if params_str else f"{i}. {label}: {command}"
+                    action_line = f"{action_index}. {label}: {command}({params_str})" if params_str else f"{action_index}. {label}: {command}"
                 else:
-                    action_line = f"{i}. {command}({params_str})" if params_str else f"{i}. {command}"
+                    action_line = f"{action_index}. {command}({params_str})" if params_str else f"{action_index}. {command}"
                 
                 actions_html += f'<div class="action-item">{action_line}</div>'
         
@@ -125,7 +125,7 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
         
         if verifications:
             verifications_html = "<div><strong>Verifications:</strong></div>"
-            for i, verification in enumerate(verifications, 1):
+            for verification_index, verification in enumerate(verifications, 1):
                 # Handle different verification formats
                 if isinstance(verification, dict):
                     command = verification.get('command', verification.get('type', verification.get('verification_type', 'unknown')))
@@ -138,16 +138,16 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
                     
                     # Create verification line with label if available
                     if label:
-                        verification_line = f"{i}. {label}: {command}({params_str})" if params_str else f"{i}. {label}: {command}"
+                        verification_line = f"{verification_index}. {label}: {command}({params_str})" if params_str else f"{verification_index}. {label}: {command}"
                     else:
-                        verification_line = f"{i}. {command}({params_str})" if params_str else f"{i}. {command}"
+                        verification_line = f"{verification_index}. {command}({params_str})" if params_str else f"{verification_index}. {command}"
                 else:
-                    verification_line = f"{i}. {str(verification)}"
+                    verification_line = f"{verification_index}. {str(verification)}"
                 
                 # Add verification result if available
                 verification_result_html = ""
-                if i <= len(verification_results):
-                    result = verification_results[i-1]  # 0-indexed array
+                if verification_index <= len(verification_results):
+                    result = verification_results[verification_index-1]  # 0-indexed array
                     result_success = result.get('success', False)
                     result_message = result.get('message', '')
                     result_badge = f'<span class="verification-result-badge {"success" if result_success else "failure"}">{"PASS" if result_success else "FAIL"}</span>'
@@ -159,13 +159,13 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
         elif verification_results:
             # Show verification results even if verification definitions are missing
             verifications_html = "<div><strong>Verification Results:</strong></div>"
-            for i, result in enumerate(verification_results, 1):
+            for verification_index, result in enumerate(verification_results, 1):
                 result_success = result.get('success', False)
                 result_message = result.get('message', 'Verification completed')
                 verification_type = result.get('verification_type', 'unknown')
                 result_badge = f'<span class="verification-result-badge {"success" if result_success else "failure"}">{"PASS" if result_success else "FAIL"}</span>'
                 
-                verification_line = f"{i}. {verification_type}: {result_message}"
+                verification_line = f"{verification_index}. {verification_type}: {result_message}"
                 if not result_success and result.get('error'):
                     verification_line += f" <span class='verification-error'>({result['error']})</span>"
                 
@@ -173,15 +173,15 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
         
         # Get corresponding screenshot
         screenshot_html = ''
-        if i < len(step_screenshots) and step_screenshots[i]:
+        if step_index < len(step_screenshots) and step_screenshots[step_index]:
             screenshot_html = f"""
             <div class="step-screenshot-container">
-                {get_thumbnail_screenshot_html(step_screenshots[i])}
+                {get_thumbnail_screenshot_html(step_screenshots[step_index])}
             </div>
             """
         
         step_html = f"""
-        <div class="step-item {'success' if success else 'failure'}" onclick="toggleStep('step-details-{i}')">
+        <div class="step-item {'success' if success else 'failure'}" onclick="toggleStep('step-details-{step_index}')">
             <div class="step-number">{step_number}</div>
             <div class="step-status">
                 <span class="step-status-badge {'success' if success else 'failure'}">
@@ -193,7 +193,7 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
                 <div class="step-timing-inline">{timing_header}</div>
             </div>
         </div>
-        <div id="step-details-{i}" class="step-details">
+        <div id="step-details-{step_index}" class="step-details">
              <div class="step-details-content">
                  <div class="step-info">
                      {actions_html}
