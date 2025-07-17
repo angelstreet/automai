@@ -3,6 +3,7 @@ import {
   CheckCircle as PassIcon,
   Error as FailIcon,
   Link as LinkIcon,
+  Delete as DiscardIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -88,6 +89,26 @@ const TestReports: React.FC = () => {
     return new Date(dateString).toLocaleString();
   }
 
+  // Handle discard toggle
+  const handleDiscardToggle = async (resultId: string, discardValue: boolean) => {
+    try {
+      // TODO: Implement API call to update discard status
+      console.log(`Toggling discard for result ${resultId} to ${discardValue}`);
+      
+      // Update local state immediately for better UX
+      setScriptResults(prev => 
+        prev.map(result => 
+          result.id === resultId 
+            ? { ...result, discard: discardValue }
+            : result
+        )
+      );
+    } catch (error) {
+      console.error('Error toggling discard status:', error);
+      setError('Failed to update discard status');
+    }
+  };
+
   // Loading state component
   const LoadingState = () => (
     <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
@@ -98,7 +119,7 @@ const TestReports: React.FC = () => {
   // Empty state component
   const EmptyState = () => (
     <TableRow>
-      <TableCell colSpan={9} sx={{ textAlign: 'center', py: 4 }}>
+      <TableCell colSpan={10} sx={{ textAlign: 'center', py: 4 }}>
         <Typography variant="body2" color="textSecondary">
           No script results available yet
         </Typography>
@@ -120,143 +141,170 @@ const TestReports: React.FC = () => {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
-        {/* Recent Test Reports */}
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Recent Test Reports
-              </Typography>
+      {/* Quick Stats */}
+      <Box sx={{ mb: 3 }}>
+        <Card>
+          <CardContent>
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
+              <ReportsIcon color="primary" />
+              <Typography variant="h6">Quick Stats</Typography>
+            </Box>
 
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>
-                        <strong>Script Name</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Type</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>UI Name</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Host</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Device</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Status</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Duration</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Started</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Report</strong>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={9}>
-                          <LoadingState />
-                        </TableCell>
-                      </TableRow>
-                    ) : scriptResults.length === 0 ? (
-                      <EmptyState />
-                    ) : (
-                      scriptResults.map((result) => (
-                        <TableRow key={result.id}>
-                          <TableCell>{result.script_name}</TableCell>
-                          <TableCell>
-                            <Chip label={result.script_type} size="small" variant="outlined" />
-                          </TableCell>
-                          <TableCell>{result.userinterface_name || 'N/A'}</TableCell>
-                          <TableCell>{result.host_name}</TableCell>
-                          <TableCell>{result.device_name}</TableCell>
-                          <TableCell>
-                            <Chip
-                              icon={result.success ? <PassIcon /> : <FailIcon />}
-                              label={result.success ? 'PASS' : 'FAIL'}
-                              color={result.success ? 'success' : 'error'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {result.execution_time_ms
-                              ? formatDuration(result.execution_time_ms)
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell>{formatDate(result.started_at)}</TableCell>
-                          <TableCell>
-                            {result.html_report_r2_url ? (
-                              <IconButton
-                                size="small"
-                                onClick={() => window.open(result.html_report_r2_url!, '_blank')}
-                                title="View Report"
-                              >
-                                <LinkIcon fontSize="small" />
-                              </IconButton>
-                            ) : (
-                              'N/A'
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Quick Stats */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <ReportsIcon color="primary" />
-                <Typography variant="h6">Quick Stats</Typography>
-              </Box>
-
-              <Box mb={2}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={3}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Total Reports</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {totalReports}
                   </Typography>
                 </Box>
+              </Grid>
+              <Grid item xs={12} md={3}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">This Week</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {thisWeekReports}
                   </Typography>
                 </Box>
+              </Grid>
+              <Grid item xs={12} md={3}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Success Rate</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {successRate}%
                   </Typography>
                 </Box>
+              </Grid>
+              <Grid item xs={12} md={3}>
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">Avg Duration</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {avgDuration}
                   </Typography>
                 </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Box>
+
+      {/* Recent Test Reports */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Recent Test Reports
+          </Typography>
+
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small" sx={{ '& .MuiTableRow-root': { height: '40px' } }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Script Name</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Type</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>UI Name</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Host</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Device</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Status</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Duration</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Started</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Report</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Actions</strong>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={10}>
+                      <LoadingState />
+                    </TableCell>
+                  </TableRow>
+                ) : scriptResults.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  scriptResults.map((result) => (
+                    <TableRow 
+                      key={result.id}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                        },
+                        opacity: result.discard ? 0.5 : 1,
+                      }}
+                    >
+                      <TableCell sx={{ py: 0.5 }}>{result.script_name}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <Chip label={result.script_type} size="small" variant="outlined" />
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>{result.userinterface_name || 'N/A'}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>{result.host_name}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>{result.device_name}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <Chip
+                          icon={result.success ? <PassIcon /> : <FailIcon />}
+                          label={result.success ? 'PASS' : 'FAIL'}
+                          color={result.success ? 'success' : 'error'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        {result.execution_time_ms
+                          ? formatDuration(result.execution_time_ms)
+                          : 'N/A'}
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>{formatDate(result.started_at)}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        {result.html_report_r2_url ? (
+                          <Chip
+                            icon={<LinkIcon />}
+                            label="View Report"
+                            size="small"
+                            clickable
+                            onClick={() => window.open(result.html_report_r2_url!, '_blank')}
+                            color="primary"
+                            variant="outlined"
+                          />
+                        ) : (
+                          <Chip label="No Report" size="small" variant="outlined" disabled />
+                        )}
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDiscardToggle(result.id, !result.discard)}
+                          title={result.discard ? "Restore result" : "Discard result"}
+                          color={result.discard ? "success" : "error"}
+                        >
+                          <DiscardIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
     </Box>
   );
 };

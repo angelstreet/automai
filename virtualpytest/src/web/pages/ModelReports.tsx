@@ -126,154 +126,164 @@ const ModelReports: React.FC = () => {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
-        {/* Recent Execution Results */}
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Recent Execution Results
-              </Typography>
+      {/* Quick Stats */}
+      <Box sx={{ mb: 3 }}>
+        <Card>
+          <CardContent>
+            <Box display="flex" alignItems="center" gap={1} mb={2}>
+              <ModelIcon color="primary" />
+              <Typography variant="h6">Execution Stats</Typography>
+            </Box>
 
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>
-                        <strong>Type</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Tree ID</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Element ID</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Host</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Device</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Status</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Duration</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Executed</strong>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={8}>
-                          <LoadingState />
-                        </TableCell>
-                      </TableRow>
-                    ) : executionResults.length === 0 ? (
-                      <EmptyState />
-                    ) : (
-                      executionResults.map((result) => (
-                        <TableRow key={result.id}>
-                          <TableCell>
-                            <Chip
-                              icon={
-                                result.execution_type === 'action' ? (
-                                  <ActionIcon />
-                                ) : (
-                                  <VerificationIcon />
-                                )
-                              }
-                              label={result.execution_type === 'action' ? 'Action' : 'Verification'}
-                              size="small"
-                              variant="outlined"
-                              color={result.execution_type === 'action' ? 'primary' : 'secondary'}
-                            />
-                          </TableCell>
-                          <TableCell>{result.tree_id}</TableCell>
-                          <TableCell>
-                            {result.execution_type === 'action' ? result.edge_id : result.node_id}
-                          </TableCell>
-                          <TableCell>{result.host_name}</TableCell>
-                          <TableCell>{result.device_model}</TableCell>
-                          <TableCell>
-                            <Chip
-                              icon={result.success ? <PassIcon /> : <FailIcon />}
-                              label={result.success ? 'PASS' : 'FAIL'}
-                              color={result.success ? 'success' : 'error'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>{formatDuration(result.execution_time_ms)}</TableCell>
-                          <TableCell>{formatDate(result.executed_at)}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Quick Stats */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Box display="flex" alignItems="center" gap={1} mb={2}>
-                <ModelIcon color="primary" />
-                <Typography variant="h6">Execution Stats</Typography>
-              </Box>
-
-              <Box mb={2}>
+            <Grid container spacing={3}>
+              <Grid item xs={12} md={2}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Total Executions</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {totalExecutions}
                   </Typography>
                 </Box>
+              </Grid>
+              <Grid item xs={12} md={2}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">This Week</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {thisWeekExecutions}
                   </Typography>
                 </Box>
+              </Grid>
+              <Grid item xs={12} md={2}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Success Rate</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {successRate}%
                   </Typography>
                 </Box>
-                <Box display="flex" justifyContent="space-between" mb={2}>
+              </Grid>
+              <Grid item xs={12} md={2}>
+                <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Avg Duration</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {avgDuration}
                   </Typography>
                 </Box>
-
-                {/* Execution Type Breakdown */}
-                <Typography variant="subtitle2" gutterBottom sx={{ mt: 2 }}>
-                  Execution Types
-                </Typography>
+              </Grid>
+              <Grid item xs={12} md={2}>
                 <Box display="flex" justifyContent="space-between" mb={1}>
                   <Typography variant="body2">Actions</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {actionExecutions.length}
                   </Typography>
                 </Box>
+              </Grid>
+              <Grid item xs={12} md={2}>
                 <Box display="flex" justifyContent="space-between">
                   <Typography variant="body2">Verifications</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {verificationExecutions.length}
                   </Typography>
                 </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      </Box>
+
+      {/* Recent Execution Results */}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Recent Execution Results
+          </Typography>
+
+          <TableContainer component={Paper} variant="outlined">
+            <Table size="small" sx={{ '& .MuiTableRow-root': { height: '40px' } }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Type</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Tree ID</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Element ID</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Host</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Device</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Status</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Duration</strong>
+                  </TableCell>
+                  <TableCell sx={{ py: 1 }}>
+                    <strong>Executed</strong>
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={8}>
+                      <LoadingState />
+                    </TableCell>
+                  </TableRow>
+                ) : executionResults.length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  executionResults.map((result) => (
+                    <TableRow 
+                      key={result.id}
+                      sx={{
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                        },
+                      }}
+                    >
+                      <TableCell sx={{ py: 0.5 }}>
+                        <Chip
+                          icon={
+                            result.execution_type === 'action' ? (
+                              <ActionIcon />
+                            ) : (
+                              <VerificationIcon />
+                            )
+                          }
+                          label={result.execution_type === 'action' ? 'Action' : 'Verification'}
+                          size="small"
+                          variant="outlined"
+                          color={result.execution_type === 'action' ? 'primary' : 'secondary'}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>{result.tree_id}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        {result.execution_type === 'action' ? result.edge_id : result.node_id}
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>{result.host_name}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>{result.device_model}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <Chip
+                          icon={result.success ? <PassIcon /> : <FailIcon />}
+                          label={result.success ? 'PASS' : 'FAIL'}
+                          color={result.success ? 'success' : 'error'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>{formatDuration(result.execution_time_ms)}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>{formatDate(result.executed_at)}</TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
     </Box>
   );
 };
