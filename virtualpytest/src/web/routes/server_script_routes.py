@@ -3,6 +3,7 @@ Server Script Routes - Script management and execution proxy
 """
 import os
 import re
+import glob
 from flask import Blueprint, request, jsonify
 import requests
 from src.utils.host_utils import get_host_manager
