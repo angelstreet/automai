@@ -77,7 +77,6 @@ def main():
     session_id = None
     script_result_id = None
     start_time = time.time()
-    start_timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     step_results = []
     screenshot_paths = []
     overall_success = False
@@ -180,13 +179,19 @@ def main():
             
             # Execute the navigation step directly
             step_start_time = time.time()
+            step_start_timestamp = datetime.now().strftime('%H:%M:%S')
             result = execute_navigation_step_directly(host, selected_device, step, team_id)
+            step_end_timestamp = datetime.now().strftime('%H:%M:%S')
             step_execution_time = int((time.time() - step_start_time) * 1000)
             
             # Capture screenshot after step execution
             step_screenshot = capture_validation_screenshot(host_dict, selected_device, f"step_{step_num}", "validation")
             if step_screenshot:
                 screenshot_paths.append(step_screenshot)
+            
+            # Get actions from step data
+            actions = step.get('actions', [])
+            verifications = step.get('target_verifications', [])
             
             # Record step result
             step_result = {
@@ -195,8 +200,12 @@ def main():
                 'screenshot_path': step_screenshot,
                 'message': f"Transition: {from_node} → {to_node}",
                 'execution_time_ms': step_execution_time,
+                'start_time': step_start_timestamp,
+                'end_time': step_end_timestamp,
                 'from_node': from_node,
-                'to_node': to_node
+                'to_node': to_node,
+                'actions': actions,
+                'verifications': verifications
             }
             step_results.append(step_result)
             
@@ -264,8 +273,6 @@ def main():
             },
             'error_msg': error_message,
             'timestamp': execution_timestamp,
-            'start_time': start_timestamp,
-            'end_time': execution_timestamp,
             'userinterface_name': userinterface_name,
             'total_steps': len(validation_sequence),
             'passed_steps': sum(1 for step in step_results if step.get('success', False)),

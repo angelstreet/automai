@@ -12,9 +12,9 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
     
     Args:
         tree_id: Navigation tree ID
-        target_node_id: Target node to navigate to
+        target_node_id: Target node to navigate to (can be node ID or label)
         team_id: Team ID for security
-        start_node_id: Starting node (if None, uses entry point)
+        start_node_id: Starting node (if None, uses entry point; can be node ID or label)
         
     Returns:
         List of navigation steps or None if no path found
@@ -30,8 +30,42 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         print(f"[@navigation:pathfinding:find_shortest_path] Failed to get graph for tree {tree_id}")
         return None
     
+    # Resolve target_node_id if it's a label instead of UUID
+    actual_target_node = target_node_id
+    if target_node_id not in G.nodes:
+        print(f"[@navigation:pathfinding:find_shortest_path] Target '{target_node_id}' not found as node ID, searching by label...")
+        for node_id, node_data in G.nodes(data=True):
+            if node_data.get('label', '') == target_node_id:
+                actual_target_node = node_id
+                print(f"[@navigation:pathfinding:find_shortest_path] Resolved label '{target_node_id}' to node ID '{node_id}'")
+                break
+        else:
+            # Try case-insensitive search
+            for node_id, node_data in G.nodes(data=True):
+                if node_data.get('label', '').lower() == target_node_id.lower():
+                    actual_target_node = node_id
+                    print(f"[@navigation:pathfinding:find_shortest_path] Resolved label '{target_node_id}' to node ID '{node_id}' (case-insensitive)")
+                    break
+    
     # Determine starting node
     actual_start_node = start_node_id
+    if start_node_id:
+        # Resolve start_node_id if it's a label instead of UUID
+        if start_node_id not in G.nodes:
+            print(f"[@navigation:pathfinding:find_shortest_path] Start '{start_node_id}' not found as node ID, searching by label...")
+            for node_id, node_data in G.nodes(data=True):
+                if node_data.get('label', '') == start_node_id:
+                    actual_start_node = node_id
+                    print(f"[@navigation:pathfinding:find_shortest_path] Resolved start label '{start_node_id}' to node ID '{node_id}'")
+                    break
+            else:
+                # Try case-insensitive search
+                for node_id, node_data in G.nodes(data=True):
+                    if node_data.get('label', '').lower() == start_node_id.lower():
+                        actual_start_node = node_id
+                        print(f"[@navigation:pathfinding:find_shortest_path] Resolved start label '{start_node_id}' to node ID '{node_id}' (case-insensitive)")
+                        break
+    
     if not actual_start_node:
         entry_points = get_entry_points(G)
         
@@ -59,20 +93,21 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         return None
     
     # Check if target node exists
-    if target_node_id not in G.nodes:
-        print(f"[@navigation:pathfinding:find_shortest_path] ERROR: Target node {target_node_id} not found in graph")
+    if actual_target_node not in G.nodes:
+        print(f"[@navigation:pathfinding:find_shortest_path] ERROR: Target node {actual_target_node} not found in graph")
+        print(f"[@navigation:pathfinding:find_shortest_path] Available nodes: {list(G.nodes())}")
         return None
     
 
     
     # Check if we're already at the target
-    if actual_start_node == target_node_id:
-        print(f"[@navigation:pathfinding:find_shortest_path] Already at target node {target_node_id}")
+    if actual_start_node == actual_target_node:
+        print(f"[@navigation:pathfinding:find_shortest_path] Already at target node {actual_target_node}")
         return []
     
     try:
         # Use NetworkX shortest path algorithm
-        path = nx.shortest_path(G, actual_start_node, target_node_id)
+        path = nx.shortest_path(G, actual_start_node, actual_target_node)
         print(f"[@navigation:pathfinding:find_shortest_path] Found path with {len(path)} nodes")
         print(f"[@navigation:pathfinding:find_shortest_path] Path nodes: {' → '.join(path)}")
         
@@ -161,7 +196,7 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
         return navigation_transitions
         
     except nx.NetworkXNoPath:
-        print(f"[@navigation:pathfinding:find_shortest_path] No path found from {actual_start_node} to {target_node_id}")
+        print(f"[@navigation:pathfinding:find_shortest_path] No path found from {actual_start_node} to {actual_target_node}")
         
         # Additional debugging for no path case
         print(f"[@navigation:pathfinding:find_shortest_path] DEBUGGING NO PATH:")
@@ -183,11 +218,11 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             for i, component in enumerate(components):
                 if actual_start_node in component:
                     start_component = i
-                if target_node_id in component:
+                if actual_target_node in component:
                     target_component = i
             
             print(f"[@navigation:pathfinding:find_shortest_path] Start node {actual_start_node} in component {start_component}")
-            print(f"[@navigation:pathfinding:find_shortest_path] Target node {target_node_id} in component {target_component}")
+            print(f"[@navigation:pathfinding:find_shortest_path] Target node {actual_target_node} in component {target_component}")
             
             if start_component != target_component:
                 print(f"[@navigation:pathfinding:find_shortest_path] Nodes are in different components - no path possible")
@@ -198,10 +233,10 @@ def find_shortest_path(tree_id: str, target_node_id: str, team_id: str, start_no
             reachable_from_start.add(actual_start_node)
             print(f"[@navigation:pathfinding:find_shortest_path] Nodes reachable from {actual_start_node}: {reachable_from_start}")
             
-            if target_node_id not in reachable_from_start:
-                print(f"[@navigation:pathfinding:find_shortest_path] Target {target_node_id} is NOT reachable from start {actual_start_node}")
+            if actual_target_node not in reachable_from_start:
+                print(f"[@navigation:pathfinding:find_shortest_path] Target {actual_target_node} is NOT reachable from start {actual_start_node}")
             else:
-                print(f"[@navigation:pathfinding:find_shortest_path] Target {target_node_id} IS reachable from start {actual_start_node} - this shouldn't happen!")
+                print(f"[@navigation:pathfinding:find_shortest_path] Target {actual_target_node} IS reachable from start {actual_start_node} - this shouldn't happen!")
                 
         except Exception as reach_error:
             print(f"[@navigation:pathfinding:find_shortest_path] Error checking reachability: {reach_error}")
