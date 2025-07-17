@@ -108,34 +108,36 @@ class AIAgentController(BaseController):
             if not tree_result['success']:
                 return {'success': False, 'error': f"Tree loading failed: {tree_result['error']}"}
             
+            tree_id = tree_result['tree_id']
+            
             # Get navigation sequence using pathfinding (same as validation.py)
-            from src.lib.navigation.navigation_pathfinding import find_path_to_node
+            from src.lib.navigation.navigation_pathfinding import find_shortest_path
             
             print(f"AI[{self.device_name}]: Finding path to '{target_node}' using pathfinding")
             
-            # Find path from current location to target node
-            path_sequence = find_path_to_node(userinterface_name, target_node, team_id)
+            # Find path from current location to target node using correct parameters
+            path_sequence = find_shortest_path(tree_id, target_node, team_id)
             
             if not path_sequence:
                 return {'success': False, 'error': f"No path found to '{target_node}'"}
             
-            print(f"AI[{self.device_name}]: Found path with {len(path_sequence)} steps")
+            print(f"AI[{self.device_name}]: Found path with {len(path_sequence)} transitions")
             
-            # Execute each step in the path (same as validation.py)
-            for i, step in enumerate(path_sequence):
+            # Execute each transition in the path (same as validation.py)
+            for i, transition in enumerate(path_sequence):
                 step_num = i + 1
-                from_node = step.get('from_node_label', 'unknown')
-                to_node = step.get('to_node_label', 'unknown')
+                from_node = transition.get('from_node_label', 'unknown')
+                to_node = transition.get('to_node_label', 'unknown')
                 
-                print(f"AI[{self.device_name}]: Executing step {step_num}/{len(path_sequence)}: {from_node} → {to_node}")
+                print(f"AI[{self.device_name}]: Executing transition {step_num}/{len(path_sequence)}: {from_node} → {to_node}")
                 
                 # Execute the navigation step directly (same as validation.py)
-                result = execute_navigation_step_directly(host, selected_device, step, team_id)
+                result = execute_navigation_step_directly(host, selected_device, transition, team_id)
                 
                 if not result['success']:
-                    return {'success': False, 'error': f"Navigation failed at step {step_num}: {result.get('error', 'Unknown error')}"}
+                    return {'success': False, 'error': f"Navigation failed at transition {step_num}: {result.get('error', 'Unknown error')}"}
                 
-                print(f"AI[{self.device_name}]: Step {step_num} completed successfully")
+                print(f"AI[{self.device_name}]: Transition {step_num} completed successfully")
             
             print(f"AI[{self.device_name}]: Navigation to '{target_node}' completed successfully")
             return {'success': True, 'message': f"Successfully navigated to '{target_node}'"}

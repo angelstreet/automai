@@ -654,57 +654,63 @@ def create_themed_html_template() -> str:
                 const slider = document.querySelector('.theme-slider');
                 const themeOptions = document.querySelectorAll('.theme-option');
                 
-                // Update slider position
-                slider.className = 'theme-slider ' + this.currentMode;
+                if (slider) {{
+                    slider.className = 'theme-slider ' + this.currentMode;
+                }}
                 
-                // Update active states
                 themeOptions.forEach(option => {{
                     option.classList.toggle('active', option.dataset.theme === this.currentMode);
                 }});
             }}
         }}
         
-        // Initialize theme manager when DOM is loaded
-        document.addEventListener('DOMContentLoaded', () => {{
-            window.themeManager = new ThemeManager();
-        }});
-        
         function toggleSection(sectionId) {{
             const content = document.getElementById(sectionId);
             const button = document.querySelector(`[onclick="toggleSection('${{sectionId}}')"]`);
             
-            if (content.classList.contains('expanded')) {{
-                content.classList.remove('expanded');
-                button.classList.remove('expanded');
-            }} else {{
-                content.classList.add('expanded');
-                button.classList.add('expanded');
+            if (content && button) {{
+                if (content.classList.contains('expanded')) {{
+                    content.classList.remove('expanded');
+                    button.classList.remove('expanded');
+                }} else {{
+                    content.classList.add('expanded');
+                    button.classList.add('expanded');
+                }}
             }}
         }}
         
         function toggleStep(stepId) {{
             const details = document.getElementById(stepId);
-            if (details.classList.contains('expanded')) {{
-                details.classList.remove('expanded');
-            }} else {{
-                details.classList.add('expanded');
+            if (details) {{
+                if (details.classList.contains('expanded')) {{
+                    details.classList.remove('expanded');
+                }} else {{
+                    details.classList.add('expanded');
+                }}
             }}
         }}
         
         function openScreenshot(src) {{
             const modal = document.getElementById('screenshot-modal');
             const img = document.getElementById('modal-img');
-            img.src = src;
-            modal.classList.add('active');
+            if (modal && img) {{
+                img.src = src;
+                modal.classList.add('active');
+            }}
         }}
         
         function closeScreenshot() {{
             const modal = document.getElementById('screenshot-modal');
-            modal.classList.remove('active');
+            if (modal) {{
+                modal.classList.remove('active');
+            }}
         }}
         
-        // Initialize sections on page load
+        // Initialize everything when DOM is loaded
         document.addEventListener('DOMContentLoaded', function() {{
+            // Initialize theme manager
+            window.themeManager = new ThemeManager();
+            
             // Expand Test Steps by default
             const stepsContent = document.getElementById('steps-content');
             const stepsButton = document.querySelector("[onclick=\"toggleSection('steps-content')\"]");
@@ -722,6 +728,13 @@ def create_themed_html_template() -> str:
                     }}
                 }});
             }}
+            
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(e) {{
+                if (e.key === 'Escape') {{
+                    closeScreenshot();
+                }}
+            }});
         }});
     </script>
 </head>
