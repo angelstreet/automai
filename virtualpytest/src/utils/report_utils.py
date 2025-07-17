@@ -408,6 +408,13 @@ def create_themed_html_template() -> str:
             font-size: 0.9em;
         }}
         
+        .step-timing-inline {{
+            font-size: 0.8em;
+            color: var(--text-secondary);
+            margin-left: 10px;
+            white-space: nowrap;
+        }}
+        
         .step-details {{
             display: none;
             padding: 12px;
@@ -446,6 +453,24 @@ def create_themed_html_template() -> str:
         
         .step-actions strong {{
             color: var(--text-primary);
+        }}
+        
+        .action-item, .verification-item {{
+            margin: 4px 0;
+            padding: 4px 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            border-left: 3px solid var(--border-color);
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+        }}
+        
+        .action-item {{
+            border-left-color: #17a2b8;
+        }}
+        
+        .verification-item {{
+            border-left-color: #6f42c1;
         }}
         
         .step-screenshot-container {{
@@ -578,6 +603,12 @@ def create_themed_html_template() -> str:
              
              .step-screenshot-container {{
                  text-align: center;
+             }}
+             
+             .step-timing-inline {{
+                 display: block;
+                 margin-top: 5px;
+                 margin-left: 0;
              }}
         }}
     </style>
@@ -817,9 +848,52 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
         # Format execution time
         exec_time_str = format_execution_time(execution_time) if execution_time else "N/A"
         
-        # Format actions and verifications
-        actions_text = f"{len(actions)} actions" if actions else "No actions"
-        verifications_text = f"{len(verifications)} verifications" if verifications else "No verifications"
+        # Format timing for header
+        timing_header = f"Start: {start_time} End: {end_time} Duration: {exec_time_str}"
+        
+        # Format detailed actions and verifications
+        actions_html = ""
+        if actions:
+            actions_html = "<div><strong>Actions:</strong></div>"
+            for i, action in enumerate(actions, 1):
+                command = action.get('command', 'unknown')
+                params = action.get('params', {})
+                label = action.get('label', '')
+                
+                # Format params as key=value pairs, excluding wait_time for cleaner display
+                filtered_params = {k: v for k, v in params.items() if k != 'wait_time'}
+                params_str = ", ".join([f"{k}='{v}'" for k, v in filtered_params.items()]) if filtered_params else ""
+                
+                # Create action line with label if available
+                if label:
+                    action_line = f"{i}. {label}: {command}({params_str})" if params_str else f"{i}. {label}: {command}"
+                else:
+                    action_line = f"{i}. {command}({params_str})" if params_str else f"{i}. {command}"
+                
+                actions_html += f'<div class="action-item">{action_line}</div>'
+        
+        verifications_html = ""
+        if verifications:
+            verifications_html = "<div><strong>Verifications:</strong></div>"
+            for i, verification in enumerate(verifications, 1):
+                # Handle different verification formats
+                if isinstance(verification, dict):
+                    command = verification.get('command', verification.get('type', verification.get('verification_type', 'unknown')))
+                    params = verification.get('params', verification.get('parameters', {}))
+                    label = verification.get('label', '')
+                    
+                    # Format params, excluding common system params
+                    filtered_params = {k: v for k, v in params.items() if k not in ['wait_time', 'timeout']}
+                    params_str = ", ".join([f"{k}='{v}'" for k, v in filtered_params.items()]) if filtered_params else ""
+                    
+                    # Create verification line with label if available
+                    if label:
+                        verification_line = f"{i}. {label}: {command}({params_str})" if params_str else f"{i}. {label}: {command}"
+                    else:
+                        verification_line = f"{i}. {command}({params_str})" if params_str else f"{i}. {command}"
+                else:
+                    verification_line = f"{i}. {str(verification)}"
+                verifications_html += f'<div class="verification-item">{verification_line}</div>'
         
         # Get corresponding screenshot
         screenshot_html = ''
@@ -830,7 +904,7 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
             </div>
             """
         
-        step_html = f"""
+                step_html = f"""
         <div class="step-item {'success' if success else 'failure'}" onclick="toggleStep('step-details-{i}')">
             <div class="step-number">{step_number}</div>
             <div class="step-status">
@@ -838,21 +912,16 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
                     {'PASS' if success else 'FAIL'}
                 </span>
             </div>
-            <div class="step-message">{message}</div>
+            <div class="step-message">
+                {message}
+                <div class="step-timing-inline">{timing_header}</div>
+            </div>
         </div>
         <div id="step-details-{i}" class="step-details">
-                         <div class="step-details-content">
+             <div class="step-details-content">
                  <div class="step-info">
-                     <div class="step-timing">
-                         <span><strong>Start:</strong> {start_time}</span>
-                         <span><strong>End:</strong> {end_time}</span>
-                         <span><strong>Duration:</strong> {exec_time_str}</span>
-                     </div>
-                     <div class="step-actions">
-                         <strong>Transition:</strong> {from_node} → {to_node}<br>
-                         <strong>Actions:</strong> {actions_text}<br>
-                         <strong>Verifications:</strong> {verifications_text}
-                     </div>
+                     {actions_html}
+                     {verifications_html}
                  </div>
                  {screenshot_html}
              </div>

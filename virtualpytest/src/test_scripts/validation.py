@@ -191,7 +191,7 @@ def main():
             
             # Get actions from step data
             actions = step.get('actions', [])
-            verifications = step.get('target_verifications', [])
+            verifications = step.get('verifications', [])
             
             # Record step result
             step_result = {
