@@ -97,6 +97,9 @@ export const useNode = (props?: UseNodeProps) => {
       }
 
       try {
+        // Sanitize filename by removing spaces and special characters
+        const sanitizedFilename = label.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
+        
         const response = await fetch('/server/av/saveScreenshot', {
           method: 'POST',
           headers: {
@@ -105,7 +108,7 @@ export const useNode = (props?: UseNodeProps) => {
           body: JSON.stringify({
             host: props.selectedHost,
             device_id: props.selectedDeviceId,
-            filename: label,
+            filename: sanitizedFilename,
             device_model: 'android_mobile',
           }),
         });

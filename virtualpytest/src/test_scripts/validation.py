@@ -147,9 +147,9 @@ def main():
         
         print(f"✅ [validation] Loaded tree with {len(tree_result['nodes'])} nodes and {len(tree_result['edges'])} edges")
 
-        # 6. Get validation sequence (use userinterface_name directly like web does)
+        # 6. Get validation sequence (use resolved tree_id instead of userinterface_name)
         print("📋 [validation] Getting validation sequence...")
-        validation_sequence = find_optimal_edge_validation_sequence(userinterface_name, team_id)
+        validation_sequence = find_optimal_edge_validation_sequence(tree_id, team_id)
         
         if not validation_sequence:
             error_message = "No validation sequence found"

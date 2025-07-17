@@ -524,7 +524,7 @@ export const useNavigationEditor = () => {
         position,
         data: {
           type: validType,
-          label: `New ${type}`,
+          label: `new_${type}`,
           description: '',
           verifications: [],
           verification_ids: [],
