@@ -15,6 +15,48 @@ def get_supabase():
     """Get the Supabase client instance."""
     return get_supabase_client()
 
+def get_execution_results(
+    team_id: str,
+    execution_type: Optional[str] = None,
+    tree_id: Optional[str] = None,
+    limit: int = 100
+) -> Dict:
+    """Get execution results with filtering."""
+    try:
+        print(f"[@db:execution_results:get_execution_results] Getting execution results:")
+        print(f"  - team_id: {team_id}")
+        print(f"  - execution_type: {execution_type}")
+        print(f"  - tree_id: {tree_id}")
+        print(f"  - limit: {limit}")
+        
+        supabase = get_supabase()
+        query = supabase.table('execution_results').select('*').eq('team_id', team_id)
+        
+        # Add filters
+        if execution_type:
+            query = query.eq('execution_type', execution_type)
+        if tree_id:
+            query = query.eq('tree_id', tree_id)
+        
+        # Execute query with ordering and limit
+        result = query.order('executed_at', desc=True).limit(limit).execute()
+        
+        print(f"[@db:execution_results:get_execution_results] Found {len(result.data)} execution results")
+        return {
+            'success': True,
+            'execution_results': result.data,
+            'count': len(result.data)
+        }
+        
+    except Exception as e:
+        print(f"[@db:execution_results:get_execution_results] Error: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'execution_results': [],
+            'count': 0
+        }
+
 def record_edge_execution(
     team_id: str,
     tree_id: str,

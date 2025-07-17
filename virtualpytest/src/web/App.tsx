@@ -24,6 +24,7 @@ const Models = React.lazy(() => import('./pages/Models'));
 const Monitoring = React.lazy(() => import('./pages/Monitoring'));
 const RunTests = React.lazy(() => import('./pages/RunTests'));
 const TestReports = React.lazy(() => import('./pages/TestReports'));
+const ModelReports = React.lazy(() => import('./pages/ModelReports'));
 const UserInterface = React.lazy(() => import('./pages/UserInterface'));
 const TestCaseEditor = React.lazy(() => import('./pages/TestCaseEditor'));
 const NavigationEditor = React.lazy(() => import('./pages/NavigationEditor'));
@@ -163,6 +164,7 @@ const App: React.FC = () => {
 
                   {/* Test Results Routes */}
                   <Route path="/test-results/reports" element={<TestReports />} />
+                  <Route path="/test-results/model-reports" element={<ModelReports />} />
 
                   {/* Configuration Routes */}
                   <Route

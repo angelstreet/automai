@@ -77,6 +77,7 @@ def _register_server_routes(app):
     
         ('server_script_routes', 'server_script_bp'),  # ✅ Script execution proxy
         ('server_script_results_routes', 'server_script_results_bp'),  # ✅ Script results management
+        ('server_execution_results_routes', 'server_execution_results_bp'),  # ✅ Execution results management
         ('server_aiagent_routes', 'server_aiagent_bp'),  # ✅ AI agent proxy routes
         ('server_frontend_routes', 'server_frontend_bp'),  # ✅ Frontend navigation control for MCP
         ('server_mcp_routes', 'server_mcp_bp'),  # ✅ MCP task execution bridge

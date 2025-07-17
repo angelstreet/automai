@@ -48,6 +48,11 @@ const NavigationBar: React.FC = () => {
       path: '/test-results/reports',
       icon: <ReportsIcon fontSize="small" />,
     },
+    {
+      label: 'Model Reports',
+      path: '/test-results/model-reports',
+      icon: <ModelIcon fontSize="small" />,
+    },
   ];
 
   const configurationItems = [
