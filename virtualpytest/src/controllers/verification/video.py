@@ -1863,17 +1863,39 @@ JSON ONLY - NO OTHER TEXT"""
                 print(f"VideoVerify[{self.device_name}]: OpenRouter API key not found in environment")
                 return "AI service not available."
             
+            # Get device model context from AV controller
+            device_model = "unknown device"
+            device_context = "a device screen"
+            
+            if hasattr(self.av_controller, 'device_model') and self.av_controller.device_model:
+                device_model = self.av_controller.device_model
+                
+                # Provide helpful context based on device model
+                model_lower = device_model.lower()
+                if "mobile" in model_lower or "phone" in model_lower:
+                    device_context = "an Android mobile phone screen"
+                elif "fire" in model_lower or "tv" in model_lower:
+                    device_context = "a Fire TV/Android TV screen"
+                elif "tablet" in model_lower:
+                    device_context = "a tablet screen"
+                else:
+                    device_context = f"a {device_model} device screen"
+            
             # Load and encode the full image
             try:
                 # Read the image file directly
                 with open(image_path, 'rb') as f:
                     image_data = base64.b64encode(f.read()).decode()
                 
-                # Simple prompt for general image analysis
-                prompt = f"""Analyze this image and answer the user's question: "{user_question}"
+                # Enhanced prompt with device model and context
+                prompt = f"""You are analyzing a screenshot from {device_context} (device model: {device_model}).
+
+This image was captured from a controlled device during automated testing/monitoring.
+
+User question: "{user_question}"
 
 Provide a clear, concise answer in maximum 3 lines.
-Be specific and helpful."""
+Be specific about what you see on the device interface."""
                 
                 # Call OpenRouter API
                 response = requests.post(
