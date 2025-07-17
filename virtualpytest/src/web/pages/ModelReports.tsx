@@ -4,6 +4,7 @@ import {
   Error as FailIcon,
   PlayArrow as ActionIcon,
   Visibility as VerificationIcon,
+  FilterList as FilterIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -20,11 +21,15 @@ import {
   Chip,
   CircularProgress,
   Alert,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
 import { useExecutionResults, ExecutionResult } from '../hooks/pages/useExecutionResults';
 import { useUserInterface } from '../hooks/pages/useUserInterface';
+
+type FilterType = 'all' | 'action' | 'verification';
 
 const ModelReports: React.FC = () => {
   const { getAllExecutionResults } = useExecutionResults();
@@ -33,6 +38,7 @@ const ModelReports: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [treeToInterfaceMap, setTreeToInterfaceMap] = useState<Record<string, string>>({});
+  const [filter, setFilter] = useState<FilterType>('all');
 
   // Load execution results and user interfaces on component mount
   useEffect(() => {
@@ -68,16 +74,22 @@ const ModelReports: React.FC = () => {
     loadData();
   }, [getAllExecutionResults, getAllUserInterfaces]);
 
-  // Calculate stats
-  const totalExecutions = executionResults.length;
-  const passedExecutions = executionResults.filter((result) => result.success).length;
+  // Filter execution results based on selected filter
+  const filteredResults = executionResults.filter((result) => {
+    if (filter === 'all') return true;
+    return result.execution_type === filter;
+  });
+
+  // Calculate stats based on filtered results
+  const totalExecutions = filteredResults.length;
+  const passedExecutions = filteredResults.filter((result) => result.success).length;
   const successRate =
     totalExecutions > 0 ? ((passedExecutions / totalExecutions) * 100).toFixed(1) : 'N/A';
 
   // Calculate this week's executions (last 7 days)
   const oneWeekAgo = new Date();
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  const thisWeekExecutions = executionResults.filter(
+  const thisWeekExecutions = filteredResults.filter(
     (result) => new Date(result.executed_at) >= oneWeekAgo,
   ).length;
 
@@ -85,16 +97,23 @@ const ModelReports: React.FC = () => {
   const avgDuration =
     totalExecutions > 0
       ? formatDuration(
-          executionResults.reduce((sum, result) => sum + result.execution_time_ms, 0) /
+          filteredResults.reduce((sum, result) => sum + result.execution_time_ms, 0) /
             totalExecutions,
         )
       : 'N/A';
 
-  // Separate by execution type
+  // Separate by execution type (for all data stats)
   const actionExecutions = executionResults.filter((result) => result.execution_type === 'action');
   const verificationExecutions = executionResults.filter(
     (result) => result.execution_type === 'verification',
   );
+
+  // Handle filter change
+  const handleFilterChange = (_event: React.MouseEvent<HTMLElement>, newFilter: FilterType) => {
+    if (newFilter !== null) {
+      setFilter(newFilter);
+    }
+  };
 
   // Format duration helper
   function formatDuration(ms: number): string {
@@ -122,7 +141,9 @@ const ModelReports: React.FC = () => {
     <TableRow>
       <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
         <Typography variant="body2" color="textSecondary">
-          No execution results available yet
+          {filter === 'all'
+            ? 'No execution results available yet'
+            : `No ${filter === 'action' ? 'node' : 'edge'} execution results available yet`}
         </Typography>
       </TableCell>
     </TableRow>
@@ -150,11 +171,20 @@ const ModelReports: React.FC = () => {
               <Box display="flex" alignItems="center" gap={1}>
                 <ModelIcon color="primary" />
                 <Typography variant="h6">Execution Stats</Typography>
+                {filter !== 'all' && (
+                  <Chip
+                    label={`Filtered: ${filter === 'action' ? 'Nodes' : 'Edges'}`}
+                    size="small"
+                    variant="outlined"
+                  />
+                )}
               </Box>
 
               <Box display="flex" alignItems="center" gap={4}>
                 <Box display="flex" alignItems="center" gap={1}>
-                  <Typography variant="body2">Total Executions</Typography>
+                  <Typography variant="body2">
+                    {filter === 'all' ? 'Total Executions' : 'Filtered Executions'}
+                  </Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {totalExecutions}
                   </Typography>
@@ -177,18 +207,22 @@ const ModelReports: React.FC = () => {
                     {avgDuration}
                   </Typography>
                 </Box>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Typography variant="body2">Actions</Typography>
-                  <Typography variant="body2" fontWeight="bold">
-                    {actionExecutions.length}
-                  </Typography>
-                </Box>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Typography variant="body2">Verifications</Typography>
-                  <Typography variant="body2" fontWeight="bold">
-                    {verificationExecutions.length}
-                  </Typography>
-                </Box>
+                {filter === 'all' && (
+                  <>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="body2">Actions</Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        {actionExecutions.length}
+                      </Typography>
+                    </Box>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="body2">Verifications</Typography>
+                      <Typography variant="body2" fontWeight="bold">
+                        {verificationExecutions.length}
+                      </Typography>
+                    </Box>
+                  </>
+                )}
               </Box>
             </Box>
           </CardContent>
@@ -198,9 +232,33 @@ const ModelReports: React.FC = () => {
       {/* Recent Execution Results */}
       <Card>
         <CardContent>
-          <Typography variant="h6" sx={{ mb: 2 }}>
-            Recent Execution Results
-          </Typography>
+          <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+            <Typography variant="h6">Recent Execution Results</Typography>
+
+            {/* Filter Toggle Buttons */}
+            <Box display="flex" alignItems="center" gap={1}>
+              <FilterIcon fontSize="small" color="action" />
+              <ToggleButtonGroup
+                value={filter}
+                exclusive
+                onChange={handleFilterChange}
+                size="small"
+                aria-label="execution type filter"
+              >
+                <ToggleButton value="all" aria-label="all executions">
+                  All
+                </ToggleButton>
+                <ToggleButton value="action" aria-label="node executions">
+                  <ActionIcon fontSize="small" sx={{ mr: 0.5 }} />
+                  Nodes
+                </ToggleButton>
+                <ToggleButton value="verification" aria-label="edge executions">
+                  <VerificationIcon fontSize="small" sx={{ mr: 0.5 }} />
+                  Edges
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+          </Box>
 
           <TableContainer component={Paper} variant="outlined">
             <Table size="small" sx={{ '& .MuiTableRow-root': { height: '40px' } }}>
@@ -233,10 +291,10 @@ const ModelReports: React.FC = () => {
                       <LoadingState />
                     </TableCell>
                   </TableRow>
-                ) : executionResults.length === 0 ? (
+                ) : filteredResults.length === 0 ? (
                   <EmptyState />
                 ) : (
-                  executionResults.map((result) => (
+                  filteredResults.map((result) => (
                     <TableRow
                       key={result.id}
                       sx={{
