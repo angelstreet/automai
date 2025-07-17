@@ -3,6 +3,7 @@ Report Generation Utilities
 
 This module provides functions for generating HTML validation reports with embedded screenshots.
 Reports include execution metrics, step-by-step results, and error analysis.
+Enhanced for manager-friendly compact view with collapsible sections.
 """
 
 import os
@@ -33,27 +34,35 @@ def generate_validation_report(report_data: Dict) -> str:
         screenshots = report_data.get('screenshots', {})
         error_msg = report_data.get('error_msg', '')
         timestamp = report_data.get('timestamp', datetime.now().strftime('%Y%m%d%H%M%S'))
+        start_time = report_data.get('start_time', timestamp)
+        end_time = report_data.get('end_time', timestamp)
+        
+        # Calculate stats
+        total_steps = len(step_results)
+        passed_steps = sum(1 for step in step_results if step.get('success', False))
+        failed_steps = total_steps - passed_steps
         
         # Generate HTML content
-        html_template = create_html_template()
+        html_template = create_compact_html_template()
         
         # Replace placeholders with actual content
         html_content = html_template.format(
             script_name=script_name,
-            timestamp=format_timestamp(timestamp),
+            start_time=format_timestamp(start_time),
+            end_time=format_timestamp(end_time),
             success_status="PASS" if success else "FAIL",
             success_class="success" if success else "failure",
             execution_time=format_execution_time(execution_time),
             device_name=device_info.get('device_name', 'Unknown Device'),
             device_model=device_info.get('device_model', 'Unknown Model'),
             host_name=host_info.get('host_name', 'Unknown Host'),
-            total_steps=len(step_results),
-            passed_steps=sum(1 for step in step_results if step.get('success', False)),
-            failed_steps=sum(1 for step in step_results if not step.get('success', True)),
-            step_results_html=create_step_results_section(step_results, screenshots),
+            total_steps=total_steps,
+            passed_steps=passed_steps,
+            failed_steps=failed_steps,
+            step_results_html=create_compact_step_results_section(step_results, screenshots),
             error_section=create_error_section(error_msg) if error_msg else '',
-            initial_screenshot=get_screenshot_html(screenshots.get('initial')),
-            final_screenshot=get_screenshot_html(screenshots.get('final'))
+            initial_screenshot=get_thumbnail_screenshot_html(screenshots.get('initial'), 'Initial State'),
+            final_screenshot=get_thumbnail_screenshot_html(screenshots.get('final'), 'Final State')
         )
         
         print(f"[@utils:report_utils:generate_validation_report] Report generated successfully")
@@ -63,8 +72,8 @@ def generate_validation_report(report_data: Dict) -> str:
         print(f"[@utils:report_utils:generate_validation_report] Error: {str(e)}")
         return create_error_report(str(e))
 
-def create_html_template() -> str:
-    """Create the base HTML template with embedded CSS."""
+def create_compact_html_template() -> str:
+    """Create the compact HTML template with embedded CSS."""
     return """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -80,68 +89,73 @@ def create_html_template() -> str:
         
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
+            line-height: 1.4;
             color: #333;
-            background: #f5f5f5;
-            padding: 20px;
+            background: #f8f9fa;
+            padding: 10px;
+            font-size: 14px;
         }}
         
         .container {{
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             overflow: hidden;
         }}
         
         .header {{
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
             color: white;
-            padding: 30px;
-            text-align: center;
+            padding: 8px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 40px;
         }}
         
         .header h1 {{
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 1.4em;
+            font-weight: 600;
         }}
         
-        .header .timestamp {{
+        .header .time-info {{
+            font-size: 0.85em;
             opacity: 0.9;
-            font-size: 1.1em;
         }}
         
         .summary {{
-            padding: 30px;
+            padding: 12px 20px;
             background: #f8f9fa;
             border-bottom: 1px solid #dee2e6;
         }}
         
         .summary-grid {{
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+            align-items: center;
         }}
         
-        .summary-card {{
+        .summary-item {{
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
             background: white;
-            padding: 20px;
-            border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            text-align: center;
-        }}
-        
-        .summary-card h3 {{
-            color: #6c757d;
+            border-radius: 4px;
+            border: 1px solid #e9ecef;
             font-size: 0.9em;
-            text-transform: uppercase;
-            margin-bottom: 10px;
         }}
         
-        .summary-card .value {{
-            font-size: 1.8em;
-            font-weight: bold;
+        .summary-item .label {{
+            color: #6c757d;
+            font-weight: 500;
+        }}
+        
+        .summary-item .value {{
+            font-weight: 600;
         }}
         
         .success {{
@@ -157,120 +171,221 @@ def create_html_template() -> str:
         }}
         
         .content {{
-            padding: 30px;
+            padding: 15px 20px;
         }}
         
         .section {{
-            margin-bottom: 40px;
-        }}
-        
-        .section h2 {{
-            color: #495057;
             margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #e9ecef;
         }}
         
-        .step {{
-            background: #f8f9fa;
-            border-radius: 6px;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-left: 4px solid #dee2e6;
-        }}
-        
-        .step.success {{
-            border-left-color: #28a745;
-        }}
-        
-        .step.failure {{
-            border-left-color: #dc3545;
-        }}
-        
-        .step-header {{
+        .section-header {{
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
         }}
         
-        .step-title {{
-            font-weight: bold;
+        .section-header h2 {{
+            color: #495057;
             font-size: 1.1em;
+            font-weight: 600;
+        }}
+        
+        .toggle-btn {{
+            background: none;
+            border: none;
+            font-size: 1.2em;
+            cursor: pointer;
+            color: #6c757d;
+            transition: transform 0.2s;
+        }}
+        
+        .toggle-btn.expanded {{
+            transform: rotate(90deg);
+        }}
+        
+        .collapsible-content {{
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }}
+        
+        .collapsible-content.expanded {{
+            max-height: 2000px;
+        }}
+        
+        .step-list {{
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+        }}
+        
+        .step-item {{
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid #f1f3f4;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }}
+        
+        .step-item:last-child {{
+            border-bottom: none;
+        }}
+        
+        .step-item:hover {{
+            background: #f8f9fa;
+        }}
+        
+        .step-item.success {{
+            border-left: 3px solid #28a745;
+        }}
+        
+        .step-item.failure {{
+            border-left: 3px solid #dc3545;
+        }}
+        
+        .step-number {{
+            width: 30px;
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 0.9em;
         }}
         
         .step-status {{
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: bold;
+            width: 50px;
+            text-align: center;
+        }}
+        
+        .step-status-badge {{
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
             text-transform: uppercase;
         }}
         
-        .step-status.success {{
+        .step-status-badge.success {{
             background: #d4edda;
             color: #155724;
         }}
         
-        .step-status.failure {{
+        .step-status-badge.failure {{
             background: #f8d7da;
             color: #721c24;
         }}
         
-        .screenshot {{
-            max-width: 100%;
-            height: auto;
-            border-radius: 4px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            margin-top: 15px;
-            cursor: pointer;
-            transition: transform 0.2s;
+        .step-message {{
+            flex: 1;
+            padding-left: 12px;
+            font-size: 0.9em;
         }}
         
-        .screenshot:hover {{
-            transform: scale(1.02);
+        .step-details {{
+            display: none;
+            padding: 12px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }}
+        
+        .step-details.expanded {{
+            display: block;
+        }}
+        
+        .screenshot-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 10px;
         }}
         
         .screenshot-container {{
             text-align: center;
-            margin: 20px 0;
         }}
         
         .screenshot-label {{
             display: block;
             color: #6c757d;
-            font-size: 0.9em;
-            margin-bottom: 10px;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }}
+        
+        .screenshot-thumbnail {{
+            width: 100%;
+            max-width: 200px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 2px solid #dee2e6;
+            cursor: pointer;
+            transition: all 0.2s;
+        }}
+        
+        .screenshot-thumbnail:hover {{
+            border-color: #4a90e2;
+            transform: scale(1.02);
+        }}
+        
+        .screenshot-modal {{
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+        }}
+        
+        .screenshot-modal.active {{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }}
+        
+        .screenshot-modal img {{
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 4px;
+        }}
+        
+        .screenshot-modal .close {{
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
         }}
         
         .error-section {{
             background: #f8d7da;
             border: 1px solid #f5c6cb;
-            border-radius: 6px;
-            padding: 20px;
-            margin-top: 20px;
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 15px;
         }}
         
         .error-section h3 {{
             color: #721c24;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            font-size: 1em;
         }}
         
         .error-message {{
             font-family: 'Courier New', monospace;
             background: #fff;
-            padding: 15px;
+            padding: 10px;
             border-radius: 4px;
             border: 1px solid #dee2e6;
             white-space: pre-wrap;
             overflow-x: auto;
-        }}
-        
-        .screenshots-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
+            font-size: 0.85em;
         }}
         
         @media (max-width: 768px) {{
@@ -278,80 +393,145 @@ def create_html_template() -> str:
                 grid-template-columns: 1fr;
             }}
             
-            .screenshots-grid {{
+            .screenshot-grid {{
                 grid-template-columns: 1fr;
             }}
             
-            .step-header {{
+            .header {{
                 flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
+                gap: 5px;
+                text-align: center;
             }}
         }}
     </style>
+    <script>
+        function toggleSection(sectionId) {{
+            const content = document.getElementById(sectionId);
+            const button = document.querySelector(`[onclick="toggleSection('${{sectionId}}')"]`);
+            
+            if (content.classList.contains('expanded')) {{
+                content.classList.remove('expanded');
+                button.classList.remove('expanded');
+            }} else {{
+                content.classList.add('expanded');
+                button.classList.add('expanded');
+            }}
+        }}
+        
+        function toggleStep(stepId) {{
+            const details = document.getElementById(stepId);
+            if (details.classList.contains('expanded')) {{
+                details.classList.remove('expanded');
+            }} else {{
+                details.classList.add('expanded');
+            }}
+        }}
+        
+        function openScreenshot(src) {{
+            const modal = document.getElementById('screenshot-modal');
+            const img = document.getElementById('modal-img');
+            img.src = src;
+            modal.classList.add('active');
+        }}
+        
+        function closeScreenshot() {{
+            const modal = document.getElementById('screenshot-modal');
+            modal.classList.remove('active');
+        }}
+        
+        // Close modal when clicking outside the image
+        document.addEventListener('DOMContentLoaded', function() {{
+            const modal = document.getElementById('screenshot-modal');
+            if (modal) {{
+                modal.addEventListener('click', function(e) {{
+                    if (e.target === modal) {{
+                        closeScreenshot();
+                    }}
+                }});
+            }}
+        }});
+    </script>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Validation Report</h1>
-            <div class="timestamp">{timestamp}</div>
+            <h1>{script_name}</h1>
+            <div class="time-info">
+                <div>Start: {start_time}</div>
+                <div>End: {end_time}</div>
+            </div>
         </div>
         
         <div class="summary">
             <div class="summary-grid">
-                <div class="summary-card">
-                    <h3>Overall Status</h3>
-                    <div class="value {success_class}">{success_status}</div>
+                <div class="summary-item">
+                    <span class="label">Status:</span>
+                    <span class="value {success_class}">{success_status}</span>
                 </div>
-                <div class="summary-card">
-                    <h3>Execution Time</h3>
-                    <div class="value neutral">{execution_time}</div>
+                <div class="summary-item">
+                    <span class="label">Duration:</span>
+                    <span class="value neutral">{execution_time}</span>
                 </div>
-                <div class="summary-card">
-                    <h3>Device</h3>
-                    <div class="value neutral">{device_name}</div>
+                <div class="summary-item">
+                    <span class="label">Device:</span>
+                    <span class="value neutral">{device_name}</span>
                 </div>
-                <div class="summary-card">
-                    <h3>Host</h3>
-                    <div class="value neutral">{host_name}</div>
+                <div class="summary-item">
+                    <span class="label">Host:</span>
+                    <span class="value neutral">{host_name}</span>
                 </div>
-                <div class="summary-card">
-                    <h3>Steps Passed</h3>
-                    <div class="value success">{passed_steps}/{total_steps}</div>
+                <div class="summary-item">
+                    <span class="label">Steps:</span>
+                    <span class="value neutral">{passed_steps}/{total_steps}</span>
                 </div>
-                <div class="summary-card">
-                    <h3>Steps Failed</h3>
-                    <div class="value failure">{failed_steps}</div>
+                <div class="summary-item">
+                    <span class="label">Failed:</span>
+                    <span class="value failure">{failed_steps}</span>
                 </div>
             </div>
         </div>
         
         <div class="content">
             <div class="section">
-                <h2>Initial & Final State</h2>
-                <div class="screenshots-grid">
-                    {initial_screenshot}
-                    {final_screenshot}
+                <div class="section-header" onclick="toggleSection('screenshots-content')">
+                    <h2>Initial & Final State</h2>
+                    <button class="toggle-btn">▶</button>
+                </div>
+                <div id="screenshots-content" class="collapsible-content">
+                    <div class="screenshot-grid">
+                        {initial_screenshot}
+                        {final_screenshot}
+                    </div>
                 </div>
             </div>
             
             <div class="section">
-                <h2>Step-by-Step Results</h2>
-                {step_results_html}
+                <div class="section-header" onclick="toggleSection('steps-content')">
+                    <h2>Test Steps ({passed_steps}/{total_steps} passed)</h2>
+                    <button class="toggle-btn">▶</button>
+                </div>
+                <div id="steps-content" class="collapsible-content">
+                    {step_results_html}
+                </div>
             </div>
             
             {error_section}
         </div>
     </div>
+    
+    <div id="screenshot-modal" class="screenshot-modal">
+        <span class="close" onclick="closeScreenshot()">&times;</span>
+        <img id="modal-img" src="" alt="Screenshot">
+    </div>
 </body>
 </html>"""
 
-def create_step_results_section(step_results: List[Dict], screenshots: Dict) -> str:
-    """Create HTML for step-by-step results."""
+def create_compact_step_results_section(step_results: List[Dict], screenshots: Dict) -> str:
+    """Create HTML for compact step-by-step results."""
     if not step_results:
         return '<p>No steps executed</p>'
     
-    steps_html = []
+    steps_html = ['<div class="step-list">']
     step_screenshots = screenshots.get('steps', [])
     
     for i, step in enumerate(step_results):
@@ -362,22 +542,25 @@ def create_step_results_section(step_results: List[Dict], screenshots: Dict) -> 
         # Get corresponding screenshot
         screenshot_html = ''
         if i < len(step_screenshots) and step_screenshots[i]:
-            screenshot_html = get_screenshot_html(step_screenshots[i], f"Step {step_number} Result")
+            screenshot_html = get_thumbnail_screenshot_html(step_screenshots[i], f"Step {step_number}")
         
         step_html = f"""
-        <div class="step {'success' if success else 'failure'}">
-            <div class="step-header">
-                <div class="step-title">Step {step_number}</div>
-                <div class="step-status {'success' if success else 'failure'}">
+        <div class="step-item {'success' if success else 'failure'}" onclick="toggleStep('step-details-{i}')">
+            <div class="step-number">{step_number}</div>
+            <div class="step-status">
+                <span class="step-status-badge {'success' if success else 'failure'}">
                     {'PASS' if success else 'FAIL'}
-                </div>
+                </span>
             </div>
             <div class="step-message">{message}</div>
+        </div>
+        <div id="step-details-{i}" class="step-details">
             {screenshot_html}
         </div>
         """
         steps_html.append(step_html)
     
+    steps_html.append('</div>')
     return ''.join(steps_html)
 
 def create_error_section(error_msg: str) -> str:
@@ -391,8 +574,8 @@ def create_error_section(error_msg: str) -> str:
     </div>
     """
 
-def get_screenshot_html(screenshot_path: Optional[str], label: str = None) -> str:
-    """Get HTML for displaying a screenshot."""
+def get_thumbnail_screenshot_html(screenshot_path: Optional[str], label: str = None) -> str:
+    """Get HTML for displaying a thumbnail screenshot that expands on click."""
     if not screenshot_path or not os.path.exists(screenshot_path):
         return ''
     
@@ -401,24 +584,28 @@ def get_screenshot_html(screenshot_path: Optional[str], label: str = None) -> st
         with open(screenshot_path, 'rb') as img_file:
             img_data = base64.b64encode(img_file.read()).decode('utf-8')
         
-        label_html = f'<span class="screenshot-label">{label}</span>' if label else ''
+        data_url = f"data:image/jpeg;base64,{img_data}"
         
         return f"""
         <div class="screenshot-container">
-            {label_html}
-            <img src="data:image/jpeg;base64,{img_data}" alt="{label or 'Screenshot'}" class="screenshot">
+            <span class="screenshot-label">{label or 'Screenshot'}</span>
+            <img src="{data_url}" alt="{label or 'Screenshot'}" class="screenshot-thumbnail" onclick="openScreenshot('{data_url}')">
         </div>
         """
     except Exception as e:
-        print(f"[@utils:report_utils:get_screenshot_html] Error embedding screenshot {screenshot_path}: {e}")
+        print(f"[@utils:report_utils:get_thumbnail_screenshot_html] Error embedding screenshot {screenshot_path}: {e}")
         return ''
+
+def get_screenshot_html(screenshot_path: Optional[str], label: str = None) -> str:
+    """Legacy function - redirects to thumbnail version."""
+    return get_thumbnail_screenshot_html(screenshot_path, label)
 
 def format_timestamp(timestamp: str) -> str:
     """Format timestamp for display."""
     try:
         # Convert YYYYMMDDHHMMSS to readable format
         dt = datetime.strptime(timestamp, '%Y%m%d%H%M%S')
-        return dt.strftime('%B %d, %Y at %I:%M:%S %p')
+        return dt.strftime('%H:%M:%S')
     except:
         return timestamp
 
