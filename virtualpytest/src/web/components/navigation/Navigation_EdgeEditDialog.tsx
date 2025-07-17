@@ -114,7 +114,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
   };
 
   const handleRunActions = () => {
-    edgeEdit.executeLocalActions(edgeForm);
+    edgeEdit.executeLocalActions();
   };
 
   if (!edgeForm) return null;
@@ -220,9 +220,10 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
                 onClick={() => {
                   const newAction = {
                     id: `action_${Date.now()}`,
+                    label: '',
                     command: '',
                     params: {},
-                    description: '',
+                    waitTime: 500,
                   };
                   edgeEdit.handleActionsChange([...edgeEdit.localActions, newAction]);
                 }}
@@ -276,7 +277,7 @@ export const EdgeEditDialog: React.FC<EdgeEditDialogProps> = ({
                     id: `retry_action_${Date.now()}`,
                     command: '',
                     params: {},
-                    description: '',
+                    waitTime: 500,
                   };
                   edgeEdit.handleRetryActionsChange([...edgeEdit.localRetryActions, newAction]);
                 }}

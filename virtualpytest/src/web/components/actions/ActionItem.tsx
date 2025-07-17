@@ -21,7 +21,7 @@ interface ActionItemProps {
   action: EdgeAction;
   index: number;
   availableActions: Actions;
-  onActionSelect: (index: number, command: string) => void;
+  onActionSelect: (index: number, actionId: string) => void;
   onUpdateAction: (index: number, updates: Partial<EdgeAction>) => void;
   onRemoveAction: (index: number) => void;
   onMoveUp: (index: number) => void;
@@ -313,7 +313,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
         <FormControl size="small" sx={{ flex: 1, minWidth: 200, maxWidth: 300 }}>
           <InputLabel>Action</InputLabel>
           <Select
-            value={action.command}
+            value={action.id || ''}
             onChange={(e) => onActionSelect(index, e.target.value)}
             label="Action"
             size="small"
@@ -330,7 +330,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
               // Find the selected action and return its label
               const selectedAction = Object.values(availableActions)
                 .flat()
-                .find((act) => act.command === selected);
+                .find((act) => act.id === selected);
               if (selectedAction) {
                 return selectedAction.label;
               }
@@ -355,10 +355,10 @@ export const ActionItem: React.FC<ActionItemProps> = ({
                 >
                   {category.replace(/_/g, ' ').toUpperCase()}
                 </MenuItem>,
-                ...actions.map((actionDef, actionIndex) => (
+                ...actions.map((actionDef) => (
                   <MenuItem
-                    key={`${category}-${actionDef.command}-${actionIndex}`}
-                    value={actionDef.command}
+                    key={actionDef.id}
+                    value={actionDef.id}
                     sx={{ pl: 3, fontSize: '0.7rem', minHeight: '20px' }}
                   >
                     {actionDef.label}
@@ -370,22 +370,22 @@ export const ActionItem: React.FC<ActionItemProps> = ({
         </FormControl>
 
         {/* Move buttons */}
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
           <IconButton
             size="small"
             onClick={() => onMoveUp(index)}
             disabled={!canMoveUp}
-            sx={{ p: 0.25, minWidth: 0, width: 20, height: 16 }}
+            sx={{ p: 0.5, minWidth: 24, width: 24, height: 20 }}
           >
-            <KeyboardArrowUpIcon sx={{ fontSize: '0.8rem' }} />
+            <KeyboardArrowUpIcon sx={{ fontSize: '1rem' }} />
           </IconButton>
           <IconButton
             size="small"
             onClick={() => onMoveDown(index)}
             disabled={!canMoveDown}
-            sx={{ p: 0.25, minWidth: 0, width: 20, height: 16 }}
+            sx={{ p: 0.5, minWidth: 24, width: 24, height: 20 }}
           >
-            <KeyboardArrowDownIcon sx={{ fontSize: '0.8rem' }} />
+            <KeyboardArrowDownIcon sx={{ fontSize: '1rem' }} />
           </IconButton>
         </Box>
 
@@ -393,9 +393,9 @@ export const ActionItem: React.FC<ActionItemProps> = ({
         <IconButton
           size="small"
           onClick={() => onRemoveAction(index)}
-          sx={{ p: 0.25, minWidth: 0, width: 20, height: 20 }}
+          sx={{ p: 0.5, minWidth: 24, width: 24, height: 24, ml: 0.5 }}
         >
-          <CloseIcon sx={{ fontSize: '0.8rem' }} />
+          <CloseIcon sx={{ fontSize: '1rem' }} />
         </IconButton>
       </Box>
 

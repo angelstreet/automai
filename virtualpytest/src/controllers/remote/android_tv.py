@@ -519,24 +519,6 @@ class AndroidTVRemoteController(RemoteControllerInterface):
                     'requiresInput': False
                 },
                 {
-                    'id': 'press_key_next',
-                    'label': 'Next Track',
-                    'command': 'press_key',
-                    'action_type': 'remote',
-                    'params': {'key': 'MEDIA_NEXT'},
-                    'description': 'Skip to next track/chapter',
-                    'requiresInput': False
-                },
-                {
-                    'id': 'press_key_previous',
-                    'label': 'Previous Track',
-                    'command': 'press_key',
-                    'action_type': 'remote',
-                    'params': {'key': 'MEDIA_PREVIOUS'},
-                    'description': 'Go to previous track/chapter',
-                    'requiresInput': False
-                },
-                {
                     'id': 'press_key_fast_forward',
                     'label': 'Fast Forward',
                     'command': 'press_key',

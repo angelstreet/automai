@@ -4,6 +4,7 @@ import { useNavigation } from '../../contexts/navigation/NavigationContext';
 import { Host } from '../../types/common/Host_Types';
 import { EdgeForm, EdgeAction, UINavigationEdge } from '../../types/pages/Navigation_Types';
 import { useAction } from '../actions';
+
 import { useEdge } from './useEdge';
 
 export interface UseEdgeEditProps {
@@ -25,8 +26,7 @@ export const useEdgeEdit = ({
 }: UseEdgeEditProps) => {
   // Action hook for execution
   const actionHook = useAction({
-    selectedHost,
-    isControlActive,
+    selectedHost: selectedHost || null,
   });
 
   // Navigation context for current position updates
@@ -69,7 +69,7 @@ export const useEdgeEdit = ({
         }
       }
     }
-  }, [isOpen, edgeForm?.actions, edgeForm?.retryActions, selectedEdge, edgeHook, setEdgeForm]);
+  }, [isOpen, edgeForm, selectedEdge, edgeHook, setEdgeForm]);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -136,16 +136,9 @@ export const useEdgeEdit = ({
     }
   }, []);
 
-  // Convert EdgeAction to ControllerAction format
+  // Convert EdgeAction for execution (EdgeAction already has the right format)
   const convertToControllerAction = useCallback((action: EdgeAction) => {
-    return {
-      command: action.command,
-      params: {
-        ...action.params,
-        wait_time: action.params?.wait_time || 500, // Use wait_time in ms
-      },
-      description: action.description,
-    };
+    return action;
   }, []);
 
   // Handle actions change
@@ -177,47 +170,44 @@ export const useEdgeEdit = ({
   );
 
   // Execute local actions
-  const executeLocalActions = useCallback(
-    async (form: EdgeForm) => {
-      if (!localActions || localActions.length === 0) return;
+  const executeLocalActions = useCallback(async () => {
+    if (!localActions || localActions.length === 0) return;
 
-      if (actionHook.loading) {
-        return;
+    if (actionHook.loading) {
+      return;
+    }
+
+    setActionResult(null);
+
+    try {
+      const result = await actionHook.executeActions(
+        localActions.map(convertToControllerAction),
+        localRetryActions.map(convertToControllerAction),
+      );
+
+      const formattedResult = actionHook.formatExecutionResults(result);
+      setActionResult(formattedResult);
+
+      // Update current position to the target node if execution was successful
+      // This follows the same pattern as executeNavigation in useNode.ts
+      if (result && result.success !== false && selectedEdge?.target) {
+        updateCurrentPosition(selectedEdge.target, null);
       }
 
-      setActionResult(null);
-
-      try {
-        const result = await actionHook.executeActions(
-          localActions.map(convertToControllerAction),
-          localRetryActions.map(convertToControllerAction),
-        );
-
-        const formattedResult = actionHook.formatExecutionResults(result);
-        setActionResult(formattedResult);
-
-        // Update current position to the target node if execution was successful
-        // This follows the same pattern as executeNavigation in useNode.ts
-        if (result && result.success !== false && selectedEdge?.target) {
-          updateCurrentPosition(selectedEdge.target, null);
-        }
-
-        return result;
-      } catch (err: any) {
-        const errorResult = `❌ Network error: ${err.message}`;
-        setActionResult(errorResult);
-        throw err;
-      }
-    },
-    [
-      actionHook,
-      localActions,
-      localRetryActions,
-      convertToControllerAction,
-      updateCurrentPosition,
-      selectedEdge,
-    ],
-  );
+      return result;
+    } catch (err: any) {
+      const errorResult = `❌ Network error: ${err.message}`;
+      setActionResult(errorResult);
+      throw err;
+    }
+  }, [
+    actionHook,
+    localActions,
+    localRetryActions,
+    convertToControllerAction,
+    updateCurrentPosition,
+    selectedEdge,
+  ]);
 
   // Validate form
   const isFormValid = useCallback((): boolean => {
@@ -226,28 +216,27 @@ export const useEdgeEdit = ({
         return false;
       }
 
-      // Check required parameters based on command
-      if (
-        action.command === 'input_text' &&
-        (!action.params?.text || action.params.text.trim() === '')
-      ) {
+      // Check required parameters based on command using type assertion
+      const params = action.params as any;
+
+      if (action.command === 'input_text' && (!params?.text || params.text.trim() === '')) {
         return false;
       }
       if (
         action.command === 'click_element' &&
-        (!action.params?.element_id || action.params.element_id.trim() === '')
+        (!params?.element_id || params.element_id.trim() === '')
       ) {
         return false;
       }
       if (
         (action.command === 'launch_app' || action.command === 'close_app') &&
-        (!action.params?.package || action.params.package.trim() === '')
+        (!params?.package || params.package.trim() === '')
       ) {
         return false;
       }
       if (
         action.command === 'tap_coordinates' &&
-        (action.params?.x === undefined || action.params?.y === undefined)
+        (params?.x === undefined || params?.y === undefined)
       ) {
         return false;
       }

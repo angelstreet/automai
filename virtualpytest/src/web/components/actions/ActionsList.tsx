@@ -15,15 +15,14 @@ export const ActionsList: React.FC<ActionsListProps> = ({ actions, onActionsUpda
   const { getAvailableActions } = useDeviceData();
   const availableActions = getAvailableActions();
 
-  const handleActionSelect = (index: number, command: string) => {
-    // Find the selected action from available actions
+  const handleActionSelect = (index: number, actionId: string) => {
+    // Find the selected action from available actions by ID
     let selectedAction: any = undefined;
 
-    // Search through all controller types to find the action
     for (const actions of Object.values(availableActions)) {
       if (!Array.isArray(actions)) continue;
 
-      const action = actions.find((a) => a.command === command);
+      const action = actions.find((a) => a.id === actionId);
       if (action) {
         selectedAction = action;
         break;
@@ -34,8 +33,7 @@ export const ActionsList: React.FC<ActionsListProps> = ({ actions, onActionsUpda
       if (i === index) {
         return {
           ...action,
-          command,
-          // Use the action definition's params
+          command: selectedAction.command,
           params: { ...selectedAction.params },
         };
       }
