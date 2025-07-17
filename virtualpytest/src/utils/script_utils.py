@@ -458,11 +458,12 @@ def execute_navigation_with_verifications(host, device, transition: Dict[str, An
         print(f"[@script_utils:execute_navigation_with_verifications] Navigation actions completed successfully")
         
         # 2. Execute verifications (following NavigationExecutor pattern)
-        verifications = transition.get('verifications', [])
+        to_node_id = transition.get('to_node_id')
+        verifications = _get_node_verifications(tree_id, to_node_id, team_id) if tree_id and to_node_id else []
         verification_results = []
         
         if verifications:
-            print(f"[@script_utils:execute_navigation_with_verifications] Executing {len(verifications)} verifications")
+            print(f"[@script_utils:execute_navigation_with_verifications] Executing {len(verifications)} target node verifications")
             
             # Execute each verification
             for i, verification in enumerate(verifications):
@@ -492,9 +493,9 @@ def execute_navigation_with_verifications(host, device, transition: Dict[str, An
                 
                 print(f"✅ [@script_utils:execute_navigation_with_verifications] Verification {i+1} passed: {verify_result.get('message', 'Success')}")
             
-            print(f"[@script_utils:execute_navigation_with_verifications] All {len(verifications)} verifications completed successfully")
+            print(f"[@script_utils:execute_navigation_with_verifications] All {len(verifications)} target node verifications completed successfully")
         else:
-            print(f"[@script_utils:execute_navigation_with_verifications] No verifications defined for this transition")
+            print(f"[@script_utils:execute_navigation_with_verifications] No verifications defined for target node")
         
         # 3. Calculate execution time and return success
         execution_time = time.time() - start_time
@@ -600,3 +601,32 @@ def capture_validation_screenshot(host: Dict[str, Any], device: Any, step_name: 
     except Exception as e:
         print(f"❌ [{script_name}] Screenshot capture error: {str(e)}")
         return "" 
+
+def _get_node_verifications(tree_id: str, node_id: str, team_id: str) -> List[Dict[str, Any]]:
+    """Get verifications from target node (like NavigationExecutor does)"""
+    try:
+        from src.web.cache.navigation_cache import get_cached_graph
+        from src.web.cache.navigation_graph import get_node_info
+        
+        G = get_cached_graph(tree_id, team_id)
+        if not G:
+            print(f"[@script_utils:_get_node_verifications] No cached graph found for tree {tree_id}")
+            return []
+        
+        node_info = get_node_info(G, node_id)
+        if not node_info:
+            print(f"[@script_utils:_get_node_verifications] No node info found for node {node_id}")
+            return []
+        
+        # Get verifications from node data (same as NavigationExecutor)
+        verifications = []
+        if 'verifications' in node_info:
+            verifications = node_info.get('verifications', [])
+        elif 'data' in node_info and isinstance(node_info['data'], dict):
+            verifications = node_info['data'].get('verifications', [])
+        
+        print(f"[@script_utils:_get_node_verifications] Found {len(verifications)} verifications for node {node_id}")
+        return verifications
+    except Exception as e:
+        print(f"[@script_utils:_get_node_verifications] Error getting node verifications: {str(e)}")
+        return [] 
