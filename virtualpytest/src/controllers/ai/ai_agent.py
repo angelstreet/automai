@@ -11,7 +11,6 @@ import requests
 from typing import Dict, Any, List
 from ..base_controller import BaseController
 from src.utils.script_utils import load_navigation_tree, execute_navigation_step_directly
-from src.utils.host_utils import get_host_instance
 
 
 class AIAgentController(BaseController):
@@ -27,6 +26,9 @@ class AIAgentController(BaseController):
         # Load navigation tree once
         tree_result = load_navigation_tree("horizon_android_mobile")
         self.tree = tree_result.get('tree') if tree_result.get('success') else None
+        
+        # Move import inside __init__ to avoid circular import
+        from src.utils.host_utils import get_host_instance
         
         # Setup host and device
         self.host = get_host_instance()

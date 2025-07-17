@@ -82,6 +82,9 @@ def main():
     overall_success = False
     error_message = ""
     
+    # Initialize flag before the main try block
+    updated_db = False
+
     try:
         # 1. Setup script environment (centralized)
         setup_result = setup_script_environment("validation")
@@ -321,6 +324,7 @@ def main():
             )
             
             if update_success:
+                updated_db = True  # Set flag after successful update
                 print("✅ [validation] Database updated successfully")
             else:
                 print("⚠️ [validation] Failed to update database")
@@ -356,7 +360,7 @@ def main():
             release_device_control(device_key, session_id, "validation")
         
         # Update database if we have an error and script_result_id
-        if script_result_id and error_message and not overall_success:
+        if script_result_id and error_message and not overall_success and not updated_db:  # Add condition to check flag
             print("📝 [validation] Recording error in database...")
             total_time = int((time.time() - start_time) * 1000)
             update_script_execution_result(
