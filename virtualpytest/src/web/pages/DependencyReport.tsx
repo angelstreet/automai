@@ -147,7 +147,18 @@ const DependencyReport: React.FC = () => {
 
         // Process Script → Node Dependencies
         const scriptNodeDeps: ScriptNodeDependency[] = [];
-        for (const script of scriptResults) {
+        const scriptNodeMap = new Map<
+          string,
+          {
+            script_name: string;
+            userinterface_name: string | null;
+            script_result_ids: string[];
+            nodeExecutions: any[];
+          }
+        >();
+
+        // Group by script name
+        scriptResults.forEach((script) => {
           const nodeExecutions = executionResults.filter(
             (exec) =>
               exec.script_result_id === script.id &&
@@ -155,8 +166,26 @@ const DependencyReport: React.FC = () => {
               exec.node_id,
           );
 
+          if (nodeExecutions.length > 0) {
+            if (!scriptNodeMap.has(script.script_name)) {
+              scriptNodeMap.set(script.script_name, {
+                script_name: script.script_name,
+                userinterface_name: script.userinterface_name,
+                script_result_ids: [script.id],
+                nodeExecutions: [],
+              });
+            }
+
+            const existing = scriptNodeMap.get(script.script_name)!;
+            existing.script_result_ids.push(script.id);
+            existing.nodeExecutions.push(...nodeExecutions);
+          }
+        });
+
+        // Process grouped scripts
+        for (const [_scriptName, data] of scriptNodeMap.entries()) {
           const nodeMap = new Map<string, Array<{ success: boolean }>>();
-          nodeExecutions.forEach((exec) => {
+          data.nodeExecutions.forEach((exec) => {
             if (!nodeMap.has(exec.node_id!)) {
               nodeMap.set(exec.node_id!, []);
             }
@@ -166,7 +195,7 @@ const DependencyReport: React.FC = () => {
           const nodes = Array.from(nodeMap.entries()).map(([nodeId, executions]) => {
             const successCount = executions.filter((e) => e.success).length;
             const nodeName =
-              nodeExecutions.find((e) => e.node_id === nodeId)?.element_name ||
+              data.nodeExecutions.find((e) => e.node_id === nodeId)?.element_name ||
               `Node ${nodeId.slice(0, 8)}`;
 
             return {
@@ -179,9 +208,9 @@ const DependencyReport: React.FC = () => {
 
           if (nodes.length > 0) {
             scriptNodeDeps.push({
-              script_result_id: script.id,
-              script_name: script.script_name,
-              userinterface_name: script.userinterface_name,
+              script_result_id: data.script_result_ids[0], // Use first ID for key
+              script_name: data.script_name,
+              userinterface_name: data.userinterface_name,
               nodes,
             });
           }
@@ -189,7 +218,18 @@ const DependencyReport: React.FC = () => {
 
         // Process Script → Edge Dependencies
         const scriptEdgeDeps: ScriptEdgeDependency[] = [];
-        for (const script of scriptResults) {
+        const scriptEdgeMap = new Map<
+          string,
+          {
+            script_name: string;
+            userinterface_name: string | null;
+            script_result_ids: string[];
+            edgeExecutions: any[];
+          }
+        >();
+
+        // Group by script name
+        scriptResults.forEach((script) => {
           const edgeExecutions = executionResults.filter(
             (exec) =>
               exec.script_result_id === script.id &&
@@ -197,8 +237,26 @@ const DependencyReport: React.FC = () => {
               exec.edge_id,
           );
 
+          if (edgeExecutions.length > 0) {
+            if (!scriptEdgeMap.has(script.script_name)) {
+              scriptEdgeMap.set(script.script_name, {
+                script_name: script.script_name,
+                userinterface_name: script.userinterface_name,
+                script_result_ids: [script.id],
+                edgeExecutions: [],
+              });
+            }
+
+            const existing = scriptEdgeMap.get(script.script_name)!;
+            existing.script_result_ids.push(script.id);
+            existing.edgeExecutions.push(...edgeExecutions);
+          }
+        });
+
+        // Process grouped scripts
+        for (const [_scriptName, data] of scriptEdgeMap.entries()) {
           const edgeMap = new Map<string, Array<{ success: boolean }>>();
-          edgeExecutions.forEach((exec) => {
+          data.edgeExecutions.forEach((exec) => {
             if (!edgeMap.has(exec.edge_id!)) {
               edgeMap.set(exec.edge_id!, []);
             }
@@ -208,7 +266,7 @@ const DependencyReport: React.FC = () => {
           const edges = Array.from(edgeMap.entries()).map(([edgeId, executions]) => {
             const successCount = executions.filter((e) => e.success).length;
             const edgeName =
-              edgeExecutions.find((e) => e.edge_id === edgeId)?.element_name ||
+              data.edgeExecutions.find((e) => e.edge_id === edgeId)?.element_name ||
               `Edge ${edgeId.slice(0, 8)}`;
 
             return {
@@ -221,9 +279,9 @@ const DependencyReport: React.FC = () => {
 
           if (edges.length > 0) {
             scriptEdgeDeps.push({
-              script_result_id: script.id,
-              script_name: script.script_name,
-              userinterface_name: script.userinterface_name,
+              script_result_id: data.script_result_ids[0], // Use first ID for key
+              script_name: data.script_name,
+              userinterface_name: data.userinterface_name,
               edges,
             });
           }
@@ -505,9 +563,6 @@ const DependencyReport: React.FC = () => {
         <Typography variant="h4" gutterBottom>
           Dependency Report
         </Typography>
-        <Typography variant="body1" color="textSecondary">
-          Track dependencies between scripts, nodes, and edges
-        </Typography>
       </Box>
 
       {error && (
@@ -577,7 +632,7 @@ const DependencyReport: React.FC = () => {
                           <TableRow
                             sx={{
                               '&:hover': {
-                                backgroundColor: 'transparent',
+                                backgroundColor: 'transparent !important',
                               },
                             }}
                           >
@@ -620,7 +675,7 @@ const DependencyReport: React.FC = () => {
                                           key={node.node_id}
                                           sx={{
                                             '&:hover': {
-                                              backgroundColor: 'transparent',
+                                              backgroundColor: 'transparent !important',
                                             },
                                           }}
                                         >
@@ -713,7 +768,7 @@ const DependencyReport: React.FC = () => {
                           <TableRow
                             sx={{
                               '&:hover': {
-                                backgroundColor: 'transparent',
+                                backgroundColor: 'transparent !important',
                               },
                             }}
                           >
@@ -756,7 +811,7 @@ const DependencyReport: React.FC = () => {
                                           key={edge.edge_id}
                                           sx={{
                                             '&:hover': {
-                                              backgroundColor: 'transparent',
+                                              backgroundColor: 'transparent !important',
                                             },
                                           }}
                                         >
@@ -849,7 +904,7 @@ const DependencyReport: React.FC = () => {
                           <TableRow
                             sx={{
                               '&:hover': {
-                                backgroundColor: 'transparent',
+                                backgroundColor: 'transparent !important',
                               },
                             }}
                           >
@@ -899,7 +954,7 @@ const DependencyReport: React.FC = () => {
                                           key={script.script_result_id}
                                           sx={{
                                             '&:hover': {
-                                              backgroundColor: 'transparent',
+                                              backgroundColor: 'transparent !important',
                                             },
                                           }}
                                         >
@@ -985,7 +1040,7 @@ const DependencyReport: React.FC = () => {
                           <TableRow
                             sx={{
                               '&:hover': {
-                                backgroundColor: 'transparent',
+                                backgroundColor: 'transparent !important',
                               },
                             }}
                           >
@@ -1035,7 +1090,7 @@ const DependencyReport: React.FC = () => {
                                           key={script.script_result_id}
                                           sx={{
                                             '&:hover': {
-                                              backgroundColor: 'transparent',
+                                              backgroundColor: 'transparent !important',
                                             },
                                           }}
                                         >
