@@ -7,9 +7,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Footer from './components/common/Footer';
 import NavigationBar from './components/common/Navigation_Bar';
 import ThemeToggle from './components/common/ThemeToggle';
+import { MCPTaskInput } from './components/mcp/MCPTaskInput';
 import { HostManagerProvider } from './contexts/HostManagerProvider';
 import { ToastProvider } from './contexts/ToastContext';
-import { MCPTaskInput } from './components/mcp/MCPTaskInput';
 
 // Lazy load all pages for better performance and to avoid loading everything at once
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));

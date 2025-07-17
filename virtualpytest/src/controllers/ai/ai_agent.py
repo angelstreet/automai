@@ -63,36 +63,58 @@ class AIAgentController(BaseController):
             print(f"AI[{self.device_name}]: Error loading navigation tree for {userinterface_name}: {e}")
             return None
     
-    def _get_host_and_device(self):
+
+    
+    def _execute_navigation(self, target_node: str) -> Dict[str, Any]:
         """
-        Get host and device instances when needed for execution.
-        Uses the same pattern as the working routes.
+        Execute navigation by proxying to script execution context.
+        Uses the same execution path as validation.py for full capability.
         
+        Args:
+            target_node: Target node to navigate to
+            
         Returns:
-            Tuple of (host, device) or (None, None) if failed
+            Dictionary with execution results
         """
         try:
-            # Lazy import inside method to avoid circular import
-            from src.utils.host_utils import get_device_by_id
+            print(f"AI[{self.device_name}]: Executing navigation to '{target_node}' via script context")
             
-            # Get device by ID (same as routes)
-            device = get_device_by_id(self.device_name)
-            if not device:
-                print(f"AI[{self.device_name}]: No device found with ID: {self.device_name}")
-                return None, None
+            # Use the same script_utils that validation.py uses
+            from src.utils.script_utils import (
+                setup_script_environment,
+                select_device, 
+                execute_navigation_step_directly
+            )
             
-            # Get host from device (same as validation.py pattern)
-            host = device.host
-            if not host:
-                print(f"AI[{self.device_name}]: No host found for device: {self.device_name}")
-                return None, None
-                
-            return host, device
+            # Setup script environment (same as validation.py)
+            setup_result = setup_script_environment("ai_agent")
+            if not setup_result['success']:
+                return {'success': False, 'error': f"Script environment setup failed: {setup_result['error']}"}
+            
+            host = setup_result['host']
+            team_id = setup_result['team_id']
+            
+            # Select device (same as validation.py)
+            device_result = select_device(host, self.device_name, "ai_agent")
+            if not device_result['success']:
+                return {'success': False, 'error': f"Device selection failed: {device_result['error']}"}
+            
+            selected_device = device_result['device']
+            
+            # Execute navigation (same as validation.py)
+            transition = {
+                "actions": [],
+                "to_node_label": target_node
+            }
+            result = execute_navigation_step_directly(host, selected_device, transition, team_id)
+            
+            print(f"AI[{self.device_name}]: Navigation to '{target_node}' completed with result: {result.get('success', False)}")
+            return result
             
         except Exception as e:
-            print(f"AI[{self.device_name}]: Error getting host and device: {e}")
-            return None, None
-    
+            error_msg = f"Navigation execution error: {str(e)}"
+            print(f"AI[{self.device_name}]: {error_msg}")
+            return {'success': False, 'error': error_msg}
 
 
     def execute_task(self, task_description: str, available_actions: List[Dict], available_verifications: List[Dict], device_model: str = None, userinterface_name: str = "horizon_android_mobile") -> Dict[str, Any]:
@@ -472,25 +494,8 @@ JSON ONLY - NO OTHER TEXT"""
                 
                 try:
                     if command == "execute_navigation":
-                        if not navigation_tree:
-                            raise ValueError("Navigation tree not available")
-                        
-                        # Get host and device for navigation
-                        host, device = self._get_host_and_device()
-                        if not host or not device:
-                            raise ValueError("Host or device not available")
-                        
-                        # Lazy import inside the block to avoid circular import
-                        from src.utils.script_utils import execute_navigation_step_directly
-                        
                         target_node = params.get("target_node")
-                        transition = {
-                            "actions": [],
-                            "to_node_label": target_node
-                        }
-                        # Use the same hardcoded team_id as validation.py and other scripts
-                        team_id = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
-                        result = execute_navigation_step_directly(host, device, transition, team_id)
+                        result = self._execute_navigation(target_node)
                         success = result.get('success', False)
                     else:
                         success = remote_controller.execute_command(command, params)

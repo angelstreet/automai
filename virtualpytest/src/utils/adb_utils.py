@@ -1026,7 +1026,7 @@ class ADBUtils:
                            f'grep -o \'text=\\"{escaped_text}\\"[^>]*bounds=\\"\\[[0-9,]*\\]\\[[0-9,]*\\]\\"\' | ' \
                            f'head -1 | ' \
                            f'sed \'s/.*bounds=\\"\\[\\([0-9]*\\),\\([0-9]*\\)\\]\\[\\([0-9]*\\),\\([0-9]*\\)\\]\\".*/\\1 \\2 \\3 \\4/\' | ' \
-                           f'{{ read x1 y1 x2 y2; [ -n \\"$x1\\" ] && input tap $((($x1+$x2)/2)) $((($y1+$y2)/2)); }}"'
+                           f'{{ read x1 y1 x2 y2; [ -n \\"\\$x1\\" ] && input tap \\$((\\$(echo \\$x1)+\\$(echo \\$x2))/2) \\$((\\$(echo \\$y1)+\\$(echo \\$y2))/2); }}"'
             
             success, stdout, stderr, exit_code = self.execute_command(search_and_tap, timeout=5)
             

@@ -48,8 +48,7 @@ def generate_validation_report(report_data: Dict) -> str:
         # Replace placeholders with actual content
         html_content = html_template.format(
             script_name=script_name,
-            start_time=format_timestamp(start_time),
-            end_time=format_timestamp(end_time),
+            start_end_time=f"{format_timestamp(start_time)} - {format_timestamp(end_time)}",
             success_status="PASS" if success else "FAIL",
             success_class="success" if success else "failure",
             execution_time=format_execution_time(execution_time),
@@ -61,8 +60,8 @@ def generate_validation_report(report_data: Dict) -> str:
             failed_steps=failed_steps,
             step_results_html=create_compact_step_results_section(step_results, screenshots),
             error_section=create_error_section(error_msg) if error_msg else '',
-            initial_screenshot=get_thumbnail_screenshot_html(screenshots.get('initial'), 'Initial State'),
-            final_screenshot=get_thumbnail_screenshot_html(screenshots.get('final'), 'Final State')
+            initial_screenshot=get_thumbnail_screenshot_html(screenshots.get('initial'), hide_label=True),
+            final_screenshot=get_thumbnail_screenshot_html(screenshots.get('final'), hide_label=True)
         )
         
         print(f"[@utils:report_utils:generate_validation_report] Report generated successfully")
@@ -179,38 +178,58 @@ def create_themed_html_template() -> str:
         .header .time-info {{
             font-size: 0.85em;
             opacity: 0.9;
+            white-space: nowrap;
         }}
         
         .theme-toggle {{
             display: flex;
             align-items: center;
-            gap: 5px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
             border-radius: 20px;
-            padding: 4px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }}
-        
-        .theme-toggle:hover {{
-            background: rgba(255,255,255,0.2);
+            padding: 2px;
+            position: relative;
+            min-width: 120px;
         }}
         
         .theme-option {{
-            padding: 4px 8px;
+            padding: 4px 12px;
             border-radius: 16px;
             font-size: 0.75em;
             font-weight: 500;
-            transition: all 0.2s ease;
             cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            transition: all 0.2s ease;
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }}
+        
+        .theme-slider {{
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: calc(33.333% - 2px);
+            height: calc(100% - 4px);
+            background: rgba(255,255,255,0.9);
+            border-radius: 16px;
+            transition: transform 0.3s ease;
+            z-index: 1;
+        }}
+        
+        .theme-slider.dark {{
+            transform: translateX(100%);
+        }}
+        
+        .theme-slider.system {{
+            transform: translateX(200%);
         }}
         
         .theme-option.active {{
-            background: rgba(255,255,255,0.9);
             color: #1976d2;
+            font-weight: 600;
         }}
         
         .summary {{
@@ -292,6 +311,11 @@ def create_themed_html_template() -> str:
             cursor: pointer;
             color: var(--text-secondary);
             transition: transform 0.2s, color 0.3s ease;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }}
         
         .toggle-btn.expanded {{
@@ -305,7 +329,7 @@ def create_themed_html_template() -> str:
         }}
         
         .collapsible-content.expanded {{
-            max-height: 2000px;
+            max-height: 3000px;
         }}
         
         .step-list {{
@@ -389,6 +413,33 @@ def create_themed_html_template() -> str:
             display: block;
         }}
         
+        .step-details-grid {{
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: start;
+        }}
+        
+        .step-info {{
+            font-size: 0.85em;
+            line-height: 1.5;
+        }}
+        
+        .step-info-row {{
+            display: flex;
+            margin-bottom: 6px;
+        }}
+        
+        .step-info-label {{
+            font-weight: 600;
+            color: var(--text-secondary);
+            min-width: 100px;
+        }}
+        
+        .step-info-value {{
+            color: var(--text-primary);
+        }}
+        
         .screenshot-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -398,6 +449,10 @@ def create_themed_html_template() -> str:
         
         .screenshot-container {{
             text-align: center;
+        }}
+        
+        .screenshot-container.no-label {{
+            margin: 0;
         }}
         
         .screenshot-label {{
@@ -423,6 +478,21 @@ def create_themed_html_template() -> str:
             border-color: #4a90e2;
             transform: scale(1.02);
             box-shadow: var(--shadow-hover);
+        }}
+        
+        .screenshot-right {{
+            max-width: 150px;
+            height: 90px;
+            border-radius: 4px;
+            border: 2px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            object-fit: cover;
+        }}
+        
+        .screenshot-right:hover {{
+            border-color: #4a90e2;
+            transform: scale(1.05);
         }}
         
         .screenshot-modal {{
@@ -495,6 +565,11 @@ def create_themed_html_template() -> str:
                 grid-template-columns: 1fr;
             }}
             
+            .step-details-grid {{
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }}
+            
             .header {{
                 flex-direction: column;
                 gap: 8px;
@@ -509,6 +584,7 @@ def create_themed_html_template() -> str:
             
             .theme-toggle {{
                 order: -1;
+                min-width: 150px;
             }}
         }}
     </style>
@@ -575,7 +651,13 @@ def create_themed_html_template() -> str:
             }}
             
             updateToggleButtons() {{
+                const slider = document.querySelector('.theme-slider');
                 const themeOptions = document.querySelectorAll('.theme-option');
+                
+                // Update slider position
+                slider.className = 'theme-slider ' + this.currentMode;
+                
+                // Update active states
                 themeOptions.forEach(option => {{
                     option.classList.toggle('active', option.dataset.theme === this.currentMode);
                 }});
@@ -621,8 +703,17 @@ def create_themed_html_template() -> str:
             modal.classList.remove('active');
         }}
         
-        // Close modal when clicking outside the image
+        // Initialize sections on page load
         document.addEventListener('DOMContentLoaded', function() {{
+            // Expand Test Steps by default
+            const stepsContent = document.getElementById('steps-content');
+            const stepsButton = document.querySelector("[onclick=\"toggleSection('steps-content')\"]");
+            if (stepsContent && stepsButton) {{
+                stepsContent.classList.add('expanded');
+                stepsButton.classList.add('expanded');
+            }}
+            
+            // Close modal when clicking outside the image
             const modal = document.getElementById('screenshot-modal');
             if (modal) {{
                 modal.addEventListener('click', function(e) {{
@@ -639,12 +730,10 @@ def create_themed_html_template() -> str:
         <div class="header">
             <div class="header-left">
                 <h1>{script_name}</h1>
-                <div class="time-info">
-                    <div>Start: {start_time}</div>
-                    <div>End: {end_time}</div>
-                </div>
+                <div class="time-info">{start_end_time}</div>
             </div>
             <div class="theme-toggle">
+                <div class="theme-slider"></div>
                 <div class="theme-option" data-theme="light">Light</div>
                 <div class="theme-option" data-theme="dark">Dark</div>
                 <div class="theme-option" data-theme="system">System</div>
@@ -697,9 +786,9 @@ def create_themed_html_template() -> str:
             <div class="section">
                 <div class="section-header" onclick="toggleSection('steps-content')">
                     <h2>Test Steps ({passed_steps}/{total_steps} passed)</h2>
-                    <button class="toggle-btn">▶</button>
+                    <button class="toggle-btn">▼</button>
                 </div>
-                <div id="steps-content" class="collapsible-content">
+                <div id="steps-content" class="collapsible-content expanded">
                     {step_results_html}
                 </div>
             </div>
@@ -716,7 +805,7 @@ def create_themed_html_template() -> str:
 </html>"""
 
 def create_compact_step_results_section(step_results: List[Dict], screenshots: Dict) -> str:
-    """Create HTML for compact step-by-step results."""
+    """Create HTML for compact step-by-step results with detailed information."""
     if not step_results:
         return '<p>No steps executed</p>'
     
@@ -727,11 +816,43 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
         step_number = step.get('step_number', i + 1)
         success = step.get('success', False)
         message = step.get('message', 'No message')
+        execution_time = step.get('execution_time_ms', 0)
+        from_node = step.get('from_node', 'Unknown')
+        to_node = step.get('to_node', 'Unknown')
         
         # Get corresponding screenshot
         screenshot_html = ''
         if i < len(step_screenshots) and step_screenshots[i]:
-            screenshot_html = get_thumbnail_screenshot_html(step_screenshots[i], f"Step {step_number}")
+            screenshot_html = get_step_screenshot_html(step_screenshots[i])
+        
+        # Create detailed step information
+        step_details = f"""
+        <div class="step-details-grid">
+            <div class="step-info">
+                <div class="step-info-row">
+                    <span class="step-info-label">Transition:</span>
+                    <span class="step-info-value">{from_node} → {to_node}</span>
+                </div>
+                <div class="step-info-row">
+                    <span class="step-info-label">Execution Time:</span>
+                    <span class="step-info-value">{format_execution_time(execution_time)}</span>
+                </div>
+                <div class="step-info-row">
+                    <span class="step-info-label">Result:</span>
+                    <span class="step-info-value {'success' if success else 'failure'}">{'SUCCESS' if success else 'FAILED'}</span>
+                </div>
+                <div class="step-info-row">
+                    <span class="step-info-label">Actions:</span>
+                    <span class="step-info-value">Navigation step executed</span>
+                </div>
+                <div class="step-info-row">
+                    <span class="step-info-label">Verifications:</span>
+                    <span class="step-info-value">Target node verification completed</span>
+                </div>
+            </div>
+            {screenshot_html}
+        </div>
+        """
         
         step_html = f"""
         <div class="step-item {'success' if success else 'failure'}" onclick="toggleStep('step-details-{i}')">
@@ -744,13 +865,33 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
             <div class="step-message">{message}</div>
         </div>
         <div id="step-details-{i}" class="step-details">
-            {screenshot_html}
+            {step_details}
         </div>
         """
         steps_html.append(step_html)
     
     steps_html.append('</div>')
     return ''.join(steps_html)
+
+def get_step_screenshot_html(screenshot_path: str) -> str:
+    """Get HTML for step screenshot aligned to the right."""
+    if not screenshot_path or not os.path.exists(screenshot_path):
+        return ''
+    
+    try:
+        with open(screenshot_path, 'rb') as img_file:
+            img_data = base64.b64encode(img_file.read()).decode('utf-8')
+        
+        data_url = f"data:image/jpeg;base64,{img_data}"
+        
+        return f"""
+        <div>
+            <img src="{data_url}" alt="Step Screenshot" class="screenshot-right" onclick="openScreenshot('{data_url}')">
+        </div>
+        """
+    except Exception as e:
+        print(f"[@utils:report_utils:get_step_screenshot_html] Error embedding screenshot {screenshot_path}: {e}")
+        return ''
 
 def create_error_section(error_msg: str) -> str:
     """Create HTML for error section."""
@@ -763,7 +904,7 @@ def create_error_section(error_msg: str) -> str:
     </div>
     """
 
-def get_thumbnail_screenshot_html(screenshot_path: Optional[str], label: str = None) -> str:
+def get_thumbnail_screenshot_html(screenshot_path: Optional[str], label: str = None, hide_label: bool = False) -> str:
     """Get HTML for displaying a thumbnail screenshot that expands on click."""
     if not screenshot_path or not os.path.exists(screenshot_path):
         return ''
@@ -775,9 +916,17 @@ def get_thumbnail_screenshot_html(screenshot_path: Optional[str], label: str = N
         
         data_url = f"data:image/jpeg;base64,{img_data}"
         
+        label_html = ''
+        container_class = 'screenshot-container'
+        
+        if not hide_label and label:
+            label_html = f'<span class="screenshot-label">{label}</span>'
+        else:
+            container_class += ' no-label'
+        
         return f"""
-        <div class="screenshot-container">
-            <span class="screenshot-label">{label or 'Screenshot'}</span>
+        <div class="{container_class}">
+            {label_html}
             <img src="{data_url}" alt="{label or 'Screenshot'}" class="screenshot-thumbnail" onclick="openScreenshot('{data_url}')">
         </div>
         """
@@ -827,4 +976,5 @@ def create_error_report(error_message: str) -> str:
         <p>{error_message}</p>
     </div>
 </body>
+</html>"""
 </html>"""

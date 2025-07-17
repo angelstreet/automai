@@ -77,6 +77,7 @@ def main():
     session_id = None
     script_result_id = None
     start_time = time.time()
+    start_timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     step_results = []
     screenshot_paths = []
     overall_success = False
@@ -263,6 +264,8 @@ def main():
             },
             'error_msg': error_message,
             'timestamp': execution_timestamp,
+            'start_time': start_timestamp,
+            'end_time': execution_timestamp,
             'userinterface_name': userinterface_name,
             'total_steps': len(validation_sequence),
             'passed_steps': sum(1 for step in step_results if step.get('success', False)),
