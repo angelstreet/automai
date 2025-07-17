@@ -42,7 +42,7 @@ from src.utils.script_utils import (
     take_device_control,
     release_device_control,
     load_navigation_tree,
-    execute_navigation_step_directly,
+    execute_navigation_with_verifications,  # Updated import
     execute_verification_directly,
     capture_validation_screenshot,
     create_host_dict_for_executor
@@ -180,7 +180,7 @@ def main():
             # Execute the navigation step directly
             step_start_time = time.time()
             step_start_timestamp = datetime.now().strftime('%H:%M:%S')
-            result = execute_navigation_step_directly(host, selected_device, step, team_id)
+            result = execute_navigation_with_verifications(host, selected_device, step, team_id)
             step_end_timestamp = datetime.now().strftime('%H:%M:%S')
             step_execution_time = int((time.time() - step_start_time) * 1000)
             
@@ -192,6 +192,9 @@ def main():
             # Get actions from step data
             actions = step.get('actions', [])
             verifications = step.get('verifications', [])
+            
+            # Get verification results from the navigation execution
+            verification_results = result.get('verification_results', [])
             
             # Record step result
             step_result = {
@@ -205,7 +208,8 @@ def main():
                 'from_node': from_node,
                 'to_node': to_node,
                 'actions': actions,
-                'verifications': verifications
+                'verifications': verifications,
+                'verification_results': verification_results  # Include verification results
             }
             step_results.append(step_result)
             
@@ -217,25 +221,13 @@ def main():
             print(f"✅ [validation] Step {step_num} completed successfully")
             current_node = step.get('to_node_id')
             
-            # Execute verifications for this transition if they exist
-            step_verifications = step.get('verifications', [])
-            if step_verifications:
-                print(f"🔍 [validation] Executing {len(step_verifications)} verifications for this transition...")
-                
-                for verification in step_verifications:
-                    verify_result = execute_verification_directly(host, selected_device, verification)
-                    
-                    if not verify_result['success']:
-                        error_message = f"Verification failed: {verify_result.get('error', 'Unknown error')}"
-                        print(f"❌ [validation] {error_message}")
-                        break
-                    
-                    print(f"✅ [validation] Verification passed: {verify_result.get('message', 'Success')}")
-                else:
-                    continue  # All verifications passed, continue to next step
-                break  # Verification failed, exit loop
+            # Log verification summary
+            if verification_results:
+                passed_verifications = sum(1 for v in verification_results if v.get('success', False))
+                total_verifications = len(verification_results)
+                print(f"🔍 [validation] Verifications: {passed_verifications}/{total_verifications} passed")
             else:
-                print(f"ℹ️ [validation] No verifications defined for this transition")
+                print(f"ℹ️ [validation] No verifications executed for this transition")
         else:
             print("🎉 [validation] All validation steps completed successfully!")
             overall_success = True
@@ -255,6 +247,15 @@ def main():
         
         # 11. Generate HTML report
         print("📄 [validation] Generating HTML report...")
+        
+        # Calculate verification statistics
+        total_verifications = sum(len(step.get('verification_results', [])) for step in step_results)
+        passed_verifications = sum(
+            sum(1 for v in step.get('verification_results', []) if v.get('success', False)) 
+            for step in step_results
+        )
+        failed_verifications = total_verifications - passed_verifications
+        
         report_data = {
             'script_name': 'validation.py',
             'device_info': {
@@ -278,7 +279,11 @@ def main():
             'userinterface_name': userinterface_name,
             'total_steps': len(validation_sequence),
             'passed_steps': sum(1 for step in step_results if step.get('success', False)),
-            'failed_steps': sum(1 for step in step_results if not step.get('success', True))
+            'failed_steps': sum(1 for step in step_results if not step.get('success', True)),
+            # Add verification statistics
+            'total_verifications': total_verifications,
+            'passed_verifications': passed_verifications,
+            'failed_verifications': failed_verifications
         }
         
         html_content = generate_validation_report(report_data)
@@ -352,6 +357,7 @@ def main():
         print(f"📊 Steps: {len(step_results)}/{len(validation_sequence)} executed")
         print(f"✅ Passed: {sum(1 for step in step_results if step.get('success', False))}")
         print(f"❌ Failed: {sum(1 for step in step_results if not step.get('success', True))}")
+        print(f"🔍 Verifications: {passed_verifications}/{total_verifications} passed")
         print(f"📸 Screenshots: {len(screenshot_paths)} captured")
         print(f"🔗 Report: {report_url if report_url else 'Not uploaded'}")
         print(f"🎯 Overall Result: {'PASS' if overall_success else 'FAIL'}")

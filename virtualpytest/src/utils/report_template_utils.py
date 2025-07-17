@@ -406,6 +406,32 @@ def create_themed_html_template() -> str:
             border-left-color: #6f42c1;
         }}
         
+        .verification-result-badge {{
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            font-weight: bold;
+            margin-left: 8px;
+        }}
+        
+        .verification-result-badge.success {{
+            background-color: var(--success-bg);
+            color: var(--success-color);
+        }}
+        
+        .verification-result-badge.failure {{
+            background-color: var(--failure-bg);
+            color: var(--failure-color);
+        }}
+        
+        .verification-error {{
+            color: var(--failure-color);
+            font-style: italic;
+            font-size: 0.8em;
+            margin-left: 4px;
+        }}
+        
         .step-screenshot-container {{
             text-align: right;
         }}

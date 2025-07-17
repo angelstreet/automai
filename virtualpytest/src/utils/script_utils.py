@@ -5,6 +5,7 @@ import os
 import sys
 import subprocess
 import uuid
+import time  # Add missing time import
 from typing import Tuple, Dict, Any, Optional, List
 
 # Add project root to path for imports
@@ -401,49 +402,117 @@ def execute_verification_directly(host, device, verification: Dict[str, Any]) ->
         return {'success': False, 'error': f'Verification execution error: {str(e)}'}
 
 
-def execute_navigation_step_directly(host, device, transition: Dict[str, Any], team_id: str) -> Dict[str, Any]:
+def execute_navigation_with_verifications(host, device, transition: Dict[str, Any], team_id: str, tree_id: str = None) -> Dict[str, Any]:
     """
-    Execute a single navigation step directly using host controllers.
+    Execute a single navigation step with verifications following NavigationExecutor pattern.
+    
+    This function mimics the NavigationExecutor.execute_navigation() behavior:
+    1. Execute navigation actions using ActionExecutor pattern
+    2. Execute target node verifications using VerificationExecutor pattern
     
     Args:
         host: Host instance
         device: Device instance
         transition: Navigation transition with actions and verifications
         team_id: Team ID for database recording
+        tree_id: Optional tree ID for verification context
         
     Returns:
-        Dictionary with execution results
+        Dictionary with execution results including verification results
     """
     try:
+        start_time = time.time()
+        
+        # 1. Execute navigation actions (same as before)
         actions = transition.get('actions', [])
         retry_actions = transition.get('retryActions', [])
         
-        print(f"[@script_utils:execute_navigation_step_directly] Executing transition with {len(actions)} actions")
+        print(f"[@script_utils:execute_navigation_with_verifications] Executing transition with {len(actions)} actions")
         
         # Debug: Check what retry actions are available
-        print(f"[@script_utils:execute_navigation_step_directly] Retry actions available: {len(retry_actions)}")
+        print(f"[@script_utils:execute_navigation_with_verifications] Retry actions available: {len(retry_actions)}")
         if retry_actions:
             for i, retry_action in enumerate(retry_actions):
-                print(f"[@script_utils:execute_navigation_step_directly] Retry action {i+1}: {retry_action.get('command')} with params {retry_action.get('params', {})}")
+                print(f"[@script_utils:execute_navigation_with_verifications] Retry action {i+1}: {retry_action.get('command')} with params {retry_action.get('params', {})}")
         
         # Get the remote controller for this device
         remote_controller = get_controller(device.device_id, 'remote')
         if not remote_controller:
             return {
                 'success': False,
-                'error': f'No remote controller found for device {device.device_id}'
+                'error': f'No remote controller found for device {device.device_id}',
+                'verification_results': []
             }
         
-        # Use controller execute_sequence without final_wait_time
-        success = remote_controller.execute_sequence(actions, retry_actions)
+        # Execute navigation actions
+        actions_success = remote_controller.execute_sequence(actions, retry_actions)
+        
+        if not actions_success:
+            return {
+                'success': False,
+                'error': 'Navigation actions failed',
+                'message': 'Navigation step failed during action execution',
+                'verification_results': []
+            }
+        
+        print(f"[@script_utils:execute_navigation_with_verifications] Navigation actions completed successfully")
+        
+        # 2. Execute verifications (following NavigationExecutor pattern)
+        verifications = transition.get('verifications', [])
+        verification_results = []
+        
+        if verifications:
+            print(f"[@script_utils:execute_navigation_with_verifications] Executing {len(verifications)} verifications")
+            
+            # Execute each verification
+            for i, verification in enumerate(verifications):
+                print(f"[@script_utils:execute_navigation_with_verifications] Executing verification {i+1}/{len(verifications)}")
+                
+                verify_result = execute_verification_directly(host, device, verification)
+                
+                # Store verification result
+                verification_result = {
+                    'verification_number': i + 1,
+                    'verification_type': verification.get('verification_type', 'adb'),
+                    'success': verify_result.get('success', False),
+                    'message': verify_result.get('message', 'Verification completed'),
+                    'resultType': 'PASS' if verify_result.get('success') else 'FAIL',
+                    'error': verify_result.get('error') if not verify_result.get('success') else None
+                }
+                verification_results.append(verification_result)
+                
+                if not verify_result['success']:
+                    print(f"❌ [@script_utils:execute_navigation_with_verifications] Verification {i+1} failed: {verify_result.get('error', 'Unknown error')}")
+                    return {
+                        'success': False,
+                        'error': f'Verification {i+1} failed: {verify_result.get("error", "Unknown error")}',
+                        'message': 'Navigation step failed during verification',
+                        'verification_results': verification_results
+                    }
+                
+                print(f"✅ [@script_utils:execute_navigation_with_verifications] Verification {i+1} passed: {verify_result.get('message', 'Success')}")
+            
+            print(f"[@script_utils:execute_navigation_with_verifications] All {len(verifications)} verifications completed successfully")
+        else:
+            print(f"[@script_utils:execute_navigation_with_verifications] No verifications defined for this transition")
+        
+        # 3. Calculate execution time and return success
+        execution_time = time.time() - start_time
         
         return {
-            'success': success,
-            'message': 'Navigation step completed successfully' if success else 'Navigation step failed'
+            'success': True,
+            'message': 'Navigation step with verifications completed successfully',
+            'verification_results': verification_results,
+            'verifications_executed': len(verifications),
+            'execution_time': execution_time
         }
         
     except Exception as e:
-        return {'success': False, 'error': f'Navigation step execution error: {str(e)}'}
+        return {
+            'success': False, 
+            'error': f'Navigation step with verifications execution error: {str(e)}',
+            'verification_results': []
+        }
 
 def capture_validation_screenshot(host: Dict[str, Any], device: Any, step_name: str, script_name: str = "validation") -> str:
     """
@@ -461,7 +530,6 @@ def capture_validation_screenshot(host: Dict[str, Any], device: Any, step_name: 
     """
     try:
         from datetime import datetime
-        import time
         import tempfile
         import requests
         from .build_url_utils import buildHostUrl

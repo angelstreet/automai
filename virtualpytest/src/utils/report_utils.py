@@ -121,6 +121,8 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
                 actions_html += f'<div class="action-item">{action_line}</div>'
         
         verifications_html = ""
+        verification_results = step.get('verification_results', [])
+        
         if verifications:
             verifications_html = "<div><strong>Verifications:</strong></div>"
             for i, verification in enumerate(verifications, 1):
@@ -141,7 +143,33 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
                         verification_line = f"{i}. {command}({params_str})" if params_str else f"{i}. {command}"
                 else:
                     verification_line = f"{i}. {str(verification)}"
-                verifications_html += f'<div class="verification-item">{verification_line}</div>'
+                
+                # Add verification result if available
+                verification_result_html = ""
+                if i <= len(verification_results):
+                    result = verification_results[i-1]  # 0-indexed array
+                    result_success = result.get('success', False)
+                    result_message = result.get('message', '')
+                    result_badge = f'<span class="verification-result-badge {'success' if result_success else 'failure'}">{'PASS' if result_success else 'FAIL'}</span>'
+                    verification_result_html = f" {result_badge}"
+                    if not result_success and result.get('error'):
+                        verification_result_html += f" <span class='verification-error'>({result['error']})</span>"
+                
+                verifications_html += f'<div class="verification-item">{verification_line}{verification_result_html}</div>'
+        elif verification_results:
+            # Show verification results even if verification definitions are missing
+            verifications_html = "<div><strong>Verification Results:</strong></div>"
+            for i, result in enumerate(verification_results, 1):
+                result_success = result.get('success', False)
+                result_message = result.get('message', 'Verification completed')
+                verification_type = result.get('verification_type', 'unknown')
+                result_badge = f'<span class="verification-result-badge {'success' if result_success else 'failure'}">{'PASS' if result_success else 'FAIL'}</span>'
+                
+                verification_line = f"{i}. {verification_type}: {result_message}"
+                if not result_success and result.get('error'):
+                    verification_line += f" <span class='verification-error'>({result['error']})</span>"
+                
+                verifications_html += f'<div class="verification-item">{verification_line} {result_badge}</div>'
         
         # Get corresponding screenshot
         screenshot_html = ''
