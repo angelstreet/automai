@@ -611,3 +611,35 @@ def convertHostUrlToLocalPath(host_url: str) -> str:
         
     except Exception as e:
         raise ValueError(f"Failed to convert host URL to local path: {e}")
+
+def buildScriptReportUrl(device_model: str, script_name: str, timestamp: str, base_url: str = None) -> str:
+    """
+    Build URL for script reports stored in cloud storage (R2).
+    
+    Args:
+        device_model: Device model (e.g., 'android_mobile')
+        script_name: Script name (e.g., 'validation')
+        timestamp: Timestamp in YYYYMMDDHHMMSS format
+        base_url: Optional custom base URL (defaults to R2)
+        
+    Returns:
+        Complete URL to script report
+        
+    Example:
+        buildScriptReportUrl('android_mobile', 'validation', '20250117134500')
+        -> 'https://r2-bucket-url/script-reports/android_mobile/validation_20250117_20250117134500/report.html'
+    """
+    if base_url is None:
+        # Use environment variable for R2 public URL
+        import os
+        base_url = os.environ.get('CLOUDFLARE_R2_PUBLIC_URL', 'https://your-r2-domain.com')
+    
+    # Create folder structure: script-reports/{device_model}/{script_name}_{date}_{timestamp}/
+    date_str = timestamp[:8]  # YYYYMMDD from YYYYMMDDHHMMSS
+    folder_name = f"{script_name}_{date_str}_{timestamp}"
+    report_path = f"script-reports/{device_model}/{folder_name}/report.html"
+    
+    # Clean the base URL and build complete URL
+    clean_base_url = base_url.rstrip('/')
+    
+    return f"{clean_base_url}/{report_path}"

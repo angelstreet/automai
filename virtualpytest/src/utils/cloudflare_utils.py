@@ -316,3 +316,117 @@ def upload_navigation_screenshot(local_path: str, model: str, screenshot_name: s
     uploader = get_cloudflare_utils()
     remote_path = f"navigation/{model}/{screenshot_name}"
     return uploader.upload_file(local_path, remote_path)
+
+def upload_script_report(html_content: str, device_model: str, script_name: str, timestamp: str) -> Dict:
+    """Upload script report HTML to R2 in the script-reports folder."""
+    try:
+        uploader = get_cloudflare_utils()
+        
+        # Create report folder path: script-reports/{device_model}/{script_name}_{date}_{timestamp}/
+        date_str = timestamp[:8]  # YYYYMMDD from YYYYMMDDHHMMSS
+        folder_name = f"{script_name}_{date_str}_{timestamp}"
+        report_path = f"script-reports/{device_model}/{folder_name}/report.html"
+        
+        # Create temporary HTML file
+        import tempfile
+        import os
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as temp_file:
+            temp_file.write(html_content)
+            temp_file_path = temp_file.name
+        
+        try:
+            # Upload HTML report
+            result = uploader.upload_file(temp_file_path, report_path)
+            
+            if result['success']:
+                logger.info(f"Uploaded script report: {report_path}")
+                return {
+                    'success': True,
+                    'report_path': report_path,
+                    'report_url': result['url'],
+                    'folder_path': f"script-reports/{device_model}/{folder_name}"
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Upload failed')
+                }
+                
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+                
+    except Exception as e:
+        logger.error(f"Script report upload failed: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+def upload_validation_screenshots(screenshot_paths: list, device_model: str, script_name: str, timestamp: str) -> Dict:
+    """Upload validation screenshots to R2 in the same folder as the report."""
+    try:
+        uploader = get_cloudflare_utils()
+        
+        # Create report folder path
+        date_str = timestamp[:8]  # YYYYMMDD from YYYYMMDDHHMMSS
+        folder_name = f"{script_name}_{date_str}_{timestamp}"
+        base_folder = f"script-reports/{device_model}/{folder_name}"
+        
+        uploaded_screenshots = []
+        failed_uploads = []
+        
+        for local_path in screenshot_paths:
+            if not os.path.exists(local_path):
+                logger.warning(f"Screenshot not found: {local_path}")
+                failed_uploads.append({'path': local_path, 'error': 'File not found'})
+                continue
+            
+            # Extract filename from local path
+            filename = os.path.basename(local_path)
+            remote_path = f"{base_folder}/{filename}"
+            
+            # Upload screenshot
+            result = uploader.upload_file(local_path, remote_path)
+            
+            if result['success']:
+                uploaded_screenshots.append({
+                    'local_path': local_path,
+                    'remote_path': remote_path,
+                    'url': result['url']
+                })
+                logger.info(f"Uploaded screenshot: {remote_path}")
+            else:
+                failed_uploads.append({
+                    'path': local_path,
+                    'error': result.get('error', 'Upload failed')
+                })
+                logger.error(f"Failed to upload screenshot {local_path}: {result.get('error')}")
+        
+        return {
+            'success': len(failed_uploads) == 0,
+            'uploaded_count': len(uploaded_screenshots),
+            'failed_count': len(failed_uploads),
+            'uploaded_screenshots': uploaded_screenshots,
+            'failed_uploads': failed_uploads,
+            'folder_path': base_folder
+        }
+        
+    except Exception as e:
+        logger.error(f"Validation screenshots upload failed: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'uploaded_screenshots': [],
+            'failed_uploads': []
+        }
+
+def get_script_report_folder_url(device_model: str, script_name: str, timestamp: str) -> str:
+    """Get base URL for script report folder."""
+    uploader = get_cloudflare_utils()
+    date_str = timestamp[:8]  # YYYYMMDD from YYYYMMDDHHMMSS
+    folder_name = f"{script_name}_{date_str}_{timestamp}"
+    folder_path = f"script-reports/{device_model}/{folder_name}"
+    return uploader.get_public_url(folder_path)

@@ -924,6 +924,7 @@ class ADBUtils:
     def click_element_by_search(self, device_id: str, search_term: str, **options) -> bool:
         """
         Click on an element using search term. Supports pipe-separated terms for fallback (e.g., "OK|Accept|Confirm").
+        OPTIMIZED: Tries fast methods first, then falls back to UI dump only if needed.
         
         Args:
             device_id: Android device ID
@@ -935,25 +936,186 @@ class ADBUtils:
             bool: True if click successful
         """
         try:
-            print(f"[@lib:adbUtils:click_element_by_search] Attempting to click using search term: '{search_term}'")
+            print(f"[@lib:adbUtils:click_element_by_search] Attempting optimized click using search term: '{search_term}'")
             
-            # Check if element exists (handles pipe-separated terms automatically)
+            # Try fast click first
+            fast_success = self._try_fast_click(device_id, search_term)
+            if fast_success:
+                print(f"[@lib:adbUtils:click_element_by_search] SUCCESS: Fast click worked!")
+                return True
+            
+            print(f"[@lib:adbUtils:click_element_by_search] Fast methods failed, falling back to UI dump search...")
+            
+            # Fallback to complex search with UI dump
             exists, element, error = self.check_element_exists(device_id, search_term)
             
             if exists and element:
-                print(f"[@lib:adbUtils:click_element_by_search] Found element, attempting click")
+                print(f"[@lib:adbUtils:click_element_by_search] Found element via UI dump, attempting click")
                 return self.click_element(device_id, element)
             else:
-                print(f"[@lib:adbUtils:click_element_by_search] No element found: {error}")
+                print(f"[@lib:adbUtils:click_element_by_search] No element found even with UI dump: {error}")
                 return False
                 
         except Exception as e:
             print(f"[@lib:adbUtils:click_element_by_search] Error: {e}")
             return False
 
+    def _try_fast_click(self, device_id: str, search_term: str) -> bool:
+        """
+        Try fast click methods without UI dump. Handles pipe-separated terms.
+        
+        Args:
+            device_id: Android device ID
+            search_term: Search term, can be pipe-separated
+            
+        Returns:
+            bool: True if any fast method succeeded
+        """
+        try:
+            # Handle pipe-separated terms
+            terms = [term.strip() for term in search_term.split('|')] if '|' in search_term else [search_term.strip()]
+            
+            print(f"[@lib:adbUtils:_try_fast_click] Trying fast methods for {len(terms)} term(s)")
+            
+            for i, term in enumerate(terms):
+                print(f"[@lib:adbUtils:_try_fast_click] Fast attempt {i+1}/{len(terms)}: '{term}'")
+                
+                # Method 1: Direct text click
+                if self._fast_click_by_text(device_id, term):
+                    print(f"[@lib:adbUtils:_try_fast_click] SUCCESS: Text click worked for '{term}'")
+                    return True
+                
+                # Method 2: Content description click
+                if self._fast_click_by_content_desc(device_id, term):
+                    print(f"[@lib:adbUtils:_try_fast_click] SUCCESS: Content-desc click worked for '{term}'")
+                    return True
+                
+                # Method 3: Resource ID click (partial match)
+                if self._fast_click_by_resource_id(device_id, term):
+                    print(f"[@lib:adbUtils:_try_fast_click] SUCCESS: Resource-ID click worked for '{term}'")
+                    return True
+            
+            print(f"[@lib:adbUtils:_try_fast_click] All fast methods failed for all terms")
+            return False
+            
+        except Exception as e:
+            print(f"[@lib:adbUtils:_try_fast_click] Error: {e}")
+            return False
+
+    def _fast_click_by_text(self, device_id: str, text: str) -> bool:
+        """Fast click by exact text match using minimal UI operations."""
+        try:
+            print(f"[@lib:adbUtils:_fast_click_by_text] Trying fast text click for: '{text}'")
+            
+            # Method 1: Use uiautomator2 command (fastest if available)
+            # This requires the device to have uiautomator2 server running
+            escaped_text = text.replace('"', '\\"').replace("'", "\\'")
+            
+            # Try direct uiautomator command with text selector
+            ui_command = f'adb -s {device_id} shell "uiautomator runtest local -c com.github.uiautomator.stub.Stub -e text \\"{escaped_text}\\""'
+            success, stdout, stderr, exit_code = self.execute_command(ui_command, timeout=3)
+            
+            if success and exit_code == 0:
+                print(f"[@lib:adbUtils:_fast_click_by_text] SUCCESS: UIAutomator click worked")
+                return True
+            
+            # Method 2: Quick XML search with immediate tap
+            # Dump to memory and search in one command
+            search_and_tap = f'adb -s {device_id} shell "' \
+                           f'uiautomator dump /dev/stdout | ' \
+                           f'grep -o \'text=\\"{escaped_text}\\"[^>]*bounds=\\"\\[[0-9,]*\\]\\[[0-9,]*\\]\\"\' | ' \
+                           f'head -1 | ' \
+                           f'sed \'s/.*bounds=\\"\\[\\([0-9]*\\),\\([0-9]*\\)\\]\\[\\([0-9]*\\),\\([0-9]*\\)\\]\\".*/\\1 \\2 \\3 \\4/\' | ' \
+                           f'{{ read x1 y1 x2 y2; [ -n \\"$x1\\" ] && input tap $((($x1+$x2)/2)) $((($y1+$y2)/2)); }}"'
+            
+            success, stdout, stderr, exit_code = self.execute_command(search_and_tap, timeout=5)
+            
+            if success and exit_code == 0:
+                print(f"[@lib:adbUtils:_fast_click_by_text] SUCCESS: Quick XML search and tap worked")
+                return True
+            
+            print(f"[@lib:adbUtils:_fast_click_by_text] Fast text methods failed")
+            return False
+            
+        except Exception as e:
+            print(f"[@lib:adbUtils:_fast_click_by_text] Error: {e}")
+            return False
+
+    def _fast_click_by_content_desc(self, device_id: str, content_desc: str) -> bool:
+        """Fast click by content description using minimal UI operations."""
+        try:
+            print(f"[@lib:adbUtils:_fast_click_by_content_desc] Trying fast content-desc click for: '{content_desc}'")
+            
+            escaped_desc = content_desc.replace('"', '\\"').replace("'", "\\'")
+            
+            # Quick XML search for content-desc and tap
+            search_and_tap = f'adb -s {device_id} shell "' \
+                           f'uiautomator dump /dev/stdout | ' \
+                           f'grep -o \'content-desc=\\"{escaped_desc}\\"[^>]*bounds=\\"\\[[0-9,]*\\]\\[[0-9,]*\\]\\"\' | ' \
+                           f'head -1 | ' \
+                           f'sed \'s/.*bounds=\\"\\[\\([0-9]*\\),\\([0-9]*\\)\\]\\[\\([0-9]*\\),\\([0-9]*\\)\\]\\".*/\\1 \\2 \\3 \\4/\' | ' \
+                           f'{{ read x1 y1 x2 y2; [ -n \\"$x1\\" ] && input tap $((($x1+$x2)/2)) $((($y1+$y2)/2)); }}"'
+            
+            success, stdout, stderr, exit_code = self.execute_command(search_and_tap, timeout=5)
+            
+            if success and exit_code == 0:
+                print(f"[@lib:adbUtils:_fast_click_by_content_desc] SUCCESS: Quick content-desc search and tap worked")
+                return True
+            
+            print(f"[@lib:adbUtils:_fast_click_by_content_desc] Fast content-desc method failed")
+            return False
+            
+        except Exception as e:
+            print(f"[@lib:adbUtils:_fast_click_by_content_desc] Error: {e}")
+            return False
+
+    def _fast_click_by_resource_id(self, device_id: str, resource_id: str) -> bool:
+        """Fast click by resource ID (partial match) using minimal UI operations."""
+        try:
+            print(f"[@lib:adbUtils:_fast_click_by_resource_id] Trying fast resource-id click for: '{resource_id}'")
+            
+            escaped_id = resource_id.replace('"', '\\"').replace("'", "\\'")
+            
+            # Quick XML search for resource-id (partial match) and tap
+            search_and_tap = f'adb -s {device_id} shell "' \
+                           f'uiautomator dump /dev/stdout | ' \
+                           f'grep -o \'resource-id=\\"[^"]*{escaped_id}[^"]*\\"[^>]*bounds=\\"\\[[0-9,]*\\]\\[[0-9,]*\\]\\"\' | ' \
+                           f'head -1 | ' \
+                           f'sed \'s/.*bounds=\\"\\[\\([0-9]*\\),\\([0-9]*\\)\\]\\[\\([0-9]*\\),\\([0-9]*\\)\\]\\".*/\\1 \\2 \\3 \\4/\' | ' \
+                           f'{{ read x1 y1 x2 y2; [ -n \\"$x1\\" ] && input tap $((($x1+$x2)/2)) $((($y1+$y2)/2)); }}"'
+            
+            success, stdout, stderr, exit_code = self.execute_command(search_and_tap, timeout=5)
+            
+            if success and exit_code == 0:
+                print(f"[@lib:adbUtils:_fast_click_by_resource_id] SUCCESS: Quick resource-id search and tap worked")
+                return True
+            
+            print(f"[@lib:adbUtils:_fast_click_by_resource_id] Fast resource-id method failed")
+            return False
+            
+        except Exception as e:
+            print(f"[@lib:adbUtils:_fast_click_by_resource_id] Error: {e}")
+            return False
+
+    def click_element_smart(self, device_id: str, search_term: str, **options) -> bool:
+        """
+        Smart click that tries multiple strategies in order of speed/reliability.
+        This is the recommended method to use instead of click_element_by_search.
+        
+        Args:
+            device_id: Android device ID
+            search_term: Search term (case-insensitive)
+            **options: Additional options
+            
+        Returns:
+            bool: True if click successful
+        """
+        return self.click_element_by_search(device_id, search_term, **options)
+
     def input_text(self, device_id: str, search_term: str, text_to_input: str, **options) -> bool:
         """
         Input text into an element. Supports pipe-separated terms for fallback (e.g., "Username|Email|Login").
+        OPTIMIZED: Tries fast methods first, then falls back to UI dump only if needed.
         
         Args:
             device_id: Android device ID
@@ -966,53 +1128,79 @@ class ADBUtils:
             bool: True if input successful
         """
         try:
-            print(f"[@lib:adbUtils:input_text] Looking for input field using search term: '{search_term}'")
+            print(f"[@lib:adbUtils:input_text] Optimized text input for search term: '{search_term}'")
             print(f"[@lib:adbUtils:input_text] Text to input: '{text_to_input}'")
             
-            # Check if element exists (handles pipe-separated terms automatically)
+            # Try fast click first to focus the field
+            fast_success = self._try_fast_click(device_id, search_term)
+            if fast_success:
+                print(f"[@lib:adbUtils:input_text] Fast click successful, proceeding with text input")
+                return self._input_text_to_focused_field(device_id, text_to_input)
+            
+            print(f"[@lib:adbUtils:input_text] Fast methods failed, falling back to UI dump search...")
+            
+            # Fallback to complex search with UI dump
             exists, element, error = self.check_element_exists(device_id, search_term)
             
             if exists and element:
-                print(f"[@lib:adbUtils:input_text] Found input field, attempting to click and input text")
+                print(f"[@lib:adbUtils:input_text] Found input field via UI dump, attempting to click and input text")
                 
                 # First click on the element to focus it
                 click_success = self.click_element(device_id, element)
                 
                 if click_success:
-                    # Small delay after click
-                    time.sleep(0.5)
-                    
-                    # Clear existing text first
-                    clear_command = f"adb -s {device_id} shell input keyevent KEYCODE_CTRL_A"
-                    self.execute_command(clear_command)
-                    time.sleep(0.2)
-                    
-                    clear_command = f"adb -s {device_id} shell input keyevent KEYCODE_DEL"
-                    self.execute_command(clear_command)
-                    time.sleep(0.2)
-                    
-                    # Input the text
-                    # Escape special characters for shell
-                    escaped_text = text_to_input.replace('"', '\\"').replace("'", "\\'").replace(' ', '\\ ')
-                    input_command = f"adb -s {device_id} shell input text \"{escaped_text}\""
-                    
-                    success, stdout, stderr, exit_code = self.execute_command(input_command)
-                    
-                    if success and exit_code == 0:
-                        print(f"[@lib:adbUtils:input_text] SUCCESS: Input text completed")
-                        return True
-                    else:
-                        print(f"[@lib:adbUtils:input_text] Text input failed: {stderr}")
-                        return False
+                    return self._input_text_to_focused_field(device_id, text_to_input)
                 else:
                     print(f"[@lib:adbUtils:input_text] Element found but click failed")
                     return False
             else:
-                print(f"[@lib:adbUtils:input_text] No input field found: {error}")
+                print(f"[@lib:adbUtils:input_text] No input field found even with UI dump: {error}")
                 return False
                 
         except Exception as e:
             print(f"[@lib:adbUtils:input_text] Error: {e}")
+            return False
+
+    def _input_text_to_focused_field(self, device_id: str, text_to_input: str) -> bool:
+        """
+        Input text to the currently focused field.
+        
+        Args:
+            device_id: Android device ID
+            text_to_input: Text to input
+            
+        Returns:
+            bool: True if input successful
+        """
+        try:
+            # Small delay after click
+            time.sleep(0.5)
+            
+            # Clear existing text first
+            clear_command = f"adb -s {device_id} shell input keyevent KEYCODE_CTRL_A"
+            self.execute_command(clear_command)
+            time.sleep(0.2)
+            
+            clear_command = f"adb -s {device_id} shell input keyevent KEYCODE_DEL"
+            self.execute_command(clear_command)
+            time.sleep(0.2)
+            
+            # Input the text
+            # Escape special characters for shell
+            escaped_text = text_to_input.replace('"', '\\"').replace("'", "\\'").replace(' ', '\\ ')
+            input_command = f"adb -s {device_id} shell input text \"{escaped_text}\""
+            
+            success, stdout, stderr, exit_code = self.execute_command(input_command)
+            
+            if success and exit_code == 0:
+                print(f"[@lib:adbUtils:_input_text_to_focused_field] SUCCESS: Input text completed")
+                return True
+            else:
+                print(f"[@lib:adbUtils:_input_text_to_focused_field] Text input failed: {stderr}")
+                return False
+                
+        except Exception as e:
+            print(f"[@lib:adbUtils:_input_text_to_focused_field] Error: {e}")
             return False
 
     def tap_coordinates(self, device_id: str, x: int, y: int) -> bool:

@@ -443,4 +443,92 @@ def execute_navigation_step_directly(host, device, transition: Dict[str, Any], t
         }
         
     except Exception as e:
-        return {'success': False, 'error': f'Navigation step execution error: {str(e)}'} 
+        return {'success': False, 'error': f'Navigation step execution error: {str(e)}'}
+
+def capture_validation_screenshot(host: Dict[str, Any], device: Any, step_name: str, script_name: str = "validation") -> str:
+    """
+    Capture screenshot for validation reporting.
+    Uses same thumbnail generation pattern as RecHostPreview.
+    
+    Args:
+        host: Host configuration dict
+        device: Device object
+        step_name: Name of the step (e.g., "initial_state", "step_1", "final_state")
+        script_name: Name of the script for logging
+        
+    Returns:
+        Local path to captured screenshot or empty string if failed
+    """
+    try:
+        from datetime import datetime
+        import time
+        import tempfile
+        import requests
+        from .build_url_utils import buildHostUrl
+        
+        print(f"📸 [{script_name}] Capturing screenshot: {step_name}")
+        
+        # Generate timestamp for screenshot
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        # Create screenshot filename
+        screenshot_filename = f"{step_name}_{timestamp}.jpg"
+        
+        # Use temporary directory for screenshots
+        temp_dir = tempfile.gettempdir()
+        screenshots_dir = os.path.join(temp_dir, 'validation_screenshots')
+        os.makedirs(screenshots_dir, exist_ok=True)
+        
+        local_screenshot_path = os.path.join(screenshots_dir, screenshot_filename)
+        
+        # Take screenshot using host API (same pattern as RecHostPreview)
+        take_screenshot_url = buildHostUrl(host, '/host/av/takeScreenshot')
+        
+        # Prepare request data
+        screenshot_data = {
+            'device_id': device.device_id,
+            'timestamp': timestamp
+        }
+        
+        print(f"📸 [{script_name}] Requesting screenshot from: {take_screenshot_url}")
+        print(f"📸 [{script_name}] Screenshot data: {screenshot_data}")
+        
+        # Request screenshot
+        response = requests.post(take_screenshot_url, json=screenshot_data, timeout=10)
+        
+        if response.status_code == 200:
+            response_data = response.json()
+            
+            if response_data.get('success'):
+                # Wait a moment for screenshot to be available
+                time.sleep(1)
+                
+                # Build URL to retrieve screenshot
+                from .build_url_utils import buildCaptureUrl
+                screenshot_url = buildCaptureUrl(host, timestamp, device.device_id)
+                
+                print(f"📸 [{script_name}] Downloading screenshot from: {screenshot_url}")
+                
+                # Download screenshot
+                img_response = requests.get(screenshot_url, timeout=10)
+                
+                if img_response.status_code == 200:
+                    # Save screenshot locally
+                    with open(local_screenshot_path, 'wb') as f:
+                        f.write(img_response.content)
+                    
+                    print(f"✅ [{script_name}] Screenshot saved: {local_screenshot_path}")
+                    return local_screenshot_path
+                else:
+                    print(f"❌ [{script_name}] Failed to download screenshot: HTTP {img_response.status_code}")
+                    return ""
+            else:
+                print(f"❌ [{script_name}] Screenshot request failed: {response_data.get('error', 'Unknown error')}")
+                return ""
+        else:
+            print(f"❌ [{script_name}] Screenshot API request failed: HTTP {response.status_code}")
+            return ""
+            
+    except Exception as e:
+        print(f"❌ [{script_name}] Screenshot capture error: {str(e)}")
+        return "" 
