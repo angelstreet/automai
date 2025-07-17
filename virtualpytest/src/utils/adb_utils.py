@@ -421,6 +421,12 @@ class ADBUtils:
                 
             print(f"[@lib:adbUtils:dump_ui_elements] Received XML data, length: {len(stdout)}")
             
+            # Debug: Show first 100 characters of response
+            if len(stdout) < 200:
+                print(f"[@lib:adbUtils:dump_ui_elements] DEBUG - Full response: '{stdout}'")
+            else:
+                print(f"[@lib:adbUtils:dump_ui_elements] DEBUG - First 100 chars: '{stdout[:100]}'")
+            
             # Parse XML to extract elements
             elements = self._parse_ui_elements(stdout)
             
