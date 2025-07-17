@@ -56,17 +56,86 @@ def execute_task():
         device_action_types = device.get_available_action_types()
         available_actions = []
         
-        # Flatten all action categories into a single list for AI
+        # Enhanced action flattening with better AI context
         for category, actions in device_action_types.items():
             if isinstance(actions, list):
                 for action in actions:
-                    available_actions.append({
-                        'command': action.get('command', ''),
-                        'description': action.get('description', f"{action.get('command', '')} action"),
+                    # Build enhanced action description for AI
+                    base_command = action.get('command', '')
+                    base_params = action.get('params', {})
+                    original_description = action.get('description', '')
+                    action_id = action.get('id', '')
+                    label = action.get('label', '')
+                    
+                    # Create AI-friendly action name and description
+                    ai_action_name = label if label else base_command
+                    ai_description = original_description
+                    
+                    # Enhance specific actions with common user task mappings
+                    if base_command == 'press_key' and base_params.get('key') == 'BACK':
+                        ai_action_name = "go_back_button"
+                        ai_description = "Go back to previous screen (use for: 'go back', 'navigate back', 'return to previous page')"
+                        
+                    elif base_command == 'press_key' and base_params.get('key') == 'HOME':
+                        ai_action_name = "go_home_button"
+                        ai_description = "Go to home screen (use for: 'go home', 'navigate to home', 'return to home')"
+                        
+                    elif base_command == 'input_text':
+                        ai_action_name = "type_text"
+                        ai_description = "Type text into current input field (use for: 'enter text', 'type', 'input', 'write')"
+                        
+                    elif base_command == 'click_element':
+                        ai_action_name = "click_ui_element"
+                        ai_description = "Click on UI element by text/ID (use for: 'click button', 'tap element', 'select item')"
+                        
+                    elif base_command == 'tap_coordinates':
+                        ai_action_name = "tap_screen_coordinates"
+                        ai_description = "Tap at specific screen coordinates (use for: 'tap at position', 'click coordinates')"
+                        
+                    elif base_command == 'launch_app':
+                        ai_action_name = "open_application"
+                        ai_description = "Launch/open an Android application (use for: 'open app', 'start app', 'launch')"
+                        
+                    elif base_command == 'close_app':
+                        ai_action_name = "close_application"
+                        ai_description = "Close/stop an Android application (use for: 'close app', 'stop app', 'exit app')"
+                    
+                    # Build comprehensive action context for AI
+                    ai_action = {
+                        'command': base_command,
+                        'ai_name': ai_action_name,
+                        'description': ai_description,
                         'action_type': action.get('action_type', category),
-                        'params': action.get('params', {}),
-                        'category': category
-                    })
+                        'params': base_params,
+                        'category': category,
+                        'full_context': {
+                            'original_id': action_id,
+                            'original_label': label,
+                            'requires_input': action.get('requiresInput', False),
+                            'input_example': action.get('inputPlaceholder', ''),
+                            'common_use_cases': []
+                        }
+                    }
+                    
+                    # Add common use cases for better AI understanding
+                    if 'back' in ai_action_name.lower():
+                        ai_action['full_context']['common_use_cases'] = [
+                            "go back", "navigate back", "previous screen", "return", "back button"
+                        ]
+                    elif 'home' in ai_action_name.lower():
+                        ai_action['full_context']['common_use_cases'] = [
+                            "go home", "home screen", "main screen", "home button"
+                        ]
+                    elif 'text' in ai_action_name.lower():
+                        ai_action['full_context']['common_use_cases'] = [
+                            "type text", "enter text", "input text", "write", "fill field"
+                        ]
+                    elif 'click' in ai_action_name.lower():
+                        ai_action['full_context']['common_use_cases'] = [
+                            "click button", "tap element", "select item", "press button"
+                        ]
+                    
+                    available_actions.append(ai_action)
         
         print(f"[@route:host_aiagent:execute_task] Available actions: {len(available_actions)} actions from device capabilities")
         

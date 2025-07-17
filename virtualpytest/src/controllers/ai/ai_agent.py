@@ -101,7 +101,7 @@ class AIAgentController(BaseController):
             context = {
                 "task": task_description,
                 "device_model": device_model or "unknown",
-                "available_actions": [action.get('command', 'unknown') for action in available_actions],
+                "available_actions": available_actions,  # Use full enhanced action list
                 "available_verifications": [verif.get('verification_type', 'unknown') for verif in available_verifications]
             }
             
@@ -143,33 +143,53 @@ If not feasible:
 
 JSON ONLY - NO OTHER TEXT"""
             else:
-                prompt = f"""You are a test automation AI. Generate an execution plan for this task.
+                # Enhanced prompt with better action context
+                action_context = "\n".join([
+                    f"- {action.get('ai_name', action.get('command'))}: {action.get('description', 'No description')}"
+                    for action in available_actions[:10]  # Limit to first 10 to avoid token limit
+                ])
+                
+                prompt = f"""You are a device automation AI for {device_model}. Generate an execution plan for this task.
 
 Task: "{task_description}"
 Device: {device_model}
-Available actions: {context['available_actions']}
-Available verifications: {context['available_verifications']}
+
+Available Actions:
+{action_context}
+
+Smart Action Guidelines:
+- For "go back/return": use go_back_button (command: press_key, params: {{"key": "BACK"}})
+- For "go home": use go_home_button (command: press_key, params: {{"key": "HOME"}})
+- For "type/enter/input text": use type_text (command: input_text, params: {{"text": "your text"}})
+- For coordinate taps: use tap_screen_coordinates (command: tap_coordinates, params: {{"x": 100, "y": 200}})
+
+Navigation Intelligence:
+- When user says "go to [something]" or "navigate to [something]": 
+  * If [something] is a UI element (button/tab/menu/section), use click_ui_element (command: click_element, params: {{"element_id": "[something]"}})
+  * Examples: "go to replay" → click replay button, "navigate to settings" → click settings, "open menu" → click menu
+- When user says "click [something]" or "tap [something]": use click_ui_element
+- When user says "select [something]" or "choose [something]": use click_ui_element
+
+Task Analysis Strategy:
+1. Identify the main action type (navigation, input, selection, etc.)
+2. If it's navigation to a UI element, use click_ui_element with the target name
+3. If it's system navigation (back/home), use the specific key commands
+4. If it's text input, use type_text
+5. Always use the exact target name/text from the user's request as element_id
 
 CRITICAL: Respond with ONLY valid JSON. No other text.
 
 Required JSON format:
 {{
-  "analysis": "brief analysis of the task",
+  "analysis": "brief analysis of the task and chosen action",
   "feasible": true,
   "plan": [
     {{
       "step": 1,
       "type": "action",
-      "command": "press_key",
-      "params": {{"key": "HOME"}},
-      "description": "Navigate to home"
-    }},
-    {{
-      "step": 2, 
-      "type": "verification",
-      "verification_type": "text_verification",
-      "params": {{"text": "Home", "timeout": 5.0}},
-      "description": "Verify home screen"
+      "command": "click_element",
+      "params": {{"element_id": "replay"}},
+      "description": "Click on replay button to navigate to replay section"
     }}
   ]
 }}
