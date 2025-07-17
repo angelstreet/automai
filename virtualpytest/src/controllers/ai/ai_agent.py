@@ -65,25 +65,27 @@ class AIAgentController(BaseController):
     
 
     
-    def _execute_navigation(self, target_node: str) -> Dict[str, Any]:
+    def _execute_navigation(self, target_node: str, userinterface_name: str = "horizon_android_mobile") -> Dict[str, Any]:
         """
-        Execute navigation by proxying to script execution context.
-        Uses the same execution path as validation.py for full capability.
+        Execute navigation by doing exactly what validation.py does.
+        Uses pathfinding to get proper navigation sequence with actions.
         
         Args:
             target_node: Target node to navigate to
+            userinterface_name: Name of the userinterface for navigation tree
             
         Returns:
             Dictionary with execution results
         """
         try:
-            print(f"AI[{self.device_name}]: Executing navigation to '{target_node}' via script context")
+            print(f"AI[{self.device_name}]: Executing navigation to '{target_node}' exactly like validation.py")
             
             # Use the same script_utils that validation.py uses
             from src.utils.script_utils import (
                 setup_script_environment,
                 select_device, 
-                execute_navigation_step_directly
+                execute_navigation_step_directly,
+                load_navigation_tree
             )
             
             # Setup script environment (same as validation.py)
@@ -101,15 +103,42 @@ class AIAgentController(BaseController):
             
             selected_device = device_result['device']
             
-            # Execute navigation (same as validation.py)
-            transition = {
-                "actions": [],
-                "to_node_label": target_node
-            }
-            result = execute_navigation_step_directly(host, selected_device, transition, team_id)
+            # Load navigation tree (same as validation.py)
+            tree_result = load_navigation_tree(userinterface_name, "ai_agent")
+            if not tree_result['success']:
+                return {'success': False, 'error': f"Tree loading failed: {tree_result['error']}"}
             
-            print(f"AI[{self.device_name}]: Navigation to '{target_node}' completed with result: {result.get('success', False)}")
-            return result
+            # Get navigation sequence using pathfinding (same as validation.py)
+            from src.lib.navigation.navigation_pathfinding import find_path_to_node
+            
+            print(f"AI[{self.device_name}]: Finding path to '{target_node}' using pathfinding")
+            
+            # Find path from current location to target node
+            path_sequence = find_path_to_node(userinterface_name, target_node, team_id)
+            
+            if not path_sequence:
+                return {'success': False, 'error': f"No path found to '{target_node}'"}
+            
+            print(f"AI[{self.device_name}]: Found path with {len(path_sequence)} steps")
+            
+            # Execute each step in the path (same as validation.py)
+            for i, step in enumerate(path_sequence):
+                step_num = i + 1
+                from_node = step.get('from_node_label', 'unknown')
+                to_node = step.get('to_node_label', 'unknown')
+                
+                print(f"AI[{self.device_name}]: Executing step {step_num}/{len(path_sequence)}: {from_node} → {to_node}")
+                
+                # Execute the navigation step directly (same as validation.py)
+                result = execute_navigation_step_directly(host, selected_device, step, team_id)
+                
+                if not result['success']:
+                    return {'success': False, 'error': f"Navigation failed at step {step_num}: {result.get('error', 'Unknown error')}"}
+                
+                print(f"AI[{self.device_name}]: Step {step_num} completed successfully")
+            
+            print(f"AI[{self.device_name}]: Navigation to '{target_node}' completed successfully")
+            return {'success': True, 'message': f"Successfully navigated to '{target_node}'"}
             
         except Exception as e:
             error_msg = f"Navigation execution error: {str(e)}"
@@ -152,7 +181,7 @@ class AIAgentController(BaseController):
             
             # Step 2: Execute the plan
             self.current_step = "Executing plan"
-            execute_result = self._execute(ai_plan['plan'], navigation_tree)
+            execute_result = self._execute(ai_plan['plan'], navigation_tree, userinterface_name)
             self._add_to_log("execute", "plan_execution", execute_result, f"Plan execution: {execute_result}")
             
             # Step 3: Generate result summary
@@ -397,13 +426,14 @@ JSON ONLY - NO OTHER TEXT"""
                 'error': f'AI plan generation failed: {str(e)}'
             }
     
-    def _execute(self, plan: Dict[str, Any], navigation_tree: Dict = None) -> Dict[str, Any]:
+    def _execute(self, plan: Dict[str, Any], navigation_tree: Dict = None, userinterface_name: str = "horizon_android_mobile") -> Dict[str, Any]:
         """
         Execute the AI plan.
         
         Args:
             plan: AI-generated plan with steps
             navigation_tree: Navigation tree data (if available)
+            userinterface_name: Name of the userinterface for navigation
         """
         if not plan.get('feasible', True):
             print(f"AI[{self.device_name}]: Plan not feasible, skipping execution")
@@ -435,7 +465,7 @@ JSON ONLY - NO OTHER TEXT"""
         # Execute actions first
         action_result = {'success': True, 'executed_steps': 0, 'total_steps': 0}
         if action_steps:
-            action_result = self._execute_actions(action_steps, navigation_tree)
+            action_result = self._execute_actions(action_steps, navigation_tree, userinterface_name)
         
         # Execute verifications second
         verification_result = {'success': True, 'executed_verifications': 0, 'total_verifications': 0}
@@ -456,13 +486,14 @@ JSON ONLY - NO OTHER TEXT"""
             'message': f'Plan execution completed: {total_executed}/{total_steps} steps successful'
         }
     
-    def _execute_actions(self, action_steps: List[Dict[str, Any]], navigation_tree: Dict = None) -> Dict[str, Any]:
+    def _execute_actions(self, action_steps: List[Dict[str, Any]], navigation_tree: Dict = None, userinterface_name: str = "horizon_android_mobile") -> Dict[str, Any]:
         """
         Execute action steps using direct controller access.
         
         Args:
             action_steps: List of action steps from AI plan
             navigation_tree: Navigation tree data (if available)
+            userinterface_name: Name of the userinterface for navigation
         """
         try:
             # Get remote controller for this device
@@ -495,7 +526,7 @@ JSON ONLY - NO OTHER TEXT"""
                 try:
                     if command == "execute_navigation":
                         target_node = params.get("target_node")
-                        result = self._execute_navigation(target_node)
+                        result = self._execute_navigation(target_node, userinterface_name)
                         success = result.get('success', False)
                     else:
                         success = remote_controller.execute_command(command, params)
