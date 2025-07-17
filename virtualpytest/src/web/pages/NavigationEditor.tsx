@@ -569,7 +569,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           error={error}
           isLocked={isLocked ?? false}
           treeId={actualTreeId || treeId || ''}
-          userInterfaceId={actualUserInterfaceId || ''}
           selectedHost={selectedHost}
           selectedDeviceId={selectedDeviceId}
           isRemotePanelOpen={isRemotePanelOpen}
