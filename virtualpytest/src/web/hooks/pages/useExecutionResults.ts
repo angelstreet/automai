@@ -22,6 +22,8 @@ export interface ExecutionResult {
   message: string;
   error_details: any;
   executed_at: string;
+  script_result_id?: string;  // NEW: Link to script execution
+  script_context?: string;    // NEW: Context of execution ('direct', 'script', 'validation')
 }
 
 export const useExecutionResults = () => {

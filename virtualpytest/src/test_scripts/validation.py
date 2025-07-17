@@ -180,7 +180,7 @@ def main():
             # Execute the navigation step directly
             step_start_time = time.time()
             step_start_timestamp = datetime.now().strftime('%H:%M:%S')
-            result = execute_navigation_with_verifications(host, selected_device, step, team_id, tree_id)
+            result = execute_navigation_with_verifications(host, selected_device, step, team_id, tree_id, script_result_id, 'validation')
             step_end_timestamp = datetime.now().strftime('%H:%M:%S')
             step_execution_time = int((time.time() - step_start_time) * 1000)
             

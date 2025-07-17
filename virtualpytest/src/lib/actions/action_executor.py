@@ -214,7 +214,9 @@ class ActionExecutor:
                 success=success,
                 execution_time_ms=execution_time_ms,
                 message=message,
-                error_details=error_details
+                error_details=error_details,
+                script_result_id=getattr(self, 'script_result_id', None),
+                script_context=getattr(self, 'script_context', 'direct')
             )
             
         except Exception as e:

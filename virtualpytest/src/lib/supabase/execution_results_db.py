@@ -122,7 +122,9 @@ def record_edge_execution(
     success: bool,
     execution_time_ms: int,
     message: str = "",
-    error_details: Optional[Dict] = None
+    error_details: Optional[Dict] = None,
+    script_result_id: Optional[str] = None,
+    script_context: str = 'direct'
 ) -> Optional[str]:
     """Record edge action execution directly to database."""
     try:
@@ -140,7 +142,9 @@ def record_edge_execution(
             'execution_time_ms': execution_time_ms,
             'message': message,
             'error_details': error_details,
-            'executed_at': datetime.now().isoformat()
+            'executed_at': datetime.now().isoformat(),
+            'script_result_id': script_result_id,
+            'script_context': script_context
         }
         
         supabase = get_supabase()
@@ -166,7 +170,9 @@ def record_node_execution(
     success: bool,
     execution_time_ms: int,
     message: str = "",
-    error_details: Optional[Dict] = None
+    error_details: Optional[Dict] = None,
+    script_result_id: Optional[str] = None,
+    script_context: str = 'direct'
 ) -> Optional[str]:
     """Record node verification execution directly to database."""
     try:
@@ -184,7 +190,9 @@ def record_node_execution(
             'execution_time_ms': execution_time_ms,
             'message': message,
             'error_details': error_details,
-            'executed_at': datetime.now().isoformat()
+            'executed_at': datetime.now().isoformat(),
+            'script_result_id': script_result_id,
+            'script_context': script_context
         }
         
         print(f"[@db:execution_results:record_node_execution] Recording execution:")

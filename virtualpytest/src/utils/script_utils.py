@@ -250,7 +250,7 @@ def execute_verification_directly(host, device, verification: Dict[str, Any]) ->
         return {'success': False, 'error': f'Verification execution error: {str(e)}'}
 
 
-def execute_navigation_with_verifications(host, device, transition: Dict[str, Any], team_id: str, tree_id: str = None) -> Dict[str, Any]:
+def execute_navigation_with_verifications(host, device, transition: Dict[str, Any], team_id: str, tree_id: str = None, script_result_id: str = None, script_context: str = 'script') -> Dict[str, Any]:
     """
     Execute a single navigation step with verifications following NavigationExecutor pattern.
     
@@ -300,7 +300,9 @@ def execute_navigation_with_verifications(host, device, transition: Dict[str, An
                     success=actions_success,
                     execution_time_ms=action_execution_time,
                     message='Navigation actions completed' if actions_success else 'Navigation actions failed',
-                    error_details={'error': 'Action execution failed'} if not actions_success else None
+                    error_details={'error': 'Action execution failed'} if not actions_success else None,
+                    script_result_id=script_result_id,
+                    script_context=script_context
                 )
             except Exception:
                 pass  # Silent fail as per optimization
@@ -334,7 +336,9 @@ def execute_navigation_with_verifications(host, device, transition: Dict[str, An
                         success=verify_result.get('success', False),
                         execution_time_ms=verification_execution_time,
                         message=verify_result.get('message', 'Verification completed'),
-                        error_details={'error': verify_result.get('error')} if verify_result.get('error') else None
+                        error_details={'error': verify_result.get('error')} if verify_result.get('error') else None,
+                        script_result_id=script_result_id,
+                        script_context=script_context
                     )
                 except Exception:
                     pass
