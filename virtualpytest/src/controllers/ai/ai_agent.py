@@ -294,22 +294,22 @@ JSON ONLY - NO OTHER TEXT"""
         
         try:
             import requests
-            from src.utils.host_utils import get_host_manager
+            from src.utils.host_utils import get_controller
             
-            # Get host information from host manager
-            host_manager = get_host_manager()
-            host_info = host_manager.get_current_host()
+            # Since we're running on the host with device control, use direct controller access
+            # This is the established pattern for host-side execution
+            remote_controller = get_controller(self.device_name, 'remote')
             
-            if not host_info:
-                print(f"AI[{self.device_name}]: No host information available")
+            if not remote_controller:
+                print(f"AI[{self.device_name}]: No remote controller available for execution")
                 return {
                     'success': False,
-                    'error': 'No host information available for action execution',
+                    'error': 'No remote controller available for plan execution',
                     'executed_steps': 0,
                     'total_steps': len(plan_steps)
                 }
             
-            print(f"AI[{self.device_name}]: Executing {len(plan_steps)} steps using action execution API")
+            print(f"AI[{self.device_name}]: Executing {len(plan_steps)} steps using {type(remote_controller).__name__}")
             
             executed_steps = 0
             failed_steps = []
@@ -327,58 +327,26 @@ JSON ONLY - NO OTHER TEXT"""
                 
                 try:
                     if step_type == 'action':
-                        # Use the existing action execution endpoint (same as useEdge.ts)
-                        action_data = {
-                            'command': command,
-                            'params': params,
-                            'wait_time': params.get('wait_time', 0)
-                        }
+                        # Execute action using direct controller access (host-side pattern)
+                        success = remote_controller.execute_command(command, params)
                         
-                        # Execute action using established server route pattern
-                        response = requests.post(
-                            'http://localhost:5000/server/remote/executeCommand',
-                            json={
-                                'host': host_info.to_dict(),
-                                'device_id': self.device_name,
+                        if success:
+                            executed_steps += 1
+                            step_results.append({
+                                'step': step_num,
                                 'command': command,
-                                'params': params
-                            },
-                            timeout=30,
-                            headers={'Content-Type': 'application/json'}
-                        )
-                        
-                        if response.status_code == 200:
-                            result = response.json()
-                            success = result.get('success', False)
+                                'params': params,
+                                'success': True,
+                                'description': description,
+                                'message': 'Action completed successfully'
+                            })
+                            print(f"AI[{self.device_name}]: Step {step_num} completed successfully")
                             
-                            if success:
-                                executed_steps += 1
-                                step_results.append({
-                                    'step': step_num,
-                                    'command': command,
-                                    'params': params,
-                                    'success': True,
-                                    'description': description,
-                                    'message': result.get('message', 'Action completed')
-                                })
-                                print(f"AI[{self.device_name}]: Step {step_num} completed successfully")
+                            # Add wait time if specified
+                            wait_time = params.get('wait_time', 0.5)  # Default 500ms between steps
+                            if wait_time > 0:
+                                time.sleep(wait_time)
                                 
-                                # Add wait time if specified
-                                wait_time = params.get('wait_time', 0.5)  # Default 500ms between steps
-                                if wait_time > 0:
-                                    time.sleep(wait_time)
-                                    
-                            else:
-                                failed_steps.append(step_num)
-                                step_results.append({
-                                    'step': step_num,
-                                    'command': command,
-                                    'params': params,
-                                    'success': False,
-                                    'error': result.get('error', 'Command execution failed'),
-                                    'description': description
-                                })
-                                print(f"AI[{self.device_name}]: Step {step_num} failed: {result.get('error', 'Unknown error')}")
                         else:
                             failed_steps.append(step_num)
                             step_results.append({
@@ -386,14 +354,14 @@ JSON ONLY - NO OTHER TEXT"""
                                 'command': command,
                                 'params': params,
                                 'success': False,
-                                'error': f'HTTP {response.status_code}: {response.text}',
+                                'error': 'Command execution failed',
                                 'description': description
                             })
-                            print(f"AI[{self.device_name}]: Step {step_num} failed with HTTP {response.status_code}")
+                            print(f"AI[{self.device_name}]: Step {step_num} failed: {command}")
                             
                     elif step_type == 'verification':
                         # For verification steps, just log them for now
-                        # Real verification would use the existing verification execution endpoints
+                        # Real verification would use the existing verification controllers
                         step_results.append({
                             'step': step_num,
                             'verification_type': step.get('verification_type', 'unknown'),
@@ -416,18 +384,6 @@ JSON ONLY - NO OTHER TEXT"""
                         })
                         print(f"AI[{self.device_name}]: Step {step_num} failed: unknown type {step_type}")
                         
-                except requests.exceptions.RequestException as e:
-                    failed_steps.append(step_num)
-                    step_results.append({
-                        'step': step_num,
-                        'command': command,
-                        'params': params,
-                        'success': False,
-                        'error': f'Network error: {str(e)}',
-                        'description': description
-                    })
-                    print(f"AI[{self.device_name}]: Step {step_num} network error: {e}")
-                    
                 except Exception as e:
                     failed_steps.append(step_num)
                     step_results.append({
