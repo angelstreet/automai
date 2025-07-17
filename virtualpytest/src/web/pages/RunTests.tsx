@@ -78,7 +78,7 @@ const RunTests: React.FC = () => {
   // Script parameters state
   const [scriptAnalysis, setScriptAnalysis] = useState<ScriptAnalysis | null>(null);
   const [parameterValues, setParameterValues] = useState<Record<string, string>>({});
-  const [analyzingScript, setAnalyzingScript] = useState<boolean>(false);
+  const [_analyzingScript, setAnalyzingScript] = useState<boolean>(false);
 
   // Only fetch host data when wizard is shown
   const { getAllHosts, getDevicesFromHost } = useHostManager();
@@ -250,8 +250,6 @@ const RunTests: React.FC = () => {
         } else {
           paramStrings.push(`--${param.name} ${value}`);
         }
-      } else if (param.required) {
-        // Don't include empty required parameters - this will cause validation error
       }
     });
 
@@ -366,12 +364,7 @@ const RunTests: React.FC = () => {
 
     // Special handling for userinterface_name with autocomplete
     if (param.name === 'userinterface_name') {
-      const options = [
-        'horizon_android_mobile',
-        'horizon_android_tv',
-        'vz_android_mobile',
-        'vz_android_tv',
-      ];
+      const options = ['horizon_android_mobile', 'horizon_android_tv'];
 
       return (
         <Autocomplete
@@ -519,10 +512,6 @@ const RunTests: React.FC = () => {
                   {/* Required Parameters Only - Inline */}
                   {requiredParameters.length > 0 && (
                     <>
-                      <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
-                        Required Parameters
-                        {analyzingScript && <CircularProgress size={12} sx={{ ml: 1 }} />}
-                      </Typography>
                       <Grid container spacing={1} sx={{ mb: 1 }}>
                         {requiredParameters.map((param) => (
                           <Grid item xs={12} sm={6} key={param.name}>
@@ -530,13 +519,6 @@ const RunTests: React.FC = () => {
                           </Grid>
                         ))}
                       </Grid>
-                      {requiredParameters.length > 0 && (
-                        <Box sx={{ mb: 1, p: 1, bgcolor: 'background.default', borderRadius: 1 }}>
-                          <Typography variant="caption" color="textSecondary">
-                            Preview: {buildParameterString() || 'No parameters set'}
-                          </Typography>
-                        </Box>
-                      )}
                     </>
                   )}
 
