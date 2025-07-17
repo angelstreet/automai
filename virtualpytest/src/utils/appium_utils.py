@@ -253,7 +253,6 @@ class AppiumUtils:
             Tuple of (success, elements_list, error_message)
         """
         try:
-            print(f"[@lib:appiumUtils:dump_ui_elements] Dumping UI elements for device {device_id}")
             
             driver = self.get_driver(device_id)
             if not driver:

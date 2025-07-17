@@ -403,8 +403,6 @@ class ADBUtils:
             Tuple of (success, elements_list, error_message)
         """
         try:
-            print(f"[@lib:adbUtils:dump_ui_elements] Dumping UI elements for device {device_id}")
-            
             # Dump UI to file then read it (more compatible)
             dump_command = f"adb -s {device_id} shell uiautomator dump --compressed /sdcard/ui_dump.xml"
             success, stdout, stderr, exit_code = self.execute_command(dump_command)
@@ -844,10 +842,8 @@ class ADBUtils:
             # Check if we have pipe-separated terms
             if '|' in search_term:
                 terms = [term.strip() for term in search_term.split('|') if term.strip()]
-                print(f"[@lib:adbUtils:check_element_exists] Checking {len(terms)} terms: {terms}")
                 
                 for i, term in enumerate(terms):
-                    print(f"[@lib:adbUtils:check_element_exists] Attempt {i+1}/{len(terms)}: Searching for '{term}'")
                     
                     success, matches, error = self.smart_element_search(device_id, term.strip())
                     
@@ -868,14 +864,12 @@ class ADBUtils:
                             enabled=element_dict['enabled']
                         )
                         
-                        print(f"[@lib:adbUtils:check_element_exists] Found element using term '{term}': ID={element.id}")
                         return True, element, ""
                 
                 print(f"[@lib:adbUtils:check_element_exists] No matches found for any term in: {search_term}")
                 return False, None, ""
             else:
                 # Single term - original logic
-                print(f"[@lib:adbUtils:check_element_exists] Smart searching for '{search_term}' on device {device_id}")
                 
                 success, matches, error = self.smart_element_search(device_id, search_term)
                 
