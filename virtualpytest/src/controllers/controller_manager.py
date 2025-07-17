@@ -20,7 +20,7 @@ from ..controllers.verification.text import TextVerificationController
 from ..controllers.verification.adb import ADBVerificationController
 from ..controllers.verification.appium import AppiumVerificationController
 from ..controllers.verification.video import VideoVerificationController
-from ..controllers.ai.ai_agent import AIAgentController
+# from ..controllers.ai.ai_agent import AIAgentController  # Lazy import to avoid circular import
 
 
 def create_host_from_environment() -> Host:
@@ -182,6 +182,8 @@ def _create_controller_instance(controller_type: str, implementation: str, param
     # AI Controllers
     elif controller_type == 'ai':
         if implementation == 'ai_agent':
+            # Lazy import to avoid circular import
+            from ..controllers.ai.ai_agent import AIAgentController
             # Pass device_name explicitly from params
             device_name = params.get('device_id')
             return AIAgentController(device_name=device_name, **params)

@@ -19,7 +19,7 @@ from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 from .system_info_utils import get_host_system_stats
-# from ..controllers.controller_manager import get_host # This import is now lazy-loaded
+from ..controllers.controller_manager import get_host
 from .build_url_utils import buildServerUrl
 
 # Disable SSL warnings for self-signed certificates
@@ -164,9 +164,6 @@ _host_manager = HostManager()
 
 def get_host_manager() -> HostManager:
     """Get the global host manager instance"""
-    # Lazy import inside function to avoid circular import
-    from ..controllers.controller_manager import get_host
-    
     global _host_manager
     if _host_manager is None:
         _host_manager = get_host()
