@@ -20,7 +20,7 @@ import {
   TableRow,
   Paper,
 } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { useScript } from '../hooks/script/useScript';
 import { useHostManager } from '../hooks/useHostManager';
@@ -43,12 +43,43 @@ const RunTests: React.FC = () => {
 
   const [selectedHost, setSelectedHost] = useState<string>('');
   const [selectedDevice, setSelectedDevice] = useState<string>('');
-  const [selectedScript, setSelectedScript] = useState<string>('helloworld');
+  const [selectedScript, setSelectedScript] = useState<string>('');
   const [showWizard, setShowWizard] = useState<boolean>(false);
   const [executions, setExecutions] = useState<ExecutionRecord[]>([]);
+  const [availableScripts, setAvailableScripts] = useState<string[]>([]);
+  const [loadingScripts, setLoadingScripts] = useState<boolean>(false);
 
   // Only fetch host data when wizard is shown
   const { getAllHosts, getDevicesFromHost } = useHostManager();
+
+  // Load available scripts from virtualpytest/scripts folder
+  useEffect(() => {
+    const loadScripts = async () => {
+      setLoadingScripts(true);
+      try {
+        const response = await fetch('/server/script/list');
+        const data = await response.json();
+
+        if (data.success && data.scripts) {
+          setAvailableScripts(data.scripts);
+
+          // Set default selection to first script if available
+          if (data.scripts.length > 0 && !selectedScript) {
+            setSelectedScript(data.scripts[0]);
+          }
+        } else {
+          showError('Failed to load available scripts');
+        }
+      } catch (error) {
+        showError('Failed to load available scripts');
+        console.error('Error loading scripts:', error);
+      } finally {
+        setLoadingScripts(false);
+      }
+    };
+
+    loadScripts();
+  }, [selectedScript, showError]);
 
   // Get hosts and devices only when needed
   const hosts = showWizard ? getAllHosts() : [];
@@ -168,8 +199,21 @@ const RunTests: React.FC = () => {
                           value={selectedScript}
                           label="Script"
                           onChange={(e) => setSelectedScript(e.target.value)}
+                          disabled={loadingScripts}
                         >
-                          <MenuItem value="helloworld">Hello World</MenuItem>
+                          {loadingScripts ? (
+                            <MenuItem value="">
+                              <CircularProgress size={20} />
+                            </MenuItem>
+                          ) : availableScripts.length === 0 ? (
+                            <MenuItem value="">No scripts available</MenuItem>
+                          ) : (
+                            availableScripts.map((script) => (
+                              <MenuItem key={script} value={script}>
+                                {script}
+                              </MenuItem>
+                            ))
+                          )}
                         </Select>
                       </FormControl>
                     </Grid>
@@ -218,7 +262,13 @@ const RunTests: React.FC = () => {
                       variant="contained"
                       startIcon={isExecuting ? <CircularProgress size={20} /> : <ScriptIcon />}
                       onClick={handleExecuteScript}
-                      disabled={isExecuting || !selectedHost || !selectedDevice}
+                      disabled={
+                        isExecuting ||
+                        !selectedHost ||
+                        !selectedDevice ||
+                        !selectedScript ||
+                        loadingScripts
+                      }
                     >
                       {isExecuting ? 'Executing...' : 'Execute Script'}
                     </Button>

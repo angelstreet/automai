@@ -578,7 +578,7 @@ const DependencyReport: React.FC = () => {
                           <TableRow
                             sx={{
                               '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                backgroundColor: 'transparent',
                               },
                             }}
                           >
@@ -634,7 +634,7 @@ const DependencyReport: React.FC = () => {
                                           key={node.node_id}
                                           sx={{
                                             '&:hover': {
-                                              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                              backgroundColor: 'transparent',
                                             },
                                           }}
                                         >
@@ -727,7 +727,7 @@ const DependencyReport: React.FC = () => {
                           <TableRow
                             sx={{
                               '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                backgroundColor: 'transparent',
                               },
                             }}
                           >
@@ -783,7 +783,7 @@ const DependencyReport: React.FC = () => {
                                           key={edge.edge_id}
                                           sx={{
                                             '&:hover': {
-                                              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                              backgroundColor: 'transparent',
                                             },
                                           }}
                                         >
@@ -942,7 +942,7 @@ const DependencyReport: React.FC = () => {
                                           key={script.script_result_id}
                                           sx={{
                                             '&:hover': {
-                                              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                              backgroundColor: 'transparent',
                                             },
                                           }}
                                         >
@@ -1113,7 +1113,7 @@ const DependencyReport: React.FC = () => {
                                           key={script.script_result_id}
                                           sx={{
                                             '&:hover': {
-                                              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                              backgroundColor: 'transparent',
                                             },
                                           }}
                                         >
