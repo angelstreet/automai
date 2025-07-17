@@ -104,7 +104,7 @@ const DependencyReport: React.FC = () => {
   const [scriptEdgeDependencies, setScriptEdgeDependencies] = useState<ScriptEdgeDependency[]>([]);
   const [nodeScriptDependencies, setNodeScriptDependencies] = useState<NodeScriptDependency[]>([]);
   const [edgeScriptDependencies, setEdgeScriptDependencies] = useState<EdgeScriptDependency[]>([]);
-  const [treeToInterfaceMap, setTreeToInterfaceMap] = useState<Record<string, string>>({});
+  const [_treeToInterfaceMap, setTreeToInterfaceMap] = useState<Record<string, string>>({});
 
   // Filter states
   const [scriptNodeFilter, setScriptNodeFilter] = useState('');
@@ -615,19 +615,6 @@ const DependencyReport: React.FC = () => {
                               >
                                 <Box sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
                                   <Table size="small">
-                                    <TableHead>
-                                      <TableRow>
-                                        <TableCell>
-                                          <strong>Node Name</strong>
-                                        </TableCell>
-                                        <TableCell>
-                                          <strong>Executions</strong>
-                                        </TableCell>
-                                        <TableCell>
-                                          <strong>Success Rate</strong>
-                                        </TableCell>
-                                      </TableRow>
-                                    </TableHead>
                                     <TableBody>
                                       {script.nodes.map((node) => (
                                         <TableRow
@@ -764,19 +751,6 @@ const DependencyReport: React.FC = () => {
                               >
                                 <Box sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
                                   <Table size="small">
-                                    <TableHead>
-                                      <TableRow>
-                                        <TableCell>
-                                          <strong>Edge Name</strong>
-                                        </TableCell>
-                                        <TableCell>
-                                          <strong>Executions</strong>
-                                        </TableCell>
-                                        <TableCell>
-                                          <strong>Success Rate</strong>
-                                        </TableCell>
-                                      </TableRow>
-                                    </TableHead>
                                     <TableBody>
                                       {script.edges.map((edge) => (
                                         <TableRow
@@ -876,7 +850,7 @@ const DependencyReport: React.FC = () => {
                           <TableRow
                             sx={{
                               '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                backgroundColor: 'transparent',
                               },
                             }}
                           >
@@ -920,22 +894,6 @@ const DependencyReport: React.FC = () => {
                               <Collapse in={expandedRows.has(`node-script-${node.node_id}`)}>
                                 <Box sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
                                   <Table size="small">
-                                    <TableHead>
-                                      <TableRow>
-                                        <TableCell>
-                                          <strong>Script Name</strong>
-                                        </TableCell>
-                                        <TableCell>
-                                          <strong>Executions</strong>
-                                        </TableCell>
-                                        <TableCell>
-                                          <strong>Success Rate</strong>
-                                        </TableCell>
-                                        <TableCell>
-                                          <strong>Report</strong>
-                                        </TableCell>
-                                      </TableRow>
-                                    </TableHead>
                                     <TableBody>
                                       {node.scripts.map((script) => (
                                         <TableRow
@@ -955,25 +913,6 @@ const DependencyReport: React.FC = () => {
                                               size="small"
                                               variant="outlined"
                                             />
-                                          </TableCell>
-                                          <TableCell>
-                                            {script.html_report_r2_url ? (
-                                              <Chip
-                                                icon={<LinkIcon />}
-                                                label="View"
-                                                size="small"
-                                                clickable
-                                                onClick={() =>
-                                                  window.open(script.html_report_r2_url!, '_blank')
-                                                }
-                                                color="primary"
-                                                variant="outlined"
-                                              />
-                                            ) : (
-                                              <Typography variant="caption" color="textSecondary">
-                                                No Report
-                                              </Typography>
-                                            )}
                                           </TableCell>
                                         </TableRow>
                                       ))}
@@ -1047,7 +986,7 @@ const DependencyReport: React.FC = () => {
                           <TableRow
                             sx={{
                               '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                                backgroundColor: 'transparent',
                               },
                             }}
                           >
@@ -1091,22 +1030,6 @@ const DependencyReport: React.FC = () => {
                               <Collapse in={expandedRows.has(`edge-script-${edge.edge_id}`)}>
                                 <Box sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
                                   <Table size="small">
-                                    <TableHead>
-                                      <TableRow>
-                                        <TableCell>
-                                          <strong>Script Name</strong>
-                                        </TableCell>
-                                        <TableCell>
-                                          <strong>Executions</strong>
-                                        </TableCell>
-                                        <TableCell>
-                                          <strong>Success Rate</strong>
-                                        </TableCell>
-                                        <TableCell>
-                                          <strong>Report</strong>
-                                        </TableCell>
-                                      </TableRow>
-                                    </TableHead>
                                     <TableBody>
                                       {edge.scripts.map((script) => (
                                         <TableRow

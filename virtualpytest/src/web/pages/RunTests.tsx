@@ -22,6 +22,8 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
+import { StreamViewer } from '../components/controller/av/StreamViewer';
+import { useStream } from '../hooks/controller/useStream';
 import { useScript } from '../hooks/script/useScript';
 import { useHostManager } from '../hooks/useHostManager';
 import { useToast } from '../hooks/useToast';
@@ -44,13 +46,32 @@ const RunTests: React.FC = () => {
   const [selectedHost, setSelectedHost] = useState<string>('');
   const [selectedDevice, setSelectedDevice] = useState<string>('');
   const [selectedScript, setSelectedScript] = useState<string>('');
-  const [showWizard, setShowWizard] = useState<boolean>(false);
-  const [executions, setExecutions] = useState<ExecutionRecord[]>([]);
   const [availableScripts, setAvailableScripts] = useState<string[]>([]);
   const [loadingScripts, setLoadingScripts] = useState<boolean>(false);
+  const [showWizard, setShowWizard] = useState<boolean>(false);
+  const [executions, setExecutions] = useState<ExecutionRecord[]>([]);
 
   // Only fetch host data when wizard is shown
   const { getAllHosts, getDevicesFromHost } = useHostManager();
+
+  // Get hosts and devices only when needed
+  const hosts = showWizard ? getAllHosts() : [];
+  const availableDevices = showWizard && selectedHost ? getDevicesFromHost(selectedHost) : [];
+
+  // Get the selected host object for stream
+  const selectedHostObject = hosts.find((host) => host.host_name === selectedHost);
+
+  // Use stream hook to get device stream
+  const { streamUrl, isLoadingUrl, urlError } = useStream({
+    host: selectedHostObject!,
+    device_id: selectedDevice || 'device1',
+  });
+
+  // Get the selected device object for model information
+  const selectedDeviceObject = availableDevices.find(
+    (device) => device.device_id === selectedDevice,
+  );
+  const deviceModel = selectedDeviceObject?.device_model || 'unknown';
 
   // Load available scripts from virtualpytest/scripts folder
   useEffect(() => {
@@ -80,10 +101,6 @@ const RunTests: React.FC = () => {
 
     loadScripts();
   }, [selectedScript, showError]);
-
-  // Get hosts and devices only when needed
-  const hosts = showWizard ? getAllHosts() : [];
-  const availableDevices = showWizard && selectedHost ? getDevicesFromHost(selectedHost) : [];
 
   const handleExecuteScript = async () => {
     if (!selectedHost || !selectedDevice || !selectedScript) {
@@ -156,20 +173,20 @@ const RunTests: React.FC = () => {
     }
   };
 
+  // Check if device is mobile model for proper aspect ratio
+  const isMobileModel = !!(deviceModel && deviceModel.toLowerCase().includes('mobile'));
+
   return (
     <Box>
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" gutterBottom>
           Script Runner
         </Typography>
-        <Typography variant="body1" color="textSecondary">
-          Execute scripts on host devices and monitor their progress in real-time.
-        </Typography>
       </Box>
 
       <Grid container spacing={3}>
         {/* Script Execution */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={showWizard && selectedHost && selectedDevice ? 6 : 12}>
           <Card>
             <CardContent>
               <Typography variant="h6" mb={2}>
@@ -288,6 +305,87 @@ const RunTests: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+
+        {/* Device Stream Viewer - Only show when host and device are selected */}
+        {showWizard && selectedHost && selectedDevice && (
+          <Grid item xs={12} md={6}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" mb={2}>
+                  Device Preview - {selectedHost}:{selectedDevice}
+                </Typography>
+
+                <Box
+                  sx={{
+                    height: 400,
+                    backgroundColor: 'black',
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {streamUrl && selectedHostObject ? (
+                    <StreamViewer
+                      streamUrl={streamUrl}
+                      isStreamActive={true}
+                      isCapturing={isExecuting}
+                      model={deviceModel}
+                      layoutConfig={{
+                        minHeight: '300px',
+                        aspectRatio: isMobileModel ? '9/16' : '16/9',
+                        objectFit: 'contain',
+                        isMobileModel,
+                      }}
+                      isExpanded={false}
+                      sx={{
+                        width: '100%',
+                        height: '100%',
+                      }}
+                    />
+                  ) : (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {isLoadingUrl ? (
+                        <>
+                          <CircularProgress sx={{ color: 'white', mb: 2 }} />
+                          <Typography>Loading device stream...</Typography>
+                        </>
+                      ) : urlError ? (
+                        <>
+                          <Typography color="error" sx={{ mb: 1 }}>
+                            Stream Error
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {urlError}
+                          </Typography>
+                        </>
+                      ) : (
+                        <Typography>No stream available</Typography>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Device info */}
+                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Chip label={`Model: ${deviceModel}`} size="small" variant="outlined" />
+                  {streamUrl && <Chip label="Stream Active" size="small" color="success" />}
+                  {isExecuting && <Chip label="Script Running" size="small" color="warning" />}
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
 
         {/* Execution History */}
         <Grid item xs={12}>
