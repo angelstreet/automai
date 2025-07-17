@@ -326,30 +326,32 @@ const DependencyReport: React.FC = () => {
 
         const nodeScriptDeps: NodeScriptDependency[] = Array.from(nodeMap.entries()).map(
           ([nodeId, data]) => {
-            // Group executions by script
+            // Group executions by script name
             const scriptGroups = new Map<
               string,
-              Array<{ success: boolean; html_report_r2_url: string | null }>
+              Array<{
+                success: boolean;
+                html_report_r2_url: string | null;
+                script_result_id: string;
+              }>
             >();
             data.script_executions.forEach((exec) => {
-              if (!scriptGroups.has(exec.script_result_id)) {
-                scriptGroups.set(exec.script_result_id, []);
+              if (!scriptGroups.has(exec.script_name)) {
+                scriptGroups.set(exec.script_name, []);
               }
-              scriptGroups.get(exec.script_result_id)!.push({
+              scriptGroups.get(exec.script_name)!.push({
                 success: exec.success,
                 html_report_r2_url: exec.html_report_r2_url,
+                script_result_id: exec.script_result_id,
               });
             });
 
-            const scripts = Array.from(scriptGroups.entries()).map(([scriptId, executions]) => {
+            const scripts = Array.from(scriptGroups.entries()).map(([scriptName, executions]) => {
               const successCount = executions.filter((e) => e.success).length;
-              const scriptName =
-                data.script_executions.find((e) => e.script_result_id === scriptId)?.script_name ||
-                'Unknown';
               const htmlReport = executions[0]?.html_report_r2_url || null;
 
               return {
-                script_result_id: scriptId,
+                script_result_id: executions[0].script_result_id, // Use first script_result_id for key
                 script_name: scriptName,
                 execution_count: executions.length,
                 success_rate: (successCount / executions.length) * 100,
@@ -411,30 +413,32 @@ const DependencyReport: React.FC = () => {
 
         const edgeScriptDeps: EdgeScriptDependency[] = Array.from(edgeMap.entries()).map(
           ([edgeId, data]) => {
-            // Group executions by script
+            // Group executions by script name
             const scriptGroups = new Map<
               string,
-              Array<{ success: boolean; html_report_r2_url: string | null }>
+              Array<{
+                success: boolean;
+                html_report_r2_url: string | null;
+                script_result_id: string;
+              }>
             >();
             data.script_executions.forEach((exec) => {
-              if (!scriptGroups.has(exec.script_result_id)) {
-                scriptGroups.set(exec.script_result_id, []);
+              if (!scriptGroups.has(exec.script_name)) {
+                scriptGroups.set(exec.script_name, []);
               }
-              scriptGroups.get(exec.script_result_id)!.push({
+              scriptGroups.get(exec.script_name)!.push({
                 success: exec.success,
                 html_report_r2_url: exec.html_report_r2_url,
+                script_result_id: exec.script_result_id,
               });
             });
 
-            const scripts = Array.from(scriptGroups.entries()).map(([scriptId, executions]) => {
+            const scripts = Array.from(scriptGroups.entries()).map(([scriptName, executions]) => {
               const successCount = executions.filter((e) => e.success).length;
-              const scriptName =
-                data.script_executions.find((e) => e.script_result_id === scriptId)?.script_name ||
-                'Unknown';
               const htmlReport = executions[0]?.html_report_r2_url || null;
 
               return {
-                script_result_id: scriptId,
+                script_result_id: executions[0].script_result_id, // Use first script_result_id for key
                 script_name: scriptName,
                 execution_count: executions.length,
                 success_rate: (successCount / executions.length) * 100,
@@ -602,7 +606,12 @@ const DependencyReport: React.FC = () => {
               </Box>
 
               <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
+                <Table
+                  size="small"
+                  sx={{
+                    '& .MuiTableRow-root:hover': { backgroundColor: 'transparent !important' },
+                  }}
+                >
                   <TableHead>
                     <TableRow>
                       <TableCell width="50"></TableCell>
@@ -668,7 +677,14 @@ const DependencyReport: React.FC = () => {
                                 in={expandedRows.has(`script-node-${script.script_result_id}`)}
                               >
                                 <Box sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
-                                  <Table size="small">
+                                  <Table
+                                    size="small"
+                                    sx={{
+                                      '& .MuiTableRow-root:hover': {
+                                        backgroundColor: 'transparent !important',
+                                      },
+                                    }}
+                                  >
                                     <TableBody>
                                       {script.nodes.map((node) => (
                                         <TableRow
@@ -738,7 +754,12 @@ const DependencyReport: React.FC = () => {
               </Box>
 
               <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
+                <Table
+                  size="small"
+                  sx={{
+                    '& .MuiTableRow-root:hover': { backgroundColor: 'transparent !important' },
+                  }}
+                >
                   <TableHead>
                     <TableRow>
                       <TableCell width="50"></TableCell>
@@ -804,7 +825,14 @@ const DependencyReport: React.FC = () => {
                                 in={expandedRows.has(`script-edge-${script.script_result_id}`)}
                               >
                                 <Box sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
-                                  <Table size="small">
+                                  <Table
+                                    size="small"
+                                    sx={{
+                                      '& .MuiTableRow-root:hover': {
+                                        backgroundColor: 'transparent !important',
+                                      },
+                                    }}
+                                  >
                                     <TableBody>
                                       {script.edges.map((edge) => (
                                         <TableRow
@@ -871,7 +899,12 @@ const DependencyReport: React.FC = () => {
               </Box>
 
               <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
+                <Table
+                  size="small"
+                  sx={{
+                    '& .MuiTableRow-root:hover': { backgroundColor: 'transparent !important' },
+                  }}
+                >
                   <TableHead>
                     <TableRow>
                       <TableCell width="50"></TableCell>
@@ -947,7 +980,14 @@ const DependencyReport: React.FC = () => {
                             <TableCell colSpan={5} sx={{ p: 0 }}>
                               <Collapse in={expandedRows.has(`node-script-${node.node_id}`)}>
                                 <Box sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
-                                  <Table size="small">
+                                  <Table
+                                    size="small"
+                                    sx={{
+                                      '& .MuiTableRow-root:hover': {
+                                        backgroundColor: 'transparent !important',
+                                      },
+                                    }}
+                                  >
                                     <TableBody>
                                       {node.scripts.map((script) => (
                                         <TableRow
@@ -1007,7 +1047,12 @@ const DependencyReport: React.FC = () => {
               </Box>
 
               <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
+                <Table
+                  size="small"
+                  sx={{
+                    '& .MuiTableRow-root:hover': { backgroundColor: 'transparent !important' },
+                  }}
+                >
                   <TableHead>
                     <TableRow>
                       <TableCell width="50"></TableCell>
@@ -1083,7 +1128,14 @@ const DependencyReport: React.FC = () => {
                             <TableCell colSpan={5} sx={{ p: 0 }}>
                               <Collapse in={expandedRows.has(`edge-script-${edge.edge_id}`)}>
                                 <Box sx={{ p: 2, backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
-                                  <Table size="small">
+                                  <Table
+                                    size="small"
+                                    sx={{
+                                      '& .MuiTableRow-root:hover': {
+                                        backgroundColor: 'transparent !important',
+                                      },
+                                    }}
+                                  >
                                     <TableBody>
                                       {edge.scripts.map((script) => (
                                         <TableRow
