@@ -221,12 +221,12 @@ def create_error_section(error_msg: str) -> str:
 
 def get_thumbnail_screenshot_html(screenshot_path: Optional[str], label: str = None) -> str:
     """Get HTML for displaying a thumbnail screenshot that expands on click."""
-    if not screenshot_path or not os.path.exists(screenshot_path):
-        return ''
+    # Convert to thumbnail path
+    thumbnail_path = screenshot_path.replace('.jpg', '_thumbnail.jpg')
     
     try:
         # Convert screenshot to base64 for embedding
-        with open(screenshot_path, 'rb') as img_file:
+        with open(thumbnail_path, 'rb') as img_file:
             img_data = base64.b64encode(img_file.read()).decode('utf-8')
         
         data_url = f"data:image/jpeg;base64,{img_data}"
@@ -238,12 +238,10 @@ def get_thumbnail_screenshot_html(screenshot_path: Optional[str], label: str = N
         </div>
         """
     except Exception as e:
-        print(f"[@utils:report_utils:get_thumbnail_screenshot_html] Error embedding screenshot {screenshot_path}: {e}")
+        print(f"[@utils:report_utils:get_thumbnail_screenshot_html] Error embedding thumbnail {thumbnail_path}: {e}")
         return ''
 
-def get_screenshot_html(screenshot_path: Optional[str], label: str = None) -> str:
-    """Legacy function - redirects to thumbnail version."""
-    return get_thumbnail_screenshot_html(screenshot_path, label)
+
 
 def format_timestamp(timestamp: str) -> str:
     """Format timestamp for display."""

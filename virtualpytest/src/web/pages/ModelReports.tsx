@@ -24,31 +24,49 @@ import {
 import React, { useState, useEffect } from 'react';
 
 import { useExecutionResults, ExecutionResult } from '../hooks/pages/useExecutionResults';
+import { useUserInterface } from '../hooks/pages/useUserInterface';
 
 const ModelReports: React.FC = () => {
   const { getAllExecutionResults } = useExecutionResults();
+  const { getAllUserInterfaces } = useUserInterface();
   const [executionResults, setExecutionResults] = useState<ExecutionResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [treeToInterfaceMap, setTreeToInterfaceMap] = useState<Record<string, string>>({});
 
-  // Load execution results on component mount
+  // Load execution results and user interfaces on component mount
   useEffect(() => {
-    const loadExecutionResults = async () => {
+    const loadData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const results = await getAllExecutionResults();
+
+        // Load both execution results and user interfaces in parallel
+        const [results, userInterfaces] = await Promise.all([
+          getAllExecutionResults(),
+          getAllUserInterfaces(),
+        ]);
+
+        // Create mapping from tree_id to userinterface_name
+        const treeMap: Record<string, string> = {};
+        userInterfaces.forEach((ui) => {
+          if (ui.root_tree?.id) {
+            treeMap[ui.root_tree.id] = ui.name;
+          }
+        });
+
+        setTreeToInterfaceMap(treeMap);
         setExecutionResults(results);
       } catch (err) {
-        console.error('[@component:ModelReports] Error loading execution results:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load execution results');
+        console.error('[@component:ModelReports] Error loading data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
         setLoading(false);
       }
     };
 
-    loadExecutionResults();
-  }, [getAllExecutionResults]);
+    loadData();
+  }, [getAllExecutionResults, getAllUserInterfaces]);
 
   // Calculate stats
   const totalExecutions = executionResults.length;
@@ -242,7 +260,9 @@ const ModelReports: React.FC = () => {
                           color={result.execution_type === 'action' ? 'primary' : 'secondary'}
                         />
                       </TableCell>
-                      <TableCell sx={{ py: 0.5 }}>{result.tree_name}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        {treeToInterfaceMap[result.tree_id] || result.tree_name}
+                      </TableCell>
                       <TableCell sx={{ py: 0.5 }}>{result.element_name}</TableCell>
                       <TableCell sx={{ py: 0.5 }}>
                         <Chip

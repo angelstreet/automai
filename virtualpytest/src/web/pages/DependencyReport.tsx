@@ -32,6 +32,7 @@ import React, { useState, useEffect } from 'react';
 
 import { useExecutionResults } from '../hooks/pages/useExecutionResults';
 import { useScriptResults } from '../hooks/pages/useScriptResults';
+import { useUserInterface } from '../hooks/pages/useUserInterface';
 
 interface ScriptDependency {
   script_result_id: string;
@@ -72,6 +73,7 @@ interface ElementDependency {
 const DependencyReport: React.FC = () => {
   const { getAllScriptResults } = useScriptResults();
   const { getAllExecutionResults } = useExecutionResults();
+  const { getAllUserInterfaces } = useUserInterface();
 
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -81,6 +83,7 @@ const DependencyReport: React.FC = () => {
   const [scriptDependencies, setScriptDependencies] = useState<ScriptDependency[]>([]);
   const [nodeDependencies, setNodeDependencies] = useState<ElementDependency[]>([]);
   const [edgeDependencies, setEdgeDependencies] = useState<ElementDependency[]>([]);
+  const [treeToInterfaceMap, setTreeToInterfaceMap] = useState<Record<string, string>>({});
 
   // Filter states
   const [scriptFilter, setScriptFilter] = useState('');
@@ -94,11 +97,21 @@ const DependencyReport: React.FC = () => {
         setLoading(true);
         setError(null);
 
-        // Load script results and execution results
-        const [scriptResults, executionResults] = await Promise.all([
+        // Load script results, execution results, and user interfaces
+        const [scriptResults, executionResults, userInterfaces] = await Promise.all([
           getAllScriptResults(),
           getAllExecutionResults(),
+          getAllUserInterfaces(),
         ]);
+
+        // Create mapping from tree_id to userinterface_name
+        const treeMap: Record<string, string> = {};
+        userInterfaces.forEach((ui) => {
+          if (ui.root_tree?.id) {
+            treeMap[ui.root_tree.id] = ui.name;
+          }
+        });
+        setTreeToInterfaceMap(treeMap);
 
         // Process script dependencies
         const scriptDeps = await Promise.all(
@@ -149,7 +162,7 @@ const DependencyReport: React.FC = () => {
                   element_id: key,
                   element_name: exec.element_name,
                   element_type: 'node' as const,
-                  tree_name: exec.tree_name,
+                  tree_name: treeMap[exec.tree_id] || exec.tree_name,
                   script_executions: [],
                   total_executions: 0,
                   success_rate: 0,
@@ -196,7 +209,7 @@ const DependencyReport: React.FC = () => {
                   element_id: key,
                   element_name: exec.element_name,
                   element_type: 'edge' as const,
-                  tree_name: exec.tree_name,
+                  tree_name: treeMap[exec.tree_id] || exec.tree_name,
                   script_executions: [],
                   total_executions: 0,
                   success_rate: 0,
@@ -244,7 +257,7 @@ const DependencyReport: React.FC = () => {
     };
 
     loadDependencyData();
-  }, [getAllScriptResults, getAllExecutionResults]);
+  }, [getAllScriptResults, getAllExecutionResults, getAllUserInterfaces]);
 
   // Filter functions
   const filteredScriptDependencies = scriptDependencies.filter(
@@ -500,7 +513,7 @@ const DependencyReport: React.FC = () => {
                         <strong>Node Name</strong>
                       </TableCell>
                       <TableCell>
-                        <strong>Tree</strong>
+                        <strong>Interface</strong>
                       </TableCell>
                       <TableCell>
                         <strong>Script Executions</strong>
@@ -609,7 +622,7 @@ const DependencyReport: React.FC = () => {
                         <strong>Edge Name</strong>
                       </TableCell>
                       <TableCell>
-                        <strong>Tree</strong>
+                        <strong>Interface</strong>
                       </TableCell>
                       <TableCell>
                         <strong>Script Executions</strong>

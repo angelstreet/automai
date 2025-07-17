@@ -59,8 +59,8 @@ def get_execution_results(
             
             tree_data = tree_cache.get(tree_id)
             if tree_data:
-                # Use provided userinterface_name if available, otherwise fallback to tree name
-                enriched_execution['tree_name'] = userinterface_name or tree_data.get('name', 'Unknown Tree')
+                # Caller must provide userinterface_name - no fallback
+                enriched_execution['tree_name'] = userinterface_name
                 
                 # Get node/edge name from metadata
                 metadata = tree_data.get('metadata', {})
@@ -91,20 +91,15 @@ def get_execution_results(
                     # Find node name using label
                     node_id = execution.get('node_id')
                     nodes = metadata.get('nodes', [])
-                    node_name = 'Unknown Node'
                     
                     for node in nodes:
                         if node.get('id') == node_id:
                             node_data = node.get('data', {})
                             node_name = node_data.get('label') or node_data.get('description') or f"Node {node_id[:8]}"
+                            enriched_execution['element_name'] = node_name
                             break
-                    
-                    enriched_execution['element_name'] = node_name
-                else:
-                    enriched_execution['element_name'] = 'Unknown Element'
             else:
-                enriched_execution['tree_name'] = userinterface_name or 'Unknown Tree'
-                enriched_execution['element_name'] = 'Unknown Element'
+                enriched_execution['tree_name'] = userinterface_name
             
             enriched_results.append(enriched_execution)
         
