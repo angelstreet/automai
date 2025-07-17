@@ -44,8 +44,7 @@ from src.utils.script_utils import (
     load_navigation_tree,
     execute_navigation_with_verifications,  # Updated import
     execute_verification_directly,
-    capture_validation_screenshot,
-    create_host_dict_for_executor
+    capture_validation_screenshot
 )
 
 # Import pathfinding for validation sequence
@@ -160,8 +159,7 @@ def main():
         
         # 7. Capture initial state screenshot
         print("📸 [validation] Capturing initial state screenshot...")
-        host_dict = create_host_dict_for_executor(host)
-        initial_screenshot = capture_validation_screenshot(host_dict, selected_device, "initial_state", "validation")
+        initial_screenshot = capture_validation_screenshot(host, selected_device, "initial_state", "validation")
         if initial_screenshot:
             screenshot_paths.append(initial_screenshot)
             print(f"✅ [validation] Initial screenshot captured: {initial_screenshot}")
@@ -187,7 +185,7 @@ def main():
             step_execution_time = int((time.time() - step_start_time) * 1000)
             
             # Capture screenshot after step execution
-            step_screenshot = capture_validation_screenshot(host_dict, selected_device, f"step_{step_num}", "validation")
+            step_screenshot = capture_validation_screenshot(host, selected_device, f"step_{step_num}", "validation")
             if step_screenshot:
                 screenshot_paths.append(step_screenshot)
             
@@ -236,7 +234,7 @@ def main():
         
         # 9. Capture final state screenshot
         print("📸 [validation] Capturing final state screenshot...")
-        final_screenshot = capture_validation_screenshot(host_dict, selected_device, "final_state", "validation")
+        final_screenshot = capture_validation_screenshot(host, selected_device, "final_state", "validation")
         if final_screenshot:
             screenshot_paths.append(final_screenshot)
             print(f"✅ [validation] Final screenshot captured: {final_screenshot}")

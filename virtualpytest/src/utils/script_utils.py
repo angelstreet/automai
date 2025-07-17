@@ -558,13 +558,13 @@ def execute_navigation_with_verifications(host, device, transition: Dict[str, An
             'verification_results': []
         }
 
-def capture_validation_screenshot(host: Dict[str, Any], device: Any, step_name: str, script_name: str = "validation") -> str:
+def capture_validation_screenshot(host, device: Any, step_name: str, script_name: str = "validation") -> str:
     """
-    Capture screenshot for validation reporting.
-    Uses same thumbnail generation pattern as RecHostPreview.
+    Capture screenshot for validation reporting using AV controller directly.
+    No HTTP requests needed - uses controller abstraction.
     
     Args:
-        host: Host configuration dict
+        host: Host instance (not dict)
         device: Device object
         step_name: Name of the step (e.g., "initial_state", "step_1", "final_state")
         script_name: Name of the script for logging
@@ -573,73 +573,30 @@ def capture_validation_screenshot(host: Dict[str, Any], device: Any, step_name: 
         Local path to captured screenshot or empty string if failed
     """
     try:
-        from datetime import datetime
-        import tempfile
-        import requests
-        from .build_url_utils import buildHostUrl
-        
         print(f"📸 [{script_name}] Capturing screenshot: {step_name}")
         
-        # Generate timestamp for screenshot
-        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-        
-        # Create screenshot filename
-        screenshot_filename = f"{step_name}_{timestamp}.jpg"
-        
-        # Use temporary directory for screenshots
-        temp_dir = tempfile.gettempdir()
-        screenshots_dir = os.path.join(temp_dir, 'validation_screenshots')
-        os.makedirs(screenshots_dir, exist_ok=True)
-        
-        local_screenshot_path = os.path.join(screenshots_dir, screenshot_filename)
-        
-        # Take screenshot using host API (same pattern as RecHostPreview)
-        take_screenshot_url = buildHostUrl(host, '/host/av/takeScreenshot')
-        
-        # Prepare request data
-        screenshot_data = {
-            'device_id': device.device_id,
-            'timestamp': timestamp
-        }
-        
-        print(f"📸 [{script_name}] Requesting screenshot from: {take_screenshot_url}")
-        print(f"📸 [{script_name}] Screenshot data: {screenshot_data}")
-        
-        # Request screenshot
-        response = requests.post(take_screenshot_url, json=screenshot_data, timeout=10)
-        
-        if response.status_code == 200:
-            response_data = response.json()
-            
-            if response_data.get('success'):
-                # Wait a moment for screenshot to be available
-                time.sleep(1)
-                
-                # Build URL to retrieve screenshot
-                from .build_url_utils import buildCaptureUrl
-                screenshot_url = buildCaptureUrl(host, timestamp, device.device_id)
-                
-                print(f"📸 [{script_name}] Downloading screenshot from: {screenshot_url}")
-                
-                # Download screenshot
-                img_response = requests.get(screenshot_url, timeout=10)
-                
-                if img_response.status_code == 200:
-                    # Save screenshot locally
-                    with open(local_screenshot_path, 'wb') as f:
-                        f.write(img_response.content)
-                    
-                    print(f"✅ [{script_name}] Screenshot saved: {local_screenshot_path}")
-                    return local_screenshot_path
-                else:
-                    print(f"❌ [{script_name}] Failed to download screenshot: HTTP {img_response.status_code}")
-                    return ""
-            else:
-                print(f"❌ [{script_name}] Screenshot request failed: {response_data.get('error', 'Unknown error')}")
-                return ""
-        else:
-            print(f"❌ [{script_name}] Screenshot API request failed: HTTP {response.status_code}")
+        # Get AV controller directly (no HTTP requests)
+        av_controller = get_controller(device.device_id, 'av')
+        if not av_controller:
+            print(f"❌ [{script_name}] No AV controller found for device {device.device_id}")
             return ""
+        
+        print(f"📸 [{script_name}] Using AV controller: {type(av_controller).__name__}")
+        
+        # Take screenshot using controller directly - returns ready-to-use local file path
+        screenshot_path = av_controller.take_screenshot()
+        
+        if not screenshot_path:
+            print(f"❌ [{script_name}] Failed to take screenshot via AV controller")
+            return ""
+        
+        # Verify the file exists
+        if not os.path.exists(screenshot_path):
+            print(f"❌ [{script_name}] Controller screenshot file not found: {screenshot_path}")
+            return ""
+        
+        print(f"✅ [{script_name}] Screenshot captured: {screenshot_path}")
+        return screenshot_path
             
     except Exception as e:
         print(f"❌ [{script_name}] Screenshot capture error: {str(e)}")
