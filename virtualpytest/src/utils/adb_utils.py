@@ -405,12 +405,21 @@ class ADBUtils:
         try:
             print(f"[@lib:adbUtils:dump_ui_elements] Dumping UI elements for device {device_id}")
             
-            # Single command - dump directly to stdout
-            dump_command = f"adb -s {device_id} shell uiautomator dump /dev/stdout"
+            # Dump UI to file then read it (more compatible)
+            dump_command = f"adb -s {device_id} shell uiautomator dump --compressed /sdcard/ui_dump.xml"
             success, stdout, stderr, exit_code = self.execute_command(dump_command)
             
             if not success or exit_code != 0:
                 error_msg = f"Failed to dump UI: {stderr}"
+                print(f"[@lib:adbUtils:dump_ui_elements] {error_msg}")
+                return False, [], error_msg
+                
+            # Read the dumped file
+            read_command = f"adb -s {device_id} shell cat /sdcard/ui_dump.xml"
+            success, stdout, stderr, exit_code = self.execute_command(read_command)
+            
+            if not success or exit_code != 0:
+                error_msg = f"Failed to read UI dump: {stderr}"
                 print(f"[@lib:adbUtils:dump_ui_elements] {error_msg}")
                 return False, [], error_msg
                 
@@ -420,12 +429,6 @@ class ADBUtils:
                 return False, [], error_msg
                 
             print(f"[@lib:adbUtils:dump_ui_elements] Received XML data, length: {len(stdout)}")
-            
-            # Debug: Show first 100 characters of response
-            if len(stdout) < 200:
-                print(f"[@lib:adbUtils:dump_ui_elements] DEBUG - Full response: '{stdout}'")
-            else:
-                print(f"[@lib:adbUtils:dump_ui_elements] DEBUG - First 100 chars: '{stdout[:100]}'")
             
             # Parse XML to extract elements
             elements = self._parse_ui_elements(stdout)
