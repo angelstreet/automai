@@ -150,7 +150,7 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
                     result = verification_results[i-1]  # 0-indexed array
                     result_success = result.get('success', False)
                     result_message = result.get('message', '')
-                    result_badge = f'<span class="verification-result-badge {'success' if result_success else 'failure'}">{'PASS' if result_success else 'FAIL'}</span>'
+                    result_badge = f'<span class="verification-result-badge {"success" if result_success else "failure"}">{"PASS" if result_success else "FAIL"}</span>'
                     verification_result_html = f" {result_badge}"
                     if not result_success and result.get('error'):
                         verification_result_html += f" <span class='verification-error'>({result['error']})</span>"
@@ -163,7 +163,7 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
                 result_success = result.get('success', False)
                 result_message = result.get('message', 'Verification completed')
                 verification_type = result.get('verification_type', 'unknown')
-                result_badge = f'<span class="verification-result-badge {'success' if result_success else 'failure'}">{'PASS' if result_success else 'FAIL'}</span>'
+                result_badge = f'<span class="verification-result-badge {"success" if result_success else "failure"}">{"PASS" if result_success else "FAIL"}</span>'
                 
                 verification_line = f"{i}. {verification_type}: {result_message}"
                 if not result_success and result.get('error'):
