@@ -414,5 +414,3 @@ def dump_ui():
             'success': False,
             'error': f'UI dump error: {str(e)}'
         }), 500
-
-# get-status endpoint removed - not needed 
