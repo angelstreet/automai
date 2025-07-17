@@ -19,7 +19,8 @@ def get_execution_results(
     team_id: str,
     execution_type: Optional[str] = None,
     tree_id: Optional[str] = None,
-    limit: int = 100
+    limit: int = 100,
+    userinterface_name: Optional[str] = None
 ) -> Dict:
     """Get execution results with filtering and enriched with tree/node/edge names."""
     try:
@@ -58,13 +59,14 @@ def get_execution_results(
             
             tree_data = tree_cache.get(tree_id)
             if tree_data:
-                enriched_execution['tree_name'] = tree_data.get('name', 'Unknown Tree')
+                # Use provided userinterface_name if available, otherwise fallback to tree name
+                enriched_execution['tree_name'] = userinterface_name or tree_data.get('name', 'Unknown Tree')
                 
                 # Get node/edge name from metadata
                 metadata = tree_data.get('metadata', {})
                 
                 if execution.get('execution_type') == 'action' and execution.get('edge_id'):
-                    # Find edge name
+                    # Find edge name using from -> to format
                     edge_id = execution.get('edge_id')
                     edges = metadata.get('edges', [])
                     edge_name = 'Unknown Edge'
@@ -72,13 +74,21 @@ def get_execution_results(
                     for edge in edges:
                         if edge.get('id') == edge_id:
                             edge_data = edge.get('data', {})
-                            edge_name = edge_data.get('name') or edge_data.get('description') or f"Edge {edge_id[:8]}"
+                            from_label = edge_data.get('from', '')
+                            to_label = edge_data.get('to', '')
+                            
+                            if from_label and to_label:
+                                edge_name = f"{from_label} -> {to_label}"
+                            elif edge_data.get('description'):
+                                edge_name = edge_data.get('description')
+                            else:
+                                edge_name = f"Edge {edge_id[:8]}"
                             break
                     
                     enriched_execution['element_name'] = edge_name
                     
                 elif execution.get('execution_type') == 'verification' and execution.get('node_id'):
-                    # Find node name
+                    # Find node name using label
                     node_id = execution.get('node_id')
                     nodes = metadata.get('nodes', [])
                     node_name = 'Unknown Node'
@@ -86,14 +96,14 @@ def get_execution_results(
                     for node in nodes:
                         if node.get('id') == node_id:
                             node_data = node.get('data', {})
-                            node_name = node_data.get('name') or node_data.get('description') or f"Node {node_id[:8]}"
+                            node_name = node_data.get('label') or node_data.get('description') or f"Node {node_id[:8]}"
                             break
                     
                     enriched_execution['element_name'] = node_name
                 else:
                     enriched_execution['element_name'] = 'Unknown Element'
             else:
-                enriched_execution['tree_name'] = 'Unknown Tree'
+                enriched_execution['tree_name'] = userinterface_name or 'Unknown Tree'
                 enriched_execution['element_name'] = 'Unknown Element'
             
             enriched_results.append(enriched_execution)

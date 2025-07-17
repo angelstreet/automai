@@ -12,6 +12,7 @@ import {
   LibraryBooks as LibraryIcon,
   Memory as ModelIcon,
   BugReport as TestingIcon,
+  Link as LinkIcon,
 } from '@mui/icons-material';
 import { Box, Button } from '@mui/material';
 import React from 'react';
@@ -52,6 +53,11 @@ const NavigationBar: React.FC = () => {
       label: 'Model Reports',
       path: '/test-results/model-reports',
       icon: <ModelIcon fontSize="small" />,
+    },
+    {
+      label: 'Dependency Report',
+      path: '/test-results/dependency-report',
+      icon: <LinkIcon fontSize="small" />,
     },
   ];
 

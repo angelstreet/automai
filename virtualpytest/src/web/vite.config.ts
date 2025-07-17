@@ -22,6 +22,8 @@ const registeredRoutes = [
   '/test-execution/run-tests',
   '/test-execution/monitoring',
   '/test-results/reports',
+  '/test-results/model-reports',
+  '/test-results/dependency-report',
   '/configuration',
   '/configuration/',
   '/configuration/devices',

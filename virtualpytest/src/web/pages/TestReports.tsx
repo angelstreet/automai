@@ -213,7 +213,7 @@ const TestReports: React.FC = () => {
                     <strong>Report</strong>
                   </TableCell>
                   <TableCell sx={{ py: 1 }}>
-                    <strong>Actions</strong>
+                    <strong>Discard</strong>
                   </TableCell>
                 </TableRow>
               </TableHead>
