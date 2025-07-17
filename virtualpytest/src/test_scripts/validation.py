@@ -217,12 +217,12 @@ def main():
             print(f"✅ [validation] Step {step_num} completed successfully")
             current_node = step.get('to_node_id')
             
-            # Execute target node verifications if they exist
-            target_verifications = step.get('target_verifications', [])
-            if target_verifications:
-                print(f"🔍 [validation] Executing {len(target_verifications)} target verifications...")
+            # Execute verifications for this transition if they exist
+            step_verifications = step.get('verifications', [])
+            if step_verifications:
+                print(f"🔍 [validation] Executing {len(step_verifications)} verifications for this transition...")
                 
-                for verification in target_verifications:
+                for verification in step_verifications:
                     verify_result = execute_verification_directly(host, selected_device, verification)
                     
                     if not verify_result['success']:
@@ -234,6 +234,8 @@ def main():
                 else:
                     continue  # All verifications passed, continue to next step
                 break  # Verification failed, exit loop
+            else:
+                print(f"ℹ️ [validation] No verifications defined for this transition")
         else:
             print("🎉 [validation] All validation steps completed successfully!")
             overall_success = True
