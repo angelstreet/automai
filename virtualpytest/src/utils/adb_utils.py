@@ -69,6 +69,7 @@ class ADBUtils:
         'LEFT': 'KEYCODE_DPAD_LEFT',
         'RIGHT': 'KEYCODE_DPAD_RIGHT',
         'SELECT': 'KEYCODE_DPAD_CENTER',
+        'OK': 'KEYCODE_DPAD_CENTER',
         
         # DPAD format (for Android TV remote compatibility)
         'DPAD_UP': 'KEYCODE_DPAD_UP',
