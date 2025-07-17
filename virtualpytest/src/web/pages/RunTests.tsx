@@ -1,4 +1,5 @@
 import { Terminal as ScriptIcon } from '@mui/icons-material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   Box,
   Typography,
@@ -19,6 +20,11 @@ import {
   TableHead,
   TableRow,
   Paper,
+  TextField,
+  Autocomplete,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
@@ -37,6 +43,28 @@ interface ExecutionRecord {
   startTime: string;
   endTime?: string;
   status: 'running' | 'completed' | 'failed';
+  parameters?: string;
+}
+
+// Script parameter interface
+interface ScriptParameter {
+  name: string;
+  type: 'positional' | 'optional';
+  required: boolean;
+  help: string;
+  default?: string;
+  suggestions?: {
+    suggested?: string;
+    confidence?: string;
+  };
+}
+
+interface ScriptAnalysis {
+  success: boolean;
+  parameters: ScriptParameter[];
+  script_name: string;
+  has_parameters: boolean;
+  error?: string;
 }
 
 const RunTests: React.FC = () => {
@@ -50,6 +78,11 @@ const RunTests: React.FC = () => {
   const [loadingScripts, setLoadingScripts] = useState<boolean>(false);
   const [showWizard, setShowWizard] = useState<boolean>(false);
   const [executions, setExecutions] = useState<ExecutionRecord[]>([]);
+
+  // Script parameters state
+  const [scriptAnalysis, setScriptAnalysis] = useState<ScriptAnalysis | null>(null);
+  const [parameterValues, setParameterValues] = useState<Record<string, string>>({});
+  const [analyzingScript, setAnalyzingScript] = useState<boolean>(false);
 
   // Only fetch host data when wizard is shown
   const { getAllHosts, getDevicesFromHost } = useHostManager();
@@ -102,11 +135,162 @@ const RunTests: React.FC = () => {
     loadScripts();
   }, [selectedScript, showError]);
 
+  // Analyze script parameters when script selection changes
+  useEffect(() => {
+    const analyzeScript = async () => {
+      if (!selectedScript || !showWizard) {
+        setScriptAnalysis(null);
+        setParameterValues({});
+        return;
+      }
+
+      setAnalyzingScript(true);
+      try {
+        const response = await fetch('/server/script/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            script_name: selectedScript,
+            device_model: deviceModel,
+            device_id: selectedDevice,
+          }),
+        });
+
+        const analysis: ScriptAnalysis = await response.json();
+
+        if (analysis.success) {
+          setScriptAnalysis(analysis);
+
+          // Pre-fill parameter values with suggestions
+          const newParameterValues: Record<string, string> = {};
+          analysis.parameters.forEach((param) => {
+            if (param.suggestions?.suggested) {
+              newParameterValues[param.name] = param.suggestions.suggested;
+            } else if (param.default) {
+              newParameterValues[param.name] = param.default;
+            } else {
+              newParameterValues[param.name] = '';
+            }
+          });
+          setParameterValues(newParameterValues);
+        } else {
+          setScriptAnalysis(null);
+          setParameterValues({});
+        }
+      } catch (error) {
+        console.error('Error analyzing script:', error);
+        setScriptAnalysis(null);
+        setParameterValues({});
+      } finally {
+        setAnalyzingScript(false);
+      }
+    };
+
+    analyzeScript();
+  }, [selectedScript, deviceModel, selectedDevice, showWizard]);
+
+  // Update parameter suggestions when device changes
+  useEffect(() => {
+    if (scriptAnalysis && selectedDevice && deviceModel) {
+      const newParameterValues = { ...parameterValues };
+
+      scriptAnalysis.parameters.forEach((param) => {
+        // Re-evaluate suggestions based on new device context
+        if (param.name === 'userinterface_name' && deviceModel) {
+          const modelLower = deviceModel.toLowerCase();
+          let suggested = '';
+
+          if (modelLower.includes('mobile') || modelLower.includes('phone')) {
+            if (modelLower.includes('horizon')) {
+              suggested = 'horizon_android_mobile';
+            } else if (modelLower.includes('vz') || modelLower.includes('verizon')) {
+              suggested = 'vz_android_mobile';
+            } else {
+              suggested = 'horizon_android_mobile';
+            }
+          } else if (modelLower.includes('tv') || modelLower.includes('android_tv')) {
+            if (modelLower.includes('horizon')) {
+              suggested = 'horizon_android_tv';
+            } else if (modelLower.includes('vz') || modelLower.includes('verizon')) {
+              suggested = 'vz_android_tv';
+            } else {
+              suggested = 'horizon_android_tv';
+            }
+          } else {
+            suggested = 'horizon_android_mobile';
+          }
+
+          newParameterValues[param.name] = suggested;
+        } else if (param.name === 'device' && selectedDevice) {
+          newParameterValues[param.name] = selectedDevice;
+        } else if (param.name === 'host' && selectedHost) {
+          newParameterValues[param.name] = selectedHost;
+        }
+      });
+
+      setParameterValues(newParameterValues);
+    }
+  }, [selectedDevice, deviceModel, selectedHost, scriptAnalysis, parameterValues]);
+
+  const handleParameterChange = (paramName: string, value: string) => {
+    setParameterValues((prev) => ({
+      ...prev,
+      [paramName]: value,
+    }));
+  };
+
+  const buildParameterString = () => {
+    if (!scriptAnalysis) return '';
+
+    const paramStrings: string[] = [];
+
+    scriptAnalysis.parameters.forEach((param) => {
+      const value = parameterValues[param.name]?.trim();
+      if (value) {
+        if (param.type === 'positional') {
+          paramStrings.push(value);
+        } else {
+          paramStrings.push(`--${param.name} ${value}`);
+        }
+      } else if (param.required) {
+        // Don't include empty required parameters - this will cause validation error
+      }
+    });
+
+    return paramStrings.join(' ');
+  };
+
+  const validateParameters = () => {
+    if (!scriptAnalysis) return { valid: true, errors: [] };
+
+    const errors: string[] = [];
+
+    scriptAnalysis.parameters.forEach((param) => {
+      const value = parameterValues[param.name]?.trim();
+      if (param.required && !value) {
+        errors.push(`${param.name} is required`);
+      }
+    });
+
+    return { valid: errors.length === 0, errors };
+  };
+
   const handleExecuteScript = async () => {
     if (!selectedHost || !selectedDevice || !selectedScript) {
       showError('Please select host, device, and script');
       return;
     }
+
+    // Validate parameters
+    const validation = validateParameters();
+    if (!validation.valid) {
+      showError(`Parameter validation failed: ${validation.errors.join(', ')}`);
+      return;
+    }
+
+    const parameterString = buildParameterString();
 
     // Create execution record
     const executionId = `exec_${Date.now()}`;
@@ -117,13 +301,21 @@ const RunTests: React.FC = () => {
       deviceId: selectedDevice,
       startTime: new Date().toLocaleTimeString(),
       status: 'running',
+      parameters: parameterString,
     };
 
     setExecutions((prev) => [newExecution, ...prev]);
-    showInfo(`Script "${selectedScript}" started on ${selectedHost}:${selectedDevice}`);
+    showInfo(
+      `Script "${selectedScript}" started on ${selectedHost}:${selectedDevice}${parameterString ? ` with parameters: ${parameterString}` : ''}`,
+    );
 
     try {
-      const result = await executeScript(selectedScript, selectedHost, selectedDevice);
+      const result = await executeScript(
+        selectedScript,
+        selectedHost,
+        selectedDevice,
+        parameterString,
+      );
 
       // Update execution record on completion
       setExecutions((prev) =>
@@ -171,6 +363,58 @@ const RunTests: React.FC = () => {
       default:
         return <Chip label="Unknown" color="default" size="small" />;
     }
+  };
+
+  const renderParameterInput = (param: ScriptParameter) => {
+    const value = parameterValues[param.name] || '';
+
+    // Special handling for userinterface_name with autocomplete
+    if (param.name === 'userinterface_name') {
+      const options = [
+        'horizon_android_mobile',
+        'horizon_android_tv',
+        'vz_android_mobile',
+        'vz_android_tv',
+      ];
+
+      return (
+        <Autocomplete
+          key={param.name}
+          options={options}
+          value={value}
+          onChange={(_event, newValue) => handleParameterChange(param.name, newValue || '')}
+          onInputChange={(_event, newInputValue) =>
+            handleParameterChange(param.name, newInputValue)
+          }
+          freeSolo
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label={`${param.name}${param.required ? ' *' : ''}`}
+              size="small"
+              fullWidth
+              error={param.required && !value.trim()}
+              helperText={param.help}
+            />
+          )}
+        />
+      );
+    }
+
+    // Default text field for other parameters
+    return (
+      <TextField
+        key={param.name}
+        label={`${param.name}${param.required ? ' *' : ''}`}
+        value={value}
+        onChange={(e) => handleParameterChange(param.name, e.target.value)}
+        size="small"
+        fullWidth
+        error={param.required && !value.trim()}
+        helperText={param.help}
+        placeholder={param.default || ''}
+      />
+    );
   };
 
   // Check if device is mobile model for proper aspect ratio
@@ -274,6 +518,34 @@ const RunTests: React.FC = () => {
                     </Grid>
                   </Grid>
 
+                  {/* Script Parameters Section */}
+                  {scriptAnalysis && scriptAnalysis.has_parameters && (
+                    <Accordion defaultExpanded sx={{ mb: 3 }}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography variant="subtitle1">
+                          Script Parameters
+                          {analyzingScript && <CircularProgress size={16} sx={{ ml: 1 }} />}
+                        </Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Grid container spacing={2}>
+                          {scriptAnalysis.parameters.map((param) => (
+                            <Grid item xs={12} sm={6} key={param.name}>
+                              {renderParameterInput(param)}
+                            </Grid>
+                          ))}
+                        </Grid>
+                        {scriptAnalysis.parameters.length > 0 && (
+                          <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+                            <Typography variant="body2" color="textSecondary">
+                              Preview: {buildParameterString() || 'No parameters set'}
+                            </Typography>
+                          </Box>
+                        )}
+                      </AccordionDetails>
+                    </Accordion>
+                  )}
+
                   <Box display="flex" gap={2}>
                     <Button
                       variant="contained"
@@ -284,7 +556,8 @@ const RunTests: React.FC = () => {
                         !selectedHost ||
                         !selectedDevice ||
                         !selectedScript ||
-                        loadingScripts
+                        loadingScripts ||
+                        !validateParameters().valid
                       }
                     >
                       {isExecuting ? 'Executing...' : 'Execute Script'}
@@ -295,6 +568,8 @@ const RunTests: React.FC = () => {
                         setShowWizard(false);
                         setSelectedHost('');
                         setSelectedDevice('');
+                        setScriptAnalysis(null);
+                        setParameterValues({});
                       }}
                     >
                       Cancel
@@ -311,13 +586,9 @@ const RunTests: React.FC = () => {
           <Grid item xs={12} md={6}>
             <Card>
               <CardContent>
-                <Typography variant="h6" mb={2}>
-                  Device Preview - {selectedHost}:{selectedDevice}
-                </Typography>
-
                 <Box
                   sx={{
-                    height: 400,
+                    height: 320,
                     backgroundColor: 'black',
                     borderRadius: 1,
                     overflow: 'hidden',
@@ -375,13 +646,6 @@ const RunTests: React.FC = () => {
                     </Box>
                   )}
                 </Box>
-
-                {/* Device info */}
-                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  <Chip label={`Model: ${deviceModel}`} size="small" variant="outlined" />
-                  {streamUrl && <Chip label="Stream Active" size="small" color="success" />}
-                  {isExecuting && <Chip label="Script Running" size="small" color="warning" />}
-                </Box>
               </CardContent>
             </Card>
           </Grid>
@@ -416,6 +680,7 @@ const RunTests: React.FC = () => {
                         <TableCell>Script</TableCell>
                         <TableCell>Host</TableCell>
                         <TableCell>Device</TableCell>
+                        <TableCell>Parameters</TableCell>
                         <TableCell>Start Time</TableCell>
                         <TableCell>End Time</TableCell>
                         <TableCell>Status</TableCell>
@@ -427,6 +692,14 @@ const RunTests: React.FC = () => {
                           <TableCell>{execution.scriptName}</TableCell>
                           <TableCell>{execution.hostName}</TableCell>
                           <TableCell>{execution.deviceId}</TableCell>
+                          <TableCell>
+                            <Typography
+                              variant="body2"
+                              sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                            >
+                              {execution.parameters || '-'}
+                            </Typography>
+                          </TableCell>
                           <TableCell>{execution.startTime}</TableCell>
                           <TableCell>{execution.endTime || '-'}</TableCell>
                           <TableCell>{getStatusChip(execution.status)}</TableCell>

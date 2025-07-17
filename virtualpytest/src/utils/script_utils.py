@@ -440,13 +440,20 @@ def execute_command(command: str, timeout: int = 30) -> Tuple[bool, str, str, in
         return False, "", str(e), -1
 
 # Add back simplified execute_script
-def execute_script(script_name: str, device_id: str) -> Dict[str, Any]:
+def execute_script(script_name: str, device_id: str, parameters: str = "") -> Dict[str, Any]:
     try:
         script_path = get_script_path(script_name)
         
         hostname = os.getenv('HOST_NAME', 'localhost')
         
-        command = f"bash -c 'source /home/{hostname}/myvenv/bin/activate && python {script_path}'"
+        # Build command with parameters
+        base_command = f"bash -c 'source /home/{hostname}/myvenv/bin/activate && python {script_path}"
+        
+        if parameters and parameters.strip():
+            # Add parameters to the command
+            command = f"{base_command} {parameters.strip()}'"
+        else:
+            command = f"{base_command}'"
         
         success, stdout, stderr, exit_code = execute_command(command, timeout=60)
         
@@ -457,7 +464,8 @@ def execute_script(script_name: str, device_id: str) -> Dict[str, Any]:
             'exit_code': exit_code,
             'script_name': script_name,
             'device_id': device_id,
-            'script_path': script_path
+            'script_path': script_path,
+            'parameters': parameters
         }
         
     except Exception as e:
@@ -467,5 +475,6 @@ def execute_script(script_name: str, device_id: str) -> Dict[str, Any]:
             'stderr': str(e),
             'exit_code': 1,
             'script_name': script_name,
-            'device_id': device_id
+            'device_id': device_id,
+            'parameters': parameters
         } 

@@ -14,6 +14,7 @@ def _execute_script():
         
         script_name = data.get('script_name')
         device_id = data.get('device_id')
+        parameters = data.get('parameters', '')
         
         if not script_name or not device_id:
             return jsonify({
@@ -21,8 +22,8 @@ def _execute_script():
                 'error': 'script_name and device_id required'
             }), 400
         
-        # Execute script
-        result = execute_script(script_name, device_id)
+        # Execute script with parameters
+        result = execute_script(script_name, device_id, parameters)
         
         return jsonify(result)
         

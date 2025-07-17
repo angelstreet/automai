@@ -1,0 +1,101 @@
+{
+  "nodes": [
+    {
+      "id": "2ae3c507-157c-4ee1-8bdf-269b58f26349",
+      "data": {
+        "type": "entry",
+        "depth": -1,
+        "label": "ENTRY",
+        "parent": [],
+        "description": "System entry point",
+        "verification_ids": [],
+        "priority": "p3",
+        "metrics": {
+          "volume": 0,
+          "success_rate": 0,
+          "avg_execution_time": 0
+        },
+        "isCurrentPosition": false,
+        "isOnNavigationRoute": false
+      },
+      "type": "uiScreen",
+      "width": 40,
+      "height": 40,
+      "position": {
+        "x": 150,
+        "y": 50
+      }
+    },
+    {
+      "id": "cf9659c5-241d-4845-95c6-e7a0e2541026",
+      "data": {
+        "type": "screen",
+        "depth": 0,
+        "label": "Home",
+        "parent": [],
+        "description": "Home",
+        "verification_ids": [
+          "0577a3a0-a17b-48c0-b5a2-5e6f45c81757"
+        ],
+        "priority": "p3",
+        "metrics": {
+          "volume": 0,
+          "success_rate": 0,
+          "avg_execution_time": 0
+        },
+        "menu_type": "main",
+        "isCurrentPosition": false,
+        "isOnNavigationRoute": false,
+        "screenshot": "https://pub-604f1a4ce32747778c6d5ac5e3100217.r2.dev/navigation/android_tv/Home.jpg",
+        "screenshot_timestamp": 1750587519034,
+        "is_root": true
+      },
+      "type": "uiScreen",
+      "width": 200,
+      "height": 180,
+      "position": {
+        "x": 375,
+        "y": 45
+      },
+      "dragging": false,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 375,
+        "y": 45
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "1098ffb0-6c0f-4d63-bc69-0d537f125b79",
+      "data": {
+        "action_ids": [
+          "2a3f6a63-f1d7-4922-b300-6597a50c96f3",
+          "ebb8d7c3-96cf-4f57-80c6-c934c04a1528"
+        ],
+        "description": "",
+        "finalWaitTime": 2000,
+        "retry_action_ids": [],
+        "priority": "p3",
+        "threshold": 0,
+        "metrics": {
+          "volume": 0,
+          "success_rate": 0,
+          "avg_execution_time": 0
+        }
+      },
+      "type": "smoothstep",
+      "source": "2ae3c507-157c-4ee1-8bdf-269b58f26349",
+      "target": "cf9659c5-241d-4845-95c6-e7a0e2541026",
+      "sourceHandle": "entry-source",
+      "targetHandle": "left-top-target",
+      "style": {
+        "stroke": "#b1b1b7",
+        "strokeWidth": 2
+      },
+      "animated": false,
+      "selected": false,
+      "finalWaitTime": 2000
+    }
+  ]
+}
