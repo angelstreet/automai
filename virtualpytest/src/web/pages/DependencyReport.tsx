@@ -2,10 +2,10 @@ import {
   CheckCircle as PassIcon,
   Clear as ClearIcon,
   Error as FailIcon,
-  Link as LinkIcon,
   PlayArrow as ActionIcon,
   Search as SearchIcon,
   Verified as VerificationIcon,
+  Warning as WarningIcon,
 } from '@mui/icons-material';
 import {
   Alert,
@@ -39,16 +39,17 @@ interface ScriptDependency {
   script_name: string;
   script_type: string;
   userinterface_name: string | null;
-  host_name: string;
-  device_name: string;
   success: boolean;
-  execution_time_ms: number | null;
-  started_at: string;
-  html_report_r2_url: string | null;
-  edges_executed: number;
-  nodes_verified: number;
-  successful_operations: number;
-  failed_operations: number;
+  elements: Array<{
+    element_id: string;
+    element_name: string;
+    element_type: 'edge' | 'node';
+    success: boolean;
+    execution_count: number;
+    success_rate: number;
+  }>;
+  total_elements: number;
+  failed_elements: number;
 }
 
 interface ElementDependency {
@@ -56,18 +57,17 @@ interface ElementDependency {
   element_name: string;
   element_type: 'edge' | 'node';
   tree_name: string;
-  script_executions: Array<{
+  scripts: Array<{
     script_result_id: string;
     script_name: string;
     script_type: string;
     success: boolean;
-    execution_time_ms: number;
-    started_at: string;
+    execution_count: number;
     html_report_r2_url: string | null;
-    script_context: string;
   }>;
-  total_executions: number;
+  total_scripts: number;
   success_rate: number;
+  risk_level: 'high' | 'medium' | 'low';
 }
 
 const DependencyReport: React.FC = () => {
@@ -81,14 +81,12 @@ const DependencyReport: React.FC = () => {
 
   // Data states
   const [scriptDependencies, setScriptDependencies] = useState<ScriptDependency[]>([]);
-  const [nodeDependencies, setNodeDependencies] = useState<ElementDependency[]>([]);
-  const [edgeDependencies, setEdgeDependencies] = useState<ElementDependency[]>([]);
+  const [elementDependencies, setElementDependencies] = useState<ElementDependency[]>([]);
   const [treeToInterfaceMap, setTreeToInterfaceMap] = useState<Record<string, string>>({});
 
   // Filter states
   const [scriptFilter, setScriptFilter] = useState('');
-  const [nodeFilter, setNodeFilter] = useState('');
-  const [edgeFilter, setEdgeFilter] = useState('');
+  const [elementFilter, setElementFilter] = useState('');
 
   // Load data on component mount
   useEffect(() => {
@@ -114,140 +112,172 @@ const DependencyReport: React.FC = () => {
         setTreeToInterfaceMap(treeMap);
 
         // Process script dependencies
-        const scriptDeps = await Promise.all(
-          scriptResults.map(async (script) => {
-            const scriptExecutions = executionResults.filter(
-              (exec) => exec.script_result_id === script.id,
-            );
+        const scriptDeps: ScriptDependency[] = [];
 
-            const edgesExecuted = scriptExecutions.filter(
-              (exec) => exec.execution_type === 'action',
-            ).length;
+        for (const script of scriptResults) {
+          const scriptExecutions = executionResults.filter(
+            (exec) => exec.script_result_id === script.id,
+          );
 
-            const nodesVerified = scriptExecutions.filter(
-              (exec) => exec.execution_type === 'verification',
-            ).length;
+          const elementMap = new Map<
+            string,
+            {
+              element_id: string;
+              element_name: string;
+              element_type: 'edge' | 'node';
+              executions: Array<{ success: boolean }>;
+            }
+          >();
 
-            const successfulOps = scriptExecutions.filter((exec) => exec.success).length;
+          // Group executions by element
+          scriptExecutions.forEach((exec) => {
+            const elementId = exec.edge_id || exec.node_id;
+            const elementType = exec.edge_id ? 'edge' : 'node';
 
-            const failedOps = scriptExecutions.filter((exec) => !exec.success).length;
+            if (elementId) {
+              if (!elementMap.has(elementId)) {
+                elementMap.set(elementId, {
+                  element_id: elementId,
+                  element_name: exec.element_name || `${elementType} ${elementId.slice(0, 8)}`,
+                  element_type: elementType,
+                  executions: [],
+                });
+              }
+              elementMap.get(elementId)!.executions.push({ success: exec.success });
+            }
+          });
+
+          // Calculate element metrics
+          const elements = Array.from(elementMap.values()).map((element) => {
+            const successCount = element.executions.filter((e) => e.success).length;
+            const totalCount = element.executions.length;
 
             return {
-              script_result_id: script.id,
-              script_name: script.script_name,
-              script_type: script.script_type,
-              userinterface_name: script.userinterface_name,
-              host_name: script.host_name,
-              device_name: script.device_name,
-              success: script.success,
-              execution_time_ms: script.execution_time_ms,
-              started_at: script.started_at,
-              html_report_r2_url: script.html_report_r2_url,
-              edges_executed: edgesExecuted,
-              nodes_verified: nodesVerified,
-              successful_operations: successfulOps,
-              failed_operations: failedOps,
+              element_id: element.element_id,
+              element_name: element.element_name,
+              element_type: element.element_type,
+              success: successCount === totalCount,
+              execution_count: totalCount,
+              success_rate: totalCount > 0 ? (successCount / totalCount) * 100 : 0,
             };
-          }),
-        );
+          });
 
-        // Process node dependencies
-        const nodeGroups = executionResults
-          .filter((exec) => exec.execution_type === 'verification' && exec.node_id)
-          .reduce(
-            (acc, exec) => {
-              const key = exec.node_id!;
-              if (!acc[key]) {
-                acc[key] = {
-                  element_id: key,
-                  element_name: exec.element_name,
-                  element_type: 'node' as const,
-                  tree_name: treeMap[exec.tree_id] || exec.tree_name,
-                  script_executions: [],
-                  total_executions: 0,
-                  success_rate: 0,
-                };
+          const failedElements = elements.filter((e) => !e.success).length;
+
+          scriptDeps.push({
+            script_result_id: script.id,
+            script_name: script.script_name,
+            script_type: script.script_type,
+            userinterface_name: script.userinterface_name,
+            success: script.success,
+            elements,
+            total_elements: elements.length,
+            failed_elements: failedElements,
+          });
+        }
+
+        // Process element dependencies
+        const elementMap = new Map<
+          string,
+          {
+            element_id: string;
+            element_name: string;
+            element_type: 'edge' | 'node';
+            tree_name: string;
+            script_executions: Array<{
+              script_result_id: string;
+              script_name: string;
+              script_type: string;
+              success: boolean;
+              html_report_r2_url: string | null;
+            }>;
+          }
+        >();
+
+        executionResults.forEach((exec) => {
+          const elementId = exec.edge_id || exec.node_id;
+          const elementType = exec.edge_id ? 'edge' : 'node';
+
+          if (elementId && exec.script_result_id) {
+            if (!elementMap.has(elementId)) {
+              elementMap.set(elementId, {
+                element_id: elementId,
+                element_name: exec.element_name || `${elementType} ${elementId.slice(0, 8)}`,
+                element_type: elementType,
+                tree_name: treeMap[exec.tree_id] || exec.tree_name,
+                script_executions: [],
+              });
+            }
+
+            const scriptInfo = scriptResults.find((s) => s.id === exec.script_result_id);
+            if (scriptInfo) {
+              const existing = elementMap
+                .get(elementId)!
+                .script_executions.find((s) => s.script_result_id === exec.script_result_id);
+
+              if (!existing) {
+                elementMap.get(elementId)!.script_executions.push({
+                  script_result_id: exec.script_result_id,
+                  script_name: scriptInfo.script_name,
+                  script_type: scriptInfo.script_type,
+                  success: exec.success,
+                  html_report_r2_url: scriptInfo.html_report_r2_url,
+                });
               }
-
-              if (exec.script_result_id) {
-                const scriptInfo = scriptResults.find((s) => s.id === exec.script_result_id);
-                if (scriptInfo) {
-                  acc[key].script_executions.push({
-                    script_result_id: exec.script_result_id,
-                    script_name: scriptInfo.script_name,
-                    script_type: scriptInfo.script_type,
-                    success: exec.success,
-                    execution_time_ms: exec.execution_time_ms,
-                    started_at: exec.executed_at,
-                    html_report_r2_url: scriptInfo.html_report_r2_url,
-                    script_context: exec.script_context || 'script',
-                  });
-                }
-              }
-
-              acc[key].total_executions++;
-              return acc;
-            },
-            {} as Record<string, ElementDependency>,
-          );
-
-        // Calculate success rates for nodes
-        Object.values(nodeGroups).forEach((node) => {
-          const successCount = node.script_executions.filter((s) => s.success).length;
-          node.success_rate =
-            node.total_executions > 0 ? (successCount / node.total_executions) * 100 : 0;
+            }
+          }
         });
 
-        // Process edge dependencies
-        const edgeGroups = executionResults
-          .filter((exec) => exec.execution_type === 'action' && exec.edge_id)
-          .reduce(
-            (acc, exec) => {
-              const key = exec.edge_id!;
-              if (!acc[key]) {
-                acc[key] = {
-                  element_id: key,
-                  element_name: exec.element_name,
-                  element_type: 'edge' as const,
-                  tree_name: treeMap[exec.tree_id] || exec.tree_name,
-                  script_executions: [],
-                  total_executions: 0,
-                  success_rate: 0,
-                };
-              }
+        // Calculate element metrics and risk levels
+        const elementDeps: ElementDependency[] = Array.from(elementMap.values()).map((element) => {
+          const scriptGroups = new Map<string, { executions: Array<{ success: boolean }> }>();
 
+          // Group executions by script
+          executionResults
+            .filter((exec) => (exec.edge_id || exec.node_id) === element.element_id)
+            .forEach((exec) => {
               if (exec.script_result_id) {
-                const scriptInfo = scriptResults.find((s) => s.id === exec.script_result_id);
-                if (scriptInfo) {
-                  acc[key].script_executions.push({
-                    script_result_id: exec.script_result_id,
-                    script_name: scriptInfo.script_name,
-                    script_type: scriptInfo.script_type,
-                    success: exec.success,
-                    execution_time_ms: exec.execution_time_ms,
-                    started_at: exec.executed_at,
-                    html_report_r2_url: scriptInfo.html_report_r2_url,
-                    script_context: exec.script_context || 'script',
-                  });
+                if (!scriptGroups.has(exec.script_result_id)) {
+                  scriptGroups.set(exec.script_result_id, { executions: [] });
                 }
+                scriptGroups.get(exec.script_result_id)!.executions.push({ success: exec.success });
               }
+            });
 
-              acc[key].total_executions++;
-              return acc;
-            },
-            {} as Record<string, ElementDependency>,
-          );
+          // Calculate success rate across all executions
+          const allExecutions = Array.from(scriptGroups.values()).flatMap((g) => g.executions);
+          const successCount = allExecutions.filter((e) => e.success).length;
+          const totalCount = allExecutions.length;
+          const successRate = totalCount > 0 ? (successCount / totalCount) * 100 : 0;
 
-        // Calculate success rates for edges
-        Object.values(edgeGroups).forEach((edge) => {
-          const successCount = edge.script_executions.filter((s) => s.success).length;
-          edge.success_rate =
-            edge.total_executions > 0 ? (successCount / edge.total_executions) * 100 : 0;
+          // Calculate script-level metrics
+          const scripts = element.script_executions.map((script) => {
+            const scriptExecutions = scriptGroups.get(script.script_result_id)?.executions || [];
+            return {
+              ...script,
+              execution_count: scriptExecutions.length,
+            };
+          });
+
+          // Determine risk level
+          let riskLevel: 'high' | 'medium' | 'low' = 'low';
+          if (successRate < 50 && scripts.length > 1) riskLevel = 'high';
+          else if (successRate < 80 || scripts.length > 2) riskLevel = 'medium';
+
+          return {
+            element_id: element.element_id,
+            element_name: element.element_name,
+            element_type: element.element_type,
+            tree_name: element.tree_name,
+            scripts,
+            total_scripts: scripts.length,
+            success_rate: successRate,
+            risk_level: riskLevel,
+          };
         });
 
         setScriptDependencies(scriptDeps);
-        setNodeDependencies(Object.values(nodeGroups));
-        setEdgeDependencies(Object.values(edgeGroups));
+        setElementDependencies(elementDeps);
       } catch (err) {
         console.error('[@component:DependencyReport] Error loading dependency data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load dependency data');
@@ -268,29 +298,33 @@ const DependencyReport: React.FC = () => {
         script.userinterface_name.toLowerCase().includes(scriptFilter.toLowerCase())),
   );
 
-  const filteredNodeDependencies = nodeDependencies.filter(
-    (node) =>
-      node.element_name.toLowerCase().includes(nodeFilter.toLowerCase()) ||
-      node.tree_name.toLowerCase().includes(nodeFilter.toLowerCase()),
+  const filteredElementDependencies = elementDependencies.filter(
+    (element) =>
+      element.element_name.toLowerCase().includes(elementFilter.toLowerCase()) ||
+      element.tree_name.toLowerCase().includes(elementFilter.toLowerCase()),
   );
 
-  const filteredEdgeDependencies = edgeDependencies.filter(
-    (edge) =>
-      edge.element_name.toLowerCase().includes(edgeFilter.toLowerCase()) ||
-      edge.tree_name.toLowerCase().includes(edgeFilter.toLowerCase()),
-  );
-
-  // Format helpers
-  const formatDuration = (ms: number): string => {
-    if (ms < 1000) return `${ms}ms`;
-    if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-    const minutes = Math.floor(ms / 60000);
-    const seconds = ((ms % 60000) / 1000).toFixed(1);
-    return `${minutes}m ${seconds}s`;
+  // Helper functions
+  const getRiskColor = (riskLevel: 'high' | 'medium' | 'low') => {
+    switch (riskLevel) {
+      case 'high':
+        return 'error';
+      case 'medium':
+        return 'warning';
+      case 'low':
+        return 'success';
+    }
   };
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString();
+  const getRiskIcon = (riskLevel: 'high' | 'medium' | 'low') => {
+    switch (riskLevel) {
+      case 'high':
+        return <FailIcon />;
+      case 'medium':
+        return <WarningIcon />;
+      case 'low':
+        return <PassIcon />;
+    }
   };
 
   // Loading state component
@@ -346,9 +380,12 @@ const DependencyReport: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ mb: 1 }}>
+      <Box sx={{ mb: 3 }}>
         <Typography variant="h4" gutterBottom>
           Dependency Report
+        </Typography>
+        <Typography variant="body1" color="textSecondary">
+          Track which elements each script depends on and which scripts use each element
         </Typography>
       </Box>
 
@@ -361,9 +398,8 @@ const DependencyReport: React.FC = () => {
       <Card>
         <CardContent>
           <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
-            <Tab label="Script Dependencies" />
-            <Tab label="Node Dependencies" />
-            <Tab label="Edge Dependencies" />
+            <Tab label="Script → Elements" />
+            <Tab label="Element → Scripts" />
           </Tabs>
 
           {/* Tab 1: Script Dependencies */}
@@ -392,41 +428,26 @@ const DependencyReport: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>
-                        <strong>Script Name</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Type</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>UI Name</strong>
+                        <strong>Script</strong>
                       </TableCell>
                       <TableCell>
                         <strong>Status</strong>
                       </TableCell>
                       <TableCell>
-                        <strong>Edges</strong>
+                        <strong>Interface</strong>
                       </TableCell>
                       <TableCell>
-                        <strong>Nodes</strong>
+                        <strong>Elements Used</strong>
                       </TableCell>
                       <TableCell>
-                        <strong>Success/Fail</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Duration</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Started</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Report</strong>
+                        <strong>Failed Elements</strong>
                       </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {loading ? (
                       <TableRow>
-                        <TableCell colSpan={10}>
+                        <TableCell colSpan={5}>
                           <LoadingState />
                         </TableCell>
                       </TableRow>
@@ -434,10 +455,22 @@ const DependencyReport: React.FC = () => {
                       <EmptyState message="No script dependencies found" />
                     ) : (
                       filteredScriptDependencies.map((script) => (
-                        <TableRow key={script.script_result_id}>
-                          <TableCell>{script.script_name}</TableCell>
-                          <TableCell>{script.script_type}</TableCell>
-                          <TableCell>{script.userinterface_name || 'N/A'}</TableCell>
+                        <TableRow
+                          key={script.script_result_id}
+                          sx={{
+                            '&:hover': {
+                              backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                            },
+                          }}
+                        >
+                          <TableCell>
+                            <Typography variant="body2" fontWeight="medium">
+                              {script.script_name}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {script.script_type}
+                            </Typography>
+                          </TableCell>
                           <TableCell>
                             <Chip
                               icon={script.success ? <PassIcon /> : <FailIcon />}
@@ -446,30 +479,68 @@ const DependencyReport: React.FC = () => {
                               size="small"
                             />
                           </TableCell>
-                          <TableCell>{script.edges_executed}</TableCell>
-                          <TableCell>{script.nodes_verified}</TableCell>
+                          <TableCell>{script.userinterface_name || 'N/A'}</TableCell>
                           <TableCell>
-                            {script.successful_operations}/{script.failed_operations}
+                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                              {script.elements.slice(0, 4).map((element) => (
+                                <Chip
+                                  key={element.element_id}
+                                  icon={
+                                    element.element_type === 'edge' ? (
+                                      <ActionIcon />
+                                    ) : (
+                                      <VerificationIcon />
+                                    )
+                                  }
+                                  label={element.element_name}
+                                  size="small"
+                                  variant="outlined"
+                                  color={element.success ? 'success' : 'error'}
+                                />
+                              ))}
+                              {script.elements.length > 4 && (
+                                <Chip
+                                  label={`+${script.elements.length - 4} more`}
+                                  size="small"
+                                  variant="outlined"
+                                />
+                              )}
+                            </Box>
                           </TableCell>
                           <TableCell>
-                            {script.execution_time_ms
-                              ? formatDuration(script.execution_time_ms)
-                              : 'N/A'}
-                          </TableCell>
-                          <TableCell>{formatDate(script.started_at)}</TableCell>
-                          <TableCell>
-                            {script.html_report_r2_url ? (
-                              <Chip
-                                icon={<LinkIcon />}
-                                label="View"
-                                size="small"
-                                clickable
-                                onClick={() => window.open(script.html_report_r2_url!, '_blank')}
-                                color="primary"
-                                variant="outlined"
-                              />
+                            {script.failed_elements > 0 ? (
+                              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                {script.elements
+                                  .filter((e) => !e.success)
+                                  .slice(0, 3)
+                                  .map((element) => (
+                                    <Chip
+                                      key={element.element_id}
+                                      icon={
+                                        element.element_type === 'edge' ? (
+                                          <ActionIcon />
+                                        ) : (
+                                          <VerificationIcon />
+                                        )
+                                      }
+                                      label={element.element_name}
+                                      size="small"
+                                      color="error"
+                                    />
+                                  ))}
+                                {script.elements.filter((e) => !e.success).length > 3 && (
+                                  <Chip
+                                    label={`+${script.elements.filter((e) => !e.success).length - 3} more`}
+                                    size="small"
+                                    color="error"
+                                    variant="outlined"
+                                  />
+                                )}
+                              </Box>
                             ) : (
-                              <Chip label="No Report" size="small" variant="outlined" disabled />
+                              <Typography variant="body2" color="textSecondary">
+                                None
+                              </Typography>
                             )}
                           </TableCell>
                         </TableRow>
@@ -481,7 +552,7 @@ const DependencyReport: React.FC = () => {
             </Box>
           )}
 
-          {/* Tab 2: Node Dependencies */}
+          {/* Tab 2: Element Dependencies */}
           {activeTab === 1 && (
             <Box sx={{ mt: 2 }}>
               <Box
@@ -493,12 +564,12 @@ const DependencyReport: React.FC = () => {
                 }}
               >
                 <Typography variant="h6">
-                  Node Dependencies ({filteredNodeDependencies.length})
+                  Element Dependencies ({filteredElementDependencies.length})
                 </Typography>
                 <SearchField
-                  value={nodeFilter}
-                  onChange={setNodeFilter}
-                  placeholder="Search nodes..."
+                  value={elementFilter}
+                  onChange={setElementFilter}
+                  placeholder="Search elements..."
                 />
               </Box>
 
@@ -507,19 +578,19 @@ const DependencyReport: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>
-                        <strong>Node Name</strong>
+                        <strong>Element</strong>
                       </TableCell>
                       <TableCell>
                         <strong>Interface</strong>
                       </TableCell>
                       <TableCell>
-                        <strong>Script Executions</strong>
+                        <strong>Risk Level</strong>
                       </TableCell>
                       <TableCell>
                         <strong>Success Rate</strong>
                       </TableCell>
                       <TableCell>
-                        <strong>Recent Scripts</strong>
+                        <strong>Used by Scripts</strong>
                       </TableCell>
                     </TableRow>
                   </TableHead>
@@ -530,168 +601,89 @@ const DependencyReport: React.FC = () => {
                           <LoadingState />
                         </TableCell>
                       </TableRow>
-                    ) : filteredNodeDependencies.length === 0 ? (
-                      <EmptyState message="No node dependencies found" />
+                    ) : filteredElementDependencies.length === 0 ? (
+                      <EmptyState message="No element dependencies found" />
                     ) : (
-                      filteredNodeDependencies.map((node) => (
-                        <TableRow key={node.element_id}>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <VerificationIcon fontSize="small" color="secondary" />
-                              {node.element_name}
-                            </Box>
-                          </TableCell>
-                          <TableCell>{node.tree_name}</TableCell>
-                          <TableCell>{node.total_executions}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={`${node.success_rate.toFixed(1)}%`}
-                              color={
-                                node.success_rate >= 80
-                                  ? 'success'
-                                  : node.success_rate >= 60
-                                    ? 'warning'
-                                    : 'error'
-                              }
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                              {node.script_executions.slice(0, 3).map((script, index) => (
-                                <Chip
-                                  key={index}
-                                  label={script.script_name}
-                                  size="small"
-                                  variant="outlined"
-                                  color={script.success ? 'success' : 'error'}
-                                  onClick={() =>
-                                    script.html_report_r2_url &&
-                                    window.open(script.html_report_r2_url, '_blank')
-                                  }
-                                  clickable={!!script.html_report_r2_url}
-                                />
-                              ))}
-                              {node.script_executions.length > 3 && (
-                                <Chip
-                                  label={`+${node.script_executions.length - 3} more`}
-                                  size="small"
-                                  variant="outlined"
-                                />
-                              )}
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Box>
-          )}
-
-          {/* Tab 3: Edge Dependencies */}
-          {activeTab === 2 && (
-            <Box sx={{ mt: 2 }}>
-              <Box
-                sx={{
-                  mb: 2,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <Typography variant="h6">
-                  Edge Dependencies ({filteredEdgeDependencies.length})
-                </Typography>
-                <SearchField
-                  value={edgeFilter}
-                  onChange={setEdgeFilter}
-                  placeholder="Search edges..."
-                />
-              </Box>
-
-              <TableContainer component={Paper} variant="outlined">
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>
-                        <strong>Edge Name</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Interface</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Script Executions</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Success Rate</strong>
-                      </TableCell>
-                      <TableCell>
-                        <strong>Recent Scripts</strong>
-                      </TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {loading ? (
-                      <TableRow>
-                        <TableCell colSpan={5}>
-                          <LoadingState />
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredEdgeDependencies.length === 0 ? (
-                      <EmptyState message="No edge dependencies found" />
-                    ) : (
-                      filteredEdgeDependencies.map((edge) => (
-                        <TableRow key={edge.element_id}>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                              <ActionIcon fontSize="small" color="primary" />
-                              {edge.element_name}
-                            </Box>
-                          </TableCell>
-                          <TableCell>{edge.tree_name}</TableCell>
-                          <TableCell>{edge.total_executions}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={`${edge.success_rate.toFixed(1)}%`}
-                              color={
-                                edge.success_rate >= 80
-                                  ? 'success'
-                                  : edge.success_rate >= 60
-                                    ? 'warning'
-                                    : 'error'
-                              }
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                              {edge.script_executions.slice(0, 3).map((script, index) => (
-                                <Chip
-                                  key={index}
-                                  label={script.script_name}
-                                  size="small"
-                                  variant="outlined"
-                                  color={script.success ? 'success' : 'error'}
-                                  onClick={() =>
-                                    script.html_report_r2_url &&
-                                    window.open(script.html_report_r2_url, '_blank')
-                                  }
-                                  clickable={!!script.html_report_r2_url}
-                                />
-                              ))}
-                              {edge.script_executions.length > 3 && (
-                                <Chip
-                                  label={`+${edge.script_executions.length - 3} more`}
-                                  size="small"
-                                  variant="outlined"
-                                />
-                              )}
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                      filteredElementDependencies
+                        .sort((a, b) => {
+                          // Sort by risk level (high first), then by success rate (low first)
+                          if (a.risk_level !== b.risk_level) {
+                            const riskOrder = { high: 0, medium: 1, low: 2 };
+                            return riskOrder[a.risk_level] - riskOrder[b.risk_level];
+                          }
+                          return a.success_rate - b.success_rate;
+                        })
+                        .map((element) => (
+                          <TableRow
+                            key={element.element_id}
+                            sx={{
+                              '&:hover': {
+                                backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                              },
+                            }}
+                          >
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                {element.element_type === 'edge' ? (
+                                  <ActionIcon fontSize="small" color="primary" />
+                                ) : (
+                                  <VerificationIcon fontSize="small" color="secondary" />
+                                )}
+                                <Typography variant="body2" fontWeight="medium">
+                                  {element.element_name}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>{element.tree_name}</TableCell>
+                            <TableCell>
+                              <Chip
+                                icon={getRiskIcon(element.risk_level)}
+                                label={element.risk_level.toUpperCase()}
+                                color={getRiskColor(element.risk_level)}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={`${element.success_rate.toFixed(1)}%`}
+                                color={
+                                  element.success_rate >= 80
+                                    ? 'success'
+                                    : element.success_rate >= 60
+                                      ? 'warning'
+                                      : 'error'
+                                }
+                                size="small"
+                                variant="outlined"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                {element.scripts.slice(0, 3).map((script) => (
+                                  <Chip
+                                    key={script.script_result_id}
+                                    label={script.script_name}
+                                    size="small"
+                                    variant="outlined"
+                                    color={script.success ? 'success' : 'error'}
+                                    onClick={() =>
+                                      script.html_report_r2_url &&
+                                      window.open(script.html_report_r2_url, '_blank')
+                                    }
+                                    clickable={!!script.html_report_r2_url}
+                                  />
+                                ))}
+                                {element.scripts.length > 3 && (
+                                  <Chip
+                                    label={`+${element.scripts.length - 3} more`}
+                                    size="small"
+                                    variant="outlined"
+                                  />
+                                )}
+                              </Box>
+                            </TableCell>
+                          </TableRow>
+                        ))
                     )}
                   </TableBody>
                 </Table>
