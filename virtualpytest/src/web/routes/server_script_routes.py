@@ -149,9 +149,19 @@ def analyze_script():
             }), 400
         
         # Find script in virtualpytest/scripts folder
-        script_path = os.path.join('virtualpytest', 'scripts', script_name)
+        # Get the project root directory (virtualpytest)
+        current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/routes
+        web_dir = os.path.dirname(current_dir)  # /src/web
+        src_dir = os.path.dirname(web_dir)  # /src
+        project_root = os.path.dirname(src_dir)  # /virtualpytest
+        
+        # Build script path
+        script_path = os.path.join(project_root, 'scripts', script_name)
         if not script_name.endswith('.py'):
             script_path += '.py'
+        
+        print(f"[@analyze_script] Looking for script at: {script_path}")
+        print(f"[@analyze_script] Script exists: {os.path.exists(script_path)}")
         
         # Analyze parameters
         analysis = analyze_script_parameters(script_path)
@@ -170,6 +180,7 @@ def analyze_script():
         return jsonify(analysis)
         
     except Exception as e:
+        print(f"[@analyze_script] Error: {e}")
         return jsonify({
             'success': False,
             'error': str(e)
