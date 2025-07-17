@@ -137,9 +137,9 @@ const TestReports: React.FC = () => {
       )}
 
       {/* Quick Stats */}
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: 0.5 }}>
         <Card>
-          <CardContent sx={{ py: 1.5 }}>
+          <CardContent sx={{ py: 0.5 }}>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box display="flex" alignItems="center" gap={1}>
                 <ReportsIcon color="primary" />

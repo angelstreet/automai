@@ -66,23 +66,37 @@ def get_execution_results(
                 metadata = tree_data.get('metadata', {})
                 
                 if execution.get('execution_type') == 'action' and execution.get('edge_id'):
-                    # Find edge name using from -> to format
+                    # Find edge name using source -> target node labels
                     edge_id = execution.get('edge_id')
                     edges = metadata.get('edges', [])
+                    nodes = metadata.get('nodes', [])
                     edge_name = 'Unknown Edge'
+                    
+                    # Create node lookup map for efficient label resolution
+                    node_labels = {}
+                    for node in nodes:
+                        node_id = node.get('id')
+                        node_data = node.get('data', {})
+                        if node_id:
+                            node_labels[node_id] = node_data.get('label') or node_data.get('description') or f"Node {node_id[:8]}"
                     
                     for edge in edges:
                         if edge.get('id') == edge_id:
-                            edge_data = edge.get('data', {})
-                            from_label = edge_data.get('from', '')
-                            to_label = edge_data.get('to', '')
+                            # Get source and target node IDs
+                            source_id = edge.get('source')
+                            target_id = edge.get('target')
                             
-                            if from_label and to_label:
-                                edge_name = f"{from_label} -> {to_label}"
-                            elif edge_data.get('description'):
-                                edge_name = edge_data.get('description')
+                            if source_id and target_id:
+                                source_label = node_labels.get(source_id, source_id)
+                                target_label = node_labels.get(target_id, target_id)
+                                edge_name = f"{source_label} -> {target_label}"
                             else:
-                                edge_name = f"Edge {edge_id[:8]}"
+                                # Fallback to edge data description or edge ID
+                                edge_data = edge.get('data', {})
+                                if edge_data.get('description'):
+                                    edge_name = edge_data.get('description')
+                                else:
+                                    edge_name = f"Edge {edge_id[:8]}"
                             break
                     
                     enriched_execution['element_name'] = edge_name
