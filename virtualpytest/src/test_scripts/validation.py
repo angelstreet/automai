@@ -145,6 +145,8 @@ def main():
         tree_data = tree_result['tree']
         tree_id = tree_result['tree_id']
         
+        print(f"✅ [validation] Loaded tree with {len(tree_result['nodes'])} nodes and {len(tree_result['edges'])} edges")
+
         # 6. Get validation sequence (use userinterface_name directly like web does)
         print("📋 [validation] Getting validation sequence...")
         validation_sequence = find_optimal_edge_validation_sequence(userinterface_name, team_id)

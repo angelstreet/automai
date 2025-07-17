@@ -615,7 +615,7 @@ def _create_validation_step(G, from_node: str, to_node: str, edge_data: Dict, st
     # Get actions and verifications
     actions = edge_data.get('actions', [])
     retry_actions = edge_data.get('retryActions', [])
-    verifications = edge_data.get('verifications', [])
+    verifications = get_node_info(G, to_node).get('verifications', []) if get_node_info(G, to_node) else []
     
     validation_step = {
         'step_number': step_number,

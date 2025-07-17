@@ -13,22 +13,19 @@ src_dir = os.path.dirname(current_dir)
 project_root = os.path.dirname(src_dir)
 sys.path.insert(0, project_root)
 
-from src.utils.script_utils import load_navigation_tree, _get_node_verifications
+from src.utils.script_utils import load_navigation_tree, _get_node_verifications, setup_script_environment
 
 from src.utils.app_utils import load_environment_variables  # Add this import
 
 def main():
-    # Load environment variables
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    env_path = os.path.join(script_dir, '..', 'web', '.env.host')  # Correct path: test_scripts/../web/.env.host
-    if os.path.exists(env_path):
-        load_environment_variables(mode='host', calling_script_dir=os.path.dirname(env_path))
-        print("✅ Loaded environment variables from {env_path}")
-    else:
-        print("⚠️ .env.host not found at {env_path}")
+    # Setup environment like validation.py
+    setup_result = setup_script_environment("test_verification_load")
+    if not setup_result['success']:
+        print(f"❌ Failed setup: {setup_result['error']}")
+        return
+    team_id = setup_result['team_id']
     
     userinterface_name = "horizon_android_mobile"  # From your query
-    team_id = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"  # From your logs
     test_node_id = "node-1"  # Example: "home" node from logs; change if needed
     
     print("🔄 Testing verification loading...")

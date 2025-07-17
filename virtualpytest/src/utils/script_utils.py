@@ -402,7 +402,7 @@ def execute_verification_directly(host, device, verification: Dict[str, Any]) ->
         return {'success': False, 'error': f'Verification execution error: {str(e)}'}
 
 
-def execute_navigation_with_verifications(host, device, transition: Dict[str, Any], team_id: str, tree_id: str = None) -> Dict[str, Any]:
+def execute_navigation_with_verifications(host, device, transition: Dict[str, Any], team_id: str) -> Dict[str, Any]:
     """
     Execute a single navigation step with verifications following NavigationExecutor pattern.
     
@@ -415,7 +415,6 @@ def execute_navigation_with_verifications(host, device, transition: Dict[str, An
         device: Device instance
         transition: Navigation transition with actions and verifications
         team_id: Team ID for database recording
-        tree_id: Optional tree ID for verification context
         
     Returns:
         Dictionary with execution results including verification results
@@ -458,13 +457,11 @@ def execute_navigation_with_verifications(host, device, transition: Dict[str, An
         print(f"[@script_utils:execute_navigation_with_verifications] Navigation actions completed successfully")
         
         # 2. Execute verifications (following NavigationExecutor pattern)
-        to_node_id = transition.get('to_node_id')
-        verifications = _get_node_verifications(tree_id, to_node_id, team_id) if tree_id and to_node_id else []
+        verifications = transition.get('verifications', [])
+        print(f"[@script_utils:execute_navigation_with_verifications] Executing {len(verifications)} target node verifications")
         verification_results = []
         
         if verifications:
-            print(f"[@script_utils:execute_navigation_with_verifications] Executing {len(verifications)} target node verifications")
-            
             # Execute each verification
             for i, verification in enumerate(verifications):
                 print(f"[@script_utils:execute_navigation_with_verifications] Executing verification {i+1}/{len(verifications)}")
@@ -601,36 +598,3 @@ def capture_validation_screenshot(host: Dict[str, Any], device: Any, step_name: 
     except Exception as e:
         print(f"❌ [{script_name}] Screenshot capture error: {str(e)}")
         return "" 
-
-def _get_node_verifications(tree_id: str, node_id: str, team_id: str) -> List[Dict[str, Any]]:
-    """Get verifications from target node (like NavigationExecutor does)"""
-    try:
-        from src.web.cache.navigation_cache import get_cached_graph
-        from src.web.cache.navigation_graph import get_node_info
-        
-        G = get_cached_graph(tree_id, team_id)
-        if not G:
-            print(f"[@script_utils:_get_node_verifications] No cached graph found for tree {tree_id}")
-            return []
-        
-        node_info = get_node_info(G, node_id)
-        if not node_info:
-            print(f"[@script_utils:_get_node_verifications] No node info found for node {node_id}")
-            return []
-        
-        print(f"[@debug:_get_node_verifications] Node info for {node_id}: {node_info}")  # Debug: Print full node info
-        print(f"[@debug:_get_node_verifications] 'verifications' key exists: {'verifications' in node_info}")  # Debug: Check key
-        print(f"[@debug:_get_node_verifications] 'data.verifications' exists: {'data' in node_info and 'verifications' in node_info.get('data', {})}")  # Debug: Check nested key
-        
-        # Get verifications from node data (same as NavigationExecutor)
-        verifications = []
-        if 'verifications' in node_info:
-            verifications = node_info.get('verifications', [])
-        elif 'data' in node_info and isinstance(node_info['data'], dict):
-            verifications = node_info['data'].get('verifications', [])
-        
-        print(f"[@script_utils:_get_node_verifications] Found {len(verifications)} verifications for node {node_id}")
-        return verifications
-    except Exception as e:
-        print(f"[@script_utils:_get_node_verifications] Error getting node verifications: {str(e)}")
-        return [] 
