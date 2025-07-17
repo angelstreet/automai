@@ -10,7 +10,6 @@ import os
 import requests
 from typing import Dict, Any, List
 from ..base_controller import BaseController
-from src.utils.script_utils import load_navigation_tree, execute_navigation_step_directly
 
 
 class AIAgentController(BaseController):
@@ -22,6 +21,9 @@ class AIAgentController(BaseController):
         self.is_executing = False
         self.current_step = ""
         self.execution_log = []
+        
+        # Lazy import inside __init__ to avoid circular import
+        from src.utils.script_utils import load_navigation_tree
         
         # Load navigation tree once
         tree_result = load_navigation_tree("horizon_android_mobile")
@@ -385,6 +387,9 @@ JSON ONLY - NO OTHER TEXT"""
                 
                 try:
                     if command == "execute_navigation":
+                        # Lazy import inside the block to avoid circular import
+                        from src.utils.script_utils import execute_navigation_step_directly
+                        
                         target_node = params.get("target_node")
                         transition = {
                             "actions": [],
