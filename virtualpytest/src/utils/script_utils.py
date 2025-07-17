@@ -28,7 +28,7 @@ def load_navigation_tree(userinterface_name: str, script_name: str = "script") -
     This populates the cache and is required before calling pathfinding functions.
     
     Args:
-        userinterface_name: Name of the userinterface (e.g., 'horizon_android_mobile')
+        userinterface_name: trface (e.g., 'horizon_android_mobile')
         script_name: Name of the script for logging
         
     Returns:

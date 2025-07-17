@@ -1,5 +1,4 @@
 import { Terminal as ScriptIcon } from '@mui/icons-material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import {
   Box,
   Typography,
@@ -22,9 +21,6 @@ import {
   Paper,
   TextField,
   Autocomplete,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
@@ -387,6 +383,7 @@ const RunTests: React.FC = () => {
             handleParameterChange(param.name, newInputValue)
           }
           freeSolo
+          size="small"
           renderInput={(params) => (
             <TextField
               {...params}
@@ -417,29 +414,30 @@ const RunTests: React.FC = () => {
     );
   };
 
+  // Filter to only show required parameters
+  const requiredParameters = scriptAnalysis?.parameters.filter((param) => param.required) || [];
+
   // Check if device is mobile model for proper aspect ratio
   const isMobileModel = !!(deviceModel && deviceModel.toLowerCase().includes('mobile'));
 
   return (
-    <Box>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Script Runner
-        </Typography>
-      </Box>
+    <Box sx={{ p: 1 }}>
+      <Typography variant="h5" sx={{ mb: 1 }}>
+        Script Runner
+      </Typography>
 
-      <Grid container spacing={3}>
+      <Grid container spacing={2}>
         {/* Script Execution */}
         <Grid item xs={12} md={showWizard && selectedHost && selectedDevice ? 6 : 12}>
-          <Card>
+          <Card sx={{ '& .MuiCardContent-root': { p: 2, '&:last-child': { pb: 2 } } }}>
             <CardContent>
-              <Typography variant="h6" mb={2}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
                 Execute Script
               </Typography>
 
               {!showWizard ? (
                 // Show launch button when wizard is not active
-                <Box display="flex" justifyContent="center" py={4}>
+                <Box display="flex" justifyContent="center" py={2}>
                   <Button
                     variant="contained"
                     size="large"
@@ -452,7 +450,7 @@ const RunTests: React.FC = () => {
               ) : (
                 // Show wizard form when active
                 <>
-                  <Grid container spacing={2} mb={3}>
+                  <Grid container spacing={1} sx={{ mb: 1 }}>
                     <Grid item xs={12} sm={4}>
                       <FormControl fullWidth size="small">
                         <InputLabel>Script</InputLabel>
@@ -518,38 +516,34 @@ const RunTests: React.FC = () => {
                     </Grid>
                   </Grid>
 
-                  {/* Script Parameters Section */}
-                  {scriptAnalysis && scriptAnalysis.has_parameters && (
-                    <Accordion defaultExpanded sx={{ mb: 3 }}>
-                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                        <Typography variant="subtitle1">
-                          Script Parameters
-                          {analyzingScript && <CircularProgress size={16} sx={{ ml: 1 }} />}
-                        </Typography>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <Grid container spacing={2}>
-                          {scriptAnalysis.parameters.map((param) => (
-                            <Grid item xs={12} sm={6} key={param.name}>
-                              {renderParameterInput(param)}
-                            </Grid>
-                          ))}
-                        </Grid>
-                        {scriptAnalysis.parameters.length > 0 && (
-                          <Box sx={{ mt: 2, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
-                            <Typography variant="body2" color="textSecondary">
-                              Preview: {buildParameterString() || 'No parameters set'}
-                            </Typography>
-                          </Box>
-                        )}
-                      </AccordionDetails>
-                    </Accordion>
+                  {/* Required Parameters Only - Inline */}
+                  {requiredParameters.length > 0 && (
+                    <>
+                      <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>
+                        Required Parameters
+                        {analyzingScript && <CircularProgress size={12} sx={{ ml: 1 }} />}
+                      </Typography>
+                      <Grid container spacing={1} sx={{ mb: 1 }}>
+                        {requiredParameters.map((param) => (
+                          <Grid item xs={12} sm={6} key={param.name}>
+                            {renderParameterInput(param)}
+                          </Grid>
+                        ))}
+                      </Grid>
+                      {requiredParameters.length > 0 && (
+                        <Box sx={{ mb: 1, p: 1, bgcolor: 'background.default', borderRadius: 1 }}>
+                          <Typography variant="caption" color="textSecondary">
+                            Preview: {buildParameterString() || 'No parameters set'}
+                          </Typography>
+                        </Box>
+                      )}
+                    </>
                   )}
 
-                  <Box display="flex" gap={2}>
+                  <Box display="flex" gap={1}>
                     <Button
                       variant="contained"
-                      startIcon={isExecuting ? <CircularProgress size={20} /> : <ScriptIcon />}
+                      startIcon={isExecuting ? <CircularProgress size={16} /> : <ScriptIcon />}
                       onClick={handleExecuteScript}
                       disabled={
                         isExecuting ||
@@ -559,6 +553,7 @@ const RunTests: React.FC = () => {
                         loadingScripts ||
                         !validateParameters().valid
                       }
+                      size="small"
                     >
                       {isExecuting ? 'Executing...' : 'Execute Script'}
                     </Button>
@@ -571,6 +566,7 @@ const RunTests: React.FC = () => {
                         setScriptAnalysis(null);
                         setParameterValues({});
                       }}
+                      size="small"
                     >
                       Cancel
                     </Button>
@@ -584,11 +580,11 @@ const RunTests: React.FC = () => {
         {/* Device Stream Viewer - Only show when host and device are selected */}
         {showWizard && selectedHost && selectedDevice && (
           <Grid item xs={12} md={6}>
-            <Card>
+            <Card sx={{ '& .MuiCardContent-root': { p: 1, '&:last-child': { pb: 1 } } }}>
               <CardContent>
                 <Box
                   sx={{
-                    height: 320,
+                    height: 280,
                     backgroundColor: 'black',
                     borderRadius: 1,
                     overflow: 'hidden',
@@ -604,7 +600,7 @@ const RunTests: React.FC = () => {
                       isCapturing={isExecuting}
                       model={deviceModel}
                       layoutConfig={{
-                        minHeight: '300px',
+                        minHeight: '260px',
                         aspectRatio: isMobileModel ? '9/16' : '16/9',
                         objectFit: 'contain',
                         isMobileModel,
@@ -628,20 +624,20 @@ const RunTests: React.FC = () => {
                     >
                       {isLoadingUrl ? (
                         <>
-                          <CircularProgress sx={{ color: 'white', mb: 2 }} />
-                          <Typography>Loading device stream...</Typography>
+                          <CircularProgress sx={{ color: 'white', mb: 1 }} size={24} />
+                          <Typography variant="body2">Loading device stream...</Typography>
                         </>
                       ) : urlError ? (
                         <>
-                          <Typography color="error" sx={{ mb: 1 }}>
+                          <Typography color="error" variant="body2" sx={{ mb: 1 }}>
                             Stream Error
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="caption" color="text.secondary">
                             {urlError}
                           </Typography>
                         </>
                       ) : (
-                        <Typography>No stream available</Typography>
+                        <Typography variant="body2">No stream available</Typography>
                       )}
                     </Box>
                   )}
@@ -653,16 +649,16 @@ const RunTests: React.FC = () => {
 
         {/* Execution History */}
         <Grid item xs={12}>
-          <Card>
+          <Card sx={{ '& .MuiCardContent-root': { p: 2, '&:last-child': { pb: 2 } } }}>
             <CardContent>
-              <Typography variant="h6" mb={2}>
+              <Typography variant="h6" sx={{ mb: 1 }}>
                 Execution History
               </Typography>
 
               {executions.length === 0 ? (
                 <Box
                   sx={{
-                    p: 3,
+                    p: 2,
                     textAlign: 'center',
                     borderRadius: 1,
                     backgroundColor: 'background.default',
@@ -674,7 +670,7 @@ const RunTests: React.FC = () => {
                 </Box>
               ) : (
                 <TableContainer component={Paper} variant="outlined">
-                  <Table size="small">
+                  <Table size="small" sx={{ '& .MuiTableCell-root': { py: 0.5 } }}>
                     <TableHead>
                       <TableRow>
                         <TableCell>Script</TableCell>
@@ -688,7 +684,14 @@ const RunTests: React.FC = () => {
                     </TableHead>
                     <TableBody>
                       {executions.map((execution) => (
-                        <TableRow key={execution.id}>
+                        <TableRow
+                          key={execution.id}
+                          sx={{
+                            '&:hover': {
+                              backgroundColor: 'rgba(0, 0, 0, 0.04) !important',
+                            },
+                          }}
+                        >
                           <TableCell>{execution.scriptName}</TableCell>
                           <TableCell>{execution.hostName}</TableCell>
                           <TableCell>{execution.deviceId}</TableCell>
