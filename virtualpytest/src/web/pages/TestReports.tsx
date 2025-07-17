@@ -142,48 +142,42 @@ const TestReports: React.FC = () => {
       )}
 
       {/* Quick Stats */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 2 }}>
         <Card>
-          <CardContent>
-            <Box display="flex" alignItems="center" gap={1} mb={2}>
-              <ReportsIcon color="primary" />
-              <Typography variant="h6">Quick Stats</Typography>
-            </Box>
-
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={3}>
-                <Box display="flex" justifyContent="space-between" mb={1}>
+          <CardContent sx={{ py: 1.5 }}>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box display="flex" alignItems="center" gap={1}>
+                <ReportsIcon color="primary" />
+                <Typography variant="h6">Quick Stats</Typography>
+              </Box>
+              
+              <Box display="flex" alignItems="center" gap={4}>
+                <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Total Reports</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {totalReports}
                   </Typography>
                 </Box>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <Box display="flex" justifyContent="space-between" mb={1}>
+                <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">This Week</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {thisWeekReports}
                   </Typography>
                 </Box>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <Box display="flex" justifyContent="space-between" mb={1}>
+                <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Success Rate</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {successRate}%
                   </Typography>
                 </Box>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <Box display="flex" justifyContent="space-between">
+                <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Avg Duration</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {avgDuration}
                   </Typography>
                 </Box>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
       </Box>
@@ -246,7 +240,7 @@ const TestReports: React.FC = () => {
                       key={result.id}
                       sx={{
                         '&:hover': {
-                          backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                          backgroundColor: 'rgba(0, 0, 0, 0.04) !important',
                         },
                         opacity: result.discard ? 0.5 : 1,
                       }}

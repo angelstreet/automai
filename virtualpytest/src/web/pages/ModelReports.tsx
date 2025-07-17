@@ -127,64 +127,54 @@ const ModelReports: React.FC = () => {
       )}
 
       {/* Quick Stats */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 2 }}>
         <Card>
-          <CardContent>
-            <Box display="flex" alignItems="center" gap={1} mb={2}>
-              <ModelIcon color="primary" />
-              <Typography variant="h6">Execution Stats</Typography>
-            </Box>
-
-            <Grid container spacing={3}>
-              <Grid item xs={12} md={2}>
-                <Box display="flex" justifyContent="space-between" mb={1}>
+          <CardContent sx={{ py: 1.5 }}>
+            <Box display="flex" alignItems="center" justifyContent="space-between">
+              <Box display="flex" alignItems="center" gap={1}>
+                <ModelIcon color="primary" />
+                <Typography variant="h6">Execution Stats</Typography>
+              </Box>
+              
+              <Box display="flex" alignItems="center" gap={4}>
+                <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Total Executions</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {totalExecutions}
                   </Typography>
                 </Box>
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <Box display="flex" justifyContent="space-between" mb={1}>
+                <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">This Week</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {thisWeekExecutions}
                   </Typography>
                 </Box>
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <Box display="flex" justifyContent="space-between" mb={1}>
+                <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Success Rate</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {successRate}%
                   </Typography>
                 </Box>
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <Box display="flex" justifyContent="space-between" mb={1}>
+                <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Avg Duration</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {avgDuration}
                   </Typography>
                 </Box>
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <Box display="flex" justifyContent="space-between" mb={1}>
+                <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Actions</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {actionExecutions.length}
                   </Typography>
                 </Box>
-              </Grid>
-              <Grid item xs={12} md={2}>
-                <Box display="flex" justifyContent="space-between">
+                <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Verifications</Typography>
                   <Typography variant="body2" fontWeight="bold">
                     {verificationExecutions.length}
                   </Typography>
                 </Box>
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
           </CardContent>
         </Card>
       </Box>
@@ -241,7 +231,7 @@ const ModelReports: React.FC = () => {
                       key={result.id}
                       sx={{
                         '&:hover': {
-                          backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                          backgroundColor: 'rgba(0, 0, 0, 0.04) !important',
                         },
                       }}
                     >
