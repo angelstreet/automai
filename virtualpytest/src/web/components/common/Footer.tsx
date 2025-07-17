@@ -15,7 +15,7 @@ const Footer: React.FC = () => {
         borderColor: 'divider',
       }}
     >
-      <Box display="flex" justifyContent="space-between" alignItems="center" minHeight={40}>
+      <Box display="flex" justifyContent="space-between" alignItems="center" minHeight={24}>
         <Typography variant="body2" color="text.secondary">
           © 2024 VirtualPyTest - Automated Testing Platform
         </Typography>
