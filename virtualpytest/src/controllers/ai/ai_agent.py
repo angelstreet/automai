@@ -86,6 +86,8 @@ class AIAgentController(BaseController):
         except Exception as e:
             print(f"AI[{self.device_name}]: Error getting host and device: {e}")
             return None, None
+    
+
 
     def execute_task(self, task_description: str, available_actions: List[Dict], available_verifications: List[Dict], device_model: str = None, userinterface_name: str = "horizon_android_mobile") -> Dict[str, Any]:
         """
@@ -217,17 +219,17 @@ If not feasible:
 
 JSON ONLY - NO OTHER TEXT"""
             else:
-                # Enhanced prompt with navigation tree context
+                # Build simple action list - let AI figure out what to use
                 action_context = "\n".join([
-                    f"- {action.get('ai_name', action.get('command'))}: {action.get('description', 'No description')}"
-                    for action in available_actions[:10]  # Limit to first 10 to avoid token limit
+                    f"- {action.get('command')} (params: {action.get('params', {})}): {action.get('description', 'No description')}"
+                    for action in available_actions
                 ])
                 
                 # Add navigation context if tree is available
                 navigation_context = ""
                 if navigation_tree:
                     navigation_context = """
-- execute_navigation: Use for navigating to a target node (e.g., "settings"). Params: {"target_node": "node_label"}. System handles path like goto/validation."""
+- execute_navigation (params: {"target_node": "node_name"}): Navigate to a specific node in the navigation tree"""
                 
                 prompt = f"""You are a device automation AI for {device_model}. Generate an execution plan for this task.
 
@@ -238,32 +240,27 @@ Navigation Tree Available: {context['has_navigation_tree']}
 Available Actions:
 {action_context}{navigation_context}
 
-Smart Action Guidelines:
-- For "go back/return": use go_back_button (command: press_key, params: {{"key": "BACK"}})
-- For "go home": use go_home_button (command: press_key, params: {{"key": "HOME"}})
-- For "type/enter/input text": use type_text (command: input_text, params: {{"text": "your text"}})
-- For tapping at specific positions: use tap_screen_coordinates (command: tap_coordinates, params: {{"x": 100, "y": 200}})
-- For navigation to specific nodes: use execute_navigation (command: execute_navigation, params: {{"target_node": "node_name"}}) when navigation tree is available
-
-Navigation Intelligence:
-- When user says "go to [node]" and navigation tree is available: Use execute_navigation with target_node
-- When user says "click [element]" or "tap [element]": Use click_ui_element
-- When user says "tap at [x,y]": Use tap_screen_coordinates
-- For system navigation (back/home): Use the specific key commands
+INSTRUCTIONS:
+1. Analyze the task and determine what needs to be accomplished
+2. Look at the available actions and choose the most appropriate ones
+3. Use ONLY the commands and parameters shown in the available actions
+4. For navigation tasks ("go to X"), use execute_navigation if navigation tree is available
+5. For interaction tasks ("click X"), choose the best available interaction method
+6. Create a logical sequence of steps to accomplish the task
 
 CRITICAL: Respond with ONLY valid JSON. No other text.
 
 Required JSON format:
 {{
-  "analysis": "brief analysis of the task and chosen action",
+  "analysis": "brief analysis of the task and chosen approach",
   "feasible": true,
   "plan": [
     {{
       "step": 1,
       "type": "action",
-      "command": "execute_navigation",
-      "params": {{"target_node": "settings"}},
-      "description": "Navigate to settings using navigation tree"
+      "command": "command_from_available_actions",
+      "params": {{"param_name": "param_value"}},
+      "description": "What this step does"
     }}
   ]
 }}
