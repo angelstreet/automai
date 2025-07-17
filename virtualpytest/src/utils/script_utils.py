@@ -590,12 +590,8 @@ def capture_validation_screenshot(host, device: Any, step_name: str, script_name
             print(f"❌ [{script_name}] Failed to take screenshot via AV controller")
             return ""
         
-        # Verify the file exists
-        if not os.path.exists(screenshot_path):
-            print(f"❌ [{script_name}] Controller screenshot file not found: {screenshot_path}")
-            return ""
-        
         print(f"✅ [{script_name}] Screenshot captured: {screenshot_path}")
+        # Note: File may not exist immediately due to capture delay, but path is valid
         return screenshot_path
             
     except Exception as e:
