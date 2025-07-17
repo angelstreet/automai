@@ -618,6 +618,10 @@ def _get_node_verifications(tree_id: str, node_id: str, team_id: str) -> List[Di
             print(f"[@script_utils:_get_node_verifications] No node info found for node {node_id}")
             return []
         
+        print(f"[@debug:_get_node_verifications] Node info for {node_id}: {node_info}")  # Debug: Print full node info
+        print(f"[@debug:_get_node_verifications] 'verifications' key exists: {'verifications' in node_info}")  # Debug: Check key
+        print(f"[@debug:_get_node_verifications] 'data.verifications' exists: {'data' in node_info and 'verifications' in node_info.get('data', {})}")  # Debug: Check nested key
+        
         # Get verifications from node data (same as NavigationExecutor)
         verifications = []
         if 'verifications' in node_info:
