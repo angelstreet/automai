@@ -656,9 +656,6 @@ const RunTests: React.FC = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell>Script</TableCell>
-                        <TableCell>Host</TableCell>
-                        <TableCell>Device</TableCell>
-                        <TableCell>Parameters</TableCell>
                         <TableCell>Start Time</TableCell>
                         <TableCell>End Time</TableCell>
                         <TableCell>Status</TableCell>
@@ -675,16 +672,6 @@ const RunTests: React.FC = () => {
                           }}
                         >
                           <TableCell>{execution.scriptName}</TableCell>
-                          <TableCell>{execution.hostName}</TableCell>
-                          <TableCell>{execution.deviceId}</TableCell>
-                          <TableCell>
-                            <Typography
-                              variant="body2"
-                              sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}
-                            >
-                              {execution.parameters || '-'}
-                            </Typography>
-                          </TableCell>
                           <TableCell>{execution.startTime}</TableCell>
                           <TableCell>{execution.endTime || '-'}</TableCell>
                           <TableCell>{getStatusChip(execution.status)}</TableCell>

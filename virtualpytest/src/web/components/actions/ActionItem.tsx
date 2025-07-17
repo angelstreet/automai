@@ -45,7 +45,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
   const handleParamChange = (paramName: string, value: string | number) => {
     onUpdateAction(index, {
       params: {
-        ...action.params,
+        ...(action.params as any),
         [paramName]: value,
       },
     });
@@ -55,6 +55,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
     if (!action.command) return null;
 
     const fields = [];
+    const params = action.params as any;
 
     // Common wait_time field for all actions
     fields.push(
@@ -63,7 +64,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
         label="Wait Time (ms)"
         type="number"
         size="small"
-        value={action.params?.wait_time ?? 500}
+        value={params?.wait_time ?? 500}
         onChange={(e) => {
           const value = parseInt(e.target.value);
           handleParamChange('wait_time', isNaN(value) ? 0 : value);
@@ -87,7 +88,7 @@ export const ActionItem: React.FC<ActionItemProps> = ({
             key="key"
             label="Key"
             size="small"
-            value={action.params?.key || ''}
+            value={params?.key || ''}
             onChange={(e) => handleParamChange('key', e.target.value)}
             placeholder="e.g., UP, DOWN, HOME, BACK"
             sx={{
@@ -313,7 +314,14 @@ export const ActionItem: React.FC<ActionItemProps> = ({
         <FormControl size="small" sx={{ flex: 1, minWidth: 200, maxWidth: 300 }}>
           <InputLabel>Action</InputLabel>
           <Select
-            value={action.id || ''}
+            value={
+              action.id &&
+              Object.values(availableActions)
+                .flat()
+                .some((act) => act.id === action.id)
+                ? action.id
+                : ''
+            }
             onChange={(e) => onActionSelect(index, e.target.value)}
             label="Action"
             size="small"

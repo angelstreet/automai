@@ -33,7 +33,9 @@ export const ActionsList: React.FC<ActionsListProps> = ({ actions, onActionsUpda
       if (i === index) {
         return {
           ...action,
+          id: selectedAction.id,
           command: selectedAction.command,
+          label: selectedAction.label,
           params: { ...selectedAction.params },
         };
       }
