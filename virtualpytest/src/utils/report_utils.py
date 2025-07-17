@@ -904,7 +904,7 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
             </div>
             """
         
-                step_html = f"""
+        step_html = f"""
         <div class="step-item {'success' if success else 'failure'}" onclick="toggleStep('step-details-{i}')">
             <div class="step-number">{step_number}</div>
             <div class="step-status">
