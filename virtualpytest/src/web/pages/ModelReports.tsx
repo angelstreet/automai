@@ -10,7 +10,6 @@ import {
   Typography,
   Card,
   CardContent,
-  Grid,
   Table,
   TableBody,
   TableCell,
@@ -54,7 +53,6 @@ const ModelReports: React.FC = () => {
   // Calculate stats
   const totalExecutions = executionResults.length;
   const passedExecutions = executionResults.filter((result) => result.success).length;
-  const failedExecutions = totalExecutions - passedExecutions;
   const successRate =
     totalExecutions > 0 ? ((passedExecutions / totalExecutions) * 100).toFixed(1) : 'N/A';
 
@@ -104,7 +102,7 @@ const ModelReports: React.FC = () => {
   // Empty state component
   const EmptyState = () => (
     <TableRow>
-      <TableCell colSpan={8} sx={{ textAlign: 'center', py: 4 }}>
+      <TableCell colSpan={6} sx={{ textAlign: 'center', py: 4 }}>
         <Typography variant="body2" color="textSecondary">
           No execution results available yet
         </Typography>
@@ -135,7 +133,7 @@ const ModelReports: React.FC = () => {
                 <ModelIcon color="primary" />
                 <Typography variant="h6">Execution Stats</Typography>
               </Box>
-              
+
               <Box display="flex" alignItems="center" gap={4}>
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Total Executions</Typography>
@@ -194,16 +192,10 @@ const ModelReports: React.FC = () => {
                     <strong>Type</strong>
                   </TableCell>
                   <TableCell sx={{ py: 1 }}>
-                    <strong>Tree ID</strong>
+                    <strong>Tree Name</strong>
                   </TableCell>
                   <TableCell sx={{ py: 1 }}>
-                    <strong>Element ID</strong>
-                  </TableCell>
-                  <TableCell sx={{ py: 1 }}>
-                    <strong>Host</strong>
-                  </TableCell>
-                  <TableCell sx={{ py: 1 }}>
-                    <strong>Device</strong>
+                    <strong>Element Name</strong>
                   </TableCell>
                   <TableCell sx={{ py: 1 }}>
                     <strong>Status</strong>
@@ -219,7 +211,7 @@ const ModelReports: React.FC = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8}>
+                    <TableCell colSpan={6}>
                       <LoadingState />
                     </TableCell>
                   </TableRow>
@@ -227,7 +219,7 @@ const ModelReports: React.FC = () => {
                   <EmptyState />
                 ) : (
                   executionResults.map((result) => (
-                    <TableRow 
+                    <TableRow
                       key={result.id}
                       sx={{
                         '&:hover': {
@@ -250,12 +242,8 @@ const ModelReports: React.FC = () => {
                           color={result.execution_type === 'action' ? 'primary' : 'secondary'}
                         />
                       </TableCell>
-                      <TableCell sx={{ py: 0.5 }}>{result.tree_id}</TableCell>
-                      <TableCell sx={{ py: 0.5 }}>
-                        {result.execution_type === 'action' ? result.edge_id : result.node_id}
-                      </TableCell>
-                      <TableCell sx={{ py: 0.5 }}>{result.host_name}</TableCell>
-                      <TableCell sx={{ py: 0.5 }}>{result.device_model}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>{result.tree_name}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>{result.element_name}</TableCell>
                       <TableCell sx={{ py: 0.5 }}>
                         <Chip
                           icon={result.success ? <PassIcon /> : <FailIcon />}
@@ -264,7 +252,9 @@ const ModelReports: React.FC = () => {
                           size="small"
                         />
                       </TableCell>
-                      <TableCell sx={{ py: 0.5 }}>{formatDuration(result.execution_time_ms)}</TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        {formatDuration(result.execution_time_ms)}
+                      </TableCell>
                       <TableCell sx={{ py: 0.5 }}>{formatDate(result.executed_at)}</TableCell>
                     </TableRow>
                   ))

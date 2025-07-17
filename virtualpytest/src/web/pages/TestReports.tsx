@@ -3,14 +3,12 @@ import {
   CheckCircle as PassIcon,
   Error as FailIcon,
   Link as LinkIcon,
-  Delete as DiscardIcon,
 } from '@mui/icons-material';
 import {
   Box,
   Typography,
   Card,
   CardContent,
-  Grid,
   Table,
   TableBody,
   TableCell,
@@ -21,7 +19,7 @@ import {
   Chip,
   CircularProgress,
   Alert,
-  IconButton,
+  Checkbox,
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
@@ -55,7 +53,6 @@ const TestReports: React.FC = () => {
   // Calculate stats
   const totalReports = scriptResults.length;
   const passedReports = scriptResults.filter((result) => result.success).length;
-  const failedReports = totalReports - passedReports;
   const successRate = totalReports > 0 ? ((passedReports / totalReports) * 100).toFixed(1) : 'N/A';
 
   // Calculate this week's reports (last 7 days)
@@ -94,14 +91,12 @@ const TestReports: React.FC = () => {
     try {
       // TODO: Implement API call to update discard status
       console.log(`Toggling discard for result ${resultId} to ${discardValue}`);
-      
+
       // Update local state immediately for better UX
-      setScriptResults(prev => 
-        prev.map(result => 
-          result.id === resultId 
-            ? { ...result, discard: discardValue }
-            : result
-        )
+      setScriptResults((prev) =>
+        prev.map((result) =>
+          result.id === resultId ? { ...result, discard: discardValue } : result,
+        ),
       );
     } catch (error) {
       console.error('Error toggling discard status:', error);
@@ -119,7 +114,7 @@ const TestReports: React.FC = () => {
   // Empty state component
   const EmptyState = () => (
     <TableRow>
-      <TableCell colSpan={10} sx={{ textAlign: 'center', py: 4 }}>
+      <TableCell colSpan={9} sx={{ textAlign: 'center', py: 4 }}>
         <Typography variant="body2" color="textSecondary">
           No script results available yet
         </Typography>
@@ -150,7 +145,7 @@ const TestReports: React.FC = () => {
                 <ReportsIcon color="primary" />
                 <Typography variant="h6">Quick Stats</Typography>
               </Box>
-              
+
               <Box display="flex" alignItems="center" gap={4}>
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Total Reports</Typography>
@@ -197,9 +192,6 @@ const TestReports: React.FC = () => {
                     <strong>Script Name</strong>
                   </TableCell>
                   <TableCell sx={{ py: 1 }}>
-                    <strong>Type</strong>
-                  </TableCell>
-                  <TableCell sx={{ py: 1 }}>
                     <strong>UI Name</strong>
                   </TableCell>
                   <TableCell sx={{ py: 1 }}>
@@ -228,7 +220,7 @@ const TestReports: React.FC = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10}>
+                    <TableCell colSpan={9}>
                       <LoadingState />
                     </TableCell>
                   </TableRow>
@@ -236,7 +228,7 @@ const TestReports: React.FC = () => {
                   <EmptyState />
                 ) : (
                   scriptResults.map((result) => (
-                    <TableRow 
+                    <TableRow
                       key={result.id}
                       sx={{
                         '&:hover': {
@@ -246,9 +238,6 @@ const TestReports: React.FC = () => {
                       }}
                     >
                       <TableCell sx={{ py: 0.5 }}>{result.script_name}</TableCell>
-                      <TableCell sx={{ py: 0.5 }}>
-                        <Chip label={result.script_type} size="small" variant="outlined" />
-                      </TableCell>
                       <TableCell sx={{ py: 0.5 }}>{result.userinterface_name || 'N/A'}</TableCell>
                       <TableCell sx={{ py: 0.5 }}>{result.host_name}</TableCell>
                       <TableCell sx={{ py: 0.5 }}>{result.device_name}</TableCell>
@@ -282,14 +271,14 @@ const TestReports: React.FC = () => {
                         )}
                       </TableCell>
                       <TableCell sx={{ py: 0.5 }}>
-                        <IconButton
+                        <Checkbox
                           size="small"
-                          onClick={() => handleDiscardToggle(result.id, !result.discard)}
-                          title={result.discard ? "Restore result" : "Discard result"}
-                          color={result.discard ? "success" : "error"}
-                        >
-                          <DiscardIcon fontSize="small" />
-                        </IconButton>
+                          checked={result.discard || false}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleDiscardToggle(result.id, e.target.checked)
+                          }
+                          title={result.discard ? 'Discarded' : 'Not discarded'}
+                        />
                       </TableCell>
                     </TableRow>
                   ))

@@ -21,7 +21,7 @@ def get_execution_results(
     tree_id: Optional[str] = None,
     limit: int = 100
 ) -> Dict:
-    """Get execution results with filtering."""
+    """Get execution results with filtering and enriched with tree/node/edge names."""
     try:
         print(f"[@db:execution_results:get_execution_results] Getting execution results:")
         print(f"  - team_id: {team_id}")
@@ -42,10 +42,66 @@ def get_execution_results(
         result = query.order('executed_at', desc=True).limit(limit).execute()
         
         print(f"[@db:execution_results:get_execution_results] Found {len(result.data)} execution results")
+        
+        # Enrich results with tree names and node/edge names
+        enriched_results = []
+        tree_cache = {}  # Cache trees to avoid repeated queries
+        
+        for execution in result.data:
+            enriched_execution = execution.copy()
+            
+            # Get tree information
+            tree_id = execution.get('tree_id')
+            if tree_id and tree_id not in tree_cache:
+                tree_query = supabase.table('navigation_trees').select('name, metadata').eq('id', tree_id).eq('team_id', team_id).execute()
+                tree_cache[tree_id] = tree_query.data[0] if tree_query.data else None
+            
+            tree_data = tree_cache.get(tree_id)
+            if tree_data:
+                enriched_execution['tree_name'] = tree_data.get('name', 'Unknown Tree')
+                
+                # Get node/edge name from metadata
+                metadata = tree_data.get('metadata', {})
+                
+                if execution.get('execution_type') == 'action' and execution.get('edge_id'):
+                    # Find edge name
+                    edge_id = execution.get('edge_id')
+                    edges = metadata.get('edges', [])
+                    edge_name = 'Unknown Edge'
+                    
+                    for edge in edges:
+                        if edge.get('id') == edge_id:
+                            edge_data = edge.get('data', {})
+                            edge_name = edge_data.get('name') or edge_data.get('description') or f"Edge {edge_id[:8]}"
+                            break
+                    
+                    enriched_execution['element_name'] = edge_name
+                    
+                elif execution.get('execution_type') == 'verification' and execution.get('node_id'):
+                    # Find node name
+                    node_id = execution.get('node_id')
+                    nodes = metadata.get('nodes', [])
+                    node_name = 'Unknown Node'
+                    
+                    for node in nodes:
+                        if node.get('id') == node_id:
+                            node_data = node.get('data', {})
+                            node_name = node_data.get('name') or node_data.get('description') or f"Node {node_id[:8]}"
+                            break
+                    
+                    enriched_execution['element_name'] = node_name
+                else:
+                    enriched_execution['element_name'] = 'Unknown Element'
+            else:
+                enriched_execution['tree_name'] = 'Unknown Tree'
+                enriched_execution['element_name'] = 'Unknown Element'
+            
+            enriched_results.append(enriched_execution)
+        
         return {
             'success': True,
-            'execution_results': result.data,
-            'count': len(result.data)
+            'execution_results': enriched_results,
+            'count': len(enriched_results)
         }
         
     except Exception as e:

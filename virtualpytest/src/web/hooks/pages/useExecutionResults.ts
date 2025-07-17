@@ -10,8 +10,10 @@ export interface ExecutionResult {
   id: string;
   team_id: string;
   tree_id: string;
+  tree_name: string;
   node_id?: string;
   edge_id?: string;
+  element_name: string;
   execution_type: 'action' | 'verification';
   host_name: string;
   device_model: string;
