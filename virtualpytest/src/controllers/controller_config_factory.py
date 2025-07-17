@@ -87,7 +87,7 @@ def create_controller_configs_from_device_info(device_config: dict) -> dict:
         configs['ai'] = {
             'type': 'ai',
             'implementation': ai_impl,
-            'params': {}  # AI agent needs no special parameters
+            'params': {'device_id': device_config.get('device_id')}  # Add device_id to params
         }
         print(f"[@controller_factory:create_controller_configs_from_device_info] Created AI controller: {ai_impl}")
     
