@@ -10,6 +10,8 @@ import os
 import requests
 from typing import Dict, Any, List
 from ..base_controller import BaseController
+from src.utils.script_utils import load_navigation_tree, execute_navigation_step_directly
+from src.utils.host_utils import get_host_instance
 
 
 class AIAgentController(BaseController):
@@ -21,6 +23,14 @@ class AIAgentController(BaseController):
         self.is_executing = False
         self.current_step = ""
         self.execution_log = []
+        
+        # Load navigation tree once
+        tree_result = load_navigation_tree("horizon_android_mobile")
+        self.tree = tree_result.get('tree') if tree_result.get('success') else None
+        
+        # Setup host and device
+        self.host = get_host_instance()
+        self.device = next(d for d in self.host.get_devices() if d.device_name == self.device_name)
         
         print(f"AI[{self.device_name}]: Initialized")
     
@@ -113,6 +123,7 @@ Available MCP tools: {context['available_actions']}
 
 MCP Tool Guidelines:
 - navigate_to_page: Use for "go to [page]" requests (pages: dashboard, rec, userinterface, runTests)
+- execute_navigation: Use for navigating to a target node (e.g., "settings"). Params: {{"target_node": "node_label"}}. System handles path.
 - execute_navigation_to_node: Use for navigation tree operations
 - remote_execute_command: Use for device command execution
 
@@ -155,6 +166,7 @@ Device: {device_model}
 
 Available Actions:
 {action_context}
+- execute_navigation: Use for navigating to a target node (e.g., "settings"). Params: {{"target_node": "node_label"}}. System handles path.
 
 Smart Action Guidelines:
 - For "go back/return": use go_back_button (command: press_key, params: {{"key": "BACK"}})
@@ -370,8 +382,17 @@ JSON ONLY - NO OTHER TEXT"""
                 print(f"AI[{self.device_name}]: Executing action {step_num}: {description}")
                 
                 try:
-                    # Use controller-specific abstraction - single line! (same as host_remote_routes.py)
-                    success = remote_controller.execute_command(command, params)
+                    if command == "execute_navigation":
+                        target_node = params.get("target_node")
+                        transition = {
+                            "actions": [],
+                            "to_node_label": target_node
+                        }
+                        team_id = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
+                        result = execute_navigation_step_directly(self.host, self.device, transition, team_id)
+                        success = result.get('success', False)
+                    else:
+                        success = remote_controller.execute_command(command, params)
                     
                     if success:
                         executed_steps += 1
