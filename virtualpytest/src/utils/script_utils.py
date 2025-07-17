@@ -398,3 +398,70 @@ def capture_validation_screenshot(host, device: Any, step_name: str, script_name
             
     except Exception:
         return "" 
+
+# Add back simplified get_script_path at the end of the file
+def get_script_path(script_name: str) -> str:
+    current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/utils
+    src_dir = os.path.dirname(current_dir)  # /src
+    project_root = os.path.dirname(src_dir)  # /virtualpytest
+    
+    script_path = os.path.join(project_root, 'scripts', f'{script_name}.py')
+    
+    if not os.path.exists(script_path):
+        raise ValueError(f'Script not found: {script_path}')
+    
+    return script_path
+
+# Add back simplified execute_command
+def execute_command(command: str, timeout: int = 30) -> Tuple[bool, str, str, int]:
+    try:
+        result = subprocess.run(
+            command,
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+        
+        success = result.returncode == 0
+        stdout = result.stdout.strip()
+        stderr = result.stderr.strip()
+        exit_code = result.returncode
+        
+        return success, stdout, stderr, exit_code
+        
+    except subprocess.TimeoutExpired:
+        return False, "", "Command timed out", -1
+    except Exception as e:
+        return False, "", str(e), -1
+
+# Add back simplified execute_script
+def execute_script(script_name: str, device_id: str) -> Dict[str, Any]:
+    try:
+        script_path = get_script_path(script_name)
+        
+        hostname = os.getenv('HOST_NAME', 'localhost')
+        
+        command = f"bash -c 'source /home/{hostname}/myvenv/bin/activate && python {script_path}'"
+        
+        success, stdout, stderr, exit_code = execute_command(command, timeout=60)
+        
+        return {
+            'success': success,
+            'stdout': stdout,
+            'stderr': stderr,
+            'exit_code': exit_code,
+            'script_name': script_name,
+            'device_id': device_id,
+            'script_path': script_path
+        }
+        
+    except Exception as e:
+        return {
+            'success': False,
+            'stdout': '',
+            'stderr': str(e),
+            'exit_code': 1,
+            'script_name': script_name,
+            'device_id': device_id
+        } 
