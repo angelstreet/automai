@@ -66,19 +66,25 @@ class AIAgentController(BaseController):
     def _get_host_and_device(self):
         """
         Get host and device instances when needed for execution.
+        Uses the same pattern as the working routes.
         
         Returns:
             Tuple of (host, device) or (None, None) if failed
         """
         try:
             # Lazy import inside method to avoid circular import
-            from src.utils.host_utils import get_host_instance
+            from src.utils.host_utils import get_device_by_id
             
-            host = get_host_instance()
-            device = next((d for d in host.get_devices() if d.device_name == self.device_name), None)
-            
+            # Get device by ID (same as routes)
+            device = get_device_by_id(self.device_name)
             if not device:
-                print(f"AI[{self.device_name}]: No device found with name: {self.device_name}")
+                print(f"AI[{self.device_name}]: No device found with ID: {self.device_name}")
+                return None, None
+            
+            # Get host from device (same as validation.py pattern)
+            host = device.host
+            if not host:
+                print(f"AI[{self.device_name}]: No host found for device: {self.device_name}")
                 return None, None
                 
             return host, device
@@ -482,6 +488,7 @@ JSON ONLY - NO OTHER TEXT"""
                             "actions": [],
                             "to_node_label": target_node
                         }
+                        # Use the same hardcoded team_id as validation.py and other scripts
                         team_id = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
                         result = execute_navigation_step_directly(host, device, transition, team_id)
                         success = result.get('success', False)

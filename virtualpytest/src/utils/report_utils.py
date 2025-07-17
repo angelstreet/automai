@@ -3,7 +3,7 @@ Report Generation Utilities
 
 This module provides functions for generating HTML validation reports with embedded screenshots.
 Reports include execution metrics, step-by-step results, and error analysis.
-Enhanced for manager-friendly compact view with collapsible sections.
+Enhanced for manager-friendly compact view with collapsible sections and theme support.
 """
 
 import os
@@ -43,7 +43,7 @@ def generate_validation_report(report_data: Dict) -> str:
         failed_steps = total_steps - passed_steps
         
         # Generate HTML content
-        html_template = create_compact_html_template()
+        html_template = create_themed_html_template()
         
         # Replace placeholders with actual content
         html_content = html_template.format(
@@ -72,8 +72,8 @@ def generate_validation_report(report_data: Dict) -> str:
         print(f"[@utils:report_utils:generate_validation_report] Error: {str(e)}")
         return create_error_report(str(e))
 
-def create_compact_html_template() -> str:
-    """Create the compact HTML template with embedded CSS."""
+def create_themed_html_template() -> str:
+    """Create the themed HTML template with embedded CSS and theme system."""
     return """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,6 +81,54 @@ def create_compact_html_template() -> str:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Validation Report - {script_name}</title>
     <style>
+        :root {{
+            /* Light theme variables */
+            --bg-primary: #f8f9fa;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f8f9fa;
+            --text-primary: #333333;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
+            --border-light: #e9ecef;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+            --shadow-hover: 0 2px 8px rgba(0,0,0,0.15);
+            --success-color: #28a745;
+            --success-bg: #d4edda;
+            --success-text: #155724;
+            --failure-color: #dc3545;
+            --failure-bg: #f8d7da;
+            --failure-text: #721c24;
+            --header-bg: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            --step-hover: #f8f9fa;
+            --error-bg: #f8d7da;
+            --error-border: #f5c6cb;
+            --modal-bg: rgba(0,0,0,0.8);
+        }}
+        
+        [data-theme="dark"] {{
+            /* Dark theme variables */
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --border-color: #404040;
+            --border-light: #303030;
+            --shadow: 0 4px 6px rgba(0,0,0,0.3);
+            --shadow-hover: 0 8px 16px rgba(0,0,0,0.4);
+            --success-color: #4ade80;
+            --success-bg: #1a4a2a;
+            --success-text: #86efac;
+            --failure-color: #f87171;
+            --failure-bg: #4a1a1a;
+            --failure-text: #fca5a5;
+            --header-bg: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            --step-hover: #2a2a2a;
+            --error-bg: #4a1a1a;
+            --error-border: #6b2c2c;
+            --modal-bg: rgba(0,0,0,0.9);
+        }}
+        
         * {{
             margin: 0;
             padding: 0;
@@ -90,29 +138,37 @@ def create_compact_html_template() -> str:
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.4;
-            color: #333;
-            background: #f8f9fa;
+            color: var(--text-primary);
+            background: var(--bg-primary);
             padding: 10px;
             font-size: 14px;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }}
         
         .container {{
             max-width: 1400px;
             margin: 0 auto;
-            background: white;
+            background: var(--bg-secondary);
             border-radius: 6px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow);
             overflow: hidden;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }}
         
         .header {{
-            background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+            background: var(--header-bg);
             color: white;
             padding: 8px 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             min-height: 40px;
+        }}
+        
+        .header-left {{
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }}
         
         .header h1 {{
@@ -125,10 +181,43 @@ def create_compact_html_template() -> str:
             opacity: 0.9;
         }}
         
+        .theme-toggle {{
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }}
+        
+        .theme-toggle:hover {{
+            background: rgba(255,255,255,0.2);
+        }}
+        
+        .theme-option {{
+            padding: 4px 8px;
+            border-radius: 16px;
+            font-size: 0.75em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }}
+        
+        .theme-option.active {{
+            background: rgba(255,255,255,0.9);
+            color: #1976d2;
+        }}
+        
         .summary {{
             padding: 12px 20px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
         }}
         
         .summary-grid {{
@@ -143,14 +232,15 @@ def create_compact_html_template() -> str:
             align-items: center;
             gap: 8px;
             padding: 6px 12px;
-            background: white;
+            background: var(--bg-secondary);
             border-radius: 4px;
-            border: 1px solid #e9ecef;
+            border: 1px solid var(--border-light);
             font-size: 0.9em;
+            transition: all 0.3s ease;
         }}
         
         .summary-item .label {{
-            color: #6c757d;
+            color: var(--text-secondary);
             font-weight: 500;
         }}
         
@@ -159,15 +249,15 @@ def create_compact_html_template() -> str:
         }}
         
         .success {{
-            color: #28a745;
+            color: var(--success-color);
         }}
         
         .failure {{
-            color: #dc3545;
+            color: var(--failure-color);
         }}
         
         .neutral {{
-            color: #6c757d;
+            color: var(--text-secondary);
         }}
         
         .content {{
@@ -185,11 +275,12 @@ def create_compact_html_template() -> str:
             margin-bottom: 10px;
             cursor: pointer;
             padding: 8px 0;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid var(--border-light);
+            transition: border-color 0.3s ease;
         }}
         
         .section-header h2 {{
-            color: #495057;
+            color: var(--text-primary);
             font-size: 1.1em;
             font-weight: 600;
         }}
@@ -199,8 +290,8 @@ def create_compact_html_template() -> str:
             border: none;
             font-size: 1.2em;
             cursor: pointer;
-            color: #6c757d;
-            transition: transform 0.2s;
+            color: var(--text-secondary);
+            transition: transform 0.2s, color 0.3s ease;
         }}
         
         .toggle-btn.expanded {{
@@ -218,18 +309,19 @@ def create_compact_html_template() -> str:
         }}
         
         .step-list {{
-            border: 1px solid #e9ecef;
+            border: 1px solid var(--border-light);
             border-radius: 4px;
             overflow: hidden;
+            transition: border-color 0.3s ease;
         }}
         
         .step-item {{
             display: flex;
             align-items: center;
             padding: 8px 12px;
-            border-bottom: 1px solid #f1f3f4;
+            border-bottom: 1px solid var(--border-light);
             cursor: pointer;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, border-color 0.3s ease;
         }}
         
         .step-item:last-child {{
@@ -237,21 +329,21 @@ def create_compact_html_template() -> str:
         }}
         
         .step-item:hover {{
-            background: #f8f9fa;
+            background: var(--step-hover);
         }}
         
         .step-item.success {{
-            border-left: 3px solid #28a745;
+            border-left: 3px solid var(--success-color);
         }}
         
         .step-item.failure {{
-            border-left: 3px solid #dc3545;
+            border-left: 3px solid var(--failure-color);
         }}
         
         .step-number {{
             width: 30px;
             font-weight: 600;
-            color: #6c757d;
+            color: var(--text-secondary);
             font-size: 0.9em;
         }}
         
@@ -266,16 +358,17 @@ def create_compact_html_template() -> str:
             font-size: 0.75em;
             font-weight: 600;
             text-transform: uppercase;
+            transition: all 0.3s ease;
         }}
         
         .step-status-badge.success {{
-            background: #d4edda;
-            color: #155724;
+            background: var(--success-bg);
+            color: var(--success-text);
         }}
         
         .step-status-badge.failure {{
-            background: #f8d7da;
-            color: #721c24;
+            background: var(--failure-bg);
+            color: var(--failure-text);
         }}
         
         .step-message {{
@@ -287,8 +380,9 @@ def create_compact_html_template() -> str:
         .step-details {{
             display: none;
             padding: 12px;
-            background: #f8f9fa;
-            border-top: 1px solid #e9ecef;
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border-light);
+            transition: all 0.3s ease;
         }}
         
         .step-details.expanded {{
@@ -308,7 +402,7 @@ def create_compact_html_template() -> str:
         
         .screenshot-label {{
             display: block;
-            color: #6c757d;
+            color: var(--text-secondary);
             font-size: 0.85em;
             margin-bottom: 8px;
             font-weight: 500;
@@ -320,7 +414,7 @@ def create_compact_html_template() -> str:
             height: 120px;
             object-fit: cover;
             border-radius: 4px;
-            border: 2px solid #dee2e6;
+            border: 2px solid var(--border-color);
             cursor: pointer;
             transition: all 0.2s;
         }}
@@ -328,6 +422,7 @@ def create_compact_html_template() -> str:
         .screenshot-thumbnail:hover {{
             border-color: #4a90e2;
             transform: scale(1.02);
+            box-shadow: var(--shadow-hover);
         }}
         
         .screenshot-modal {{
@@ -338,7 +433,8 @@ def create_compact_html_template() -> str:
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0,0,0,0.8);
+            background-color: var(--modal-bg);
+            transition: background-color 0.3s ease;
         }}
         
         .screenshot-modal.active {{
@@ -364,28 +460,30 @@ def create_compact_html_template() -> str:
         }}
         
         .error-section {{
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
+            background: var(--error-bg);
+            border: 1px solid var(--error-border);
             border-radius: 4px;
             padding: 12px;
             margin-top: 15px;
+            transition: all 0.3s ease;
         }}
         
         .error-section h3 {{
-            color: #721c24;
+            color: var(--failure-text);
             margin-bottom: 8px;
             font-size: 1em;
         }}
         
         .error-message {{
             font-family: 'Courier New', monospace;
-            background: #fff;
+            background: var(--bg-secondary);
             padding: 10px;
             border-radius: 4px;
-            border: 1px solid #dee2e6;
+            border: 1px solid var(--border-color);
             white-space: pre-wrap;
             overflow-x: auto;
             font-size: 0.85em;
+            transition: all 0.3s ease;
         }}
         
         @media (max-width: 768px) {{
@@ -399,12 +497,96 @@ def create_compact_html_template() -> str:
             
             .header {{
                 flex-direction: column;
-                gap: 5px;
+                gap: 8px;
                 text-align: center;
+                padding: 12px 20px;
+            }}
+            
+            .header-left {{
+                flex-direction: column;
+                gap: 8px;
+            }}
+            
+            .theme-toggle {{
+                order: -1;
             }}
         }}
     </style>
     <script>
+        // Theme management system
+        class ThemeManager {{
+            constructor() {{
+                this.currentMode = this.getSavedTheme() || 'system';
+                this.systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                this.init();
+            }}
+            
+            init() {{
+                this.applyTheme();
+                this.setupSystemThemeListener();
+                this.setupThemeToggle();
+            }}
+            
+            getSavedTheme() {{
+                return localStorage.getItem('validation-report-theme');
+            }}
+            
+            saveTheme(mode) {{
+                localStorage.setItem('validation-report-theme', mode);
+            }}
+            
+            getActualTheme() {{
+                if (this.currentMode === 'system') {{
+                    return this.systemPrefersDark ? 'dark' : 'light';
+                }}
+                return this.currentMode;
+            }}
+            
+            applyTheme() {{
+                const actualTheme = this.getActualTheme();
+                document.documentElement.setAttribute('data-theme', actualTheme);
+                this.updateToggleButtons();
+            }}
+            
+            setTheme(mode) {{
+                this.currentMode = mode;
+                this.saveTheme(mode);
+                this.applyTheme();
+            }}
+            
+            setupSystemThemeListener() {{
+                const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+                mediaQuery.addEventListener('change', (e) => {{
+                    this.systemPrefersDark = e.matches;
+                    if (this.currentMode === 'system') {{
+                        this.applyTheme();
+                    }}
+                }});
+            }}
+            
+            setupThemeToggle() {{
+                const themeOptions = document.querySelectorAll('.theme-option');
+                themeOptions.forEach(option => {{
+                    option.addEventListener('click', (e) => {{
+                        const mode = e.target.dataset.theme;
+                        this.setTheme(mode);
+                    }});
+                }});
+            }}
+            
+            updateToggleButtons() {{
+                const themeOptions = document.querySelectorAll('.theme-option');
+                themeOptions.forEach(option => {{
+                    option.classList.toggle('active', option.dataset.theme === this.currentMode);
+                }});
+            }}
+        }}
+        
+        // Initialize theme manager when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {{
+            window.themeManager = new ThemeManager();
+        }});
+        
         function toggleSection(sectionId) {{
             const content = document.getElementById(sectionId);
             const button = document.querySelector(`[onclick="toggleSection('${{sectionId}}')"]`);
@@ -455,10 +637,17 @@ def create_compact_html_template() -> str:
 <body>
     <div class="container">
         <div class="header">
-            <h1>{script_name}</h1>
-            <div class="time-info">
-                <div>Start: {start_time}</div>
-                <div>End: {end_time}</div>
+            <div class="header-left">
+                <h1>{script_name}</h1>
+                <div class="time-info">
+                    <div>Start: {start_time}</div>
+                    <div>End: {end_time}</div>
+                </div>
+            </div>
+            <div class="theme-toggle">
+                <div class="theme-option" data-theme="light">Light</div>
+                <div class="theme-option" data-theme="dark">Dark</div>
+                <div class="theme-option" data-theme="system">System</div>
             </div>
         </div>
         
