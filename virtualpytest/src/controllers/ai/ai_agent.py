@@ -265,7 +265,7 @@ JSON ONLY - NO OTHER TEXT"""
     def _execute(self, plan: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute the AI plan using proven HTTP API infrastructure.
-        Uses the same pattern as useAction.ts and useEdge.ts instead of direct controller access.
+        Uses the same pattern as useAction.ts and verification batch APIs.
         
         Args:
             plan: AI-generated plan with steps
@@ -294,9 +294,49 @@ JSON ONLY - NO OTHER TEXT"""
         
         print(f"AI[{self.device_name}]: Executing plan with {len(plan_steps)} steps")
         
+        # Separate actions and verifications (like useNode.ts pattern)
+        action_steps = [step for step in plan_steps if step.get('type') == 'action']
+        verification_steps = [step for step in plan_steps if step.get('type') == 'verification']
+        
+        print(f"AI[{self.device_name}]: Found {len(action_steps)} action steps and {len(verification_steps)} verification steps")
+        
+        # Execute actions first (same pattern as useNode.ts)
+        action_result = {'success': True, 'executed_steps': 0, 'total_steps': 0}
+        if action_steps:
+            action_result = self._execute_actions(action_steps)
+        
+        # Execute verifications second (same pattern as useNode.ts)
+        verification_result = {'success': True, 'executed_verifications': 0, 'total_verifications': 0}
+        if verification_steps:
+            verification_result = self._execute_verifications(plan)
+        
+        # Combine results (same pattern as NavigationExecutor)
+        overall_success = action_result.get('success', False) and verification_result.get('success', False)
+        total_executed = action_result.get('executed_steps', 0) + verification_result.get('executed_verifications', 0)
+        total_steps = action_result.get('total_steps', 0) + verification_result.get('total_verifications', 0)
+        
+        return {
+            'success': overall_success,
+            'executed_steps': total_executed,
+            'total_steps': total_steps,
+            'action_result': action_result,
+            'verification_result': verification_result,
+            'message': f'Plan execution completed: {total_executed}/{total_steps} steps successful'
+        }
+    
+    def _execute_actions(self, action_steps: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Execute action steps using proven HTTP action API.
+        
+        Args:
+            action_steps: List of action steps from AI plan
+            
+        Returns:
+            Dict with action execution results
+        """
         # Convert AI plan steps to action format (same as useAction.ts)
         actions = []
-        for i, step in enumerate(plan_steps):
+        for i, step in enumerate(action_steps):
             action = {
                 'id': f'ai_step_{i}',
                 'label': step.get('description', f'Step {i+1}'),
@@ -340,7 +380,7 @@ JSON ONLY - NO OTHER TEXT"""
                     'success': False,
                     'error': f'Action execution API error: {error_msg}',
                     'executed_steps': 0,
-                    'total_steps': len(plan_steps)
+                    'total_steps': len(action_steps)
                 }
             
             result = response.json()
@@ -348,25 +388,25 @@ JSON ONLY - NO OTHER TEXT"""
             
             if result.get('success'):
                 passed_count = result.get('passed_count', 0)
-                total_count = result.get('total_count', len(plan_steps))
+                total_count = result.get('total_count', len(action_steps))
                 
-                print(f"AI[{self.device_name}]: Successfully executed {passed_count}/{total_count} steps")
+                print(f"AI[{self.device_name}]: Successfully executed {passed_count}/{total_count} actions")
                 
                 return {
                     'success': True,
                     'executed_steps': passed_count,
                     'total_steps': total_count,
-                    'message': f'Successfully executed {passed_count}/{total_count} steps',
+                    'message': f'Successfully executed {passed_count}/{total_count} actions',
                     'results': result.get('results', [])
                 }
             else:
                 error_msg = result.get('error', 'Unknown execution error')
-                print(f"AI[{self.device_name}]: Plan execution failed: {error_msg}")
+                print(f"AI[{self.device_name}]: Action execution failed: {error_msg}")
                 return {
                     'success': False,
-                    'error': f'Plan execution failed: {error_msg}',
+                    'error': f'Action execution failed: {error_msg}',
                     'executed_steps': 0,
-                    'total_steps': len(plan_steps)
+                    'total_steps': len(action_steps)
                 }
                 
         except requests.exceptions.RequestException as e:
@@ -376,88 +416,258 @@ JSON ONLY - NO OTHER TEXT"""
                 'success': False,
                 'error': error_msg,
                 'executed_steps': 0,
-                'total_steps': len(plan_steps)
+                'total_steps': len(action_steps)
             }
         except Exception as e:
-            error_msg = f'Unexpected error during plan execution: {str(e)}'
+            error_msg = f'Unexpected error during action execution: {str(e)}'
             print(f"AI[{self.device_name}]: {error_msg}")
             return {
                 'success': False,
                 'error': error_msg,
                 'executed_steps': 0,
-                'total_steps': len(plan_steps)
+                'total_steps': len(action_steps)
+            }
+    
+    def _execute_verifications(self, plan: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute AI plan verifications using proven HTTP verification API.
+        Uses the same pattern as server_verification_common_routes.py batch execution.
+        
+        Args:
+            plan: AI-generated plan with verification steps
+            
+        Returns:
+            Dict with verification results
+        """
+        plan_steps = plan.get('plan', [])
+        verification_steps = [step for step in plan_steps if step.get('type') == 'verification']
+        
+        if not verification_steps:
+            print(f"AI[{self.device_name}]: No verification steps in plan")
+            return {
+                'success': True,
+                'executed_verifications': 0,
+                'total_verifications': 0,
+                'message': 'No verifications to execute'
+            }
+        
+        print(f"AI[{self.device_name}]: Executing {len(verification_steps)} verification steps")
+        
+        # Convert AI verification steps to verification format (same as batch verification API)
+        verifications = []
+        for i, step in enumerate(verification_steps):
+            verification = {
+                'id': f'ai_verification_{i}',
+                'verification_type': step.get('verification_type', 'image'),
+                'command': step.get('command', ''),
+                'params': step.get('params', {}),
+                'description': step.get('description', f'AI generated verification {i+1}')
+            }
+            verifications.append(verification)
+        
+        try:
+            # Use the same HTTP API pattern as batch verification
+            import requests
+            
+            # Prepare request body (same format as server_verification_common_routes.py)
+            request_body = {
+                'verifications': verifications,
+                'image_source_url': None,  # Let controller capture screenshots automatically
+                'model': 'android_mobile'  # Default model
+            }
+            
+            print(f"AI[{self.device_name}]: Sending verification execution request with {len(verifications)} verifications")
+            
+            # Make HTTP request to batch verification endpoint (same as verification hooks)
+            response = requests.post(
+                'http://localhost:5000/server/verification/executeBatch',
+                json={
+                    'host': {
+                        'host_name': 'current_host',  # Will be resolved on server side
+                        'host_url': 'current_host'
+                    },
+                    'device_id': self.device_name,
+                    **request_body
+                },
+                timeout=60  # Longer timeout for verifications
+            )
+            
+            if response.status_code != 200:
+                error_msg = f'HTTP {response.status_code}: {response.text}'
+                print(f"AI[{self.device_name}]: Verification execution failed: {error_msg}")
+                return {
+                    'success': False,
+                    'error': f'Verification execution API error: {error_msg}',
+                    'executed_verifications': 0,
+                    'total_verifications': len(verification_steps)
+                }
+            
+            result = response.json()
+            print(f"AI[{self.device_name}]: Verification execution result: {result}")
+            
+            if result.get('success'):
+                passed_count = result.get('passed_count', 0)
+                total_count = result.get('total_count', len(verification_steps))
+                
+                print(f"AI[{self.device_name}]: Successfully executed {passed_count}/{total_count} verifications")
+                
+                return {
+                    'success': True,
+                    'executed_verifications': passed_count,
+                    'total_verifications': total_count,
+                    'message': f'Successfully executed {passed_count}/{total_count} verifications',
+                    'results': result.get('results', [])
+                }
+            else:
+                error_msg = result.get('error', 'Unknown verification error')
+                print(f"AI[{self.device_name}]: Verification execution failed: {error_msg}")
+                return {
+                    'success': False,
+                    'error': f'Verification execution failed: {error_msg}',
+                    'executed_verifications': 0,
+                    'total_verifications': len(verification_steps)
+                }
+                
+        except requests.exceptions.RequestException as e:
+            error_msg = f'Network error during verification execution: {str(e)}'
+            print(f"AI[{self.device_name}]: {error_msg}")
+            return {
+                'success': False,
+                'error': error_msg,
+                'executed_verifications': 0,
+                'total_verifications': len(verification_steps)
+            }
+        except Exception as e:
+            error_msg = f'Unexpected error during verification execution: {str(e)}'
+            print(f"AI[{self.device_name}]: {error_msg}")
+            return {
+                'success': False,
+                'error': error_msg,
+                'executed_verifications': 0,
+                'total_verifications': len(verification_steps)
             }
     
     def _result_summary(self, plan: Dict[str, Any], execute_result: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Generate intelligent result summary based on plan and execution.
+        Generate comprehensive result summary for AI task execution.
+        Provides detailed analysis of both actions and verifications like useNode.ts.
         
         Args:
             plan: Original AI plan
-            execute_result: Execution results
+            execute_result: Combined execution results
             
         Returns:
-            Dict with summary analysis
+            Dict with comprehensive summary and recommendations
         """
         try:
-            if not execute_result.get('success', False):
-                # Execution failed
-                failed_steps = execute_result.get('failed_steps', [])
-                total_steps = execute_result.get('total_steps', 0)
-                executed_steps = execute_result.get('executed_steps', 0)
-                
-                summary = {
-                    'success': False,
-                    'outcome': 'execution_failed',
-                    'summary': f'Task execution incomplete: {executed_steps}/{total_steps} steps completed',
-                    'recommendations': []
-                }
-                
-                if failed_steps:
-                    summary['recommendations'].append(f'Review failed steps: {failed_steps}')
-                    summary['recommendations'].append('Check device connectivity and controller status')
-                    
-                    # Analyze step failures
-                    step_results = execute_result.get('step_results', [])
-                    failed_commands = [r.get('command', 'unknown') for r in step_results if not r.get('success', True)]
-                    if failed_commands:
-                        summary['recommendations'].append(f'Failed commands: {", ".join(set(failed_commands))}')
-                
-                return summary
-                
+            overall_success = execute_result.get('success', False)
+            total_executed = execute_result.get('executed_steps', 0)
+            total_steps = execute_result.get('total_steps', 0)
+            
+            # Extract detailed results
+            action_result = execute_result.get('action_result', {})
+            verification_result = execute_result.get('verification_result', {})
+            
+            action_executed = action_result.get('executed_steps', 0)
+            action_total = action_result.get('total_steps', 0)
+            verification_executed = verification_result.get('executed_verifications', 0)
+            verification_total = verification_result.get('total_verifications', 0)
+            
+            # Build comprehensive summary (same pattern as NavigationExecutor)
+            summary_parts = []
+            
+            if action_total > 0:
+                action_status = "✅" if action_result.get('success') else "❌"
+                summary_parts.append(f"{action_status} Actions: {action_executed}/{action_total} successful")
+            
+            if verification_total > 0:
+                verification_status = "✅" if verification_result.get('success') else "❌"
+                summary_parts.append(f"{verification_status} Verifications: {verification_executed}/{verification_total} passed")
+            
+            if not summary_parts:
+                summary_parts.append("ℹ️ No actions or verifications in plan")
+            
+            # Overall outcome determination
+            if overall_success:
+                outcome = 'task_completed'
+                summary = f"Task completed successfully: {' | '.join(summary_parts)}"
+            elif total_executed == 0:
+                outcome = 'execution_failed'
+                summary = f"Task execution failed to start: {execute_result.get('error', 'Unknown error')}"
             else:
-                # Execution succeeded
-                total_steps = execute_result.get('total_steps', 0)
-                success_rate = execute_result.get('success_rate', 0)
-                
-                summary = {
-                    'success': True,
-                    'outcome': 'task_completed',
-                    'summary': f'Task completed successfully: {total_steps} steps executed ({success_rate}% success rate)',
-                    'achievements': []
-                }
-                
-                # Analyze what was accomplished
-                step_results = execute_result.get('step_results', [])
-                executed_commands = [r.get('command', 'unknown') for r in step_results if r.get('success', True)]
-                if executed_commands:
-                    command_summary = ", ".join(set(executed_commands))
-                    summary['achievements'].append(f'Executed commands: {command_summary}')
-                
-                # Add plan analysis if available
-                plan_analysis = plan.get('analysis', '')
-                if plan_analysis:
-                    summary['achievements'].append(f'Plan analysis: {plan_analysis}')
-                
-                return summary
-                
+                outcome = 'partially_completed'
+                summary = f"Task partially completed: {' | '.join(summary_parts)}"
+            
+            # Generate recommendations (same pattern as useNode.ts)
+            recommendations = []
+            
+            # Action-specific recommendations
+            if action_total > 0 and not action_result.get('success'):
+                action_error = action_result.get('error', '')
+                if 'not available' in action_error.lower():
+                    recommendations.append("Check device connection and controller availability")
+                elif 'timeout' in action_error.lower():
+                    recommendations.append("Device may be unresponsive - check device status")
+                elif 'not found' in action_error.lower():
+                    recommendations.append("Verify UI elements exist and device is in correct state")
+                else:
+                    recommendations.append("Check action parameters and device capabilities")
+            
+            # Verification-specific recommendations
+            if verification_total > 0 and not verification_result.get('success'):
+                verification_error = verification_result.get('error', '')
+                if 'screenshot' in verification_error.lower():
+                    recommendations.append("Check screen capture functionality and device display")
+                elif 'image' in verification_error.lower():
+                    recommendations.append("Verify reference images and matching thresholds")
+                elif 'text' in verification_error.lower():
+                    recommendations.append("Check text extraction and search parameters")
+                else:
+                    recommendations.append("Review verification configuration and device state")
+            
+            # Success recommendations
+            if overall_success:
+                recommendations.append("Task completed successfully - AI agent performed as expected")
+            elif total_executed > 0:
+                recommendations.append("Partial success - review failed steps and retry if needed")
+            
+            # Plan analysis (unique to AI agent)
+            plan_steps = plan.get('plan', [])
+            plan_analysis = {
+                'total_planned_steps': len(plan_steps),
+                'action_steps_planned': len([s for s in plan_steps if s.get('type') == 'action']),
+                'verification_steps_planned': len([s for s in plan_steps if s.get('type') == 'verification']),
+                'plan_feasibility': plan.get('feasible', True)
+            }
+            
+            print(f"AI[{self.device_name}]: Task summary: {outcome} - {summary}")
+            
+            return {
+                'success': overall_success,
+                'outcome': outcome,
+                'summary': summary,
+                'recommendations': recommendations,
+                'execution_details': {
+                    'total_executed': total_executed,
+                    'total_planned': total_steps,
+                    'actions_executed': action_executed,
+                    'actions_planned': action_total,
+                    'verifications_executed': verification_executed,
+                    'verifications_planned': verification_total
+                },
+                'plan_analysis': plan_analysis,
+                'action_result': action_result,
+                'verification_result': verification_result
+            }
+            
         except Exception as e:
-            print(f"AI[{self.device_name}]: Result summary error: {e}")
+            print(f"AI[{self.device_name}]: Error generating result summary: {e}")
             return {
                 'success': False,
                 'outcome': 'summary_error',
-                'summary': f'Could not generate result summary: {str(e)}',
-                'recommendations': ['Check AI agent controller logs for details']
+                'summary': f'Error generating task summary: {str(e)}',
+                'recommendations': ['Check AI agent configuration and execution logs'],
+                'error': str(e)
             }
     
     def _add_to_log(self, log_type: str, action_type: str, action_value: Any, description: str):
