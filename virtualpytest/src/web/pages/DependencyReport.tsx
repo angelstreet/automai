@@ -346,12 +346,9 @@ const DependencyReport: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 1 }}>
         <Typography variant="h4" gutterBottom>
           Dependency Report
-        </Typography>
-        <Typography variant="body1" color="textSecondary">
-          Track script dependencies with navigation elements and vice versa
         </Typography>
       </Box>
 
