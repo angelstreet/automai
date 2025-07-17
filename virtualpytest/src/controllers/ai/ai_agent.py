@@ -160,21 +160,27 @@ Smart Action Guidelines:
 - For "go back/return": use go_back_button (command: press_key, params: {{"key": "BACK"}})
 - For "go home": use go_home_button (command: press_key, params: {{"key": "HOME"}})
 - For "type/enter/input text": use type_text (command: input_text, params: {{"text": "your text"}})
-- For coordinate taps: use tap_screen_coordinates (command: tap_coordinates, params: {{"x": 100, "y": 200}})
+- For tapping at specific positions: use tap_screen_coordinates (command: tap_coordinates, params: {{"x": 100, "y": 200}}). Use this when user says 'tap' without specifying an element, or 'tap at position'.
 
 Navigation Intelligence:
+- Distinguish between tap and click:
+  * Use tap_screen_coordinates for 'tap at [position]' or general 'tap' requests implying coordinates
+  * Use click_ui_element for 'click [element]' or 'tap [element]' where [element] is a UI element name/ID
 - When user says "go to [something]" or "navigate to [something]": 
-  * If [something] is a UI element (button/tab/menu/section), use click_ui_element (command: click_element, params: {{"element_id": "[something]"}})
-  * Examples: "go to replay" → click replay button, "navigate to settings" → click settings, "open menu" → click menu
-- When user says "click [something]" or "tap [something]": use click_ui_element
+  * If [something] is a UI element, use click_ui_element (command: click_element, params: {{"element_id": "[something]"}})
+  * Examples: "go to replay" → click replay, "navigate to settings" → click settings, "open menu" → click menu
+- When user says "click [something]" or "tap [something]" (where [something] is an element): use click_ui_element
+- When user says "tap at [x,y]" or "tap position": use tap_screen_coordinates
 - When user says "select [something]" or "choose [something]": use click_ui_element
 
 Task Analysis Strategy:
-1. Identify the main action type (navigation, input, selection, etc.)
-2. If it's navigation to a UI element, use click_ui_element with the target name
-3. If it's system navigation (back/home), use the specific key commands
-4. If it's text input, use type_text
-5. Always use the exact target name/text from the user's request as element_id
+1. Identify the main action type (navigation, input, selection, tap, etc.)
+2. If request mentions 'tap' without element, assume coordinates and use tap_screen_coordinates (prompt for x,y if not specified)
+3. If it's navigation to a UI element, use click_ui_element with the target name
+4. If it's system navigation (back/home), use the specific key commands
+5. If it's text input, use type_text
+6. Always use the exact target name/text from the user's request as element_id
+7. Do not append '_button' or any other suffix to the element_id. Use exactly the term provided in the user's request. For example, if user says 'click watch', use element_id: 'watch', not 'watch_button'.
 
 CRITICAL: Respond with ONLY valid JSON. No other text.
 
@@ -188,16 +194,17 @@ Required JSON format:
       "type": "action",
       "command": "click_element",
       "params": {{"element_id": "replay"}},
-      "description": "Click on replay button to navigate to replay section"
+      "description": "Click on replay to navigate to replay section"
     }}
   ]
 }}
 
-If not feasible:
+If coordinates needed but not provided:
 {{
-  "analysis": "why task cannot be completed",
+  "analysis": "task requires coordinates",
   "feasible": false,
-  "plan": []
+  "plan": [],
+  "needs_input": "Please provide x,y coordinates"
 }}
 
 JSON ONLY - NO OTHER TEXT"""

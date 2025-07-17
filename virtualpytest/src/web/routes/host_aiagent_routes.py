@@ -86,7 +86,7 @@ def execute_task():
                         
                     elif base_command == 'click_element':
                         ai_action_name = "click_ui_element"
-                        ai_description = "Click on UI element by text/ID (use for: 'click button', 'tap element', 'select item')"
+                        ai_description = "Click on UI element by text/ID (use for: 'click [element]', 'tap [element]', 'select [item]')"
                         
                     elif base_command == 'tap_coordinates':
                         ai_action_name = "tap_screen_coordinates"
@@ -132,7 +132,7 @@ def execute_task():
                         ]
                     elif 'click' in ai_action_name.lower():
                         ai_action['full_context']['common_use_cases'] = [
-                            "click button", "tap element", "select item", "press button"
+                            "click [element]", "tap [element]", "select [item]", "press [element]"
                         ]
                     
                     available_actions.append(ai_action)
