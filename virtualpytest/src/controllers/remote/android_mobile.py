@@ -662,4 +662,10 @@ class AndroidMobileRemoteController(RemoteControllerInterface):
             print(f"Remote[{self.device_type.upper()}]: Unknown command: {command}")
             result = False
         
+        # Apply wait_time after successful command execution
+        if result and wait_time > 0:
+            wait_seconds = wait_time / 1000.0
+            print(f"Remote[{self.device_type.upper()}]: Waiting {wait_seconds}s after {command}")
+            time.sleep(wait_seconds)
+        
         return result
