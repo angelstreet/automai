@@ -264,8 +264,8 @@ JSON ONLY - NO OTHER TEXT"""
     
     def _execute(self, plan: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Execute the AI plan using existing action execution infrastructure.
-        Uses the same pattern as useEdge.ts and useNode.ts instead of direct controller access.
+        Execute the AI plan using proven HTTP API infrastructure.
+        Uses the same pattern as useAction.ts and useEdge.ts instead of direct controller access.
         
         Args:
             plan: AI-generated plan with steps
@@ -284,147 +284,106 @@ JSON ONLY - NO OTHER TEXT"""
         
         plan_steps = plan.get('plan', [])
         if not plan_steps:
-            print(f"AI[{self.device_name}]: No execution steps in plan")
+            print(f"AI[{self.device_name}]: No steps in plan to execute")
             return {
                 'success': True,
-                'message': 'No steps to execute',
                 'executed_steps': 0,
-                'total_steps': 0
+                'total_steps': 0,
+                'message': 'No steps to execute'
             }
         
+        print(f"AI[{self.device_name}]: Executing plan with {len(plan_steps)} steps")
+        
+        # Convert AI plan steps to action format (same as useAction.ts)
+        actions = []
+        for i, step in enumerate(plan_steps):
+            action = {
+                'id': f'ai_step_{i}',
+                'label': step.get('description', f'Step {i+1}'),
+                'command': step.get('command'),
+                'params': step.get('params', {}),
+                'description': step.get('description', f'AI generated step {i+1}'),
+                'requiresInput': False
+            }
+            actions.append(action)
+        
         try:
+            # Use the same HTTP API pattern as useAction.ts
             import requests
-            from src.utils.host_utils import get_controller
             
-            # Since we're running on the host with device control, use direct controller access
-            # This is the established pattern for host-side execution
-            remote_controller = get_controller(self.device_name, 'remote')
+            # Prepare request body (same format as useAction.ts)
+            request_body = {
+                'actions': actions,
+                'retry_actions': []  # AI agent doesn't use retry actions yet
+            }
             
-            if not remote_controller:
-                print(f"AI[{self.device_name}]: No remote controller available for execution")
+            print(f"AI[{self.device_name}]: Sending action execution request with {len(actions)} actions")
+            
+            # Make HTTP request to action execution endpoint (same as useAction.ts)
+            response = requests.post(
+                'http://localhost:5000/server/action/executeBatch',
+                json={
+                    'host': {
+                        'host_name': 'current_host',  # Will be resolved on server side
+                        'host_url': 'current_host'
+                    },
+                    'device_id': self.device_name,
+                    **request_body
+                },
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                error_msg = f'HTTP {response.status_code}: {response.text}'
+                print(f"AI[{self.device_name}]: Action execution failed: {error_msg}")
                 return {
                     'success': False,
-                    'error': 'No remote controller available for plan execution',
+                    'error': f'Action execution API error: {error_msg}',
                     'executed_steps': 0,
                     'total_steps': len(plan_steps)
                 }
             
-            print(f"AI[{self.device_name}]: Executing {len(plan_steps)} steps using {type(remote_controller).__name__}")
+            result = response.json()
+            print(f"AI[{self.device_name}]: Action execution result: {result}")
             
-            executed_steps = 0
-            failed_steps = []
-            step_results = []
-            
-            for i, step in enumerate(plan_steps):
-                step_num = i + 1
-                step_type = step.get('type', 'unknown')
-                command = step.get('command', '')
-                params = step.get('params', {})
-                description = step.get('description', f'Step {step_num}')
+            if result.get('success'):
+                passed_count = result.get('passed_count', 0)
+                total_count = result.get('total_count', len(plan_steps))
                 
-                print(f"AI[{self.device_name}]: Executing step {step_num}: {description}")
-                self.current_step = f"Executing step {step_num}: {description}"
+                print(f"AI[{self.device_name}]: Successfully executed {passed_count}/{total_count} steps")
                 
-                try:
-                    if step_type == 'action':
-                        # Execute action using direct controller access (host-side pattern)
-                        success = remote_controller.execute_command(command, params)
-                        
-                        if success:
-                            executed_steps += 1
-                            step_results.append({
-                                'step': step_num,
-                                'command': command,
-                                'params': params,
-                                'success': True,
-                                'description': description,
-                                'message': 'Action completed successfully'
-                            })
-                            print(f"AI[{self.device_name}]: Step {step_num} completed successfully")
-                            
-                            # Add wait time if specified
-                            wait_time = params.get('wait_time', 0.5)  # Default 500ms between steps
-                            if wait_time > 0:
-                                time.sleep(wait_time)
-                                
-                        else:
-                            failed_steps.append(step_num)
-                            step_results.append({
-                                'step': step_num,
-                                'command': command,
-                                'params': params,
-                                'success': False,
-                                'error': 'Command execution failed',
-                                'description': description
-                            })
-                            print(f"AI[{self.device_name}]: Step {step_num} failed: {command}")
-                            
-                    elif step_type == 'verification':
-                        # For verification steps, just log them for now
-                        # Real verification would use the existing verification controllers
-                        step_results.append({
-                            'step': step_num,
-                            'verification_type': step.get('verification_type', 'unknown'),
-                            'params': params,
-                            'success': True,
-                            'note': 'Verification skipped in current implementation',
-                            'description': description
-                        })
-                        print(f"AI[{self.device_name}]: Step {step_num} (verification) logged: {description}")
-                        
-                    else:
-                        # Unknown step type
-                        failed_steps.append(step_num)
-                        step_results.append({
-                            'step': step_num,
-                            'type': step_type,
-                            'success': False,
-                            'error': f'Unknown step type: {step_type}',
-                            'description': description
-                        })
-                        print(f"AI[{self.device_name}]: Step {step_num} failed: unknown type {step_type}")
-                        
-                except Exception as e:
-                    failed_steps.append(step_num)
-                    step_results.append({
-                        'step': step_num,
-                        'command': command,
-                        'params': params,
-                        'success': False,
-                        'error': str(e),
-                        'description': description
-                    })
-                    print(f"AI[{self.device_name}]: Step {step_num} exception: {e}")
-            
-            # Calculate overall success
-            total_steps = len(plan_steps)
-            success_rate = executed_steps / total_steps if total_steps > 0 else 0
-            overall_success = len(failed_steps) == 0
-            
-            result = {
-                'success': overall_success,
-                'executed_steps': executed_steps,
-                'total_steps': total_steps,
-                'failed_steps': failed_steps,
-                'success_rate': round(success_rate * 100, 1),
-                'step_results': step_results
-            }
-            
-            if overall_success:
-                result['message'] = f'All {total_steps} steps executed successfully'
-                print(f"AI[{self.device_name}]: Plan execution completed successfully ({executed_steps}/{total_steps} steps)")
+                return {
+                    'success': True,
+                    'executed_steps': passed_count,
+                    'total_steps': total_count,
+                    'message': f'Successfully executed {passed_count}/{total_count} steps',
+                    'results': result.get('results', [])
+                }
             else:
-                result['message'] = f'{executed_steps}/{total_steps} steps executed, {len(failed_steps)} failed'
-                result['error'] = f'Failed steps: {failed_steps}'
-                print(f"AI[{self.device_name}]: Plan execution completed with errors ({executed_steps}/{total_steps} steps, failed: {failed_steps})")
-            
-            return result
-            
-        except Exception as e:
-            print(f"AI[{self.device_name}]: Plan execution error: {e}")
+                error_msg = result.get('error', 'Unknown execution error')
+                print(f"AI[{self.device_name}]: Plan execution failed: {error_msg}")
+                return {
+                    'success': False,
+                    'error': f'Plan execution failed: {error_msg}',
+                    'executed_steps': 0,
+                    'total_steps': len(plan_steps)
+                }
+                
+        except requests.exceptions.RequestException as e:
+            error_msg = f'Network error during action execution: {str(e)}'
+            print(f"AI[{self.device_name}]: {error_msg}")
             return {
                 'success': False,
-                'error': f'Plan execution failed: {str(e)}',
+                'error': error_msg,
+                'executed_steps': 0,
+                'total_steps': len(plan_steps)
+            }
+        except Exception as e:
+            error_msg = f'Unexpected error during plan execution: {str(e)}'
+            print(f"AI[{self.device_name}]: {error_msg}")
+            return {
+                'success': False,
+                'error': error_msg,
                 'executed_steps': 0,
                 'total_steps': len(plan_steps)
             }
