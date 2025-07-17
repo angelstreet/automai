@@ -2,7 +2,6 @@ import {
   Clear as ClearIcon,
   ExpandLess,
   ExpandMore,
-  Link as LinkIcon,
   PlayArrow as ActionIcon,
   Search as SearchIcon,
   Verified as VerificationIcon,
@@ -1049,25 +1048,6 @@ const DependencyReport: React.FC = () => {
                                               size="small"
                                               variant="outlined"
                                             />
-                                          </TableCell>
-                                          <TableCell>
-                                            {script.html_report_r2_url ? (
-                                              <Chip
-                                                icon={<LinkIcon />}
-                                                label="View"
-                                                size="small"
-                                                clickable
-                                                onClick={() =>
-                                                  window.open(script.html_report_r2_url!, '_blank')
-                                                }
-                                                color="primary"
-                                                variant="outlined"
-                                              />
-                                            ) : (
-                                              <Typography variant="caption" color="textSecondary">
-                                                No Report
-                                              </Typography>
-                                            )}
                                           </TableCell>
                                         </TableRow>
                                       ))}
