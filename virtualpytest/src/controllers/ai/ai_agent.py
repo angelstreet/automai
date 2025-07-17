@@ -244,13 +244,28 @@ INSTRUCTIONS:
 1. Analyze the task and determine what needs to be accomplished
 2. Look at the available actions and choose the most appropriate ones
 3. Use ONLY the commands and parameters shown in the available actions
-4. For navigation tasks ("go to X"), use execute_navigation if navigation tree is available
-5. For interaction tasks ("click X"), choose the best available interaction method
-6. Create a logical sequence of steps to accomplish the task
+4. Fill in the parameter values based on the task requirements
+
+IMPORTANT EXAMPLES:
+- Task: "click home_replay" → Use click_element command with element_id parameter set to "home_replay"
+- Task: "goto home_replay" → Use execute_navigation command with target_node parameter set to "home_replay" (if navigation tree available)
+- Task: "go to settings" → Use execute_navigation command with target_node parameter set to "settings" (if navigation tree available)
+- Task: "press up arrow" → Use press_key command with key parameter set to "UP"  
+- Task: "type hello" → Use input_text command with text parameter set to "hello"
+- Task: "go home" → Use press_key command with key parameter set to "HOME" (system home)
+- Task: "go back" → Use press_key command with key parameter set to "BACK" (system back)
+
+CRITICAL DISTINCTIONS:
+- "goto X" or "go to X" = NAVIGATION to location/screen X → use execute_navigation with target_node="X"
+- "go home" = SYSTEM HOME → use press_key with key="HOME" 
+- "go back" = SYSTEM BACK → use press_key with key="BACK"
+- "click X" = INTERACT with element X → use click_element with element_id="X"
+
+The available actions are TEMPLATES - you fill in the parameter values based on what the task asks for.
 
 CRITICAL: Respond with ONLY valid JSON. No other text.
 
-Required JSON format:
+Required JSON format for interaction:
 {{
   "analysis": "brief analysis of the task and chosen approach",
   "feasible": true,
@@ -258,11 +273,33 @@ Required JSON format:
     {{
       "step": 1,
       "type": "action",
-      "command": "command_from_available_actions",
-      "params": {{"param_name": "param_value"}},
-      "description": "What this step does"
+      "command": "click_element",
+      "params": {{"element_id": "home_replay"}},
+      "description": "Click on the home_replay element"
     }}
   ]
+}}
+
+Required JSON format for navigation:
+{{
+  "analysis": "brief analysis of the task and chosen approach",
+  "feasible": true,
+  "plan": [
+    {{
+      "step": 1,
+      "type": "action",
+      "command": "execute_navigation",
+      "params": {{"target_node": "home_replay"}},
+      "description": "Navigate to the home_replay location"
+    }}
+  ]
+}}
+
+For tasks that cannot be completed with available actions, return:
+{{
+  "analysis": "explanation of why task cannot be completed",
+  "feasible": false,
+  "plan": []
 }}
 
 If coordinates needed but not provided:
@@ -285,16 +322,14 @@ JSON ONLY - NO OTHER TEXT"""
                     'X-Title': 'AutomAI-VirtualPyTest'
                 },
                 json={
-                    'model': 'qwen/qwen-2-vl-7b-instruct',
+                    'model': 'moonshotai/kimi-k2:free',
                     'messages': [
                         {
                             'role': 'user',
-                            'content': [
-                                {'type': 'text', 'text': prompt}
-                            ]
+                            'content': prompt
                         }
                     ],
-                    'max_tokens': 500,
+                    'max_tokens': 1000,
                     'temperature': 0.0
                 },
                 timeout=30
