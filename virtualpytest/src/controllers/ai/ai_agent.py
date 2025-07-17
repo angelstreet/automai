@@ -15,9 +15,8 @@ from ..base_controller import BaseController
 class AIAgentController(BaseController):
     """Simple AI agent controller that generates real execution plans using AI."""
     
-    def __init__(self, **kwargs):
-        """Initialize AI agent controller."""
-        super().__init__("ai", "AI Agent Controller")
+    def __init__(self, device_name: str = 'default_device', **kwargs):
+        super().__init__("ai", device_name)
         
         self.is_executing = False
         self.current_step = ""
