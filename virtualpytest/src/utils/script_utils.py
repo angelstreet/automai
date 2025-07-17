@@ -402,19 +402,21 @@ def execute_verification_directly(host, device, verification: Dict[str, Any]) ->
         return {'success': False, 'error': f'Verification execution error: {str(e)}'}
 
 
-def execute_navigation_with_verifications(host, device, transition: Dict[str, Any], team_id: str) -> Dict[str, Any]:
+def execute_navigation_with_verifications(host, device, transition: Dict[str, Any], team_id: str, tree_id: str = None) -> Dict[str, Any]:
     """
     Execute a single navigation step with verifications following NavigationExecutor pattern.
     
     This function mimics the NavigationExecutor.execute_navigation() behavior:
     1. Execute navigation actions using ActionExecutor pattern
     2. Execute target node verifications using VerificationExecutor pattern
+    3. Record execution results to database (same as server-side NavigationExecutor)
     
     Args:
         host: Host instance
         device: Device instance
         transition: Navigation transition with actions and verifications
         team_id: Team ID for database recording
+        tree_id: Tree ID for database recording (should be UUID)
         
     Returns:
         Dictionary with execution results including verification results
@@ -444,7 +446,29 @@ def execute_navigation_with_verifications(host, device, transition: Dict[str, An
             }
         
         # Execute navigation actions
+        action_start_time = time.time()
         actions_success = remote_controller.execute_sequence(actions, retry_actions)
+        action_execution_time = int((time.time() - action_start_time) * 1000)
+        
+        # Record action execution to database (same as ActionExecutor)
+        if tree_id and actions:
+            try:
+                from src.lib.supabase.execution_results_db import record_edge_execution
+                edge_id = transition.get('edge_id', 'unknown')
+                record_edge_execution(
+                    team_id=team_id,
+                    tree_id=tree_id,
+                    edge_id=edge_id,
+                    host_name=host.host_name,
+                    device_model=device.device_model,
+                    success=actions_success,
+                    execution_time_ms=action_execution_time,
+                    message='Navigation actions completed' if actions_success else 'Navigation actions failed',
+                    error_details={'error': 'Action execution failed'} if not actions_success else None
+                )
+                print(f"[@script_utils:execute_navigation_with_verifications] Action execution recorded to database")
+            except Exception as e:
+                print(f"[@script_utils:execute_navigation_with_verifications] Failed to record action execution: {e}")
         
         if not actions_success:
             return {
@@ -466,7 +490,29 @@ def execute_navigation_with_verifications(host, device, transition: Dict[str, An
             for i, verification in enumerate(verifications):
                 print(f"[@script_utils:execute_navigation_with_verifications] Executing verification {i+1}/{len(verifications)}")
                 
+                verification_start_time = time.time()
                 verify_result = execute_verification_directly(host, device, verification)
+                verification_execution_time = int((time.time() - verification_start_time) * 1000)
+                
+                # Record verification execution to database (same as VerificationExecutor)
+                if tree_id:
+                    try:
+                        from src.lib.supabase.execution_results_db import record_node_execution
+                        node_id = transition.get('to_node_id', 'unknown')
+                        record_node_execution(
+                            team_id=team_id,
+                            tree_id=tree_id,
+                            node_id=node_id,
+                            host_name=host.host_name,
+                            device_model=device.device_model,
+                            success=verify_result.get('success', False),
+                            execution_time_ms=verification_execution_time,
+                            message=verify_result.get('message', 'Verification completed'),
+                            error_details={'error': verify_result.get('error')} if verify_result.get('error') else None
+                        )
+                        print(f"[@script_utils:execute_navigation_with_verifications] Verification execution recorded to database")
+                    except Exception as e:
+                        print(f"[@script_utils:execute_navigation_with_verifications] Failed to record verification execution: {e}")
                 
                 # Store verification result
                 verification_result = {
