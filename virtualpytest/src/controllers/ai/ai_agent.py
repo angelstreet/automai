@@ -15,6 +15,9 @@ from ..base_controller import BaseController
 class AIAgentController(BaseController):
     """Simple AI agent controller that generates real execution plans using AI."""
     
+    # Class-level cache for navigation trees (singleton pattern)
+    _navigation_trees_cache: Dict[str, Dict] = {}
+    
     def __init__(self, device_name: str = 'default_device', **kwargs):
         super().__init__("ai", device_name)
         
@@ -22,23 +25,69 @@ class AIAgentController(BaseController):
         self.current_step = ""
         self.execution_log = []
         
-        # Lazy import inside __init__ to avoid circular import
-        from src.utils.script_utils import load_navigation_tree
-        
-        # Load navigation tree once
-        tree_result = load_navigation_tree("horizon_android_mobile")
-        self.tree = tree_result.get('tree') if tree_result.get('success') else None
-        
-        # Move import inside __init__ to avoid circular import
-        from src.utils.host_utils import get_host_instance
-        
-        # Setup host and device
-        self.host = get_host_instance()
-        self.device = next(d for d in self.host.get_devices() if d.device_name == self.device_name)
-        
         print(f"AI[{self.device_name}]: Initialized")
     
-    def execute_task(self, task_description: str, available_actions: List[Dict], available_verifications: List[Dict], device_model: str = None) -> Dict[str, Any]:
+    def _get_navigation_tree(self, userinterface_name: str) -> Dict[str, Any]:
+        """
+        Get navigation tree using singleton pattern - load only when needed and cache it.
+        
+        Args:
+            userinterface_name: Name of the userinterface (e.g., 'horizon_android_mobile')
+            
+        Returns:
+            Dictionary with tree data or None if failed
+        """
+        # Check if already cached
+        if userinterface_name in self._navigation_trees_cache:
+            print(f"AI[{self.device_name}]: Using cached navigation tree for: {userinterface_name}")
+            return self._navigation_trees_cache[userinterface_name]
+        
+        # Load tree lazily
+        try:
+            # Lazy import inside method to avoid circular import
+            from src.utils.script_utils import load_navigation_tree
+            
+            print(f"AI[{self.device_name}]: Loading navigation tree for: {userinterface_name}")
+            tree_result = load_navigation_tree(userinterface_name, "ai_agent")
+            
+            if tree_result.get('success'):
+                # Cache the tree
+                self._navigation_trees_cache[userinterface_name] = tree_result.get('tree')
+                print(f"AI[{self.device_name}]: Successfully loaded and cached navigation tree for: {userinterface_name}")
+                return tree_result.get('tree')
+            else:
+                print(f"AI[{self.device_name}]: Failed to load navigation tree for: {userinterface_name}: {tree_result.get('error')}")
+                return None
+                
+        except Exception as e:
+            print(f"AI[{self.device_name}]: Error loading navigation tree for {userinterface_name}: {e}")
+            return None
+    
+    def _get_host_and_device(self):
+        """
+        Get host and device instances when needed for execution.
+        
+        Returns:
+            Tuple of (host, device) or (None, None) if failed
+        """
+        try:
+            # Lazy import inside method to avoid circular import
+            from src.utils.host_utils import get_host_instance
+            
+            host = get_host_instance()
+            device = next((d for d in host.get_devices() if d.device_name == self.device_name), None)
+            
+            if not device:
+                print(f"AI[{self.device_name}]: No device found with name: {self.device_name}")
+                return None, None
+                
+            return host, device
+            
+        except Exception as e:
+            print(f"AI[{self.device_name}]: Error getting host and device: {e}")
+            return None, None
+
+    def execute_task(self, task_description: str, available_actions: List[Dict], available_verifications: List[Dict], device_model: str = None, userinterface_name: str = "horizon_android_mobile") -> Dict[str, Any]:
         """
         Execute a task: generate plan with AI, execute it, and summarize results.
         
@@ -47,6 +96,7 @@ class AIAgentController(BaseController):
             available_actions: Real actions from device capabilities
             available_verifications: Real verifications from device capabilities
             device_model: Device model for context
+            userinterface_name: Name of the userinterface for navigation tree loading
         """
         try:
             print(f"AI[{self.device_name}]: Starting task: {task_description}")
@@ -55,8 +105,11 @@ class AIAgentController(BaseController):
             self.current_step = "Generating AI plan"
             self.execution_log = []
             
+            # Load navigation tree only when needed
+            navigation_tree = self._get_navigation_tree(userinterface_name)
+            
             # Step 1: Generate plan using AI
-            ai_plan = self._generate_plan(task_description, available_actions, available_verifications, device_model)
+            ai_plan = self._generate_plan(task_description, available_actions, available_verifications, device_model, navigation_tree)
             
             if not ai_plan.get('success'):
                 return {
@@ -67,12 +120,12 @@ class AIAgentController(BaseController):
             
             self._add_to_log("ai_plan", "plan_generated", ai_plan['plan'], "AI generated execution plan")
             
-            # Step 2: Execute the plan (just return True for now)
+            # Step 2: Execute the plan
             self.current_step = "Executing plan"
-            execute_result = self._execute(ai_plan['plan'])
+            execute_result = self._execute(ai_plan['plan'], navigation_tree)
             self._add_to_log("execute", "plan_execution", execute_result, f"Plan execution: {execute_result}")
             
-            # Step 3: Generate result summary (just return True for now)
+            # Step 3: Generate result summary
             self.current_step = "Generating summary"
             summary_result = self._result_summary(ai_plan['plan'], execute_result)
             self._add_to_log("summary", "result_summary", summary_result, f"Result summary: {summary_result}")
@@ -96,9 +149,16 @@ class AIAgentController(BaseController):
         finally:
             self.is_executing = False
     
-    def _generate_plan(self, task_description: str, available_actions: List[Dict], available_verifications: List[Dict], device_model: str = None) -> Dict[str, Any]:
+    def _generate_plan(self, task_description: str, available_actions: List[Dict], available_verifications: List[Dict], device_model: str = None, navigation_tree: Dict = None) -> Dict[str, Any]:
         """
-        Generate execution plan using AI API (like detect_subtitles_ai in video.py).
+        Generate execution plan using AI API.
+        
+        Args:
+            task_description: User's task description
+            available_actions: Available actions from device capabilities
+            available_verifications: Available verifications from device capabilities
+            device_model: Device model for context
+            navigation_tree: Navigation tree data (if available)
         """
         try:
             # Get API key from environment
@@ -115,7 +175,8 @@ class AIAgentController(BaseController):
                 "task": task_description,
                 "device_model": device_model or "unknown",
                 "available_actions": available_actions,  # Use full enhanced action list
-                "available_verifications": [verif.get('verification_type', 'unknown') for verif in available_verifications]
+                "available_verifications": [verif.get('verification_type', 'unknown') for verif in available_verifications],
+                "has_navigation_tree": navigation_tree is not None
             }
             
             # Create MCP-aware prompt for AI
@@ -127,7 +188,6 @@ Available MCP tools: {context['available_actions']}
 
 MCP Tool Guidelines:
 - navigate_to_page: Use for "go to [page]" requests (pages: dashboard, rec, userinterface, runTests)
-- execute_navigation: Use for navigating to a target node (e.g., "settings"). Params: {{"target_node": "node_label"}}. System handles path.
 - execute_navigation_to_node: Use for navigation tree operations
 - remote_execute_command: Use for device command execution
 
@@ -157,46 +217,39 @@ If not feasible:
 
 JSON ONLY - NO OTHER TEXT"""
             else:
-                # Enhanced prompt with better action context
+                # Enhanced prompt with navigation tree context
                 action_context = "\n".join([
                     f"- {action.get('ai_name', action.get('command'))}: {action.get('description', 'No description')}"
                     for action in available_actions[:10]  # Limit to first 10 to avoid token limit
                 ])
                 
+                # Add navigation context if tree is available
+                navigation_context = ""
+                if navigation_tree:
+                    navigation_context = """
+- execute_navigation: Use for navigating to a target node (e.g., "settings"). Params: {"target_node": "node_label"}. System handles path like goto/validation."""
+                
                 prompt = f"""You are a device automation AI for {device_model}. Generate an execution plan for this task.
 
 Task: "{task_description}"
 Device: {device_model}
+Navigation Tree Available: {context['has_navigation_tree']}
 
 Available Actions:
-{action_context}
-- execute_navigation: Use for navigating to a target node (e.g., "settings"). Params: {{"target_node": "node_label"}}. System handles path.
+{action_context}{navigation_context}
 
 Smart Action Guidelines:
 - For "go back/return": use go_back_button (command: press_key, params: {{"key": "BACK"}})
 - For "go home": use go_home_button (command: press_key, params: {{"key": "HOME"}})
 - For "type/enter/input text": use type_text (command: input_text, params: {{"text": "your text"}})
-- For tapping at specific positions: use tap_screen_coordinates (command: tap_coordinates, params: {{"x": 100, "y": 200}}). Use this when user says 'tap' without specifying an element, or 'tap at position'.
+- For tapping at specific positions: use tap_screen_coordinates (command: tap_coordinates, params: {{"x": 100, "y": 200}})
+- For navigation to specific nodes: use execute_navigation (command: execute_navigation, params: {{"target_node": "node_name"}}) when navigation tree is available
 
 Navigation Intelligence:
-- Distinguish between tap and click:
-  * Use tap_screen_coordinates for 'tap at [position]' or general 'tap' requests implying coordinates
-  * Use click_ui_element for 'click [element]' or 'tap [element]' where [element] is a UI element name/ID
-- When user says "go to [something]" or "navigate to [something]": 
-  * If [something] is a UI element, use click_ui_element (command: click_element, params: {{"element_id": "[something]"}})
-  * Examples: "go to replay" → click replay, "navigate to settings" → click settings, "open menu" → click menu
-- When user says "click [something]" or "tap [something]" (where [something] is an element): use click_ui_element
-- When user says "tap at [x,y]" or "tap position": use tap_screen_coordinates
-- When user says "select [something]" or "choose [something]": use click_ui_element
-
-Task Analysis Strategy:
-1. Identify the main action type (navigation, input, selection, tap, etc.)
-2. If request mentions 'tap' without element, assume coordinates and use tap_screen_coordinates (prompt for x,y if not specified)
-3. If it's navigation to a UI element, use click_ui_element with the target name
-4. If it's system navigation (back/home), use the specific key commands
-5. If it's text input, use type_text
-6. Always use the exact target name/text from the user's request as element_id
-7. Do not append '_button' or any other suffix to the element_id. Use exactly the term provided in the user's request. For example, if user says 'click watch', use element_id: 'watch', not 'watch_button'.
+- When user says "go to [node]" and navigation tree is available: Use execute_navigation with target_node
+- When user says "click [element]" or "tap [element]": Use click_ui_element
+- When user says "tap at [x,y]": Use tap_screen_coordinates
+- For system navigation (back/home): Use the specific key commands
 
 CRITICAL: Respond with ONLY valid JSON. No other text.
 
@@ -208,9 +261,9 @@ Required JSON format:
     {{
       "step": 1,
       "type": "action",
-      "command": "click_element",
-      "params": {{"element_id": "replay"}},
-      "description": "Click on replay to navigate to replay section"
+      "command": "execute_navigation",
+      "params": {{"target_node": "settings"}},
+      "description": "Navigate to settings using navigation tree"
     }}
   ]
 }}
@@ -225,7 +278,7 @@ If coordinates needed but not provided:
 
 JSON ONLY - NO OTHER TEXT"""
             
-            # Call OpenRouter API (same as video.py detect_subtitles_ai)
+            # Call OpenRouter API
             response = requests.post(
                 'https://openrouter.ai/api/v1/chat/completions',
                 headers={
@@ -284,16 +337,13 @@ JSON ONLY - NO OTHER TEXT"""
                 'error': f'AI plan generation failed: {str(e)}'
             }
     
-    def _execute(self, plan: Dict[str, Any]) -> Dict[str, Any]:
+    def _execute(self, plan: Dict[str, Any], navigation_tree: Dict = None) -> Dict[str, Any]:
         """
-        Execute the AI plan using proven HTTP API infrastructure.
-        Uses the same pattern as useAction.ts and verification batch APIs.
+        Execute the AI plan.
         
         Args:
             plan: AI-generated plan with steps
-            
-        Returns:
-            Dict with execution results and detailed step outcomes
+            navigation_tree: Navigation tree data (if available)
         """
         if not plan.get('feasible', True):
             print(f"AI[{self.device_name}]: Plan not feasible, skipping execution")
@@ -316,23 +366,23 @@ JSON ONLY - NO OTHER TEXT"""
         
         print(f"AI[{self.device_name}]: Executing plan with {len(plan_steps)} steps")
         
-        # Separate actions and verifications (like useNode.ts pattern)
+        # Separate actions and verifications
         action_steps = [step for step in plan_steps if step.get('type') == 'action']
         verification_steps = [step for step in plan_steps if step.get('type') == 'verification']
         
         print(f"AI[{self.device_name}]: Found {len(action_steps)} action steps and {len(verification_steps)} verification steps")
         
-        # Execute actions first (same pattern as useNode.ts)
+        # Execute actions first
         action_result = {'success': True, 'executed_steps': 0, 'total_steps': 0}
         if action_steps:
-            action_result = self._execute_actions(action_steps)
+            action_result = self._execute_actions(action_steps, navigation_tree)
         
-        # Execute verifications second (same pattern as useNode.ts)
+        # Execute verifications second
         verification_result = {'success': True, 'executed_verifications': 0, 'total_verifications': 0}
         if verification_steps:
             verification_result = self._execute_verifications(plan)
         
-        # Combine results (same pattern as NavigationExecutor)
+        # Combine results
         overall_success = action_result.get('success', False) and verification_result.get('success', False)
         total_executed = action_result.get('executed_steps', 0) + verification_result.get('executed_verifications', 0)
         total_steps = action_result.get('total_steps', 0) + verification_result.get('total_verifications', 0)
@@ -346,19 +396,16 @@ JSON ONLY - NO OTHER TEXT"""
             'message': f'Plan execution completed: {total_executed}/{total_steps} steps successful'
         }
     
-    def _execute_actions(self, action_steps: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def _execute_actions(self, action_steps: List[Dict[str, Any]], navigation_tree: Dict = None) -> Dict[str, Any]:
         """
-        Execute action steps using direct controller access (host-side pattern).
-        Uses the same pattern as host_remote_routes.py and script_utils.py.
+        Execute action steps using direct controller access.
         
         Args:
             action_steps: List of action steps from AI plan
-            
-        Returns:
-            Dict with action execution results
+            navigation_tree: Navigation tree data (if available)
         """
         try:
-            # Get remote controller for this device (same as host_remote_routes.py)
+            # Get remote controller for this device
             from src.utils.host_utils import get_controller
             
             remote_controller = get_controller(self.device_name, 'remote')
@@ -387,6 +434,14 @@ JSON ONLY - NO OTHER TEXT"""
                 
                 try:
                     if command == "execute_navigation":
+                        if not navigation_tree:
+                            raise ValueError("Navigation tree not available")
+                        
+                        # Get host and device for navigation
+                        host, device = self._get_host_and_device()
+                        if not host or not device:
+                            raise ValueError("Host or device not available")
+                        
                         # Lazy import inside the block to avoid circular import
                         from src.utils.script_utils import execute_navigation_step_directly
                         
@@ -396,7 +451,7 @@ JSON ONLY - NO OTHER TEXT"""
                             "to_node_label": target_node
                         }
                         team_id = "7fdeb4bb-3639-4ec3-959f-b54769a219ce"
-                        result = execute_navigation_step_directly(self.host, self.device, transition, team_id)
+                        result = execute_navigation_step_directly(host, device, transition, team_id)
                         success = result.get('success', False)
                     else:
                         success = remote_controller.execute_command(command, params)
@@ -413,7 +468,7 @@ JSON ONLY - NO OTHER TEXT"""
                         })
                         print(f"AI[{self.device_name}]: Action {step_num} completed successfully")
                         
-                        # Add wait time if specified (same as script_utils.py)
+                        # Add wait time if specified
                         wait_time = params.get('wait_time', 0.5)  # Default 500ms between steps
                         if wait_time > 0:
                             import time

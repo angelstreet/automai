@@ -156,12 +156,16 @@ def execute_task():
         
         print(f"[@route:host_aiagent:execute_task] Available verifications: {len(available_verifications)} verifications from device capabilities")
         
+        # Get userinterface_name from request or use default
+        userinterface_name = data.get('userinterface_name', 'horizon_android_mobile')
+        
         # Execute task using AI controller with real device capabilities and model
         result = ai_controller.execute_task(
             task_description, 
             available_actions, 
             available_verifications,
-            device_model=device_model
+            device_model=device_model,
+            userinterface_name=userinterface_name
         )
         
         return jsonify({
