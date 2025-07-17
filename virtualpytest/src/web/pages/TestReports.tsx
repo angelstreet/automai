@@ -131,7 +131,7 @@ const TestReports: React.FC = () => {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}

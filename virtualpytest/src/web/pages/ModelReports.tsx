@@ -254,7 +254,7 @@ const ModelReports: React.FC = () => {
                               <VerificationIcon />
                             )
                           }
-                          label={result.execution_type === 'action' ? 'Action' : 'Verification'}
+                          label={result.execution_type === 'action' ? 'Node' : 'Edge'}
                           size="small"
                           variant="outlined"
                           color={result.execution_type === 'action' ? 'primary' : 'secondary'}

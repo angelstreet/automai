@@ -13,11 +13,11 @@ This script validates all transitions in a navigation tree by:
 8. Releasing device control
 
 Usage:
-    python -m src.test_scripts.validation <userinterface_name> [--host <host>] [--device <device>]
+    python scripts/validation.py <userinterface_name> [--host <host>] [--device <device>]
     
 Example:
-    python -m src.test_scripts.validation horizon_android_mobile
-    python -m src.test_scripts.validation horizon_android_mobile --device device2
+    python scripts/validation.py horizon_android_mobile
+    python scripts/validation.py horizon_android_mobile --device device2
 """
 
 import sys
@@ -29,8 +29,7 @@ from datetime import datetime
 # Add project root to path for imports
 import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.dirname(current_dir)
-project_root = os.path.dirname(src_dir)
+project_root = os.path.dirname(current_dir)
 
 if project_root not in sys.path:
     sys.path.insert(0, project_root)

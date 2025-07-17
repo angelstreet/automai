@@ -10,11 +10,11 @@ This script navigates to the live_fullscreen node by:
 5. Releasing device control
 
 Usage:
-    python -m src.test_scripts.goto_live_fullscreen <userinterface_name> [--host <host>] [--device <device>]
+    python scripts/goto_live_fullscreen.py <userinterface_name> [--host <host>] [--device <device>]
     
 Example:
-    python -m src.test_scripts.goto_live_fullscreen horizon_android_mobile
-    python -m src.test_scripts.goto_live_fullscreen horizon_android_mobile --device device2
+    python scripts/goto_live_fullscreen.py horizon_android_mobile
+    python scripts/goto_live_fullscreen.py horizon_android_mobile --device device2
 """
 
 import sys
@@ -25,8 +25,7 @@ from typing import Dict, Any, Optional
 # Add project root to path for imports
 import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
-src_dir = os.path.dirname(current_dir)
-project_root = os.path.dirname(src_dir)
+project_root = os.path.dirname(current_dir)
 
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
