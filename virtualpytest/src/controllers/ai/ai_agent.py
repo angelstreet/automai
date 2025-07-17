@@ -326,7 +326,8 @@ JSON ONLY - NO OTHER TEXT"""
     
     def _execute_actions(self, action_steps: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Execute action steps using proven HTTP action API.
+        Execute action steps using direct controller access (host-side pattern).
+        Uses the same pattern as host_remote_routes.py and script_utils.py.
         
         Args:
             action_steps: List of action steps from AI plan
@@ -334,92 +335,95 @@ JSON ONLY - NO OTHER TEXT"""
         Returns:
             Dict with action execution results
         """
-        # Convert AI plan steps to action format (same as useAction.ts)
-        actions = []
-        for i, step in enumerate(action_steps):
-            action = {
-                'id': f'ai_step_{i}',
-                'label': step.get('description', f'Step {i+1}'),
-                'command': step.get('command'),
-                'params': step.get('params', {}),
-                'description': step.get('description', f'AI generated step {i+1}'),
-                'requiresInput': False
-            }
-            actions.append(action)
-        
         try:
-            # Use the same HTTP API pattern as useAction.ts
-            import requests
+            # Get remote controller for this device (same as host_remote_routes.py)
+            from src.utils.host_utils import get_controller
             
-            # Prepare request body (same format as useAction.ts)
-            request_body = {
-                'actions': actions,
-                'retry_actions': []  # AI agent doesn't use retry actions yet
-            }
-            
-            print(f"AI[{self.device_name}]: Sending action execution request with {len(actions)} actions")
-            
-            # Make HTTP request to action execution endpoint (same as useAction.ts)
-            response = requests.post(
-                'http://localhost:5000/server/action/executeBatch',
-                json={
-                    'host': {
-                        'host_name': 'current_host',  # Will be resolved on server side
-                        'host_url': 'current_host'
-                    },
-                    'device_id': self.device_name,
-                    **request_body
-                },
-                timeout=30
-            )
-            
-            if response.status_code != 200:
-                error_msg = f'HTTP {response.status_code}: {response.text}'
-                print(f"AI[{self.device_name}]: Action execution failed: {error_msg}")
+            remote_controller = get_controller(self.device_name, 'remote')
+            if not remote_controller:
+                print(f"AI[{self.device_name}]: No remote controller available for action execution")
                 return {
                     'success': False,
-                    'error': f'Action execution API error: {error_msg}',
+                    'error': 'No remote controller available for action execution',
                     'executed_steps': 0,
                     'total_steps': len(action_steps)
                 }
             
-            result = response.json()
-            print(f"AI[{self.device_name}]: Action execution result: {result}")
+            print(f"AI[{self.device_name}]: Executing {len(action_steps)} actions using {type(remote_controller).__name__}")
             
-            if result.get('success'):
-                passed_count = result.get('passed_count', 0)
-                total_count = result.get('total_count', len(action_steps))
+            executed_steps = 0
+            failed_steps = []
+            step_results = []
+            
+            for i, step in enumerate(action_steps):
+                step_num = i + 1
+                command = step.get('command', '')
+                params = step.get('params', {})
+                description = step.get('description', f'Action {step_num}')
                 
-                print(f"AI[{self.device_name}]: Successfully executed {passed_count}/{total_count} actions")
+                print(f"AI[{self.device_name}]: Executing action {step_num}: {description}")
                 
-                return {
-                    'success': True,
-                    'executed_steps': passed_count,
-                    'total_steps': total_count,
-                    'message': f'Successfully executed {passed_count}/{total_count} actions',
-                    'results': result.get('results', [])
-                }
-            else:
-                error_msg = result.get('error', 'Unknown execution error')
-                print(f"AI[{self.device_name}]: Action execution failed: {error_msg}")
-                return {
-                    'success': False,
-                    'error': f'Action execution failed: {error_msg}',
-                    'executed_steps': 0,
-                    'total_steps': len(action_steps)
-                }
-                
-        except requests.exceptions.RequestException as e:
-            error_msg = f'Network error during action execution: {str(e)}'
-            print(f"AI[{self.device_name}]: {error_msg}")
+                try:
+                    # Use controller-specific abstraction - single line! (same as host_remote_routes.py)
+                    success = remote_controller.execute_command(command, params)
+                    
+                    if success:
+                        executed_steps += 1
+                        step_results.append({
+                            'step': step_num,
+                            'command': command,
+                            'params': params,
+                            'success': True,
+                            'description': description,
+                            'message': 'Action completed successfully'
+                        })
+                        print(f"AI[{self.device_name}]: Action {step_num} completed successfully")
+                        
+                        # Add wait time if specified (same as script_utils.py)
+                        wait_time = params.get('wait_time', 0.5)  # Default 500ms between steps
+                        if wait_time > 0:
+                            import time
+                            time.sleep(wait_time)
+                    else:
+                        failed_steps.append(step_num)
+                        step_results.append({
+                            'step': step_num,
+                            'command': command,
+                            'params': params,
+                            'success': False,
+                            'error': 'Command execution failed',
+                            'description': description
+                        })
+                        print(f"AI[{self.device_name}]: Action {step_num} failed: {command}")
+                        
+                except Exception as e:
+                    failed_steps.append(step_num)
+                    step_results.append({
+                        'step': step_num,
+                        'command': command,
+                        'params': params,
+                        'success': False,
+                        'error': str(e),
+                        'description': description
+                    })
+                    print(f"AI[{self.device_name}]: Action {step_num} exception: {e}")
+            
+            # Calculate overall success
+            overall_success = len(failed_steps) == 0
+            
+            print(f"AI[{self.device_name}]: Action execution completed: {executed_steps}/{len(action_steps)} successful")
+            
             return {
-                'success': False,
-                'error': error_msg,
-                'executed_steps': 0,
-                'total_steps': len(action_steps)
+                'success': overall_success,
+                'executed_steps': executed_steps,
+                'total_steps': len(action_steps),
+                'failed_steps': failed_steps,
+                'step_results': step_results,
+                'message': f'Actions: {executed_steps}/{len(action_steps)} successful'
             }
+            
         except Exception as e:
-            error_msg = f'Unexpected error during action execution: {str(e)}'
+            error_msg = f'Action execution error: {str(e)}'
             print(f"AI[{self.device_name}]: {error_msg}")
             return {
                 'success': False,
@@ -430,8 +434,8 @@ JSON ONLY - NO OTHER TEXT"""
     
     def _execute_verifications(self, plan: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Execute AI plan verifications using proven HTTP verification API.
-        Uses the same pattern as server_verification_common_routes.py batch execution.
+        Execute AI plan verifications using direct controller access (host-side pattern).
+        Uses the same pattern as script_utils.py and validation.py.
         
         Args:
             plan: AI-generated plan with verification steps
@@ -453,92 +457,99 @@ JSON ONLY - NO OTHER TEXT"""
         
         print(f"AI[{self.device_name}]: Executing {len(verification_steps)} verification steps")
         
-        # Convert AI verification steps to verification format (same as batch verification API)
-        verifications = []
-        for i, step in enumerate(verification_steps):
-            verification = {
-                'id': f'ai_verification_{i}',
-                'verification_type': step.get('verification_type', 'image'),
-                'command': step.get('command', ''),
-                'params': step.get('params', {}),
-                'description': step.get('description', f'AI generated verification {i+1}')
-            }
-            verifications.append(verification)
-        
         try:
-            # Use the same HTTP API pattern as batch verification
-            import requests
+            # Import controller utilities (same as script_utils.py)
+            from src.utils.host_utils import get_controller
             
-            # Prepare request body (same format as server_verification_common_routes.py)
-            request_body = {
-                'verifications': verifications,
-                'image_source_url': None,  # Let controller capture screenshots automatically
-                'model': 'android_mobile'  # Default model
-            }
+            executed_verifications = 0
+            failed_verifications = []
+            verification_results = []
             
-            print(f"AI[{self.device_name}]: Sending verification execution request with {len(verifications)} verifications")
-            
-            # Make HTTP request to batch verification endpoint (same as verification hooks)
-            response = requests.post(
-                'http://localhost:5000/server/verification/executeBatch',
-                json={
-                    'host': {
-                        'host_name': 'current_host',  # Will be resolved on server side
-                        'host_url': 'current_host'
-                    },
-                    'device_id': self.device_name,
-                    **request_body
-                },
-                timeout=60  # Longer timeout for verifications
-            )
-            
-            if response.status_code != 200:
-                error_msg = f'HTTP {response.status_code}: {response.text}'
-                print(f"AI[{self.device_name}]: Verification execution failed: {error_msg}")
-                return {
-                    'success': False,
-                    'error': f'Verification execution API error: {error_msg}',
-                    'executed_verifications': 0,
-                    'total_verifications': len(verification_steps)
-                }
-            
-            result = response.json()
-            print(f"AI[{self.device_name}]: Verification execution result: {result}")
-            
-            if result.get('success'):
-                passed_count = result.get('passed_count', 0)
-                total_count = result.get('total_count', len(verification_steps))
+            for i, step in enumerate(verification_steps):
+                step_num = i + 1
+                verification_type = step.get('verification_type', 'image')
+                command = step.get('command', '')
+                params = step.get('params', {})
+                description = step.get('description', f'Verification {step_num}')
                 
-                print(f"AI[{self.device_name}]: Successfully executed {passed_count}/{total_count} verifications")
+                print(f"AI[{self.device_name}]: Executing verification {step_num}: {description}")
                 
-                return {
-                    'success': True,
-                    'executed_verifications': passed_count,
-                    'total_verifications': total_count,
-                    'message': f'Successfully executed {passed_count}/{total_count} verifications',
-                    'results': result.get('results', [])
-                }
-            else:
-                error_msg = result.get('error', 'Unknown verification error')
-                print(f"AI[{self.device_name}]: Verification execution failed: {error_msg}")
-                return {
-                    'success': False,
-                    'error': f'Verification execution failed: {error_msg}',
-                    'executed_verifications': 0,
-                    'total_verifications': len(verification_steps)
-                }
-                
-        except requests.exceptions.RequestException as e:
-            error_msg = f'Network error during verification execution: {str(e)}'
-            print(f"AI[{self.device_name}]: {error_msg}")
+                try:
+                    # Get the verification controller for this device (same as script_utils.py)
+                    verification_controller = get_controller(self.device_name, f'verification_{verification_type}')
+                    if not verification_controller:
+                        failed_verifications.append(step_num)
+                        verification_results.append({
+                            'step': step_num,
+                            'verification_type': verification_type,
+                            'success': False,
+                            'error': f'No {verification_type} verification controller found',
+                            'description': description
+                        })
+                        print(f"AI[{self.device_name}]: Verification {step_num} failed: No {verification_type} controller")
+                        continue
+                    
+                    # Build verification object (same format as script_utils.py)
+                    verification = {
+                        'verification_type': verification_type,
+                        'command': command,
+                        'params': params
+                    }
+                    
+                    # Use controller-specific abstraction - single line! (same as script_utils.py)
+                    result = verification_controller.execute_verification(verification)
+                    
+                    if result.get('success', False):
+                        executed_verifications += 1
+                        verification_results.append({
+                            'step': step_num,
+                            'verification_type': verification_type,
+                            'success': True,
+                            'description': description,
+                            'message': result.get('message', 'Verification completed'),
+                            'result_type': 'PASS'
+                        })
+                        print(f"AI[{self.device_name}]: Verification {step_num} passed: {result.get('message', 'Success')}")
+                    else:
+                        failed_verifications.append(step_num)
+                        verification_results.append({
+                            'step': step_num,
+                            'verification_type': verification_type,
+                            'success': False,
+                            'error': result.get('error', 'Verification failed'),
+                            'description': description,
+                            'result_type': 'FAIL'
+                        })
+                        print(f"AI[{self.device_name}]: Verification {step_num} failed: {result.get('error', 'Unknown error')}")
+                        
+                except Exception as e:
+                    failed_verifications.append(step_num)
+                    verification_results.append({
+                        'step': step_num,
+                        'verification_type': verification_type,
+                        'success': False,
+                        'error': str(e),
+                        'description': description,
+                        'result_type': 'ERROR'
+                    })
+                    print(f"AI[{self.device_name}]: Verification {step_num} exception: {e}")
+            
+            # Calculate overall success
+            overall_success = len(failed_verifications) == 0
+            
+            print(f"AI[{self.device_name}]: Verification execution completed: {executed_verifications}/{len(verification_steps)} successful")
+            
             return {
-                'success': False,
-                'error': error_msg,
-                'executed_verifications': 0,
-                'total_verifications': len(verification_steps)
+                'success': overall_success,
+                'executed_verifications': executed_verifications,
+                'total_verifications': len(verification_steps),
+                'failed_verifications': failed_verifications,
+                'verification_results': verification_results,
+                'message': f'Verifications: {executed_verifications}/{len(verification_steps)} passed'
             }
+            
         except Exception as e:
-            error_msg = f'Unexpected error during verification execution: {str(e)}'
+            error_msg = f'Verification execution error: {str(e)}'
             print(f"AI[{self.device_name}]: {error_msg}")
             return {
                 'success': False,
