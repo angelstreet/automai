@@ -977,4 +977,3 @@ def create_error_report(error_message: str) -> str:
     </div>
 </body>
 </html>"""
-</html>"""
