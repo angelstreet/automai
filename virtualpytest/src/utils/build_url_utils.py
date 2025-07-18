@@ -487,13 +487,24 @@ def buildStreamUrlForDevice(host_info: dict, device_id: str) -> str:
         device_id: Device ID (required)
         
     Returns:
-        Complete URL to HLS stream for the device
+        Complete URL to stream for the device (HLS for video, raw URL for VNC)
         
     Example:
         buildStreamUrlForDevice(host_info, 'device1')
         -> 'https://host:444/host/stream/capture1/output.m3u8'
+        
+        buildStreamUrlForDevice(host_info, 'host_vnc')
+        -> 'https://host:444/host/vnc/stream'
     """
-    return buildStreamUrl(host_info, device_id)
+    # Check if this is a VNC device
+    device = get_device_by_id(host_info, device_id)
+    if device and device.get('device_model') == 'host_vnc':
+        # For VNC devices, return the raw stream URL (no .m3u8 suffix)
+        stream_path = _get_device_stream_path(host_info, device_id)
+        return buildHostUrl(host_info, f'host{stream_path}')
+    else:
+        # For regular devices, return HLS stream URL
+        return buildStreamUrl(host_info, device_id)
 
 def resolveCaptureFilePath(filename: str) -> str:
     """
