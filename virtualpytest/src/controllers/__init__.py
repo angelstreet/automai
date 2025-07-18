@@ -14,7 +14,9 @@ from .base_controller import (
     RemoteControllerInterface,
     AVControllerInterface,
     VerificationControllerInterface,
-    PowerControllerInterface
+    PowerControllerInterface,
+    DesktopControllerInterface,
+    WebControllerInterface
 )
 
 # Import AV implementations
@@ -27,6 +29,9 @@ from .remote.android_mobile import AndroidMobileRemoteController
 from .remote.appium_remote import AppiumRemoteController
 from .remote.infrared import IRRemoteController
 from .remote.bluetooth import BluetoothRemoteController
+
+# Import desktop implementations
+from .desktop.bash import BashDesktopController
 
 # Import power implementations
 from .power.usb_power import USBPowerController
@@ -70,6 +75,9 @@ CONTROLLER_REGISTRY = {
     },
     'power': {
         'usb': USBPowerController,           # USB hub power control via SSH + uhubctl
+    },
+    'desktop': {
+        'bash': BashDesktopController,      # Bash desktop controller for executing commands
     }
 }
 

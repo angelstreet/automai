@@ -10,6 +10,8 @@ DEVICE_CONTROLLER_MAP = {
     'android_mobile': {
         'av': ['hdmi_stream'], 
         'remote': ['android_mobile'],
+        'desktop': [],
+        'web': [],
         'power': [],
         'network': [],
         'ai': ['ai_agent']
@@ -17,6 +19,8 @@ DEVICE_CONTROLLER_MAP = {
     'android_tv': {
         'av': ['hdmi_stream'], 
         'remote': ['android_tv'],
+        'desktop': [],
+        'web': [],
         'power': [],
         'network': [],
         'ai': ['ai_agent']
@@ -24,6 +28,8 @@ DEVICE_CONTROLLER_MAP = {
     'ios_mobile': {
         'av': ['hdmi_stream'], 
         'remote': ['appium'],
+        'desktop': [],
+        'web': [],
         'power': [],
         'network': [],
         'ai': ['ai_agent']
@@ -31,6 +37,8 @@ DEVICE_CONTROLLER_MAP = {
     'stb': {
         'av': ['hdmi_stream'], 
         'remote': [],
+        'desktop': [],
+        'web': [],
         'power': [],
         'network': [],
         'ai': ['ai_agent']
@@ -38,6 +46,8 @@ DEVICE_CONTROLLER_MAP = {
     'host_vnc': {
         'av': ['vnc_stream'], 
         'remote': [],
+        'desktop': ['bash'],  # Add bash desktop controller
+        'web': [],
         'power': [],
         'network': [],
         'ai': ['ai_agent']
@@ -51,6 +61,7 @@ CONTROLLER_VERIFICATION_MAP = {
     'android_mobile': ['adb'],
     'android_tv': [],  # No verification for android_tv remote
     'appium': ['appium'],
+    'bash': [],  # No verification for bash desktop controller (uses AV controller verification)
     'ai_agent': ['task_execution']
 }
 
@@ -90,6 +101,24 @@ def create_controller_configs_from_device_info(device_config: dict) -> dict:
         }
         print(f"[@controller_factory:create_controller_configs_from_device_info] Created Remote controller: {remote_impl}")
     
+    # Create Desktop controllers
+    for desktop_impl in device_mapping['desktop']:
+        configs['desktop'] = {
+            'type': 'desktop',
+            'implementation': desktop_impl,
+            'params': _get_desktop_params(desktop_impl, device_config)
+        }
+        print(f"[@controller_factory:create_controller_configs_from_device_info] Created Desktop controller: {desktop_impl}")
+    
+    # Create Web controllers
+    for web_impl in device_mapping['web']:
+        configs['web'] = {
+            'type': 'web',
+            'implementation': web_impl,
+            'params': _get_web_params(web_impl, device_config)
+        }
+        print(f"[@controller_factory:create_controller_configs_from_device_info] Created Web controller: {web_impl}")
+    
     # Create AI controllers
     for ai_impl in device_mapping['ai']:
         configs['ai'] = {
@@ -123,6 +152,8 @@ def get_device_capabilities(device_model: str) -> dict:
         return {
             'av': None,
             'remote': None,
+            'desktop': None,
+            'web': None,
             'verification': []
         }
     
@@ -137,6 +168,8 @@ def get_device_capabilities(device_model: str) -> dict:
     capabilities = {
         'av': mapping['av'][0] if mapping['av'] else None,
         'remote': mapping['remote'][0] if mapping['remote'] else None,
+        'desktop': mapping['desktop'][0] if mapping['desktop'] else None,
+        'web': mapping['web'][0] if mapping['web'] else None,
         'ai': mapping['ai'][0] if mapping['ai'] else None,
         'verification': list(set(verification_types))  # Remove duplicates
     }
@@ -183,6 +216,45 @@ def _get_remote_params(implementation: str, device_config: dict) -> dict:
         return params
     
     print(f"[@controller_factory:_get_remote_params] DEBUG: Unknown implementation, returning empty params")
+    return {}
+
+def _get_desktop_params(implementation: str, device_config: dict) -> dict:
+    """Get parameters for Desktop controllers."""
+    print(f"[@controller_factory:_get_desktop_params] DEBUG: Getting desktop params for implementation: {implementation}")
+    
+    if implementation == 'bash':
+        params = {
+            'host_ip': device_config.get('host_ip', '127.0.0.1'),
+            'host_port': device_config.get('host_port', 22),
+            'host_user': device_config.get('host_user', 'root')
+        }
+        print(f"[@controller_factory:_get_desktop_params] DEBUG: Bash params: {params}")
+        return params
+    elif implementation == 'powershell':
+        params = {
+            'host_ip': device_config.get('host_ip', '127.0.0.1'),
+            'host_port': device_config.get('host_port', 22),
+            'host_user': device_config.get('host_user', 'Administrator')
+        }
+        print(f"[@controller_factory:_get_desktop_params] DEBUG: PowerShell params: {params}")
+        return params
+    
+    print(f"[@controller_factory:_get_desktop_params] DEBUG: Unknown implementation, returning empty params")
+    return {}
+
+def _get_web_params(implementation: str, device_config: dict) -> dict:
+    """Get parameters for Web controllers."""
+    print(f"[@controller_factory:_get_web_params] DEBUG: Getting web params for implementation: {implementation}")
+    
+    if implementation == 'selenium':
+        params = {
+            'selenium_url': device_config.get('selenium_url', 'http://localhost:4444/wd/hub'),
+            'selenium_browser': device_config.get('selenium_browser', 'chrome')
+        }
+        print(f"[@controller_factory:_get_web_params] DEBUG: Selenium params: {params}")
+        return params
+    
+    print(f"[@controller_factory:_get_web_params] DEBUG: Unknown implementation, returning empty params")
     return {}
 
 def _get_verification_params(implementation: str, device_config: dict) -> dict:

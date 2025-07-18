@@ -57,84 +57,93 @@ class RemoteControllerInterface(BaseController):
         
         # Execute main commands
         main_success = True
-        for i, action in enumerate(commands):
-            command = action.get('command')
-            params = action.get('params', {})
-            wait_time = params.get('wait_time', 0)  # Extract wait_time from params
+        for i, cmd in enumerate(commands):
+            command = cmd.get('command')
+            params = cmd.get('params', {})
+            delay = cmd.get('delay', 0)
             
-            # Ensure wait_time is an integer (handle string inputs)
-            try:
-                wait_time = int(wait_time) if wait_time else 0
-            except (ValueError, TypeError):
-                wait_time = 0
+            print(f"Remote[{self.device_type.upper()}]: Command {i+1}/{len(commands)}: {command}")
             
-            # Remove wait_time from params - base controller handles timing
-            action_params = {k: v for k, v in params.items() if k != 'wait_time'}
-            
-            print(f"Remote[{self.device_type.upper()}]: Step {i+1}: {command}")
-            
-            success = self.execute_command(command, action_params)
+            # Execute command
+            success = self.execute_command(command, params)
             
             if not success:
-                print(f"Remote[{self.device_type.upper()}]: Sequence failed at step {i+1}")
+                print(f"Remote[{self.device_type.upper()}]: Command {i+1} failed: {command}")
                 main_success = False
                 break
                 
-            # Handle wait time after each successful action
-            if wait_time > 0:
-                self._handle_wait_time(wait_time, f"command {command}")
+            # Apply delay if specified
+            if delay > 0:
+                delay_seconds = delay / 1000.0
+                print(f"Remote[{self.device_type.upper()}]: Waiting {delay_seconds}s after command {i+1}")
+                time.sleep(delay_seconds)
         
-        # Execute retry actions if main commands failed
+        # If main commands failed and retry actions provided, execute retry actions
         if not main_success and retry_actions:
-            print(f"Remote[{self.device_type.upper()}]: Main commands failed, trying {len(retry_actions)} retry actions")
-            retry_success = True  # Assume success unless a retry fails
-            for i, retry_action in enumerate(retry_actions):
-                command = retry_action.get('command')
-                params = retry_action.get('params', {})
-                wait_time = params.get('wait_time', 0)
+            print(f"Remote[{self.device_type.upper()}]: Main commands failed, executing {len(retry_actions)} retry actions")
+            
+            for i, retry_cmd in enumerate(retry_actions):
+                command = retry_cmd.get('command')
+                params = retry_cmd.get('params', {})
+                delay = retry_cmd.get('delay', 0)
                 
-                # Ensure wait_time is an integer (handle string inputs)
-                try:
-                    wait_time = int(wait_time) if wait_time else 0
-                except (ValueError, TypeError):
-                    wait_time = 0
+                print(f"Remote[{self.device_type.upper()}]: Retry {i+1}/{len(retry_actions)}: {command}")
                 
-                # Remove wait_time from params - base controller handles timing
-                action_params = {k: v for k, v in params.items() if k != 'wait_time'}
-                
-                print(f"Remote[{self.device_type.upper()}]: Retry step {i+1}: {command}")
-                
-                success = self.execute_command(command, action_params)
+                # Execute retry command
+                success = self.execute_command(command, params)
                 
                 if not success:
-                    print(f"Remote[{self.device_type.upper()}]: Retry action failed at step {i+1}")
-                    retry_success = False
-                    break  # Break on failure like main loop
-                
-                # Handle wait time after successful retry action
-                if wait_time > 0:
-                    self._handle_wait_time(wait_time, f"retry command {command}")
-            
-            # Set overall success if all retries completed successfully
-            if retry_success:
-                main_success = True
-                
-        result_msg = "succeeded" if main_success else "failed"
-        print(f"Remote[{self.device_type.upper()}]: Sequence {result_msg}")
+                    print(f"Remote[{self.device_type.upper()}]: Retry {i+1} failed: {command}")
+                    
+                # Apply delay if specified
+                if delay > 0:
+                    delay_seconds = delay / 1000.0
+                    print(f"Remote[{self.device_type.upper()}]: Waiting {delay_seconds}s after retry {i+1}")
+                    time.sleep(delay_seconds)
+        
         return main_success
+
+
+class DesktopControllerInterface(BaseController):
+    """Type hint interface for desktop controllers (bash, powershell, etc.)."""
     
-    def _handle_wait_time(self, wait_time: int, action_name: str = "action") -> None:
+    def __init__(self, device_name: str = "Unknown Device", desktop_type: str = "generic"):
+        super().__init__("desktop", device_name)
+        self.desktop_type = desktop_type
+    
+    def execute_command(self, command: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        Handle wait time after action execution.
+        Execute a desktop command and return the result.
         
         Args:
-            wait_time: Wait time in milliseconds
-            action_name: Name of action for logging
+            command: Command to execute
+            params: Command parameters
+            
+        Returns:
+            Dict with success, output, error, and exit_code
         """
-        if wait_time > 0:
-            wait_seconds = wait_time / 1000.0
-            print(f"Remote[{self.device_type.upper()}]: Waiting {wait_seconds}s after {action_name}")
-            time.sleep(wait_seconds)
+        raise NotImplementedError("Desktop controllers must implement execute_command")
+
+
+class WebControllerInterface(BaseController):
+    """Type hint interface for web controllers (playwright, selenium, etc.)."""
+    
+    def __init__(self, device_name: str = "Unknown Device", web_type: str = "generic"):
+        super().__init__("web", device_name)
+        self.web_type = web_type
+    
+    def execute_command(self, command: str, params: Dict[str, Any] = None) -> bool:
+        """
+        Execute a web automation command.
+        
+        Args:
+            command: Command to execute
+            params: Command parameters
+            
+        Returns:
+            bool: True if command executed successfully
+        """
+        raise NotImplementedError("Web controllers must implement execute_command")
 
 
 class AVControllerInterface(BaseController):

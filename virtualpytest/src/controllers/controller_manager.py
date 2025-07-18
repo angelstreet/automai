@@ -16,6 +16,7 @@ from ..controllers.audiovideo.vnc_stream import VNCStreamController
 from ..controllers.remote.android_mobile import AndroidMobileRemoteController
 from ..controllers.remote.android_tv import AndroidTVRemoteController
 from ..controllers.remote.appium_remote import AppiumRemoteController
+from ..controllers.desktop.bash import BashDesktopController
 from ..controllers.verification.image import ImageVerificationController
 from ..controllers.verification.text import TextVerificationController
 from ..controllers.verification.adb import ADBVerificationController
@@ -234,6 +235,11 @@ def _create_controller_instance(controller_type: str, implementation: str, param
         elif implementation == 'appium':
             return AppiumVerificationController(**params)
     
+    # Desktop Controllers
+    elif controller_type == 'desktop':
+        if implementation == 'bash':
+            return BashDesktopController(**params)
+    
     print(f"[@controller_manager:_create_controller_instance] WARNING: Unknown controller {controller_type}_{implementation}")
     return None
 
@@ -278,6 +284,7 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
     ai_controllers = [c for c in controller_list if c['type'] == 'ai']
     verification_controllers = [c for c in controller_list if c['type'] == 'verification']
     power_controllers = [c for c in controller_list if c['type'] == 'power']
+    desktop_controllers = [c for c in controller_list if c['type'] == 'desktop']
     
     # Step 1: Create AV controllers first (no dependencies)  
     av_controller = None
@@ -348,6 +355,18 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
     
     # Step 5: Create power controllers (no dependencies)
     for controller_config in power_controllers:
+        controller_type = controller_config['type']
+        implementation = controller_config['implementation']
+        controller_params = controller_config['params']
+        
+        print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {implementation}")
+        
+        controller = _create_controller_instance(controller_type, implementation, controller_params)
+        if controller:
+            device.add_controller(controller_type, controller)
+    
+    # Step 6: Create desktop controllers (no dependencies)
+    for controller_config in desktop_controllers:
         controller_type = controller_config['type']
         implementation = controller_config['implementation']
         controller_params = controller_config['params']
