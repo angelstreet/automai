@@ -3,6 +3,7 @@ import { Card, Typography, Box, Chip, CircularProgress } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 
 import { useModal } from '../../contexts/ModalContext';
+import { useStream } from '../../hooks/controller';
 import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
 
@@ -45,6 +46,17 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     return isMobileModel(device?.device_model);
   }, [device?.device_model]);
 
+  // Check if this is a VNC device
+  const isVncDevice = useMemo(() => {
+    return device?.device_id === 'host_vnc';
+  }, [device?.device_id]);
+
+  // For VNC devices, get the stream URL directly
+  const { streamUrl: vncStreamUrl } = useStream({
+    host,
+    device_id: device?.device_id || 'device1',
+  });
+
   // Hook for notifications only
   const { showError } = useToast();
 
@@ -80,6 +92,11 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
   // Optimized approach - just generate URL with current timestamp (no server calls after init)
   const handleTakeScreenshot = useCallback(async () => {
+    // Skip screenshots for VNC devices - they use iframe
+    if (isVncDevice) {
+      return;
+    }
+
     // Don't take screenshots when modal is open
     if (isAnyModalOpen) {
       console.log(
@@ -139,10 +156,16 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     generateThumbnailUrl,
     initializeBaseUrl,
     isAnyModalOpen,
+    isVncDevice,
   ]);
 
-  // Initialize base URL once, then auto-generate URLs
+  // Initialize base URL once, then auto-generate URLs (skip for VNC devices)
   useEffect(() => {
+    // Skip screenshot polling for VNC devices
+    if (isVncDevice) {
+      return;
+    }
+
     // Immediately return if any modal is open - no polling activity should occur
     if (isStreamModalOpen || isAnyModalOpen) {
       return;
@@ -217,6 +240,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     handleTakeScreenshot,
     isStreamModalOpen,
     isAnyModalOpen,
+    isVncDevice,
   ]);
 
   // Log modal state changes for debugging (only once per state change)
@@ -324,7 +348,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         </Box>
       )}
 
-      {/* Screenshot area */}
+      {/* Content area - VNC iframe or screenshot */}
       <Box sx={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden' }}>
         <Box
           sx={{
@@ -334,160 +358,220 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
             backgroundColor: 'transparent',
           }}
         >
-          {error ? (
-            <Box
-              sx={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'error.main',
-              }}
-            >
-              <ErrorIcon sx={{ mb: 1 }} />
-              <Typography variant="caption" align="center">
-                {error}
-              </Typography>
-            </Box>
-          ) : thumbnailUrl ? (
-            <Box
-              sx={{
-                position: 'relative',
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'transparent',
-                overflow: 'hidden',
-              }}
-            >
-              {/* Previous image - fading out */}
-              {previousThumbnailUrl && isTransitioning && (
+          {/* VNC devices: Show iframe preview */}
+          {isVncDevice ? (
+            vncStreamUrl ? (
+              <Box
+                sx={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'black',
+                  overflow: 'hidden',
+                }}
+              >
+                <iframe
+                  src={vncStreamUrl}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    backgroundColor: '#000',
+                    pointerEvents: 'none', // Disable interaction in preview
+                  }}
+                  title="VNC Desktop Preview"
+                />
+                {/* Click overlay to open full modal */}
                 <Box
-                  component="img"
-                  src={getImageUrl(previousThumbnailUrl)}
-                  alt="Previous screenshot"
+                  onClick={handleOpenStreamModal}
                   sx={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
-                    height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
-                    objectFit: 'cover', // Fill entire container
-                    objectPosition: 'top center', // Center horizontally, anchor to top
-                    opacity: isTransitioning ? 0 : 1,
-                    transition: 'opacity 300ms ease-in-out',
+                    right: 0,
+                    bottom: 0,
                     cursor: 'pointer',
+                    backgroundColor: 'transparent',
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                    },
                   }}
-                  draggable={false}
                 />
-              )}
-
-              {/* Current image - fading in */}
+              </Box>
+            ) : (
               <Box
-                component="img"
-                src={getImageUrl(thumbnailUrl)}
-                alt="Current screenshot"
                 sx={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
-                  height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
-                  objectFit: 'cover', // Fill entire container
-                  objectPosition: 'top center', // Center horizontally, anchor to top
-                  opacity: 1,
-                  transition: 'opacity 300ms ease-in-out',
-                  cursor: 'pointer',
+                  height: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 2,
                 }}
-                draggable={false}
-                onLoad={handleImageLoad}
-                onError={(_e) => {
-                  console.error(
-                    `[RecHostPreview] ${host.host_name}-${device?.device_id}: Failed to load image: ${thumbnailUrl}`,
-                  );
-                  // Only retry if polling is active and modal is not open
-                  if (generateThumbnailUrl && device && !isStreamModalOpen && !isAnyModalOpen) {
-                    // Generate a URL with timestamp 1 second earlier
-                    const now = new Date(Date.now() - 1000); // 1 second ago
-                    const timestamp =
-                      now.getFullYear().toString() +
-                      (now.getMonth() + 1).toString().padStart(2, '0') +
-                      now.getDate().toString().padStart(2, '0') +
-                      now.getHours().toString().padStart(2, '0') +
-                      now.getMinutes().toString().padStart(2, '0') +
-                      now.getSeconds().toString().padStart(2, '0');
-
-                    // Get base pattern and create retry URL
-                    const retryUrl = generateThumbnailUrl(host, device)?.replace(
-                      /capture_\d{14}\.jpg$/,
-                      `capture_${timestamp}.jpg`,
-                    );
-
-                    if (retryUrl && retryUrl !== thumbnailUrl) {
-                      setThumbnailUrl(retryUrl);
-                    } else {
-                      // If retry fails, reset transition state
-                      if (isTransitioning) {
-                        setPreviousThumbnailUrl(null);
-                        setIsTransitioning(false);
-                      }
-                    }
-                  } else {
-                    console.log(
-                      `[RecHostPreview] ${host.host_name}-${device?.device_id}: Image retry skipped (modal open)`,
-                    );
-                    // Just reset transition state without generating new URLs
-                    if (isTransitioning) {
-                      setPreviousThumbnailUrl(null);
-                      setIsTransitioning(false);
-                    }
-                  }
-                }}
-              />
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 2,
-              }}
-            >
-              {isLoading ? (
-                <>
-                  <CircularProgress size={24} />
-                  <Typography variant="caption" color="text.secondary">
-                    Capturing screenshot...
-                  </Typography>
-                </>
-              ) : (
+              >
+                <CircularProgress size={24} />
                 <Typography variant="caption" color="text.secondary">
-                  No screenshot available
+                  Loading VNC stream...
                 </Typography>
-              )}
-            </Box>
-          )}
+              </Box>
+            )
+          ) : (
+            // Non-VNC devices: Show screenshot thumbnails
+            <>
+              {error ? (
+                <Box
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'error.main',
+                  }}
+                >
+                  <ErrorIcon sx={{ mb: 1 }} />
+                  <Typography variant="caption" align="center">
+                    {error}
+                  </Typography>
+                </Box>
+              ) : thumbnailUrl ? (
+                <Box
+                  sx={{
+                    position: 'relative',
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'transparent',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Previous image - fading out */}
+                  {previousThumbnailUrl && isTransitioning && (
+                    <Box
+                      component="img"
+                      src={getImageUrl(previousThumbnailUrl)}
+                      alt="Previous screenshot"
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
+                        height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
+                        objectFit: 'cover', // Fill entire container
+                        objectPosition: 'top center', // Center horizontally, anchor to top
+                        opacity: isTransitioning ? 0 : 1,
+                        transition: 'opacity 300ms ease-in-out',
+                        cursor: 'pointer',
+                      }}
+                      draggable={false}
+                    />
+                  )}
 
-          {/* Click overlay to open stream modal */}
-          {thumbnailUrl && (
-            <Box
-              onClick={handleOpenStreamModal}
-              sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                cursor: 'pointer',
-                backgroundColor: 'transparent',
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                },
-              }}
-            />
+                  {/* Current image - fading in */}
+                  <Box
+                    component="img"
+                    src={getImageUrl(thumbnailUrl)}
+                    alt="Current screenshot"
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
+                      height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
+                      objectFit: 'cover', // Fill entire container
+                      objectPosition: 'top center', // Center horizontally, anchor to top
+                      opacity: 1,
+                      transition: 'opacity 300ms ease-in-out',
+                      cursor: 'pointer',
+                    }}
+                    draggable={false}
+                    onLoad={handleImageLoad}
+                    onError={(_e) => {
+                      console.error(
+                        `[RecHostPreview] ${host.host_name}-${device?.device_id}: Failed to load image: ${thumbnailUrl}`,
+                      );
+                      // Only retry if polling is active and modal is not open
+                      if (generateThumbnailUrl && device && !isStreamModalOpen && !isAnyModalOpen) {
+                        // Generate a URL with timestamp 1 second earlier
+                        const now = new Date(Date.now() - 1000); // 1 second ago
+                        const timestamp =
+                          now.getFullYear().toString() +
+                          (now.getMonth() + 1).toString().padStart(2, '0') +
+                          now.getDate().toString().padStart(2, '0') +
+                          now.getHours().toString().padStart(2, '0') +
+                          now.getMinutes().toString().padStart(2, '0') +
+                          now.getSeconds().toString().padStart(2, '0');
+
+                        // Get base pattern and create retry URL
+                        const retryUrl = generateThumbnailUrl(host, device)?.replace(
+                          /capture_\d{14}\.jpg$/,
+                          `capture_${timestamp}.jpg`,
+                        );
+
+                        if (retryUrl && retryUrl !== thumbnailUrl) {
+                          setThumbnailUrl(retryUrl);
+                        } else {
+                          // If retry fails, reset transition state
+                          if (isTransitioning) {
+                            setPreviousThumbnailUrl(null);
+                            setIsTransitioning(false);
+                          }
+                        }
+                      } else {
+                        console.log(
+                          `[RecHostPreview] ${host.host_name}-${device?.device_id}: Image retry skipped (modal open)`,
+                        );
+                        // Just reset transition state without generating new URLs
+                        if (isTransitioning) {
+                          setPreviousThumbnailUrl(null);
+                          setIsTransitioning(false);
+                        }
+                      }
+                    }}
+                  />
+
+                  {/* Click overlay to open stream modal */}
+                  <Box
+                    onClick={handleOpenStreamModal}
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      cursor: 'pointer',
+                      backgroundColor: 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                      },
+                    }}
+                  />
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 2,
+                  }}
+                >
+                  {isLoading ? (
+                    <>
+                      <CircularProgress size={24} />
+                      <Typography variant="caption" color="text.secondary">
+                        Capturing screenshot...
+                      </Typography>
+                    </>
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      No screenshot available
+                    </Typography>
+                  )}
+                </Box>
+              )}
+            </>
           )}
         </Box>
       </Box>
