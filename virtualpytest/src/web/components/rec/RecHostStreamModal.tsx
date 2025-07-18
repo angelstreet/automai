@@ -145,8 +145,8 @@ const RecHostStreamModalContent: React.FC<{
 
   // Check if this is a desktop device (host_vnc)
   const isDesktopDevice = useMemo(() => {
-    return device?.device_id === 'host_vnc' || device?.device_model === 'host_vnc';
-  }, [device?.device_id, device?.device_model]);
+    return device?.device_model === 'host_vnc';
+  }, [device?.device_model]);
 
   // Handle remote/terminal toggle
   const handleToggleRemote = useCallback(() => {
@@ -505,7 +505,7 @@ const RecHostStreamModalContent: React.FC<{
               />
             ) : streamUrl ? (
               // Check if this is a VNC device - use iframe instead of HLS player
-              device?.device_id === 'host_vnc' ? (
+              device?.device_model === 'host_vnc' ? (
                 (() => {
                   const panelCount = (showRemote ? 1 : 0) + (showWeb ? 1 : 0);
                   const hasPanel = panelCount > 0 && isControlActive;

@@ -48,8 +48,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
   // Check if this is a VNC device
   const isVncDevice = useMemo(() => {
-    return device?.device_id === 'host_vnc';
-  }, [device?.device_id]);
+    return device?.device_model === 'host_vnc';
+  }, [device?.device_model]);
 
   // For VNC devices, get the stream URL directly
   const { streamUrl: vncStreamUrl } = useStream({
