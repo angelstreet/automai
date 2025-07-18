@@ -71,16 +71,16 @@ class PlaywrightWebController(WebControllerInterface):
             
             start_time = time.time()
             
+            # Set the DISPLAY environment variable for VNC
+            os.environ["DISPLAY"] = ":1"
+            
             # Initialize Playwright if needed
             if not self.playwright:
                 from playwright.async_api import async_playwright
                 self.playwright = await async_playwright().start()
             
-            # Launch browser using async Playwright API
-            self.browser = await self.playwright.chromium.launch(
-                headless=False,
-                env={"DISPLAY": ":1"}
-            )
+            # Launch browser with headless=False to show the UI
+            self.browser = await self.playwright.chromium.launch(headless=False)
             self.page = await self.browser.new_page()
             
             # Set viewport for consistent behavior
