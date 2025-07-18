@@ -70,7 +70,7 @@ def create_host_from_environment() -> Host:
             'device_id': 'host_vnc',
             'device_name': f'{host_name}_VNC',
             'device_model': 'host_vnc',  # Special model for host VNC
-            'vnc_stream_path': vnc_stream_path,
+            'video_stream_path': vnc_stream_path,  # Use same field name as HDMI
             'video_capture_path': video_capture_path
         }
         

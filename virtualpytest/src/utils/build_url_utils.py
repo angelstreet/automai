@@ -352,17 +352,9 @@ def _get_device_stream_path(host_info: dict, device_id: str) -> str:
     # Find the specific device
     for device in devices:
         if device.get('device_id') == device_id:
-            # Handle both VNC and regular devices consistently
-            if device.get('device_model') == 'host_vnc':
-                # VNC devices use vnc_stream_path
-                stream_path = device.get('vnc_stream_path')
-                if not stream_path:
-                    raise ValueError(f"VNC device {device_id} has no vnc_stream_path configured (HOST_VNC_STREAM_PATH missing)")
-            else:
-                # Regular devices use video_stream_path
-                stream_path = device.get('video_stream_path')
-                if not stream_path:
-                    raise ValueError(f"Device {device_id} has no video_stream_path configured (DEVICE{device_id.replace('device', '')}_VIDEO_STREAM_PATH missing)")
+            stream_path = device.get('video_stream_path')
+            if not stream_path:
+                raise ValueError(f"Device {device_id} has no video_stream_path configured (DEVICE{device_id.replace('device', '')}_VIDEO_STREAM_PATH missing)")
             
             # Remove '/host' prefix if present and ensure starts with /
             clean_path = stream_path.replace('/host', '').lstrip('/')
