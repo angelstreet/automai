@@ -43,12 +43,9 @@ def execute_command():
         print(f"[@route:host_desktop:execute_command] Using desktop controller: {type(desktop_controller).__name__}")
         
         # Use controller-specific abstraction - single line!
-        success = desktop_controller.execute_command(command, params)
+        result = desktop_controller.execute_command(command, params)
         
-        return jsonify({
-            'success': success,
-            'message': f'Command {command} {"executed successfully" if success else "failed"}'
-        })
+        return jsonify(result)
             
     except Exception as e:
         print(f"[@route:host_desktop:execute_command] Error: {str(e)}")

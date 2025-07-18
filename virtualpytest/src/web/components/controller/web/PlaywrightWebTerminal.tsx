@@ -30,13 +30,14 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const {
     isExecuting,
     terminalOutput,
-    handleDisconnect,
     session,
     currentUrl,
     pageTitle,
     navigateToUrl,
     clickElement,
     executeWebCommand,
+    openBrowser,
+    closeBrowser,
   } = usePlaywrightWeb(host); // Web automation operates directly on the host
 
   // Local state for individual action inputs
@@ -57,17 +58,23 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     }
   }, [terminalOutput]);
 
-  // Update browser open state based on session
+  // Update browser open state based on session and page info
   useEffect(() => {
-    setIsBrowserOpen(session.connected);
-  }, [session.connected]);
+    // Browser is considered open if we have session and either URL or title
+    const browserOpen = session.connected && Boolean(currentUrl || pageTitle);
+    setIsBrowserOpen(browserOpen);
+  }, [session.connected, currentUrl, pageTitle]);
 
   // Handle browser open
   const handleOpenBrowser = async () => {
     try {
-      // Just check status to trigger connection
-      await executeWebCommand('get_page_info');
-      setIsBrowserOpen(true);
+      const result = await openBrowser();
+      if (result.success) {
+        setIsBrowserOpen(true);
+        console.log('Browser opened successfully');
+      } else {
+        console.error('Failed to open browser:', result.error);
+      }
     } catch (error) {
       console.error('Failed to open browser:', error);
     }
@@ -75,8 +82,17 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
 
   // Handle browser close
   const handleCloseBrowser = async () => {
-    await handleDisconnect();
-    setIsBrowserOpen(false);
+    try {
+      const result = await closeBrowser();
+      if (result.success) {
+        setIsBrowserOpen(false);
+        console.log('Browser closed successfully');
+      } else {
+        console.error('Failed to close browser:', result.error);
+      }
+    } catch (error) {
+      console.error('Failed to close browser:', error);
+    }
     // Don't call onDisconnectComplete here - that's for closing the entire panel, not just the browser
   };
 

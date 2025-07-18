@@ -62,7 +62,7 @@ class VNCStreamController(AVControllerInterface):
 
     def take_screenshot(self, filename: str = None) -> Optional[str]:
         """
-        Take screenshot using timestamp logic.
+        Take VNC screenshot using vncsnapshot tool.
         Returns local file path only - routes will build URLs using existing URL building functions.
         """
         try:
@@ -85,10 +85,41 @@ class VNCStreamController(AVControllerInterface):
             captures_path = os.path.join(self.video_capture_path, 'captures')
             screenshot_path = f'{captures_path}/capture_{timestamp}.jpg'
             
-            # Add 200ms delay before returning path (allows host to capture screenshot)
-            time.sleep(0.2)
+            # Ensure captures directory exists
+            os.makedirs(captures_path, exist_ok=True)
             
-            return screenshot_path
+            print(f"VNC[{self.capture_source}]: Taking screenshot using vncsnapshot to {screenshot_path}")
+            
+            # Use vncsnapshot to capture from localhost VNC server on display :1
+            result = subprocess.run([
+                'vncsnapshot',
+                'localhost:1',  # VNC display :1 (port 5901)
+                screenshot_path
+            ], capture_output=True, text=True, timeout=10)
+            
+            if result.returncode == 0 and os.path.exists(screenshot_path):
+                print(f"VNC[{self.capture_source}]: Screenshot captured successfully: {screenshot_path}")
+                
+                # Create thumbnail (same as rename_captures.sh)
+                thumbnail_path = screenshot_path.replace('.jpg', '_thumbnail.jpg')
+                thumbnail_result = subprocess.run([
+                    'convert',
+                    screenshot_path,
+                    '-thumbnail', '498x280',
+                    '-strip',
+                    '-quality', '85',
+                    thumbnail_path
+                ], capture_output=True, text=True, timeout=5)
+                
+                if thumbnail_result.returncode == 0:
+                    print(f"VNC[{self.capture_source}]: Thumbnail created: {thumbnail_path}")
+                else:
+                    print(f"VNC[{self.capture_source}]: Thumbnail creation failed: {thumbnail_result.stderr}")
+                
+                return screenshot_path
+            else:
+                print(f"VNC[{self.capture_source}]: Screenshot failed - vncsnapshot error: {result.stderr}")
+                return None
                 
         except Exception as e:
             print(f'VNC[{self.capture_source}]: Error taking screenshot: {e}')

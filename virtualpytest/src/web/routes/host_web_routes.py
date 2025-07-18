@@ -135,6 +135,76 @@ def get_page_info():
             'error': f'Page info error: {str(e)}'
         }), 500
 
+@host_web_bp.route('/openBrowser', methods=['POST'])
+def open_browser():
+    """Open browser using web controller."""
+    try:
+        print(f"[@route:host_web:open_browser] Opening browser")
+        
+        # Get web controller for the host (no device_id needed for host operations)
+        web_controller = get_controller(None, 'web')
+        
+        if not web_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No web controller found for host'
+            }), 404
+        
+        print(f"[@route:host_web:open_browser] Using web controller: {type(web_controller).__name__}")
+        
+        # Open browser
+        if not hasattr(web_controller, 'open_browser'):
+            return jsonify({
+                'success': False,
+                'error': 'Browser open not supported by this web controller'
+            }), 400
+        
+        result = web_controller.open_browser()
+        
+        return jsonify(result)
+            
+    except Exception as e:
+        print(f"[@route:host_web:open_browser] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Browser open error: {str(e)}'
+        }), 500
+
+@host_web_bp.route('/closeBrowser', methods=['POST'])
+def close_browser():
+    """Close browser using web controller."""
+    try:
+        print(f"[@route:host_web:close_browser] Closing browser")
+        
+        # Get web controller for the host (no device_id needed for host operations)
+        web_controller = get_controller(None, 'web')
+        
+        if not web_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No web controller found for host'
+            }), 404
+        
+        print(f"[@route:host_web:close_browser] Using web controller: {type(web_controller).__name__}")
+        
+        # Close browser
+        if not hasattr(web_controller, 'close_browser'):
+            return jsonify({
+                'success': False,
+                'error': 'Browser close not supported by this web controller'
+            }), 400
+        
+        result = web_controller.close_browser()
+        
+        return jsonify(result)
+            
+    except Exception as e:
+        print(f"[@route:host_web:close_browser] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Browser close error: {str(e)}'
+        }), 500
+
 @host_web_bp.route('/getStatus', methods=['POST'])
 def get_status():
     """Get web controller status."""

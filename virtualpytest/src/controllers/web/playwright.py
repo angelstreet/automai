@@ -22,24 +22,15 @@ if src_utils_path not in sys.path:
 class PlaywrightWebController(WebControllerInterface):
     """Playwright web controller for browser automation."""
     
-    def __init__(self, browser_path: str = "", host_ip: str = "127.0.0.1", **kwargs):
+    def __init__(self, host_ip: str = "127.0.0.1", **kwargs):
         """
         Initialize the Playwright web controller.
         
         Args:
-            browser_path: Path to browser executable (from HOST_WEB_BROWSER_PATH)
             host_ip: Host machine IP address
         """
         super().__init__("Playwright Web", "playwright")
         
-        # Environment check - only create if browser path exists
-        if not browser_path:
-            raise ValueError("HOST_WEB_BROWSER_PATH environment variable is required for PlaywrightWebController")
-            
-        if not os.path.exists(browser_path):
-            raise ValueError(f"Browser path does not exist: {browser_path}")
-        
-        self.browser_path = browser_path
         self.host_ip = host_ip
         self.browser = None
         self.page = None
@@ -51,13 +42,13 @@ class PlaywrightWebController(WebControllerInterface):
         self.current_url = ""
         self.page_title = ""
         
-        print(f"[@controller:PlaywrightWeb] Initialized with browser: {browser_path}")
+        print(f"[@controller:PlaywrightWeb] Initialized with Playwright's built-in Chromium")
         self.connect()
     
     def connect(self) -> bool:
-        """Connect and initialize Playwright browser."""
+        """Connect and prepare Playwright configuration (don't open browser yet)."""
         try:
-            print(f"Web[{self.web_type.upper()}]: Initializing Playwright browser")
+            print(f"Web[{self.web_type.upper()}]: Preparing Playwright configuration")
             
             # Import Playwright (assume it's installed)
             try:
@@ -66,13 +57,66 @@ class PlaywrightWebController(WebControllerInterface):
                 print(f"Web[{self.web_type.upper()}]: ERROR - Playwright not installed")
                 return False
             
-            # Start Playwright
+            # Start Playwright (just the library, not the browser)
             self.playwright = sync_playwright().start()
+            
+            self.is_connected = True
+            print(f"Web[{self.web_type.upper()}]: Playwright configuration ready")
+            return True
+            
+        except Exception as e:
+            print(f"Web[{self.web_type.upper()}]: Configuration error: {e}")
+            return False
+    
+    def disconnect(self) -> bool:
+        """Disconnect and cleanup Playwright configuration (don't close browser here)."""
+        try:
+            print(f"Web[{self.web_type.upper()}]: Cleaning up Playwright configuration")
+            
+            # Close browser first if it's still open
+            if self.browser:
+                self.close_browser()
+                
+            if self.playwright:
+                self.playwright.stop()
+                self.playwright = None
+            
+            self.is_connected = False
+            print(f"Web[{self.web_type.upper()}]: Playwright configuration cleaned up")
+            return True
+            
+        except Exception as e:
+            print(f"Web[{self.web_type.upper()}]: Cleanup error: {e}")
+            self.is_connected = False
+            return False
+    
+    def open_browser(self) -> Dict[str, Any]:
+        """Open/launch the browser window."""
+        if not self.is_connected or not self.playwright:
+            return {
+                'success': False,
+                'error': 'Playwright not configured. Call connect() first.',
+                'execution_time': 0,
+                'connected': False
+            }
+        
+        if self.browser:
+            return {
+                'success': True,
+                'error': 'Browser already open',
+                'execution_time': 0,
+                'connected': True,
+                'browser_path': None # No custom browser path
+            }
+        
+        try:
+            print(f"Web[{self.web_type.upper()}]: Opening browser")
+            
+            start_time = time.time()
             
             # Launch browser (non-headless for VNC visibility)
             self.browser = self.playwright.chromium.launch(
-                headless=False,
-                executable_path=self.browser_path
+                headless=False
             )
             
             # Create new page
@@ -81,19 +125,41 @@ class PlaywrightWebController(WebControllerInterface):
             # Set viewport for consistent behavior
             self.page.set_viewport_size({"width": 1920, "height": 1080})
             
-            self.is_connected = True
-            print(f"Web[{self.web_type.upper()}]: Browser launched successfully")
-            return True
+            execution_time = int((time.time() - start_time) * 1000)
+            
+            print(f"Web[{self.web_type.upper()}]: Browser opened successfully")
+            return {
+                'success': True,
+                'error': '',
+                'execution_time': execution_time,
+                'browser_path': None,
+                'connected': True
+            }
             
         except Exception as e:
-            print(f"Web[{self.web_type.upper()}]: Connection error: {e}")
-            self.disconnect()
-            return False
+            error_msg = f"Browser open error: {e}"
+            print(f"Web[{self.web_type.upper()}]: {error_msg}")
+            return {
+                'success': False,
+                'error': error_msg,
+                'execution_time': 0,
+                'connected': False
+            }
     
-    def disconnect(self) -> bool:
-        """Disconnect and cleanup Playwright resources."""
+    def close_browser(self) -> Dict[str, Any]:
+        """Close the browser window."""
+        if not self.browser:
+            return {
+                'success': True,
+                'error': 'Browser already closed',
+                'execution_time': 0,
+                'connected': False
+            }
+        
         try:
-            print(f"Web[{self.web_type.upper()}]: Disconnecting from browser")
+            print(f"Web[{self.web_type.upper()}]: Closing browser")
+            
+            start_time = time.time()
             
             if self.page:
                 self.page.close()
@@ -102,19 +168,35 @@ class PlaywrightWebController(WebControllerInterface):
             if self.browser:
                 self.browser.close()
                 self.browser = None
-                
-            if self.playwright:
-                self.playwright.stop()
-                self.playwright = None
             
-            self.is_connected = False
-            print(f"Web[{self.web_type.upper()}]: Disconnected successfully")
-            return True
+            # Clear page state
+            self.current_url = ""
+            self.page_title = ""
+            
+            execution_time = int((time.time() - start_time) * 1000)
+            
+            print(f"Web[{self.web_type.upper()}]: Browser closed successfully")
+            return {
+                'success': True,
+                'error': '',
+                'execution_time': execution_time,
+                'connected': False
+            }
             
         except Exception as e:
-            print(f"Web[{self.web_type.upper()}]: Disconnect error: {e}")
-            self.is_connected = False
-            return False
+            error_msg = f"Browser close error: {e}"
+            print(f"Web[{self.web_type.upper()}]: {error_msg}")
+            # Force cleanup even if error
+            self.page = None
+            self.browser = None
+            self.current_url = ""
+            self.page_title = ""
+            return {
+                'success': False,
+                'error': error_msg,
+                'execution_time': 0,
+                'connected': False
+            }
     
     def navigate_to_url(self, url: str, timeout: int = 30000) -> Dict[str, Any]:
         """
@@ -392,7 +474,7 @@ class PlaywrightWebController(WebControllerInterface):
             if self.is_connected and self.page:
                 return {
                     'success': True,
-                    'browser_path': self.browser_path,
+                    'browser_path': None, # No custom browser path
                     'current_url': self.current_url,
                     'page_title': self.page_title,
                     'connected': True
@@ -494,6 +576,12 @@ class PlaywrightWebController(WebControllerInterface):
         
         elif command == 'get_page_info':
             return self.get_page_info()
+        
+        elif command == 'open_browser':
+            return self.open_browser()
+        
+        elif command == 'close_browser':
+            return self.close_browser()
         
         else:
             print(f"Web[{self.web_type.upper()}]: Unknown command: {command}")

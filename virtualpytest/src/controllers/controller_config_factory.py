@@ -248,7 +248,6 @@ def _get_web_params(implementation: str, device_config: dict) -> dict:
     
     if implementation == 'playwright':
         params = {
-            'browser_path': device_config.get('host_web_browser_path', ''),
             'host_ip': device_config.get('host_ip', '127.0.0.1')
         }
         print(f"[@controller_factory:_get_web_params] DEBUG: Playwright params: {params}")

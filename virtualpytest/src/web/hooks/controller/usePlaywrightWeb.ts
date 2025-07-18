@@ -124,6 +124,25 @@ export const usePlaywrightWeb = (host: Host) => {
           });
 
           console.log('[@hook:usePlaywrightWeb] Connection established successfully');
+
+          // Auto-open browser in debug mode
+          console.log('[@hook:usePlaywrightWeb] Auto-opening browser for Playwright connection');
+          const openResult = await executeWebCommand('open_browser');
+
+          if (openResult.success) {
+            console.log('[@hook:usePlaywrightWeb] Browser opened successfully in debug mode');
+            // Get initial page info
+            const pageInfo = await executeWebCommand('get_page_info');
+            if (pageInfo.success) {
+              setCurrentUrl(pageInfo.url || '');
+              setPageTitle(pageInfo.title || '');
+            }
+          } else {
+            console.error(
+              '[@hook:usePlaywrightWeb] Failed to auto-open browser:',
+              openResult.error,
+            );
+          }
         } else {
           console.error('[@hook:usePlaywrightWeb] Connection failed:', result.error);
         }
@@ -133,7 +152,7 @@ export const usePlaywrightWeb = (host: Host) => {
     };
 
     initializeConnection();
-  }, [host, getStatus]);
+  }, [host, getStatus, executeWebCommand]);
 
   // Execute command with JSON parsing and terminal output
   const executeCommand = useCallback(
@@ -213,6 +232,16 @@ export const usePlaywrightWeb = (host: Host) => {
     },
     [session.connected, isExecuting, terminalOutput, commandHistory, executeWebCommand],
   );
+
+  // Open browser (convenience method)
+  const openBrowser = useCallback(async (): Promise<WebCommandResult> => {
+    return await executeWebCommand('open_browser');
+  }, [executeWebCommand]);
+
+  // Close browser (convenience method)
+  const closeBrowser = useCallback(async (): Promise<WebCommandResult> => {
+    return await executeWebCommand('close_browser');
+  }, [executeWebCommand]);
 
   // Navigate to URL (convenience method)
   const navigateToUrl = useCallback(
@@ -300,6 +329,8 @@ export const usePlaywrightWeb = (host: Host) => {
     setCurrentCommand,
     getStatus,
     executeWebCommand,
+    openBrowser,
+    closeBrowser,
 
     // Refs
     terminalRef,
