@@ -77,7 +77,10 @@ class PlaywrightWebController(WebControllerInterface):
                 self.playwright = await async_playwright().start()
             
             # Launch browser using async Playwright API
-            self.browser = await self.playwright.chromium.launch()
+            self.browser = await self.playwright.chromium.launch(
+                headless=False,
+                env={"DISPLAY": ":1"}
+            )
             self.page = await self.browser.new_page()
             
             # Set viewport for consistent behavior
