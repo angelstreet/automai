@@ -34,28 +34,14 @@ interface VNCStreamProps {
 }
 
 // VNC Viewer Component for iframe display
-const VNCViewer = ({
-  host,
-  isExpanded: _isExpanded,
-  sx = {},
-}: {
-  host: Host;
-  isExpanded: boolean;
-  sx?: any;
-}) => {
+const VNCViewer = ({ streamUrl, sx = {} }: { host: Host; streamUrl: string | null; sx?: any }) => {
   const [isVncLoading, setIsVncLoading] = useState(true);
-
-  // Use the stream hook to get the proper VNC stream URL
-  const { streamUrl, isLoadingUrl, urlError } = useStream({
-    host,
-    device_id: 'host_vnc',
-  });
 
   const handleVncLoad = () => {
     setIsVncLoading(false);
   };
 
-  if (isLoadingUrl) {
+  if (!streamUrl) {
     return (
       <Box
         sx={{
@@ -66,23 +52,7 @@ const VNCViewer = ({
           color: 'white',
         }}
       >
-        <Typography>Loading VNC stream...</Typography>
-      </Box>
-    );
-  }
-
-  if (urlError || !streamUrl) {
-    return (
-      <Box
-        sx={{
-          ...sx,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-        }}
-      >
-        <Typography>VNC stream error: {urlError || 'No stream URL'}</Typography>
+        <Typography>No VNC stream URL</Typography>
       </Box>
     );
   }
@@ -152,11 +122,7 @@ export const VNCStream = React.memo(
     const [avConfig, setAvConfig] = useState<any>(null);
 
     // Use stream hook for VNC stream URL (for iframe)
-    const {
-      streamUrl,
-      isLoadingUrl: _isLoadingUrl,
-      urlError,
-    } = useStream({ host, device_id: deviceId });
+    const { streamUrl, urlError } = useStream({ host, device_id: deviceId });
     const isStreamActive = !!streamUrl && !urlError; // VNC is active if we have a valid stream URL
 
     // Get device model (always host_vnc for VNC)
@@ -520,7 +486,7 @@ export const VNCStream = React.memo(
                 {/* VNC viewer - always rendered in background */}
                 <VNCViewer
                   host={host}
-                  isExpanded={isExpanded}
+                  streamUrl={streamUrl}
                   sx={{
                     position: 'absolute',
                     top: 0,

@@ -65,12 +65,20 @@ def create_host_from_environment() -> Host:
         print(f"[@controller_manager:create_host_from_environment]   VNC Stream Path: {vnc_stream_path}")
         print(f"[@controller_manager:create_host_from_environment]   Video Capture Path: {video_capture_path}")
         
+        # Add password to VNC stream path if available
+        vnc_password = os.getenv('HOST_VNC_PASSWORD')
+        final_vnc_stream_path = vnc_stream_path
+        if vnc_password:
+            separator = '&' if '?' in vnc_stream_path else '?'
+            final_vnc_stream_path = f"{vnc_stream_path}{separator}password={vnc_password}"
+            print(f"[@controller_manager:create_host_from_environment]   VNC Password: Added to stream path")
+        
         # Create host VNC device (special device representing the host itself)
         host_device_config = {
             'device_id': 'host_vnc',
             'device_name': f'{host_name}_VNC',
             'device_model': 'host_vnc',  # Special model for host VNC
-            'video_stream_path': vnc_stream_path,  # Use same field name as HDMI
+            'video_stream_path': final_vnc_stream_path,  # Use same field name as HDMI
             'video_capture_path': video_capture_path
         }
         
