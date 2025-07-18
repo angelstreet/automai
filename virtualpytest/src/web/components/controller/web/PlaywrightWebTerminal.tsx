@@ -1,4 +1,20 @@
-import { Box, Button, TextField, Paper, Typography, CircularProgress } from '@mui/material';
+import {
+  Box,
+  Button,
+  TextField,
+  Paper,
+  Typography,
+  CircularProgress,
+  IconButton,
+  Collapse,
+  Divider,
+} from '@mui/material';
+import {
+  PlayArrow as PlayIcon,
+  Stop as StopIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+} from '@mui/icons-material';
 import React, { useState, useRef, useEffect } from 'react';
 
 import { usePlaywrightWeb } from '../../../hooks/controller/usePlaywrightWeb';
@@ -34,41 +50,125 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     session,
     currentUrl,
     pageTitle,
+    navigateToUrl,
+    clickElement,
+    getPageInfo,
+    executeWebCommand,
   } = usePlaywrightWeb(host, deviceId);
 
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const commandInputRef = useRef<HTMLInputElement>(null);
+  // Local state for individual action inputs
+  const [navigateUrl, setNavigateUrl] = useState('');
+  const [clickSelector, setClickSelector] = useState('');
+  const [tapX, setTapX] = useState('');
+  const [tapY, setTapY] = useState('');
+  const [findSelector, setFindSelector] = useState('');
+  const [isResponseExpanded, setIsResponseExpanded] = useState(false);
+  const [isBrowserOpen, setIsBrowserOpen] = useState(false);
 
-  // Auto-scroll terminal to bottom when new output arrives
+  const responseRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll response area when new output arrives
   useEffect(() => {
-    if (terminalRef.current) {
-      terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+    if (responseRef.current && terminalOutput) {
+      responseRef.current.scrollTop = responseRef.current.scrollHeight;
     }
   }, [terminalOutput]);
 
-  // Focus command input when component mounts
+  // Update browser open state based on session
   useEffect(() => {
-    if (commandInputRef.current) {
-      commandInputRef.current.focus();
-    }
-  }, []);
+    setIsBrowserOpen(session.connected);
+  }, [session.connected]);
 
-  const handleCommandSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (currentCommand.trim() && !isExecuting) {
-      await executeCommand(currentCommand.trim());
-      setCurrentCommand('');
+  // Handle browser open
+  const handleOpenBrowser = async () => {
+    try {
+      // Just check status to trigger connection
+      const result = await executeWebCommand('get_page_info');
+      if (result.success) {
+        setIsBrowserOpen(true);
+      }
+    } catch (error) {
+      console.error('Failed to open browser:', error);
     }
   };
 
-  const handleDisconnectWithCallback = async () => {
+  // Handle browser close
+  const handleCloseBrowser = async () => {
     await handleDisconnect();
+    setIsBrowserOpen(false);
     if (onDisconnectComplete) {
       onDisconnectComplete();
     }
   };
 
-  const formatTerminalOutput = (output: string) => {
+  // Handle navigate action
+  const handleNavigate = async () => {
+    if (!navigateUrl.trim() || isExecuting) return;
+
+    const result = await navigateToUrl(navigateUrl.trim());
+    setNavigateUrl('');
+
+    // Show response area if successful
+    if (result.success) {
+      setIsResponseExpanded(true);
+    }
+  };
+
+  // Handle click element action
+  const handleClickElement = async () => {
+    if (!clickSelector.trim() || isExecuting) return;
+
+    const result = await clickElement(clickSelector.trim());
+    setClickSelector('');
+
+    // Show response area
+    setIsResponseExpanded(true);
+  };
+
+  // Handle tap coordinates action
+  const handleTapXY = async () => {
+    const x = parseInt(tapX);
+    const y = parseInt(tapY);
+
+    if (isNaN(x) || isNaN(y) || isExecuting) return;
+
+    const result = await executeWebCommand('tap_x_y', { x, y });
+    setTapX('');
+    setTapY('');
+
+    // Show response area
+    setIsResponseExpanded(true);
+  };
+
+  // Handle find element action
+  const handleFindElement = async () => {
+    if (!findSelector.trim() || isExecuting) return;
+
+    const result = await executeWebCommand('execute_javascript', {
+      script: `
+        const element = document.querySelector('${findSelector.trim()}');
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          return {
+            found: true,
+            tag: element.tagName,
+            text: element.textContent ? element.textContent.substring(0, 100) : '',
+            position: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+            visible: rect.width > 0 && rect.height > 0
+          };
+        } else {
+          return { found: false };
+        }
+      `,
+    });
+
+    setFindSelector('');
+
+    // Always show response area for find element
+    setIsResponseExpanded(true);
+  };
+
+  const formatResponse = (output: string) => {
     return output.split('\n').map((line, index) => (
       <Box
         key={index}
@@ -99,12 +199,43 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
         height: '100%',
       }}
     >
+      {/* Browser Control */}
+      <Box sx={{ mb: 2 }}>
+        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+          Browser Control
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant={isBrowserOpen ? 'outlined' : 'contained'}
+            size="small"
+            onClick={handleOpenBrowser}
+            disabled={isBrowserOpen || isExecuting}
+            startIcon={<PlayIcon />}
+            color="success"
+            sx={{ flex: 1 }}
+          >
+            Open Browser
+          </Button>
+          <Button
+            variant={isBrowserOpen ? 'contained' : 'outlined'}
+            size="small"
+            onClick={handleCloseBrowser}
+            disabled={!isBrowserOpen}
+            startIcon={<StopIcon />}
+            color="error"
+            sx={{ flex: 1 }}
+          >
+            Close Browser
+          </Button>
+        </Box>
+      </Box>
+
       {/* Page Info Display */}
-      {session.connected && (currentUrl || pageTitle) && (
+      {isBrowserOpen && (currentUrl || pageTitle) && (
         <Paper
           sx={{
             p: 1,
-            mb: 1,
+            mb: 2,
             backgroundColor: '#2d2d30',
             color: '#cccccc',
             border: '1px solid #3e3e42',
@@ -118,110 +249,249 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
         </Paper>
       )}
 
-      {/* Terminal Output */}
-      <Paper
-        ref={terminalRef}
-        sx={{
-          flex: 1,
-          p: 1,
-          backgroundColor: '#1e1e1e',
-          color: '#00ff00',
-          fontFamily: 'monospace',
-          fontSize: '0.75rem',
-          overflow: 'auto',
-          border: '1px solid #333',
-          mb: 1,
-        }}
-      >
-        {terminalOutput ? (
-          formatTerminalOutput(terminalOutput)
-        ) : (
-          <Box>
-            <Typography variant="body2" sx={{ color: '#888', fontFamily: 'monospace' }}>
-              Playwright Web Terminal ready...
+      {/* Action Buttons */}
+      {isBrowserOpen && (
+        <Box sx={{ flex: 1, overflow: 'auto' }}>
+          {/* Navigate Action */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
+              Navigate
             </Typography>
-            <Typography variant="caption" sx={{ color: '#666', fontFamily: 'monospace' }}>
-              Commands (JSON format):
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{ color: '#444', fontFamily: 'monospace', display: 'block' }}
-            >
-              {'{"command": "navigate_to_url", "url": "https://google.com"}'}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{ color: '#444', fontFamily: 'monospace', display: 'block' }}
-            >
-              {'{"command": "click_element", "selector": "input[name=q]"}'}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{ color: '#444', fontFamily: 'monospace', display: 'block' }}
-            >
-              {'{"command": "input_text", "selector": "input[name=q]", "text": "hello"}'}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{ color: '#444', fontFamily: 'monospace', display: 'block' }}
-            >
-              {'{"command": "get_page_info"}'}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{ color: '#444', fontFamily: 'monospace', display: 'block' }}
-            >
-              {'{"command": "execute_javascript", "script": "return document.title"}'}
-            </Typography>
-            <Typography
-              variant="caption"
-              sx={{ color: '#444', fontFamily: 'monospace', display: 'block' }}
-            >
-              {'{"command": "tap_x_y", "x": 100, "y": 200}'}
-            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                value={navigateUrl}
+                onChange={(e) => setNavigateUrl(e.target.value)}
+                placeholder="https://example.com"
+                variant="outlined"
+                size="small"
+                disabled={isExecuting}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleNavigate();
+                  }
+                }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '0.875rem',
+                  },
+                }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleNavigate}
+                disabled={!navigateUrl.trim() || isExecuting}
+                sx={{ minWidth: '60px' }}
+              >
+                Go
+              </Button>
+            </Box>
           </Box>
-        )}
-      </Paper>
 
-      {/* Command Input and Send Button */}
-      <Box component="form" onSubmit={handleCommandSubmit} sx={{ display: 'flex', gap: 1 }}>
-        <TextField
-          ref={commandInputRef}
-          value={currentCommand}
-          onChange={(e) => setCurrentCommand(e.target.value)}
-          placeholder='{"command": "navigate_to_url", "url": "https://example.com"}'
-          variant="outlined"
-          size="small"
-          disabled={!session.connected || isExecuting}
+          <Divider sx={{ my: 1 }} />
+
+          {/* Click Element Action */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
+              Click Element
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                value={clickSelector}
+                onChange={(e) => setClickSelector(e.target.value)}
+                placeholder="CSS selector (e.g., button, #id, .class)"
+                variant="outlined"
+                size="small"
+                disabled={isExecuting}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleClickElement();
+                  }
+                }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '0.875rem',
+                  },
+                }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleClickElement}
+                disabled={!clickSelector.trim() || isExecuting}
+                sx={{ minWidth: '60px' }}
+              >
+                Click
+              </Button>
+            </Box>
+          </Box>
+
+          <Divider sx={{ my: 1 }} />
+
+          {/* Tap X,Y Action */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
+              Tap Coordinates
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                value={tapX}
+                onChange={(e) => setTapX(e.target.value)}
+                placeholder="X"
+                variant="outlined"
+                size="small"
+                type="number"
+                disabled={isExecuting}
+                sx={{
+                  width: '80px',
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '0.875rem',
+                  },
+                }}
+              />
+              <TextField
+                value={tapY}
+                onChange={(e) => setTapY(e.target.value)}
+                placeholder="Y"
+                variant="outlined"
+                size="small"
+                type="number"
+                disabled={isExecuting}
+                sx={{
+                  width: '80px',
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '0.875rem',
+                  },
+                }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleTapXY}
+                disabled={!tapX.trim() || !tapY.trim() || isExecuting}
+                sx={{ minWidth: '60px' }}
+              >
+                Tap
+              </Button>
+            </Box>
+          </Box>
+
+          <Divider sx={{ my: 1 }} />
+
+          {/* Find Element Action */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
+              Find Element
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <TextField
+                value={findSelector}
+                onChange={(e) => setFindSelector(e.target.value)}
+                placeholder="CSS selector to find"
+                variant="outlined"
+                size="small"
+                disabled={isExecuting}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleFindElement();
+                  }
+                }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    fontSize: '0.875rem',
+                  },
+                }}
+              />
+              <Button
+                variant="contained"
+                size="small"
+                onClick={handleFindElement}
+                disabled={!findSelector.trim() || isExecuting}
+                sx={{ minWidth: '60px' }}
+              >
+                Find
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Response Area - Collapsible */}
+          {terminalOutput && (
+            <Box>
+              <Divider sx={{ my: 1 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Typography variant="caption" sx={{ fontWeight: 'bold', flex: 1 }}>
+                  Response
+                </Typography>
+                <IconButton size="small" onClick={() => setIsResponseExpanded(!isResponseExpanded)}>
+                  {isResponseExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                </IconButton>
+              </Box>
+              <Collapse in={isResponseExpanded}>
+                <Paper
+                  ref={responseRef}
+                  sx={{
+                    p: 1,
+                    backgroundColor: '#1e1e1e',
+                    color: '#00ff00',
+                    fontFamily: 'monospace',
+                    fontSize: '0.75rem',
+                    overflow: 'auto',
+                    border: '1px solid #333',
+                    maxHeight: '200px',
+                  }}
+                >
+                  {formatResponse(terminalOutput)}
+                </Paper>
+              </Collapse>
+            </Box>
+          )}
+        </Box>
+      )}
+
+      {/* Show instructions when browser is closed */}
+      {!isBrowserOpen && (
+        <Box
           sx={{
             flex: 1,
-            '& .MuiOutlinedInput-root': {
-              fontFamily: 'monospace',
-              fontSize: '0.875rem',
-            },
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            color: 'text.secondary',
           }}
-        />
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={!session.connected || isExecuting || !currentCommand.trim()}
-          sx={{ minWidth: '80px' }}
         >
-          {isExecuting ? <CircularProgress size={20} /> : 'Send'}
-        </Button>
-      </Box>
+          <Typography variant="body2">Click "Open Browser" to start web automation</Typography>
+        </Box>
+      )}
 
-      {/* Disconnect Button */}
-      <Button
-        variant="contained"
-        color="error"
-        onClick={handleDisconnectWithCallback}
-        fullWidth
-        size="small"
-        sx={{ mt: 1 }}
-      >
-        {'Disconnect'}
-      </Button>
+      {/* Executing Indicator */}
+      {isExecuting && (
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            color: 'white',
+            p: 2,
+            borderRadius: 1,
+            zIndex: 1000,
+          }}
+        >
+          <CircularProgress size={20} />
+          <Typography variant="body2">Executing...</Typography>
+        </Box>
+      )}
     </Box>
   );
 });
