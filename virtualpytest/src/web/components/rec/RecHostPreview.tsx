@@ -65,15 +65,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
   // Stabilize host and device objects to prevent infinite re-renders
   // Only recreate when the actual data changes, not the object reference
-  const stableHost = useMemo(
-    () => host,
-    [host?.host_name, host?.host_url, host?.host_port, host?.status],
-  );
+  const stableHost = useMemo(() => host, [host]);
 
-  const stableDevice = useMemo(
-    () => device,
-    [device?.device_id, device?.device_name, device?.device_model],
-  );
+  const stableDevice = useMemo(() => device, [device]);
 
   // Handle smooth transition when new image loads
   const handleImageLoad = useCallback(() => {
@@ -378,6 +372,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                     border: 'none',
                     backgroundColor: '#000',
                     pointerEvents: 'none', // Disable interaction in preview
+                    transform: 'scale(0.25)', // Scale down to 25% to fit the small preview
+                    transformOrigin: 'top left',
                   }}
                   title="VNC Desktop Preview"
                 />
