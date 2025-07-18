@@ -23,21 +23,15 @@ if src_utils_path not in sys.path:
 class PlaywrightWebController(WebControllerInterface):
     """Playwright web controller for browser automation."""
     
-    def __init__(self, host_ip: str = "127.0.0.1", **kwargs):
+    def __init__(self, **kwargs):
         """
         Initialize the Playwright web controller.
-        
-        Args:
-            host_ip: Host machine IP address
         """
         super().__init__("Playwright Web", "playwright")
         
-        self.host_ip = host_ip
         self.browser = None
         self.page = None
         self.playwright = None
-        self._initialization_lock = asyncio.Lock()
-        self._initialized = False
         
         # Command execution state
         self.last_command_output = ""
@@ -46,91 +40,23 @@ class PlaywrightWebController(WebControllerInterface):
         self.page_title = ""
         
         print(f"[@controller:PlaywrightWeb] Initialized with Playwright's built-in Chromium")
-        # Don't call connect() here - defer until first async operation
     
-    async def _ensure_initialized(self) -> bool:
-        """Ensure Playwright is initialized (called by async methods)."""
-        if self._initialized:
-            return True
-            
-        async with self._initialization_lock:
-            if self._initialized:
-                return True
-            
-            try:
-                # Add timeout to prevent hanging
-                return await asyncio.wait_for(self.connect(), timeout=30.0)
-            except asyncio.TimeoutError:
-                print(f"Web[{self.web_type.upper()}]: Initialization timeout after 30 seconds")
-                return False
-            except Exception as e:
-                print(f"Web[{self.web_type.upper()}]: Initialization failed: {e}")
-                return False
+    def connect(self) -> bool:
+        """Connect to Playwright (always true for local execution)."""
+        print(f"Web[{self.web_type.upper()}]: Playwright ready for browser automation")
+        self.is_connected = True
+        return True
     
-    async def connect(self) -> bool:
-        """Connect and prepare Playwright configuration (don't open browser yet)."""
-        try:
-            print(f"Web[{self.web_type.upper()}]: Preparing Playwright configuration")
-            
-            # Import Playwright async API
-            try:
-                from playwright.async_api import async_playwright
-            except ImportError:
-                print(f"Web[{self.web_type.upper()}]: ERROR - Playwright not installed")
-                return False
-            
-            # Start Playwright using async API
-            self.playwright = await async_playwright().start()
-            
-            self.is_connected = True
-            self._initialized = True
-            print(f"Web[{self.web_type.upper()}]: Playwright configuration ready")
-            return True
-            
-        except Exception as e:
-            print(f"Web[{self.web_type.upper()}]: Configuration error: {e}")
-            return False
-    
-    async def disconnect(self) -> bool:
-        """Disconnect and cleanup Playwright configuration (don't close browser here)."""
-        try:
-            print(f"Web[{self.web_type.upper()}]: Cleaning up Playwright configuration")
-            
-            # Close browser first if it's still open
-            if self.browser:
-                await self.close_browser()
-                
-            if self.playwright:
-                await self.playwright.stop()
-                self.playwright = None
-            
-            self.is_connected = False
-            print(f"Web[{self.web_type.upper()}]: Playwright configuration cleaned up")
-            return True
-            
-        except Exception as e:
-            print(f"Web[{self.web_type.upper()}]: Cleanup error: {e}")
-            self.is_connected = False
-            return False
+    def disconnect(self) -> bool:
+        """Disconnect from Playwright (always true for local execution)."""
+        print(f"Web[{self.web_type.upper()}]: Playwright disconnected")
+        self.is_connected = False
+        return True
     
     async def open_browser(self) -> Dict[str, Any]:
         """Open/launch the browser window."""
-        # Ensure Playwright is initialized
-        if not await self._ensure_initialized():
-            return {
-                'success': False,
-                'error': 'Failed to initialize Playwright',
-                'execution_time': 0,
-                'connected': False
-            }
-        
-        if not self.is_connected or not self.playwright:
-            return {
-                'success': False,
-                'error': 'Playwright not configured. Call connect() first.',
-                'execution_time': 0,
-                'connected': False
-            }
+        if not self.is_connected:
+            self.connect()
         
         if self.browser:
             return {
@@ -145,8 +71,13 @@ class PlaywrightWebController(WebControllerInterface):
             
             start_time = time.time()
             
+            # Initialize Playwright if needed
+            if not self.playwright:
+                from playwright.async_api import async_playwright
+                self.playwright = await async_playwright().start()
+            
             # Launch browser using async Playwright API
-            self.browser = await self.playwright.chromium.launch(headless=False)
+            self.browser = await self.playwright.chromium.launch()
             self.page = await self.browser.new_page()
             
             # Set viewport for consistent behavior
@@ -496,14 +427,6 @@ class PlaywrightWebController(WebControllerInterface):
     
     async def get_status(self) -> Dict[str, Any]:
         """Get controller status."""
-        # Ensure Playwright is initialized
-        if not await self._ensure_initialized():
-            return {
-                'success': False,
-                'error': 'Failed to initialize Playwright',
-                'connected': False
-            }
-        
         try:
             if self.is_connected and self.page:
                 return {

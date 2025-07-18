@@ -216,47 +216,200 @@ export const usePlaywrightWeb = (host: Host) => {
 
   // Open browser (convenience method)
   const openBrowser = useCallback(async (): Promise<WebCommandResult> => {
-    return await executeWebCommand('open_browser');
-  }, [executeWebCommand]);
+    try {
+      console.log(`[@hook:usePlaywrightWeb] Opening browser on ${host.host_name}`);
+
+      const response = await fetch('/server/web/openBrowser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ host: host }),
+      });
+
+      const result = await response.json();
+      return {
+        success: result.success || false,
+        error: result.error || '',
+        execution_time: result.execution_time || 0,
+      };
+    } catch (error) {
+      console.error(`[@hook:usePlaywrightWeb] Open browser error:`, error);
+      return {
+        success: false,
+        error: `Failed to open browser: ${error}`,
+        execution_time: 0,
+      };
+    }
+  }, [host]);
 
   // Close browser (convenience method)
   const closeBrowser = useCallback(async (): Promise<WebCommandResult> => {
-    return await executeWebCommand('close_browser');
-  }, [executeWebCommand]);
+    try {
+      console.log(`[@hook:usePlaywrightWeb] Closing browser on ${host.host_name}`);
+
+      const response = await fetch('/server/web/closeBrowser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ host: host }),
+      });
+
+      const result = await response.json();
+      return {
+        success: result.success || false,
+        error: result.error || '',
+        execution_time: result.execution_time || 0,
+      };
+    } catch (error) {
+      console.error(`[@hook:usePlaywrightWeb] Close browser error:`, error);
+      return {
+        success: false,
+        error: `Failed to close browser: ${error}`,
+        execution_time: 0,
+      };
+    }
+  }, [host]);
 
   // Navigate to URL (convenience method)
   const navigateToUrl = useCallback(
     async (url: string): Promise<WebCommandResult> => {
-      return await executeWebCommand('navigate_to_url', { url });
+      try {
+        console.log(`[@hook:usePlaywrightWeb] Navigating to ${url} on ${host.host_name}`);
+
+        const response = await fetch('/server/web/navigateToUrl', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ host: host, url: url }),
+        });
+
+        const result = await response.json();
+
+        // Update page state for navigation
+        if (result.success) {
+          setCurrentUrl(result.url || url);
+          setPageTitle(result.title || '');
+        }
+
+        return {
+          success: result.success || false,
+          url: result.url || '',
+          title: result.title || '',
+          error: result.error || '',
+          execution_time: result.execution_time || 0,
+        };
+      } catch (error) {
+        console.error(`[@hook:usePlaywrightWeb] Navigate error:`, error);
+        return {
+          success: false,
+          error: `Failed to navigate: ${error}`,
+          execution_time: 0,
+        };
+      }
     },
-    [executeWebCommand],
+    [host],
   );
 
   // Click element (convenience method)
   const clickElement = useCallback(
     async (selector: string): Promise<WebCommandResult> => {
-      return await executeWebCommand('click_element', { selector });
+      try {
+        console.log(`[@hook:usePlaywrightWeb] Clicking element ${selector} on ${host.host_name}`);
+
+        const response = await fetch('/server/web/executeCommand', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            host: host,
+            command: 'click_element',
+            params: { selector },
+          }),
+        });
+
+        const result = await response.json();
+        return {
+          success: result.success || false,
+          error: result.error || '',
+          execution_time: result.execution_time || 0,
+        };
+      } catch (error) {
+        console.error(`[@hook:usePlaywrightWeb] Click element error:`, error);
+        return {
+          success: false,
+          error: `Failed to click element: ${error}`,
+          execution_time: 0,
+        };
+      }
     },
-    [executeWebCommand],
+    [host],
   );
 
   // Input text (convenience method)
   const inputText = useCallback(
     async (selector: string, text: string): Promise<WebCommandResult> => {
-      return await executeWebCommand('input_text', { selector, text });
+      try {
+        console.log(`[@hook:usePlaywrightWeb] Inputting text to ${selector} on ${host.host_name}`);
+
+        const response = await fetch('/server/web/executeCommand', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            host: host,
+            command: 'input_text',
+            params: { selector, text },
+          }),
+        });
+
+        const result = await response.json();
+        return {
+          success: result.success || false,
+          error: result.error || '',
+          execution_time: result.execution_time || 0,
+        };
+      } catch (error) {
+        console.error(`[@hook:usePlaywrightWeb] Input text error:`, error);
+        return {
+          success: false,
+          error: `Failed to input text: ${error}`,
+          execution_time: 0,
+        };
+      }
     },
-    [executeWebCommand],
+    [host],
   );
 
   // Get page info (convenience method)
   const getPageInfo = useCallback(async (): Promise<WebCommandResult> => {
-    const result = await executeWebCommand('get_page_info');
-    if (result.success) {
-      setCurrentUrl(result.url || '');
-      setPageTitle(result.title || '');
+    try {
+      console.log(`[@hook:usePlaywrightWeb] Getting page info from ${host.host_name}`);
+
+      const response = await fetch('/server/web/getPageInfo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ host: host }),
+      });
+
+      const result = await response.json();
+
+      // Update page state
+      if (result.success) {
+        setCurrentUrl(result.url || '');
+        setPageTitle(result.title || '');
+      }
+
+      return {
+        success: result.success || false,
+        url: result.url || '',
+        title: result.title || '',
+        error: result.error || '',
+        execution_time: result.execution_time || 0,
+      };
+    } catch (error) {
+      console.error(`[@hook:usePlaywrightWeb] Get page info error:`, error);
+      return {
+        success: false,
+        error: `Failed to get page info: ${error}`,
+        execution_time: 0,
+      };
     }
-    return result;
-  }, [executeWebCommand]);
+  }, [host]);
 
   // Clear terminal
   const clearTerminal = useCallback(() => {
@@ -309,7 +462,6 @@ export const usePlaywrightWeb = (host: Host) => {
     handleDisconnect,
     setCurrentCommand,
     getStatus,
-    executeWebCommand,
     openBrowser,
     closeBrowser,
 

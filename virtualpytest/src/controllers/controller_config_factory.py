@@ -247,9 +247,7 @@ def _get_web_params(implementation: str, device_config: dict) -> dict:
     print(f"[@controller_factory:_get_web_params] DEBUG: Getting web params for implementation: {implementation}")
     
     if implementation == 'playwright':
-        params = {
-            'host_ip': device_config.get('host_ip', '127.0.0.1')
-        }
+        params = {}
         print(f"[@controller_factory:_get_web_params] DEBUG: Playwright params: {params}")
         return params
     elif implementation == 'selenium':
