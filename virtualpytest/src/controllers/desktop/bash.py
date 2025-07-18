@@ -57,26 +57,92 @@ class BashDesktopController(DesktopControllerInterface):
         print(f"[@controller:BashDesktop] Initialized for {self.host_connection_id}")
         self.connect()
     
-    def connect(self) -> bool:
-        """Connect to host machine via SSH."""
+    def _execute_local_command(self, command: str, working_dir: str = None, timeout: int = 30) -> Dict[str, Any]:
+        """
+        Execute a command locally using subprocess.
+        
+        Args:
+            command: Command to execute
+            working_dir: Working directory for command execution
+            timeout: Command timeout in seconds
+            
+        Returns:
+            Dict with success, output, error, exit_code, and execution_time
+        """
+        start_time = time.time()
+        
         try:
-            print(f"Desktop[{self.desktop_type.upper()}]: Connecting to host {self.host_connection_id}")
+            print(f"Desktop[{self.desktop_type.upper()}]: Executing local command: '{command}'")
             
-            # Initialize Bash utilities with SSH connection
-            self.bash_utils = BashUtils()
+            # Use shell=True to execute bash commands with proper shell interpretation
+            process = subprocess.Popen(
+                command,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=working_dir
+            )
             
-            # Test SSH connection to host
-            if not self.bash_utils.test_connection(self.host_ip, self.host_port, self.host_user):
-                print(f"Desktop[{self.desktop_type.upper()}]: Failed to connect to host {self.host_connection_id}")
-                self.disconnect()
-                return False
+            # Wait for command completion with timeout
+            try:
+                stdout, stderr = process.communicate(timeout=timeout)
+                exit_code = process.returncode
+            except subprocess.TimeoutExpired:
+                process.kill()
+                stdout, stderr = process.communicate()
+                exit_code = -1
+                stderr = f"Command timed out after {timeout} seconds\n{stderr}"
+            
+            execution_time = int((time.time() - start_time) * 1000)  # Convert to milliseconds
+            success = exit_code == 0
+            
+            return {
+                'success': success,
+                'output': stdout or '',
+                'error': stderr or '',
+                'exit_code': exit_code,
+                'execution_time': execution_time
+            }
+            
+        except Exception as e:
+            execution_time = int((time.time() - start_time) * 1000)
+            return {
+                'success': False,
+                'output': '',
+                'error': f"Local command execution error: {e}",
+                'exit_code': -1,
+                'execution_time': execution_time
+            }
+    
+    def connect(self) -> bool:
+        """Connect to host machine (local execution, no SSH needed)."""
+        try:
+            print(f"Desktop[{self.desktop_type.upper()}]: Initializing local bash execution")
+            
+            # Check if this is localhost - if so, use local execution
+            is_localhost = self.host_ip in ['127.0.0.1', 'localhost'] or self.host_ip == 'localhost'
+            
+            if is_localhost:
+                print(f"Desktop[{self.desktop_type.upper()}]: Using local command execution (no SSH)")
+                self.bash_utils = None  # Don't need SSH for local execution
+            else:
+                print(f"Desktop[{self.desktop_type.upper()}]: Using SSH connection to {self.host_connection_id}")
+                # Initialize Bash utilities with SSH connection for remote hosts
+                self.bash_utils = BashUtils()
                 
-            print(f"Desktop[{self.desktop_type.upper()}]: Successfully connected to host {self.host_connection_id}")
-            
-            # Get host system information
-            system_info = self.bash_utils.get_system_info(self.host_ip, self.host_port, self.host_user)
-            if system_info:
-                print(f"Desktop[{self.desktop_type.upper()}]: Host system: {system_info.get('os_name', 'Unknown')} {system_info.get('os_version', '')}")
+                # Test SSH connection to remote host
+                if not self.bash_utils.test_connection(self.host_ip, self.host_port, self.host_user):
+                    print(f"Desktop[{self.desktop_type.upper()}]: Failed to connect to host {self.host_connection_id}")
+                    self.disconnect()
+                    return False
+                    
+                print(f"Desktop[{self.desktop_type.upper()}]: Successfully connected to host {self.host_connection_id}")
+                
+                # Get host system information
+                system_info = self.bash_utils.get_system_info(self.host_ip, self.host_port, self.host_user)
+                if system_info:
+                    print(f"Desktop[{self.desktop_type.upper()}]: Host system: {system_info.get('os_name', 'Unknown')} {system_info.get('os_version', '')}")
             
             self.is_connected = True
             return True
@@ -115,7 +181,7 @@ class BashDesktopController(DesktopControllerInterface):
         Returns:
             Dict with success, output, error, exit_code, and execution_time
         """
-        if not self.is_connected or not self.bash_utils:
+        if not self.is_connected:
             print(f"Desktop[{self.desktop_type.upper()}]: ERROR - Not connected to host")
             return {
                 'success': False,
@@ -128,14 +194,19 @@ class BashDesktopController(DesktopControllerInterface):
         try:
             print(f"Desktop[{self.desktop_type.upper()}]: Executing bash command: '{command}'")
             
-            result = self.bash_utils.execute_command(
-                self.host_ip, 
-                self.host_port, 
-                self.host_user,
-                command,
-                working_dir=working_dir,
-                timeout=timeout
-            )
+            # Use local execution if bash_utils is None (localhost)
+            if self.bash_utils is None:
+                result = self._execute_local_command(command, working_dir=working_dir, timeout=timeout)
+            else:
+                # Use SSH execution for remote hosts
+                result = self.bash_utils.execute_command(
+                    self.host_ip, 
+                    self.host_port, 
+                    self.host_user,
+                    command,
+                    working_dir=working_dir,
+                    timeout=timeout
+                )
             
             # Store last command results
             self.last_command_output = result.get('output', '')
@@ -218,7 +289,7 @@ class BashDesktopController(DesktopControllerInterface):
         Returns:
             Dict with success, content, and error
         """
-        if not self.is_connected or not self.bash_utils:
+        if not self.is_connected:
             return {
                 'success': False,
                 'content': '',
@@ -228,12 +299,30 @@ class BashDesktopController(DesktopControllerInterface):
         try:
             print(f"Desktop[{self.desktop_type.upper()}]: Reading file: '{file_path}'")
             
-            result = self.bash_utils.get_file_content(
-                self.host_ip, 
-                self.host_port, 
-                self.host_user,
-                file_path
-            )
+            # Use local file reading if bash_utils is None (localhost)
+            if self.bash_utils is None:
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    result = {
+                        'success': True,
+                        'content': content,
+                        'error': ''
+                    }
+                except Exception as e:
+                    result = {
+                        'success': False,
+                        'content': '',
+                        'error': f"Local file read error: {e}"
+                    }
+            else:
+                # Use SSH for remote hosts
+                result = self.bash_utils.get_file_content(
+                    self.host_ip, 
+                    self.host_port, 
+                    self.host_user,
+                    file_path
+                )
             
             if result.get('success'):
                 print(f"Desktop[{self.desktop_type.upper()}]: File read successfully ({len(result.get('content', ''))} bytes)")
@@ -262,7 +351,7 @@ class BashDesktopController(DesktopControllerInterface):
         Returns:
             Dict with success and error
         """
-        if not self.is_connected or not self.bash_utils:
+        if not self.is_connected:
             return {
                 'success': False,
                 'error': 'Not connected to host'
@@ -271,13 +360,31 @@ class BashDesktopController(DesktopControllerInterface):
         try:
             print(f"Desktop[{self.desktop_type.upper()}]: Writing file: '{file_path}' ({len(content)} bytes)")
             
-            result = self.bash_utils.write_file_content(
-                self.host_ip, 
-                self.host_port, 
-                self.host_user,
-                file_path,
-                content
-            )
+            # Use local file writing if bash_utils is None (localhost)
+            if self.bash_utils is None:
+                try:
+                    # Ensure directory exists
+                    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                    with open(file_path, 'w', encoding='utf-8') as f:
+                        f.write(content)
+                    result = {
+                        'success': True,
+                        'error': ''
+                    }
+                except Exception as e:
+                    result = {
+                        'success': False,
+                        'error': f"Local file write error: {e}"
+                    }
+            else:
+                # Use SSH for remote hosts
+                result = self.bash_utils.write_file_content(
+                    self.host_ip, 
+                    self.host_port, 
+                    self.host_user,
+                    file_path,
+                    content
+                )
             
             if result.get('success'):
                 print(f"Desktop[{self.desktop_type.upper()}]: File written successfully")
@@ -295,19 +402,28 @@ class BashDesktopController(DesktopControllerInterface):
             }
         
     def get_status(self) -> Dict[str, Any]:
-        """Get controller status by checking SSH connectivity."""
+        """Get controller status by checking connectivity."""
         if not self.host_ip:
             return {'success': False, 'error': 'No host IP provided'}
             
         try:
-            # Test SSH connection
-            if self.bash_utils and self.bash_utils.test_connection(self.host_ip, self.host_port, self.host_user):
-                return {'success': True, 'host': self.host_connection_id}
+            # Check local execution if bash_utils is None (localhost)
+            if self.bash_utils is None:
+                # For localhost, test with a simple command
+                result = self._execute_local_command('echo "status_test"')
+                if result.get('success') and 'status_test' in result.get('output', ''):
+                    return {'success': True, 'host': self.host_connection_id, 'mode': 'local'}
+                else:
+                    return {'success': False, 'error': 'Local command execution failed'}
             else:
-                return {'success': False, 'error': f'SSH connection failed to {self.host_connection_id}'}
+                # Test SSH connection for remote hosts
+                if self.bash_utils.test_connection(self.host_ip, self.host_port, self.host_user):
+                    return {'success': True, 'host': self.host_connection_id, 'mode': 'ssh'}
+                else:
+                    return {'success': False, 'error': f'SSH connection failed to {self.host_connection_id}'}
             
         except Exception as e:
-            return {'success': False, 'error': f'Failed to check SSH status: {str(e)}'}
+            return {'success': False, 'error': f'Failed to check status: {str(e)}'}
     
     def get_available_actions(self) -> Dict[str, Any]:
         """Get available actions for this bash desktop controller."""
