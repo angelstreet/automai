@@ -50,14 +50,14 @@ class PlaywrightWebController(WebControllerInterface):
         try:
             print(f"Web[{self.web_type.upper()}]: Preparing Playwright configuration")
             
-            # Import Playwright (assume it's installed)
+            # Import Playwright
             try:
                 from playwright.sync_api import sync_playwright
             except ImportError:
                 print(f"Web[{self.web_type.upper()}]: ERROR - Playwright not installed")
                 return False
             
-            # Start Playwright (just the library, not the browser)
+            # Start Playwright using proper context manager pattern
             self.playwright = sync_playwright().start()
             
             self.is_connected = True
@@ -105,8 +105,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'success': True,
                 'error': 'Browser already open',
                 'execution_time': 0,
-                'connected': True,
-                'browser_path': None # No custom browser path
+                'connected': True
             }
         
         try:
@@ -114,12 +113,8 @@ class PlaywrightWebController(WebControllerInterface):
             
             start_time = time.time()
             
-            # Launch browser (non-headless for VNC visibility)
-            self.browser = self.playwright.chromium.launch(
-                headless=False
-            )
-            
-            # Create new page
+            # Launch browser using Playwright's built-in Chromium (like the example)
+            self.browser = self.playwright.chromium.launch(headless=False)
             self.page = self.browser.new_page()
             
             # Set viewport for consistent behavior
@@ -132,7 +127,6 @@ class PlaywrightWebController(WebControllerInterface):
                 'success': True,
                 'error': '',
                 'execution_time': execution_time,
-                'browser_path': None,
                 'connected': True
             }
             
