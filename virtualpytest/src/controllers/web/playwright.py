@@ -56,7 +56,16 @@ class PlaywrightWebController(WebControllerInterface):
         async with self._initialization_lock:
             if self._initialized:
                 return True
-            return await self.connect()
+            
+            try:
+                # Add timeout to prevent hanging
+                return await asyncio.wait_for(self.connect(), timeout=30.0)
+            except asyncio.TimeoutError:
+                print(f"Web[{self.web_type.upper()}]: Initialization timeout after 30 seconds")
+                return False
+            except Exception as e:
+                print(f"Web[{self.web_type.upper()}]: Initialization failed: {e}")
+                return False
     
     async def connect(self) -> bool:
         """Connect and prepare Playwright configuration (don't open browser yet)."""

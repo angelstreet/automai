@@ -60,8 +60,9 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
 
   // Update browser open state based on session and page info
   useEffect(() => {
-    // Browser is considered open if we have session and either URL or title
-    const browserOpen = session.connected && Boolean(currentUrl || pageTitle);
+    // Browser is only considered open if we have an active page with content
+    // Since we don't auto-open anymore, we need explicit browser open confirmation
+    const browserOpen = session.connected && Boolean(currentUrl && pageTitle);
     setIsBrowserOpen(browserOpen);
   }, [session.connected, currentUrl, pageTitle]);
 

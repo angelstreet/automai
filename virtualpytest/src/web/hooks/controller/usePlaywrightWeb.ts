@@ -124,25 +124,6 @@ export const usePlaywrightWeb = (host: Host) => {
           });
 
           console.log('[@hook:usePlaywrightWeb] Connection established successfully');
-
-          // Auto-open browser in debug mode
-          console.log('[@hook:usePlaywrightWeb] Auto-opening browser for Playwright connection');
-          const openResult = await executeWebCommand('open_browser');
-
-          if (openResult.success) {
-            console.log('[@hook:usePlaywrightWeb] Browser opened successfully in debug mode');
-            // Get initial page info
-            const pageInfo = await executeWebCommand('get_page_info');
-            if (pageInfo.success) {
-              setCurrentUrl(pageInfo.url || '');
-              setPageTitle(pageInfo.title || '');
-            }
-          } else {
-            console.error(
-              '[@hook:usePlaywrightWeb] Failed to auto-open browser:',
-              openResult.error,
-            );
-          }
         } else {
           console.error('[@hook:usePlaywrightWeb] Connection failed:', result.error);
         }
@@ -152,7 +133,7 @@ export const usePlaywrightWeb = (host: Host) => {
     };
 
     initializeConnection();
-  }, [host, getStatus, executeWebCommand]);
+  }, [host, getStatus]);
 
   // Execute command with JSON parsing and terminal output
   const executeCommand = useCallback(
