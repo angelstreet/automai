@@ -499,9 +499,11 @@ def buildStreamUrlForDevice(host_info: dict, device_id: str) -> str:
     # Check if this is a VNC device
     device = get_device_by_id(host_info, device_id)
     if device and device.get('device_model') == 'host_vnc':
-        # For VNC devices, return the raw stream URL (no .m3u8 suffix)
-        stream_path = _get_device_stream_path(host_info, device_id)
-        return buildHostUrl(host_info, f'host{stream_path}')
+        # For VNC devices, return the video_stream_path directly (it's already a complete URL)
+        vnc_stream_url = device.get('video_stream_path')
+        if not vnc_stream_url:
+            raise ValueError(f"VNC device {device_id} has no video_stream_path configured")
+        return vnc_stream_url
     else:
         # For regular devices, return HLS stream URL
         return buildStreamUrl(host_info, device_id)
