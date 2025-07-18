@@ -3,6 +3,7 @@ import {
   Tv as TvIcon,
   Analytics as AnalyticsIcon,
   SmartToy as AIIcon,
+  Language as WebIcon,
 } from '@mui/icons-material';
 import { Box, IconButton, Typography, Button, CircularProgress, TextField } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
@@ -18,6 +19,7 @@ import { getZIndex } from '../../utils/zIndexUtils';
 import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
 import { DesktopPanel } from '../controller/desktop/DesktopPanel';
 import { RemotePanel } from '../controller/remote/RemotePanel';
+import { WebPanel } from '../controller/web/WebPanel';
 import { MonitoringPlayer } from '../monitoring/MonitoringPlayer';
 
 interface RecHostStreamModalProps {
@@ -60,6 +62,7 @@ const RecHostStreamModalContent: React.FC<{
 
   // Local state
   const [showRemote, setShowRemote] = useState<boolean>(showRemoteByDefault);
+  const [showWeb, setShowWeb] = useState<boolean>(false);
   const [monitoringMode, setMonitoringMode] = useState<boolean>(false);
   const [aiAgentMode, setAiAgentMode] = useState<boolean>(false);
 
@@ -158,6 +161,20 @@ const RecHostStreamModalContent: React.FC<{
     );
   }, [isControlActive, showRemote, showWarning, isDesktopDevice]);
 
+  // Handle web panel toggle
+  const handleToggleWeb = useCallback(() => {
+    if (!isControlActive) {
+      showWarning('Please take control of the device first');
+      return;
+    }
+
+    setShowWeb((prev) => {
+      const newWeb = !prev;
+      console.log(`[@component:RecHostStreamModal] Web panel toggled: ${newWeb}`);
+      return newWeb;
+    });
+  }, [isControlActive, showWarning]);
+
   // Handle monitoring mode toggle
   const handleToggleMonitoring = useCallback(() => {
     if (!isControlActive) {
@@ -218,6 +235,7 @@ const RecHostStreamModalContent: React.FC<{
   // Stable onReleaseControl callback to prevent re-renders
   const handleReleaseControl = useCallback(() => {
     setShowRemote(false);
+    setShowWeb(false);
     // Control release handled by useDeviceControl
   }, []);
 
@@ -227,6 +245,7 @@ const RecHostStreamModalContent: React.FC<{
 
     // Reset state (useDeviceControl handles cleanup automatically)
     setShowRemote(false);
+    setShowWeb(false);
     setMonitoringMode(false);
     setAiAgentMode(false);
     onClose();
@@ -389,6 +408,32 @@ const RecHostStreamModalContent: React.FC<{
               {aiAgentMode ? 'Stop AI Agent' : 'AI Agent'}
             </Button>
 
+            {/* Web Panel Toggle Button */}
+            {isDesktopDevice && (
+              <Button
+                variant={showWeb ? 'contained' : 'outlined'}
+                size="small"
+                onClick={handleToggleWeb}
+                disabled={!isControlActive}
+                startIcon={<WebIcon />}
+                color={showWeb ? 'secondary' : 'primary'}
+                sx={{
+                  fontSize: '0.75rem',
+                  minWidth: 100,
+                  color: showWeb ? 'white' : 'inherit',
+                }}
+                title={
+                  !isControlActive
+                    ? 'Take control first to use web automation'
+                    : showWeb
+                      ? 'Hide Web Panel'
+                      : 'Show Web Panel'
+                }
+              >
+                {showWeb ? 'Hide Web' : 'Web Panel'}
+              </Button>
+            )}
+
             {/* Remote/Terminal Toggle Button */}
             <Button
               variant="outlined"
@@ -437,7 +482,13 @@ const RecHostStreamModalContent: React.FC<{
           {/* Stream Viewer / Monitoring Player */}
           <Box
             sx={{
-              width: showRemote && isControlActive ? '75%' : '100%',
+              width: (() => {
+                if (!isControlActive) return '100%';
+                const panelCount = (showRemote ? 1 : 0) + (showWeb ? 1 : 0);
+                if (panelCount === 0) return '100%';
+                if (panelCount === 1) return '75%';
+                return '50%'; // Two panels shown
+              })(),
               position: 'relative',
               overflow: 'hidden',
               display: 'flex',
@@ -455,17 +506,50 @@ const RecHostStreamModalContent: React.FC<{
             ) : streamUrl ? (
               // Check if this is a VNC device - use iframe instead of HLS player
               device?.device_id === 'host_vnc' ? (
-                <iframe
-                  src={streamUrl}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    border: 'none',
-                    backgroundColor: '#000',
-                  }}
-                  title="VNC Desktop Stream"
-                  allow="fullscreen"
-                />
+                (() => {
+                  const panelCount = (showRemote ? 1 : 0) + (showWeb ? 1 : 0);
+                  const hasPanel = panelCount > 0 && isControlActive;
+
+                  return hasPanel ? (
+                    // When panel is shown, use scaling approach like RecHostPreview to prevent cropping
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'black',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <iframe
+                        src={streamUrl}
+                        style={{
+                          width: '200%', // Make iframe larger to contain full desktop
+                          height: '200%', // Make iframe larger to contain full desktop
+                          border: 'none',
+                          backgroundColor: '#000',
+                          transform: 'scale(0.5)', // Scale down to 50% to fit
+                          transformOrigin: 'top left',
+                        }}
+                        title="VNC Desktop Stream"
+                        allow="fullscreen"
+                      />
+                    </Box>
+                  ) : (
+                    // When no panel, use full size
+                    <iframe
+                      src={streamUrl}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                        backgroundColor: '#000',
+                      }}
+                      title="VNC Desktop Stream"
+                      allow="fullscreen"
+                    />
+                  );
+                })()
               ) : (
                 <HLSVideoPlayer
                   streamUrl={streamUrl}
@@ -510,7 +594,10 @@ const RecHostStreamModalContent: React.FC<{
           {showRemote && isControlActive && (
             <Box
               sx={{
-                width: '25%',
+                width: (() => {
+                  const panelCount = (showRemote ? 1 : 0) + (showWeb ? 1 : 0);
+                  return panelCount === 2 ? '25%' : '25%'; // 25% each when both panels shown
+                })(),
                 backgroundColor: 'background.default',
                 borderLeft: '1px solid',
                 borderColor: 'divider',
@@ -544,6 +631,35 @@ const RecHostStreamModalContent: React.FC<{
                   streamContainerDimensions={streamContainerDimensions}
                 />
               )}
+            </Box>
+          )}
+
+          {/* Web Control Panel */}
+          {showWeb && isControlActive && isDesktopDevice && (
+            <Box
+              sx={{
+                width: (() => {
+                  const panelCount = (showRemote ? 1 : 0) + (showWeb ? 1 : 0);
+                  return panelCount === 2 ? '25%' : '25%'; // 25% each when both panels shown
+                })(),
+                backgroundColor: 'background.default',
+                borderLeft: '1px solid',
+                borderColor: 'divider',
+                overflow: 'auto',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+              }}
+            >
+              <WebPanel
+                host={host}
+                deviceId={device?.device_id || 'device1'}
+                deviceModel={device?.device_model || 'host_vnc'}
+                isConnected={isControlActive}
+                onReleaseControl={handleReleaseControl}
+                initialCollapsed={false}
+                streamContainerDimensions={streamContainerDimensions}
+              />
             </Box>
           )}
 
