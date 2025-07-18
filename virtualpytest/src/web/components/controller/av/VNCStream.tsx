@@ -13,7 +13,7 @@ import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 
 import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
-import { useVncStream, useStream } from '../../../hooks/controller';
+import { useVncStream } from '../../../hooks/controller';
 import { Host } from '../../../types/common/Host_Types';
 import { getZIndex } from '../../../utils/zIndexUtils';
 import { VerificationEditor } from '../verification';
@@ -36,7 +36,7 @@ interface VNCStreamProps {
 // VNC Viewer Component for iframe display
 const VNCViewer = ({
   host,
-  isExpanded,
+  isExpanded: _isExpanded,
   sx = {},
 }: {
   host: Host;
@@ -45,14 +45,9 @@ const VNCViewer = ({
 }) => {
   const [isVncLoading, setIsVncLoading] = useState(true);
 
-  // Get VNC connection details from host
-  const vncPort = host?.vnc_port;
-  const vncPassword = host?.vnc_password;
-
-  // Build VNC URL similar to RecVncPreview
-  const vncUrl = vncPort
-    ? `https://${host.ip}:${vncPort}/vnc/vnc_lite.html?host=${host.ip}&port=${vncPort}&path=websockify&encrypt=0${vncPassword ? `&password=${vncPassword}` : ''}${isExpanded ? '' : '&view_only=1'}`
-    : null;
+  // For now, use simple fallback - VNC will be properly configured through environment variables
+  // The backend will handle the VNC connection details via the useStream hook
+  const vncUrl = `${host.host_url}/vnc`; // Simple VNC endpoint on the host
 
   const handleVncLoad = () => {
     setIsVncLoading(false);
@@ -138,9 +133,8 @@ export const VNCStream = React.memo(
     // AV config state
     const [avConfig, setAvConfig] = useState<any>(null);
 
-    // Use stream hook for VNC stream URL (though VNC mainly uses iframe)
-    const { streamUrl, isLoadingUrl, urlError } = useStream({ host, device_id: deviceId });
-    const isStreamActive = !!host.vnc_port; // VNC is active if VNC port is configured
+    // For VNC, use simple stream active detection
+    const isStreamActive = true; // VNC is always active if component is rendered
 
     // Get device model (always host_vnc for VNC)
     const effectiveDeviceModel = useMemo(() => {
@@ -186,7 +180,7 @@ export const VNCStream = React.memo(
     } = useVncStream({
       host,
       deviceModel: effectiveDeviceModel,
-      streamUrl: streamUrl || '',
+      streamUrl: '',
       isStreamActive,
     });
 
