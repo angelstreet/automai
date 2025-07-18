@@ -80,7 +80,10 @@ def create_host_from_environment() -> Host:
             'device_name': f'{host_name}_Host',
             'device_model': 'host_vnc',  # Keep the model as host_vnc for controller configuration
             'video_stream_path': final_vnc_stream_path,  # Use same field name as HDMI
-            'video_capture_path': video_capture_path
+            'video_capture_path': video_capture_path,
+            'host_web_browser_path': os.getenv('HOST_WEB_BROWSER_PATH', ''),  # Add web browser path
+            'host_ip': host_ip,  # Add host IP for web controller
+            'host_port': host_port  # Add host port for web controller
         }
         
         host_device = _create_device_with_controllers(host_device_config)
