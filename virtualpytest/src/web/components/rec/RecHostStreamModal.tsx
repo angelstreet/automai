@@ -16,6 +16,7 @@ import { useToast } from '../../hooks/useToast';
 import { Host, Device } from '../../types/common/Host_Types';
 import { getZIndex } from '../../utils/zIndexUtils';
 import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
+import { DesktopPanel } from '../controller/desktop/DesktopPanel';
 import { RemotePanel } from '../controller/remote/RemotePanel';
 import { MonitoringPlayer } from '../monitoring/MonitoringPlayer';
 
@@ -139,7 +140,12 @@ const RecHostStreamModalContent: React.FC<{
     };
   }, []);
 
-  // Handle remote toggle
+  // Check if this is a desktop device (host_vnc)
+  const isDesktopDevice = useMemo(() => {
+    return device?.device_id === 'host_vnc' || device?.device_model === 'host_vnc';
+  }, [device?.device_id, device?.device_model]);
+
+  // Handle remote/terminal toggle
   const handleToggleRemote = useCallback(() => {
     if (!isControlActive) {
       showWarning('Please take control of the device first');
@@ -147,8 +153,10 @@ const RecHostStreamModalContent: React.FC<{
     }
 
     setShowRemote((prev) => !prev);
-    console.log(`[@component:RecHostStreamModal] Remote panel toggled: ${!showRemote}`);
-  }, [isControlActive, showRemote, showWarning]);
+    console.log(
+      `[@component:RecHostStreamModal] ${isDesktopDevice ? 'Terminal' : 'Remote'} panel toggled: ${!showRemote}`,
+    );
+  }, [isControlActive, showRemote, showWarning, isDesktopDevice]);
 
   // Handle monitoring mode toggle
   const handleToggleMonitoring = useCallback(() => {
@@ -381,7 +389,7 @@ const RecHostStreamModalContent: React.FC<{
               {aiAgentMode ? 'Stop AI Agent' : 'AI Agent'}
             </Button>
 
-            {/* Remote Toggle Button */}
+            {/* Remote/Terminal Toggle Button */}
             <Button
               variant="outlined"
               size="small"
@@ -394,13 +402,15 @@ const RecHostStreamModalContent: React.FC<{
               }}
               title={
                 !isControlActive
-                  ? 'Take control first to use remote'
+                  ? `Take control first to use ${isDesktopDevice ? 'terminal' : 'remote'}`
                   : showRemote
-                    ? 'Hide Remote'
-                    : 'Show Remote'
+                    ? `Hide ${isDesktopDevice ? 'Terminal' : 'Remote'}`
+                    : `Show ${isDesktopDevice ? 'Terminal' : 'Remote'}`
               }
             >
-              {showRemote ? 'Hide Remote' : 'Show Remote'}
+              {showRemote
+                ? `Hide ${isDesktopDevice ? 'Terminal' : 'Remote'}`
+                : `Show ${isDesktopDevice ? 'Terminal' : 'Remote'}`}
             </Button>
 
             {/* Close Button */}
@@ -496,7 +506,7 @@ const RecHostStreamModalContent: React.FC<{
             )}
           </Box>
 
-          {/* Remote Control Panel */}
+          {/* Remote Control Panel or Desktop Terminal */}
           {showRemote && isControlActive && (
             <Box
               sx={{
@@ -510,18 +520,30 @@ const RecHostStreamModalContent: React.FC<{
                 height: '100%',
               }}
             >
-              <RemotePanel
-                host={host}
-                deviceId={device?.device_id || 'device1'}
-                deviceModel={device?.device_model || 'unknown'}
-                isConnected={isControlActive}
-                onReleaseControl={handleReleaseControl}
-                initialCollapsed={false}
-                deviceResolution={stableDeviceResolution}
-                streamCollapsed={false}
-                streamMinimized={false}
-                streamContainerDimensions={streamContainerDimensions}
-              />
+              {isDesktopDevice ? (
+                <DesktopPanel
+                  host={host}
+                  deviceId={device?.device_id || 'device1'}
+                  deviceModel={device?.device_model || 'host_vnc'}
+                  isConnected={isControlActive}
+                  onReleaseControl={handleReleaseControl}
+                  initialCollapsed={false}
+                  streamContainerDimensions={streamContainerDimensions}
+                />
+              ) : (
+                <RemotePanel
+                  host={host}
+                  deviceId={device?.device_id || 'device1'}
+                  deviceModel={device?.device_model || 'unknown'}
+                  isConnected={isControlActive}
+                  onReleaseControl={handleReleaseControl}
+                  initialCollapsed={false}
+                  deviceResolution={stableDeviceResolution}
+                  streamCollapsed={false}
+                  streamMinimized={false}
+                  streamContainerDimensions={streamContainerDimensions}
+                />
+              )}
             </Box>
           )}
 
