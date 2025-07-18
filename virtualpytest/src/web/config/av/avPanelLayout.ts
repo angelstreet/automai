@@ -4,7 +4,9 @@
  */
 
 import { getZIndex } from '../../utils/zIndexUtils';
+
 import { hdmiStreamConfig, hdmiStreamMobileConfig } from './hdmiStream';
+import { vncStreamConfig } from './vncStream';
 
 // AV panel layout configuration from device config
 export interface ConfigurableAVPanelLayout {
@@ -150,6 +152,10 @@ export const loadAVConfig = async (streamType: string, deviceModel?: string): Pr
           console.log(`[@config:avPanelLayout] Using regular HDMI config for ${deviceModel}`);
           return hdmiStreamConfig;
         }
+      case 'vnc_stream':
+        // VNC is always landscape (desktop/host screens) - no mobile variant needed
+        console.log(`[@config:avPanelLayout] Using VNC config for ${deviceModel || 'host_vnc'}`);
+        return vncStreamConfig;
       default:
         console.warn(`[@config:avPanelLayout] No config found for stream type: ${streamType}`);
         return null;

@@ -12,6 +12,7 @@ from ..controllers.controller_config_factory import create_controller_configs_fr
 
 # Import controller classes
 from ..controllers.audiovideo.hdmi_stream import HDMIStreamController
+from ..controllers.audiovideo.vnc_stream import VNCStreamController
 from ..controllers.remote.android_mobile import AndroidMobileRemoteController
 from ..controllers.remote.android_tv import AndroidTVRemoteController
 from ..controllers.remote.appium_remote import AppiumRemoteController
@@ -54,6 +55,31 @@ def create_host_from_environment() -> Host:
     
     # Create host with host_url parameter
     host = Host(host_ip, host_port, host_name, host_url)
+    
+    # Check for host VNC configuration and create VNC controller if present
+    vnc_stream_path = os.getenv('HOST_VNC_STREAM_PATH')
+    vnc_capture_path = os.getenv('HOST_VNC_CAPTURE_PATH')
+    vnc_port = os.getenv('HOST_VNC_PORT')
+    
+    if vnc_stream_path:
+        print(f"[@controller_manager:create_host_from_environment] VNC configuration detected - creating host VNC controller")
+        print(f"[@controller_manager:create_host_from_environment]   VNC Stream Path: {vnc_stream_path}")
+        print(f"[@controller_manager:create_host_from_environment]   VNC Capture Path: {vnc_capture_path}")
+        print(f"[@controller_manager:create_host_from_environment]   VNC Port: {vnc_port}")
+        
+        # Create host VNC device (special device representing the host itself)
+        host_device_config = {
+            'device_id': 'host_vnc',
+            'device_name': f'{host_name}_VNC',
+            'device_model': 'host_vnc',  # Special model for host VNC
+            'vnc_stream_path': vnc_stream_path,
+            'vnc_capture_path': vnc_capture_path,
+            'vnc_port': vnc_port
+        }
+        
+        host_device = _create_device_with_controllers(host_device_config)
+        host.add_device(host_device)
+        print(f"[@controller_manager:create_host_from_environment] Added host VNC device: {host_device.device_id} ({host_device.device_name})")
     
     # Create devices from environment variables
     devices_config = _get_devices_config_from_environment()
@@ -169,6 +195,8 @@ def _create_controller_instance(controller_type: str, implementation: str, param
     if controller_type == 'av':
         if implementation == 'hdmi_stream':
             return HDMIStreamController(**params)
+        elif implementation == 'vnc_stream':
+            return VNCStreamController(**params)
     
     # Remote Controllers
     elif controller_type == 'remote':

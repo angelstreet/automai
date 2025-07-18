@@ -17,8 +17,9 @@ from .base_controller import (
     PowerControllerInterface
 )
 
-# Import mock implementations
+# Import AV implementations
 from .audiovideo.hdmi_stream import HDMIStreamController
+from .audiovideo.vnc_stream import VNCStreamController
 
 # Import real implementations
 from .remote.android_tv import AndroidTVRemoteController
@@ -52,6 +53,7 @@ CONTROLLER_REGISTRY = {
     },
     'av': {
         'hdmi_stream': HDMIStreamController, # HDMI stream URL controller
+        'vnc_stream': VNCStreamController,   # VNC stream URL controller
     },
     'ai': {
         'ai_agent': AIAgentController,       # AI task execution agent

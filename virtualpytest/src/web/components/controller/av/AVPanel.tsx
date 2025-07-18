@@ -3,6 +3,7 @@ import { Box, Alert } from '@mui/material';
 import { Host } from '../../../types/common/Host_Types';
 
 import { HDMIStream } from './HDMIStream';
+import { VNCStream } from './VNCStream';
 
 interface AVPanelProps {
   host: Host;
@@ -37,10 +38,19 @@ export function AVPanel({ host, onExpandedChange }: AVPanelProps) {
     switch (avType) {
       case 'hdmi_stream':
         return (
-          <HDMIStream 
-            host={host} 
+          <HDMIStream
+            host={host}
             onExpandedChange={onExpandedChange}
             deviceResolution={defaultDeviceResolution}
+          />
+        );
+      case 'vnc_stream':
+        return (
+          <VNCStream
+            host={host}
+            deviceId="host_vnc"
+            deviceModel="host_vnc"
+            onExpandedChange={onExpandedChange}
           />
         );
       default:

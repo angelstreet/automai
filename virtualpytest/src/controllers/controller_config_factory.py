@@ -34,12 +34,20 @@ DEVICE_CONTROLLER_MAP = {
         'power': [],
         'network': [],
         'ai': ['ai_agent']
+    },
+    'host_vnc': {
+        'av': ['vnc_stream'], 
+        'remote': [],
+        'power': [],
+        'network': [],
+        'ai': ['ai_agent']
     }
 }
 
 # Controller → Verification Capabilities
 CONTROLLER_VERIFICATION_MAP = {
     'hdmi_stream': ['image', 'text', 'video'],
+    'vnc_stream': ['image', 'text', 'video'],  # VNC supports same verification as HDMI
     'android_mobile': ['adb'],
     'android_tv': [],  # No verification for android_tv remote
     'appium': ['appium'],
@@ -142,6 +150,11 @@ def _get_av_params(implementation: str, device_config: dict) -> dict:
         return {
             'video_stream_path': device_config.get('video_stream_path', '/host/stream/capture1'),
             'video_capture_path': device_config.get('video_capture_path', '/var/www/html/stream/capture1')
+        }
+    elif implementation == 'vnc_stream':
+        return {
+            'vnc_stream_path': device_config.get('vnc_stream_path', '/host/vnc/stream'),
+            'vnc_capture_path': device_config.get('vnc_capture_path', '/var/www/html/vnc/stream')
         }
     return {}
 

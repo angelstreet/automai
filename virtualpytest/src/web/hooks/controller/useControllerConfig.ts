@@ -44,6 +44,14 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
       status: 'available',
       inputFields: [],
     },
+    {
+      id: 'vnc_stream',
+      name: 'VNC Stream',
+      description: '',
+      implementation: 'vnc_stream',
+      status: 'available',
+      inputFields: [],
+    },
   ],
   verification: [
     {
