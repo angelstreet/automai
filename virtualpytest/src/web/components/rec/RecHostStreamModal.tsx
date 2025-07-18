@@ -443,23 +443,38 @@ const RecHostStreamModalContent: React.FC<{
                 baseUrlPattern={baseUrlPatterns.get(`${host.host_name}-${device?.device_id}`)}
               />
             ) : streamUrl ? (
-              <HLSVideoPlayer
-                streamUrl={streamUrl}
-                isStreamActive={true}
-                isCapturing={false}
-                model={device?.device_model || 'unknown'}
-                layoutConfig={{
-                  minHeight: '300px',
-                  aspectRatio: isMobileModel ? '9/16' : '16/9',
-                  objectFit: 'contain', // Prevent cropping/truncation like in preview grid
-                  isMobileModel, // Use our mobile detection result
-                }}
-                isExpanded={false}
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                }}
-              />
+              // Check if this is a VNC device - use iframe instead of HLS player
+              device?.device_id === 'host_vnc' ? (
+                <iframe
+                  src={streamUrl}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    border: 'none',
+                    backgroundColor: '#000',
+                  }}
+                  title="VNC Desktop Stream"
+                  allow="fullscreen"
+                />
+              ) : (
+                <HLSVideoPlayer
+                  streamUrl={streamUrl}
+                  isStreamActive={true}
+                  isCapturing={false}
+                  model={device?.device_model || 'unknown'}
+                  layoutConfig={{
+                    minHeight: '300px',
+                    aspectRatio: isMobileModel ? '9/16' : '16/9',
+                    objectFit: 'contain', // Prevent cropping/truncation like in preview grid
+                    isMobileModel, // Use our mobile detection result
+                  }}
+                  isExpanded={false}
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                  }}
+                />
+              )
             ) : (
               <Box
                 sx={{
