@@ -145,30 +145,10 @@ export const WebPanel = React.memo(
       switch (deviceModel) {
         case 'host_vnc':
           // Playwright Web Terminal for host_vnc devices with web capability
-          return (
-            <PlaywrightWebTerminal
-              host={host}
-              deviceId={deviceId}
-              onDisconnectComplete={onReleaseControl}
-              isCollapsed={isCollapsed}
-              panelWidth={currentWidth}
-              panelHeight={currentHeight}
-              streamContainerDimensions={stableStreamContainerDimensions}
-            />
-          );
+          return <PlaywrightWebTerminal host={host} />;
         case 'host_web':
           // Legacy case - redirect to host_vnc behavior
-          return (
-            <PlaywrightWebTerminal
-              host={host}
-              deviceId={deviceId}
-              onDisconnectComplete={onReleaseControl}
-              isCollapsed={isCollapsed}
-              panelWidth={currentWidth}
-              panelHeight={currentHeight}
-              streamContainerDimensions={stableStreamContainerDimensions}
-            />
-          );
+          return <PlaywrightWebTerminal host={host} />;
         default:
           return (
             <Box

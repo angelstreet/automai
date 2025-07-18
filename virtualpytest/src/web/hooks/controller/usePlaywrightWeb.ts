@@ -5,7 +5,6 @@ import { Host } from '../../types/common/Host_Types';
 interface PlaywrightWebSession {
   connected: boolean;
   host: Host;
-  deviceId: string;
   connectionTime?: Date;
 }
 
@@ -18,12 +17,11 @@ interface WebCommandResult {
   execution_time?: number;
 }
 
-export const usePlaywrightWeb = (host: Host, deviceId: string) => {
+export const usePlaywrightWeb = (host: Host) => {
   // Session state
   const [session, setSession] = useState<PlaywrightWebSession>({
     connected: false,
     host,
-    deviceId,
   });
 
   // Terminal state for command output
@@ -113,7 +111,7 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
   useEffect(() => {
     const initializeConnection = async () => {
       try {
-        console.log('[@hook:usePlaywrightWeb] Initializing connection for', deviceId);
+        console.log('[@hook:usePlaywrightWeb] Initializing connection for', host.host_name);
 
         // Test connection by getting status
         const result = await getStatus();
@@ -122,7 +120,6 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
           setSession({
             connected: true,
             host,
-            deviceId,
             connectionTime: new Date(),
           });
 
@@ -136,7 +133,7 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
     };
 
     initializeConnection();
-  }, [host, deviceId, getStatus]);
+  }, [host, getStatus]);
 
   // Execute command with JSON parsing and terminal output
   const executeCommand = useCallback(
@@ -267,7 +264,6 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
       setSession({
         connected: false,
         host,
-        deviceId,
       });
 
       setTerminalOutput('');
@@ -280,7 +276,7 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
     } catch (error) {
       console.error('[@hook:usePlaywrightWeb] Disconnect error:', error);
     }
-  }, [host, deviceId]);
+  }, [host]);
 
   return {
     // State

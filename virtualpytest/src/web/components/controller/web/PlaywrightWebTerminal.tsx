@@ -22,14 +22,10 @@ import { Host } from '../../../types/common/Host_Types';
 
 interface PlaywrightWebTerminalProps {
   host: Host;
-  deviceId: string;
-  onDisconnectComplete?: () => void;
 }
 
 export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   host,
-  deviceId,
-  onDisconnectComplete,
 }: PlaywrightWebTerminalProps) {
   const {
     isExecuting,
@@ -41,7 +37,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     navigateToUrl,
     clickElement,
     executeWebCommand,
-  } = usePlaywrightWeb(host, deviceId);
+  } = usePlaywrightWeb(host); // Web automation operates directly on the host
 
   // Local state for individual action inputs
   const [navigateUrl, setNavigateUrl] = useState('');
@@ -81,9 +77,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const handleCloseBrowser = async () => {
     await handleDisconnect();
     setIsBrowserOpen(false);
-    if (onDisconnectComplete) {
-      onDisconnectComplete();
-    }
+    // Don't call onDisconnectComplete here - that's for closing the entire panel, not just the browser
   };
 
   // Handle navigate action
