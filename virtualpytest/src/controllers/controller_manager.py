@@ -57,27 +57,21 @@ def create_host_from_environment() -> Host:
     host = Host(host_ip, host_port, host_name, host_url)
     
     # Check for host VNC configuration and create VNC controller if present
-    vnc_ip = os.getenv('HOST_VNC_IP')
-    vnc_port = os.getenv('HOST_VNC_PORT')
-    vnc_password = os.getenv('HOST_VNC_PASSWORD')  # Optional
-    vnc_capture_path = os.getenv('HOST_VNC_CAPTURE_PATH')
+    vnc_stream_path = os.getenv('HOST_VNC_STREAM_PATH')
+    video_capture_path = os.getenv('HOST_VIDEO_CAPTURE_PATH')
     
-    if vnc_ip and vnc_port and vnc_capture_path:
+    if vnc_stream_path and video_capture_path:
         print(f"[@controller_manager:create_host_from_environment] VNC configuration detected - creating host VNC controller")
-        print(f"[@controller_manager:create_host_from_environment]   VNC IP: {vnc_ip}")
-        print(f"[@controller_manager:create_host_from_environment]   VNC Port: {vnc_port}")
-        print(f"[@controller_manager:create_host_from_environment]   VNC Password: {'***' if vnc_password else 'None'}")
-        print(f"[@controller_manager:create_host_from_environment]   VNC Capture Path: {vnc_capture_path}")
+        print(f"[@controller_manager:create_host_from_environment]   VNC Stream Path: {vnc_stream_path}")
+        print(f"[@controller_manager:create_host_from_environment]   Video Capture Path: {video_capture_path}")
         
         # Create host VNC device (special device representing the host itself)
         host_device_config = {
             'device_id': 'host_vnc',
             'device_name': f'{host_name}_VNC',
             'device_model': 'host_vnc',  # Special model for host VNC
-            'vnc_ip': vnc_ip,
-            'vnc_port': vnc_port,
-            'vnc_password': vnc_password,
-            'video_capture_path': vnc_capture_path
+            'vnc_stream_path': vnc_stream_path,
+            'video_capture_path': video_capture_path
         }
         
         host_device = _create_device_with_controllers(host_device_config)

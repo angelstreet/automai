@@ -352,9 +352,17 @@ def _get_device_stream_path(host_info: dict, device_id: str) -> str:
     # Find the specific device
     for device in devices:
         if device.get('device_id') == device_id:
-            stream_path = device.get('video_stream_path')
-            if not stream_path:
-                raise ValueError(f"Device {device_id} has no video_stream_path configured (DEVICE{device_id.replace('device', '')}_VIDEO_STREAM_PATH missing)")
+            # Handle both VNC and regular devices consistently
+            if device.get('device_model') == 'host_vnc':
+                # VNC devices use vnc_stream_path
+                stream_path = device.get('vnc_stream_path')
+                if not stream_path:
+                    raise ValueError(f"VNC device {device_id} has no vnc_stream_path configured (HOST_VNC_STREAM_PATH missing)")
+            else:
+                # Regular devices use video_stream_path
+                stream_path = device.get('video_stream_path')
+                if not stream_path:
+                    raise ValueError(f"Device {device_id} has no video_stream_path configured (DEVICE{device_id.replace('device', '')}_VIDEO_STREAM_PATH missing)")
             
             # Remove '/host' prefix if present and ensure starts with /
             clean_path = stream_path.replace('/host', '').lstrip('/')
@@ -393,16 +401,35 @@ def _get_device_capture_path(host_info: dict, device_id: str) -> str:
     # Find the specific device
     for device in devices:
         if device.get('device_id') == device_id:
-            stream_path = device.get('video_stream_path')
-            if not stream_path:
-                raise ValueError(f"Device {device_id} has no video_stream_path configured (DEVICE{device_id.replace('device', '')}_VIDEO_STREAM_PATH missing)")
-            
-            # Remove '/host' prefix if present and ensure starts with /
-            clean_path = stream_path.replace('/host', '').lstrip('/')
-            url_path = f'/{clean_path}/captures'
-            
-            print(f"[@build_url_utils:_get_device_capture_path] Using device {device_id} capture path: {url_path}")
-            return url_path
+            # Special handling for VNC devices - they use video_capture_path directly
+            if device.get('device_model') == 'host_vnc':
+                capture_path = device.get('video_capture_path')
+                if not capture_path:
+                    raise ValueError(f"VNC device {device_id} has no video_capture_path configured")
+                
+                # Convert capture path to URL path format
+                url_path = capture_path.replace('/var/www/html', '')
+                if not url_path.startswith('/'):
+                    url_path = f'/{url_path}'
+                
+                # Add /captures suffix if not already present
+                if not url_path.endswith('/captures'):
+                    url_path = f'{url_path}/captures'
+                
+                print(f"[@build_url_utils:_get_device_capture_path] Using VNC device {device_id} capture path: {url_path}")
+                return url_path
+            else:
+                # Regular devices derive capture path from video_stream_path
+                stream_path = device.get('video_stream_path')
+                if not stream_path:
+                    raise ValueError(f"Device {device_id} has no video_stream_path configured (DEVICE{device_id.replace('device', '')}_VIDEO_STREAM_PATH missing)")
+                
+                # Remove '/host' prefix if present and ensure starts with /
+                clean_path = stream_path.replace('/host', '').lstrip('/')
+                url_path = f'/{clean_path}/captures'
+                
+                print(f"[@build_url_utils:_get_device_capture_path] Using device {device_id} capture path: {url_path}")
+                return url_path
     
     raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")
 
