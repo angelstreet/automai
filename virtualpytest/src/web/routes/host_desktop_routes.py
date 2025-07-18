@@ -18,13 +18,12 @@ host_desktop_bp = Blueprint('host_desktop', __name__, url_prefix='/host/desktop'
 def execute_command():
     """Execute a desktop command using desktop controller."""
     try:
-        # Get device_id from request (defaults to device1)
+        # Get request data
         data = request.get_json() or {}
-        device_id = data.get('device_id', 'device1')
         command = data.get('command')
         params = data.get('params', {})
         
-        print(f"[@route:host_desktop:execute_command] Executing command: {command} with params: {params} for device: {device_id}")
+        print(f"[@route:host_desktop:execute_command] Executing command: {command} with params: {params}")
         
         if not command:
             return jsonify({
@@ -32,21 +31,13 @@ def execute_command():
                 'error': 'command is required'
             }), 400
         
-        # Get desktop controller for the specified device
-        desktop_controller = get_controller(device_id, 'desktop')
+        # Get desktop controller for the host (no device_id needed for host_vnc)
+        desktop_controller = get_controller('device1', 'desktop')
         
         if not desktop_controller:
-            device = get_device_by_id(device_id)
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
             return jsonify({
                 'success': False,
-                'error': f'No desktop controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
+                'error': 'No desktop controller found for host'
             }), 404
         
         print(f"[@route:host_desktop:execute_command] Using desktop controller: {type(desktop_controller).__name__}")
@@ -56,8 +47,7 @@ def execute_command():
         
         return jsonify({
             'success': success,
-            'message': f'Command {command} {"executed successfully" if success else "failed"}',
-            'device_id': device_id
+            'message': f'Command {command} {"executed successfully" if success else "failed"}'
         })
             
     except Exception as e:
@@ -71,12 +61,11 @@ def execute_command():
 def read_file():
     """Read file content using desktop controller."""
     try:
-        # Get device_id from request (defaults to device1)
+        # Get request data
         data = request.get_json() or {}
-        device_id = data.get('device_id', 'device1')
         file_path = data.get('file_path')
         
-        print(f"[@route:host_desktop:read_file] Reading file: {file_path} for device: {device_id}")
+        print(f"[@route:host_desktop:read_file] Reading file: {file_path}")
         
         if not file_path:
             return jsonify({
@@ -84,21 +73,13 @@ def read_file():
                 'error': 'file_path is required'
             }), 400
         
-        # Get desktop controller for the specified device
-        desktop_controller = get_controller(device_id, 'desktop')
+        # Get desktop controller for the host (no device_id needed for host_vnc)
+        desktop_controller = get_controller('device1', 'desktop')
         
         if not desktop_controller:
-            device = get_device_by_id(device_id)
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
             return jsonify({
                 'success': False,
-                'error': f'No desktop controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
+                'error': 'No desktop controller found for host'
             }), 404
         
         print(f"[@route:host_desktop:read_file] Using desktop controller: {type(desktop_controller).__name__}")
@@ -115,8 +96,7 @@ def read_file():
         if success:
             return jsonify({
                 'success': True,
-                'content': content,
-                'device_id': device_id
+                'content': content
             })
         else:
             return jsonify({
@@ -135,13 +115,12 @@ def read_file():
 def write_file():
     """Write file content using desktop controller."""
     try:
-        # Get device_id from request (defaults to device1)
+        # Get request data
         data = request.get_json() or {}
-        device_id = data.get('device_id', 'device1')
         file_path = data.get('file_path')
         content = data.get('content')
         
-        print(f"[@route:host_desktop:write_file] Writing file: {file_path} for device: {device_id}")
+        print(f"[@route:host_desktop:write_file] Writing file: {file_path}")
         
         if not file_path or content is None:
             return jsonify({
@@ -149,21 +128,13 @@ def write_file():
                 'error': 'file_path and content are required'
             }), 400
         
-        # Get desktop controller for the specified device
-        desktop_controller = get_controller(device_id, 'desktop')
+        # Get desktop controller for the host (no device_id needed for host_vnc)
+        desktop_controller = get_controller('device1', 'desktop')
         
         if not desktop_controller:
-            device = get_device_by_id(device_id)
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
             return jsonify({
                 'success': False,
-                'error': f'No desktop controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
+                'error': 'No desktop controller found for host'
             }), 404
         
         print(f"[@route:host_desktop:write_file] Using desktop controller: {type(desktop_controller).__name__}")
@@ -180,8 +151,7 @@ def write_file():
         if success:
             return jsonify({
                 'success': True,
-                'message': f'File {file_path} written successfully',
-                'device_id': device_id
+                'message': f'File {file_path} written successfully'
             })
         else:
             return jsonify({
@@ -200,27 +170,15 @@ def write_file():
 def get_status():
     """Get desktop controller status."""
     try:
-        # Get device_id from request (defaults to device1)
-        data = request.get_json() or {}
-        device_id = data.get('device_id', 'device1')
+        print(f"[@route:host_desktop:get_status] Getting status")
         
-        print(f"[@route:host_desktop:get_status] Getting status for device: {device_id}")
-        
-        # Get desktop controller for the specified device
-        desktop_controller = get_controller(device_id, 'desktop')
+        # Get desktop controller for the host (no device_id needed for host_vnc)
+        desktop_controller = get_controller('device1', 'desktop')
         
         if not desktop_controller:
-            device = get_device_by_id(device_id)
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
             return jsonify({
                 'success': False,
-                'error': f'No desktop controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
+                'error': 'No desktop controller found for host'
             }), 404
         
         print(f"[@route:host_desktop:get_status] Using desktop controller: {type(desktop_controller).__name__}")
@@ -230,8 +188,7 @@ def get_status():
         
         return jsonify({
             'success': True,
-            'status': status,
-            'device_id': device_id
+            'status': status
         })
             
     except Exception as e:

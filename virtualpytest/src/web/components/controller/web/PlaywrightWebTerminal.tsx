@@ -1,4 +1,10 @@
 import {
+  PlayArrow as PlayIcon,
+  Stop as StopIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+} from '@mui/icons-material';
+import {
   Box,
   Button,
   TextField,
@@ -9,12 +15,6 @@ import {
   Collapse,
   Divider,
 } from '@mui/material';
-import {
-  PlayArrow as PlayIcon,
-  Stop as StopIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
-} from '@mui/icons-material';
 import React, { useState, useRef, useEffect } from 'react';
 
 import { usePlaywrightWeb } from '../../../hooks/controller/usePlaywrightWeb';
@@ -24,15 +24,6 @@ interface PlaywrightWebTerminalProps {
   host: Host;
   deviceId: string;
   onDisconnectComplete?: () => void;
-  isCollapsed: boolean;
-  panelWidth: string;
-  panelHeight: string;
-  streamContainerDimensions?: {
-    width: number;
-    height: number;
-    x: number;
-    y: number;
-  };
 }
 
 export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
@@ -41,18 +32,14 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   onDisconnectComplete,
 }: PlaywrightWebTerminalProps) {
   const {
-    currentCommand,
     isExecuting,
     terminalOutput,
-    executeCommand,
     handleDisconnect,
-    setCurrentCommand,
     session,
     currentUrl,
     pageTitle,
     navigateToUrl,
     clickElement,
-    getPageInfo,
     executeWebCommand,
   } = usePlaywrightWeb(host, deviceId);
 
@@ -83,10 +70,8 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const handleOpenBrowser = async () => {
     try {
       // Just check status to trigger connection
-      const result = await executeWebCommand('get_page_info');
-      if (result.success) {
-        setIsBrowserOpen(true);
-      }
+      await executeWebCommand('get_page_info');
+      setIsBrowserOpen(true);
     } catch (error) {
       console.error('Failed to open browser:', error);
     }
@@ -118,7 +103,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const handleClickElement = async () => {
     if (!clickSelector.trim() || isExecuting) return;
 
-    const result = await clickElement(clickSelector.trim());
+    await clickElement(clickSelector.trim());
     setClickSelector('');
 
     // Show response area
@@ -132,7 +117,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
 
     if (isNaN(x) || isNaN(y) || isExecuting) return;
 
-    const result = await executeWebCommand('tap_x_y', { x, y });
+    await executeWebCommand('tap_x_y', { x, y });
     setTapX('');
     setTapY('');
 
@@ -144,7 +129,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const handleFindElement = async () => {
     if (!findSelector.trim() || isExecuting) return;
 
-    const result = await executeWebCommand('execute_javascript', {
+    await executeWebCommand('execute_javascript', {
       script: `
         const element = document.querySelector('${findSelector.trim()}');
         if (element) {
@@ -214,7 +199,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
             color="success"
             sx={{ flex: 1 }}
           >
-            Open Browser
+            Open
           </Button>
           <Button
             variant={isBrowserOpen ? 'contained' : 'outlined'}
@@ -225,7 +210,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
             color="error"
             sx={{ flex: 1 }}
           >
-            Close Browser
+            Close
           </Button>
         </Box>
       </Box>

@@ -462,8 +462,8 @@ def get_controller(device_id: str, controller_type: str):
     Get a controller from a specific device with proper abstraction.
     
     Args:
-        device_id: Device identifier
-        controller_type: Abstract controller type ('av', 'remote', 'verification') 
+        device_id: Device identifier (can be None for host_vnc operations)
+        controller_type: Abstract controller type ('av', 'remote', 'verification', 'web', 'desktop') 
                         OR specific verification type ('verification_image', 'verification_adb', 'verification_text')
     
     Returns:
@@ -491,7 +491,7 @@ def get_controller(device_id: str, controller_type: str):
         print(f"[@host_utils:get_controller] No {verification_impl} verification controller found for device {device_id}")
         return None
     
-    # Handle abstract controller types (av, remote, verification)
+    # Handle abstract controller types (av, remote, verification, web, desktop)
     return host.get_controller(device_id, controller_type)
 
 

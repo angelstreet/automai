@@ -29,15 +29,13 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
   // Terminal state for command output
   const [terminalOutput, setTerminalOutput] = useState<string>('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
   const [currentCommand, setCurrentCommand] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
 
   // Page state
   const [currentUrl, setCurrentUrl] = useState<string>('');
   const [pageTitle, setPageTitle] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
 
   // Auto-scroll terminal ref
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -54,7 +52,7 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
     async (command: string, params: any = {}) => {
       try {
         console.log(
-          `[@hook:usePlaywrightWeb] Executing command on ${host.host_name}:${deviceId}:`,
+          `[@hook:usePlaywrightWeb] Executing command on ${host.host_name}:`,
           command,
           params,
         );
@@ -64,7 +62,6 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             host: host,
-            device_id: deviceId,
             command: command,
             params: params,
           }),
@@ -91,8 +88,26 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
         };
       }
     },
-    [host, deviceId],
+    [host],
   );
+
+  // Get web controller status
+  const getStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/server/web/getStatus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: host,
+        }),
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  }, [host]);
 
   // Initialize connection
   useEffect(() => {
@@ -121,26 +136,7 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
     };
 
     initializeConnection();
-  }, [host, deviceId]);
-
-  // Get web controller status
-  const getStatus = useCallback(async () => {
-    try {
-      const response = await fetch('/server/web/getStatus', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          host: host,
-          device_id: deviceId,
-        }),
-      });
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return { success: false, error: String(error) };
-    }
-  }, [host, deviceId]);
+  }, [host, deviceId, getStatus]);
 
   // Execute command with JSON parsing and terminal output
   const executeCommand = useCallback(
@@ -158,7 +154,7 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
         let parsedCommand;
         try {
           parsedCommand = JSON.parse(commandStr);
-        } catch (e) {
+        } catch {
           throw new Error(
             'Invalid JSON command format. Expected: {"command": "...", "params": {...}}',
           );
@@ -173,7 +169,6 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
         // Add command to history
         const newHistory = [...commandHistory, commandStr];
         setCommandHistory(newHistory);
-        setHistoryIndex(newHistory.length - 1);
 
         // Execute command
         const result = await executeWebCommand(command, params);
@@ -219,15 +214,7 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
         setIsExecuting(false);
       }
     },
-    [
-      session.connected,
-      isExecuting,
-      host,
-      deviceId,
-      terminalOutput,
-      commandHistory,
-      executeWebCommand,
-    ],
+    [session.connected, isExecuting, terminalOutput, commandHistory, executeWebCommand],
   );
 
   // Navigate to URL (convenience method)
@@ -285,7 +272,6 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
 
       setTerminalOutput('');
       setCommandHistory([]);
-      setHistoryIndex(-1);
       setCurrentCommand('');
       setCurrentUrl('');
       setPageTitle('');
@@ -305,7 +291,6 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
     currentUrl,
     pageTitle,
     isExecuting,
-    isLoading,
     error,
 
     // Actions
@@ -318,6 +303,7 @@ export const usePlaywrightWeb = (host: Host, deviceId: string) => {
     handleDisconnect,
     setCurrentCommand,
     getStatus,
+    executeWebCommand,
 
     // Refs
     terminalRef,

@@ -18,13 +18,12 @@ host_web_bp = Blueprint('host_web', __name__, url_prefix='/host/web')
 def execute_command():
     """Execute a web automation command using web controller."""
     try:
-        # Get device_id from request (defaults to device1)
+        # Get request data
         data = request.get_json() or {}
-        device_id = data.get('device_id', 'device1')
         command = data.get('command')
         params = data.get('params', {})
         
-        print(f"[@route:host_web:execute_command] Executing command: {command} with params: {params} for device: {device_id}")
+        print(f"[@route:host_web:execute_command] Executing command: {command} with params: {params}")
         
         if not command:
             return jsonify({
@@ -32,21 +31,13 @@ def execute_command():
                 'error': 'command is required'
             }), 400
         
-        # Get web controller for the specified device
-        web_controller = get_controller(device_id, 'web')
+        # Get web controller for the host (no device_id needed for host_vnc)
+        web_controller = get_controller('device1', 'web')
         
         if not web_controller:
-            device = get_device_by_id(device_id)
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
             return jsonify({
                 'success': False,
-                'error': f'No web controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
+                'error': 'No web controller found for host'
             }), 404
         
         print(f"[@route:host_web:execute_command] Using web controller: {type(web_controller).__name__}")
@@ -67,13 +58,12 @@ def execute_command():
 def navigate_to_url():
     """Navigate to URL using web controller."""
     try:
-        # Get device_id from request (defaults to device1)
+        # Get request data
         data = request.get_json() or {}
-        device_id = data.get('device_id', 'device1')
         url = data.get('url')
         timeout = data.get('timeout', 30000)
         
-        print(f"[@route:host_web:navigate_to_url] Navigating to: {url} for device: {device_id}")
+        print(f"[@route:host_web:navigate_to_url] Navigating to: {url}")
         
         if not url:
             return jsonify({
@@ -81,21 +71,13 @@ def navigate_to_url():
                 'error': 'url is required'
             }), 400
         
-        # Get web controller for the specified device
-        web_controller = get_controller(device_id, 'web')
+        # Get web controller for the host (no device_id needed for host_vnc)
+        web_controller = get_controller('device1', 'web')
         
         if not web_controller:
-            device = get_device_by_id(device_id)
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
             return jsonify({
                 'success': False,
-                'error': f'No web controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
+                'error': 'No web controller found for host'
             }), 404
         
         print(f"[@route:host_web:navigate_to_url] Using web controller: {type(web_controller).__name__}")
@@ -122,27 +104,15 @@ def navigate_to_url():
 def get_page_info():
     """Get page information using web controller."""
     try:
-        # Get device_id from request (defaults to device1)
-        data = request.get_json() or {}
-        device_id = data.get('device_id', 'device1')
+        print(f"[@route:host_web:get_page_info] Getting page info")
         
-        print(f"[@route:host_web:get_page_info] Getting page info for device: {device_id}")
-        
-        # Get web controller for the specified device
-        web_controller = get_controller(device_id, 'web')
+        # Get web controller for the host (no device_id needed for host_vnc)
+        web_controller = get_controller('device1', 'web')
         
         if not web_controller:
-            device = get_device_by_id(device_id)
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
             return jsonify({
                 'success': False,
-                'error': f'No web controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
+                'error': 'No web controller found for host'
             }), 404
         
         print(f"[@route:host_web:get_page_info] Using web controller: {type(web_controller).__name__}")
@@ -169,27 +139,15 @@ def get_page_info():
 def get_status():
     """Get web controller status."""
     try:
-        # Get device_id from request (defaults to device1)
-        data = request.get_json() or {}
-        device_id = data.get('device_id', 'device1')
+        print(f"[@route:host_web:get_status] Getting status")
         
-        print(f"[@route:host_web:get_status] Getting status for device: {device_id}")
-        
-        # Get web controller for the specified device
-        web_controller = get_controller(device_id, 'web')
+        # Get web controller for the host (no device_id needed for host_vnc)
+        web_controller = get_controller('device1', 'web')
         
         if not web_controller:
-            device = get_device_by_id(device_id)
-            if not device:
-                return jsonify({
-                    'success': False,
-                    'error': f'Device {device_id} not found'
-                }), 404
-            
             return jsonify({
                 'success': False,
-                'error': f'No web controller found for device {device_id}',
-                'available_capabilities': device.get_capabilities()
+                'error': 'No web controller found for host'
             }), 404
         
         print(f"[@route:host_web:get_status] Using web controller: {type(web_controller).__name__}")
@@ -199,8 +157,7 @@ def get_status():
         
         return jsonify({
             'success': True,
-            'status': status,
-            'device_id': device_id
+            'status': status
         })
             
     except Exception as e:

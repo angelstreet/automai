@@ -48,7 +48,6 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
   // Terminal state
   const [terminalOutput, setTerminalOutput] = useState<string>('');
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
   const [currentCommand, setCurrentCommand] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
 
@@ -81,17 +80,13 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
   const executeDesktopCommand = useCallback(
     async (command: string, options: { working_dir?: string; timeout?: number } = {}) => {
       try {
-        console.log(
-          `[@hook:useBashDesktop] Executing command on ${host.host_name}:${deviceId}:`,
-          command,
-        );
+        console.log(`[@hook:useBashDesktop] Executing command on ${host.host_name}:`, command);
 
         const response = await fetch('/server/desktop/executeCommand', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             host: host,
-            device_id: deviceId,
             command: 'execute_bash_command',
             params: {
               command: command,
@@ -132,7 +127,7 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
         };
       }
     },
-    [host, deviceId],
+    [host],
   );
 
   // Initialize connection
@@ -168,7 +163,7 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
     };
 
     initializeConnection();
-  }, [host, deviceId]);
+  }, [host, deviceId, executeDesktopCommand]);
 
   // Get system information
   const getSystemInfo = useCallback(async () => {
@@ -237,7 +232,6 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
         // Add command to history
         const newHistory = [...commandHistory, command];
         setCommandHistory(newHistory);
-        setHistoryIndex(newHistory.length - 1);
 
         // Execute command
         const result = await executeDesktopCommand(command);
@@ -276,8 +270,6 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
     [
       session.connected,
       isExecuting,
-      host,
-      deviceId,
       terminalOutput,
       commandHistory,
       executeDesktopCommand,
@@ -357,7 +349,7 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
 
   // Handle disconnect
   const handleDisconnect = useCallback(async () => {
-    setIsExecuting(false); // Ensure execution state is reset
+    setIsExecuting(false);
 
     try {
       console.log('[@hook:useBashDesktop] Disconnecting from desktop session');
@@ -371,7 +363,6 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
 
       setTerminalOutput('');
       setCommandHistory([]);
-      setHistoryIndex(-1);
       setCurrentCommand('');
       setCurrentDirectory('~');
       setDirectoryContents([]);
@@ -382,8 +373,6 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
       console.log('[@hook:useBashDesktop] Disconnected successfully');
     } catch (error) {
       console.error('[@hook:useBashDesktop] Disconnect error:', error);
-    } finally {
-      // No need to set isDisconnecting to false here, as it's removed.
     }
   }, [host, deviceId]);
 
@@ -412,8 +401,7 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
     handleDisconnect,
     setCurrentCommand,
 
-    // Configuration
-    // layoutConfig, // Removed as per new_code
+    // Refs
     terminalRef,
   };
 };
