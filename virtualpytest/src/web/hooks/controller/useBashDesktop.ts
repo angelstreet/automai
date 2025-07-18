@@ -233,14 +233,11 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
         setCommandHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
 
-        // Add command to output
-        const commandLine = `$ ${command}\n`;
-        setTerminalOutput(terminalOutput + commandLine);
-
         // Execute command
         const result = await executeDesktopCommand(command);
 
-        // Add result to output
+        // Build complete output with command and result
+        const commandLine = `$ ${command}\n`;
         let resultOutput = '';
         if (result.success) {
           resultOutput = result.output || '';
@@ -248,6 +245,7 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
           resultOutput = `Error: ${result.error || 'Command failed'}`;
         }
 
+        // Update terminal output with command + result in one go
         const newOutput = terminalOutput + commandLine + resultOutput + '\n';
         setTerminalOutput(newOutput);
 
@@ -260,8 +258,9 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
       } catch (error) {
         console.error('[@hook:useBashDesktop] Command execution error:', error);
 
+        const commandLine = `$ ${command}\n`;
         const errorOutput = `Error: ${error}\n`;
-        setTerminalOutput(terminalOutput + `$ ${command}\n` + errorOutput);
+        setTerminalOutput(terminalOutput + commandLine + errorOutput);
 
         return { success: false, error: String(error) };
       } finally {
