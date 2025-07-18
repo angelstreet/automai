@@ -22,7 +22,7 @@ class VNCStreamController(AVControllerInterface):
     """VNC Stream controller that references continuously captured screenshots by timestamp."""
     
     def __init__(self, vnc_ip: str = None, vnc_port: str = None, vnc_password: str = None, 
-                 vnc_stream_path: str = None, vnc_capture_path: str = None, **kwargs):
+                 vnc_capture_path: str = None, **kwargs):
         """
         Initialize the VNC Stream controller.
         
@@ -30,8 +30,7 @@ class VNCStreamController(AVControllerInterface):
             vnc_ip: VNC server IP address
             vnc_port: VNC server port
             vnc_password: VNC server password (optional)
-            vnc_stream_path: Stream path for URLs (e.g., "/host/vnc/stream")
-            vnc_capture_path: Local capture path (e.g., "/var/www/html/vnc/stream")
+            vnc_capture_path: Local capture path (e.g., "/var/www/html/vnc/captures")
         """
         super().__init__("VNC Stream Controller", "VNC")
         
@@ -40,8 +39,7 @@ class VNCStreamController(AVControllerInterface):
         self.vnc_port = vnc_port
         self.vnc_password = vnc_password
         
-        # Stream and capture paths
-        self.vnc_stream_path = vnc_stream_path
+        # Capture path
         self.vnc_capture_path = vnc_capture_path
         
         # Video capture state (timestamp-based, no FFmpeg)
@@ -50,7 +48,7 @@ class VNCStreamController(AVControllerInterface):
         self.capture_duration = 0
         self.capture_session_id = None
         
-        print(f"VNC[{self.capture_source}]: Initialized - Stream: {self.vnc_stream_path}, Capture: {self.vnc_capture_path}")
+        print(f"VNC[{self.capture_source}]: Initialized - IP: {self.vnc_ip}:{self.vnc_port}, Capture: {self.vnc_capture_path}")
 
         
     def restart_stream(self) -> bool:

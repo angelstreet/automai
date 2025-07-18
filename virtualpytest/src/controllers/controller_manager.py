@@ -60,15 +60,13 @@ def create_host_from_environment() -> Host:
     vnc_ip = os.getenv('HOST_VNC_IP')
     vnc_port = os.getenv('HOST_VNC_PORT')
     vnc_password = os.getenv('HOST_VNC_PASSWORD')  # Optional
-    vnc_stream_path = os.getenv('HOST_VNC_STREAM_PATH')
     vnc_capture_path = os.getenv('HOST_VNC_CAPTURE_PATH')
     
-    if vnc_ip and vnc_port and vnc_stream_path and vnc_capture_path:
+    if vnc_ip and vnc_port and vnc_capture_path:
         print(f"[@controller_manager:create_host_from_environment] VNC configuration detected - creating host VNC controller")
         print(f"[@controller_manager:create_host_from_environment]   VNC IP: {vnc_ip}")
         print(f"[@controller_manager:create_host_from_environment]   VNC Port: {vnc_port}")
         print(f"[@controller_manager:create_host_from_environment]   VNC Password: {'***' if vnc_password else 'None'}")
-        print(f"[@controller_manager:create_host_from_environment]   VNC Stream Path: {vnc_stream_path}")
         print(f"[@controller_manager:create_host_from_environment]   VNC Capture Path: {vnc_capture_path}")
         
         # Create host VNC device (special device representing the host itself)
@@ -79,7 +77,6 @@ def create_host_from_environment() -> Host:
             'vnc_ip': vnc_ip,
             'vnc_port': vnc_port,
             'vnc_password': vnc_password,
-            'vnc_stream_path': vnc_stream_path,
             'vnc_capture_path': vnc_capture_path
         }
         

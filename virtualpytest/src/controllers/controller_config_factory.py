@@ -156,8 +156,7 @@ def _get_av_params(implementation: str, device_config: dict) -> dict:
             'vnc_ip': device_config.get('vnc_ip'),
             'vnc_port': device_config.get('vnc_port'),
             'vnc_password': device_config.get('vnc_password'),
-            'vnc_stream_path': device_config.get('vnc_stream_path', '/host/vnc/stream'),
-            'vnc_capture_path': device_config.get('vnc_capture_path', '/var/www/html/vnc/stream')
+            'vnc_capture_path': device_config.get('vnc_capture_path', '/var/www/html/vnc/captures')
         }
     return {}
 
