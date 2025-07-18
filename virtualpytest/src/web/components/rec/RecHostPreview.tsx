@@ -367,12 +367,12 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                 <iframe
                   src={vncStreamUrl}
                   style={{
-                    width: '100%',
-                    height: '100%',
+                    width: '400%', // Make iframe larger to contain full desktop
+                    height: '400%', // Make iframe larger to contain full desktop
                     border: 'none',
                     backgroundColor: '#000',
                     pointerEvents: 'none', // Disable interaction in preview
-                    transform: 'scale(0.25)', // Scale down to 25% to fit the small preview
+                    transform: 'scale(0.25)', // Scale down to 25% to fit the preview
                     transformOrigin: 'top left',
                   }}
                   title="VNC Desktop Preview"
