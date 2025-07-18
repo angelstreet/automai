@@ -13,7 +13,7 @@ import { Box, IconButton, Tooltip, Typography } from '@mui/material';
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 
 import { getConfigurableAVPanelLayout, loadAVConfig } from '../../../config/av';
-import { useVncStream } from '../../../hooks/controller';
+import { useVncStream, useStream } from '../../../hooks/controller';
 import { Host } from '../../../types/common/Host_Types';
 import { getZIndex } from '../../../utils/zIndexUtils';
 import { VerificationEditor } from '../verification';
@@ -45,15 +45,17 @@ const VNCViewer = ({
 }) => {
   const [isVncLoading, setIsVncLoading] = useState(true);
 
-  // For now, use simple fallback - VNC will be properly configured through environment variables
-  // The backend will handle the VNC connection details via the useStream hook
-  const vncUrl = `${host.host_url}/vnc`; // Simple VNC endpoint on the host
+  // Use the stream hook to get the proper VNC stream URL
+  const { streamUrl, isLoadingUrl, urlError } = useStream({
+    host,
+    device_id: 'host_vnc',
+  });
 
   const handleVncLoad = () => {
     setIsVncLoading(false);
   };
 
-  if (!vncUrl) {
+  if (isLoadingUrl) {
     return (
       <Box
         sx={{
@@ -64,50 +66,66 @@ const VNCViewer = ({
           color: 'white',
         }}
       >
-        <Typography>VNC not configured</Typography>
+        <Typography>Loading VNC stream...</Typography>
+      </Box>
+    );
+  }
+
+  if (urlError || !streamUrl) {
+    return (
+      <Box
+        sx={{
+          ...sx,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'white',
+        }}
+      >
+        <Typography>VNC stream error: {urlError || 'No stream URL'}</Typography>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ ...sx, position: 'relative', width: '100%', height: '100%' }}>
-      {/* Loading state */}
+    <Box
+      sx={{
+        ...sx,
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+      }}
+    >
       {isVncLoading && (
         <Box
           sx={{
             position: 'absolute',
             top: 0,
             left: 0,
-            right: 0,
-            bottom: 0,
+            width: '100%',
+            height: '100%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            bgcolor: 'rgba(0,0,0,0.8)',
-            zIndex: 10,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            zIndex: 1,
           }}
         >
-          <Box sx={{ textAlign: 'center', color: 'white' }}>
-            <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
-            <Typography variant="caption" sx={{ mt: 1 }}>
-              Connecting to VNC...
-            </Typography>
-          </Box>
+          <Typography color="white">Loading VNC...</Typography>
         </Box>
       )}
 
-      {/* VNC iframe */}
+      {/* VNC iframe - this is the key difference from HDMI */}
       <iframe
-        src={vncUrl}
+        src={streamUrl}
         style={{
           width: '100%',
           height: '100%',
           border: 'none',
-          backgroundColor: 'black',
+          backgroundColor: '#000',
         }}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-pointer-lock"
         onLoad={handleVncLoad}
-        title={`VNC Stream - ${host.host_name}`}
+        title="VNC Desktop Stream"
         allow="fullscreen"
       />
     </Box>
@@ -133,8 +151,13 @@ export const VNCStream = React.memo(
     // AV config state
     const [avConfig, setAvConfig] = useState<any>(null);
 
-    // For VNC, use simple stream active detection
-    const isStreamActive = true; // VNC is always active if component is rendered
+    // Use stream hook for VNC stream URL (for iframe)
+    const {
+      streamUrl,
+      isLoadingUrl: _isLoadingUrl,
+      urlError,
+    } = useStream({ host, device_id: deviceId });
+    const isStreamActive = !!streamUrl && !urlError; // VNC is active if we have a valid stream URL
 
     // Get device model (always host_vnc for VNC)
     const effectiveDeviceModel = useMemo(() => {
@@ -180,9 +203,21 @@ export const VNCStream = React.memo(
     } = useVncStream({
       host,
       deviceModel: effectiveDeviceModel,
-      streamUrl: '',
+      streamUrl: streamUrl || '',
       isStreamActive,
     });
+
+    // Fix handleImageLoad signature to match expected type
+    const handleImageLoadWrapper = useCallback(
+      (
+        _ref: React.RefObject<HTMLImageElement>,
+        dimensions: { width: number; height: number },
+        _sourcePath: string,
+      ) => {
+        handleImageLoad(dimensions);
+      },
+      [handleImageLoad],
+    );
 
     // Enhanced screenshot handler
     const handleTakeScreenshot = useCallback(async () => {
@@ -502,7 +537,7 @@ export const VNCStream = React.memo(
                     screenshotPath={screenshotPath}
                     isCapturing={false}
                     isSaving={isScreenshotLoading}
-                    onImageLoad={handleImageLoad}
+                    onImageLoad={handleImageLoadWrapper}
                     selectedArea={selectedArea}
                     onAreaSelected={handleAreaSelected}
                     model={effectiveDeviceModel}
@@ -524,7 +559,7 @@ export const VNCStream = React.memo(
                     currentFrame={currentFrame}
                     totalFrames={totalFrames}
                     onFrameChange={handleFrameChange}
-                    onImageLoad={handleImageLoad}
+                    onImageLoad={handleImageLoadWrapper}
                     selectedArea={selectedArea}
                     onAreaSelected={handleAreaSelected}
                     isCapturing={isCaptureActive}
