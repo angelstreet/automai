@@ -15,7 +15,7 @@ host_web_bp = Blueprint('host_web', __name__, url_prefix='/host/web')
 # =====================================================
 
 @host_web_bp.route('/executeCommand', methods=['POST'])
-def execute_command():
+async def execute_command():
     """Execute a web automation command using web controller."""
     try:
         # Get request data
@@ -43,7 +43,7 @@ def execute_command():
         print(f"[@route:host_web:execute_command] Using web controller: {type(web_controller).__name__}")
         
         # Use controller-specific abstraction - single line!
-        result = web_controller.execute_command(command, params)
+        result = await web_controller.execute_command(command, params)
         
         return jsonify(result)
             
@@ -55,7 +55,7 @@ def execute_command():
         }), 500
 
 @host_web_bp.route('/navigateToUrl', methods=['POST'])
-def navigate_to_url():
+async def navigate_to_url():
     """Navigate to URL using web controller."""
     try:
         # Get request data
@@ -89,7 +89,7 @@ def navigate_to_url():
                 'error': 'URL navigation not supported by this web controller'
             }), 400
         
-        result = web_controller.navigate_to_url(url, timeout=timeout)
+        result = await web_controller.navigate_to_url(url, timeout=timeout)
         
         return jsonify(result)
             
@@ -101,7 +101,7 @@ def navigate_to_url():
         }), 500
 
 @host_web_bp.route('/getPageInfo', methods=['POST'])
-def get_page_info():
+async def get_page_info():
     """Get page information using web controller."""
     try:
         print(f"[@route:host_web:get_page_info] Getting page info")
@@ -124,7 +124,7 @@ def get_page_info():
                 'error': 'Page info not supported by this web controller'
             }), 400
         
-        result = web_controller.get_page_info()
+        result = await web_controller.get_page_info()
         
         return jsonify(result)
             
@@ -136,7 +136,7 @@ def get_page_info():
         }), 500
 
 @host_web_bp.route('/openBrowser', methods=['POST'])
-def open_browser():
+async def open_browser():
     """Open browser using web controller."""
     try:
         print(f"[@route:host_web:open_browser] Opening browser")
@@ -159,7 +159,7 @@ def open_browser():
                 'error': 'Browser open not supported by this web controller'
             }), 400
         
-        result = web_controller.open_browser()
+        result = await web_controller.open_browser()
         
         return jsonify(result)
             
@@ -171,7 +171,7 @@ def open_browser():
         }), 500
 
 @host_web_bp.route('/closeBrowser', methods=['POST'])
-def close_browser():
+async def close_browser():
     """Close browser using web controller."""
     try:
         print(f"[@route:host_web:close_browser] Closing browser")
@@ -194,7 +194,7 @@ def close_browser():
                 'error': 'Browser close not supported by this web controller'
             }), 400
         
-        result = web_controller.close_browser()
+        result = await web_controller.close_browser()
         
         return jsonify(result)
             
@@ -206,7 +206,7 @@ def close_browser():
         }), 500
 
 @host_web_bp.route('/getStatus', methods=['POST'])
-def get_status():
+async def get_status():
     """Get web controller status."""
     try:
         print(f"[@route:host_web:get_status] Getting status")
@@ -223,7 +223,7 @@ def get_status():
         print(f"[@route:host_web:get_status] Using web controller: {type(web_controller).__name__}")
         
         # Get controller status
-        status = web_controller.get_status()
+        status = await web_controller.get_status()
         
         return jsonify({
             'success': True,
