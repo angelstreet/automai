@@ -47,7 +47,7 @@ DEVICE_CONTROLLER_MAP = {
         'av': ['vnc_stream'], 
         'remote': [],
         'desktop': ['bash'],  # Add bash desktop controller
-        'web': [],
+        'web': ['playwright'],  # Add playwright web controller
         'power': [],
         'network': [],
         'ai': ['ai_agent']
@@ -246,7 +246,14 @@ def _get_web_params(implementation: str, device_config: dict) -> dict:
     """Get parameters for Web controllers."""
     print(f"[@controller_factory:_get_web_params] DEBUG: Getting web params for implementation: {implementation}")
     
-    if implementation == 'selenium':
+    if implementation == 'playwright':
+        params = {
+            'browser_path': device_config.get('host_web_browser_path', ''),
+            'host_ip': device_config.get('host_ip', '127.0.0.1')
+        }
+        print(f"[@controller_factory:_get_web_params] DEBUG: Playwright params: {params}")
+        return params
+    elif implementation == 'selenium':
         params = {
             'selenium_url': device_config.get('selenium_url', 'http://localhost:4444/wd/hub'),
             'selenium_browser': device_config.get('selenium_browser', 'chrome')

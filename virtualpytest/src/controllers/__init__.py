@@ -33,6 +33,9 @@ from .remote.bluetooth import BluetoothRemoteController
 # Import desktop implementations
 from .desktop.bash import BashDesktopController
 
+# Import web implementations
+from .web.playwright import PlaywrightWebController
+
 # Import power implementations
 from .power.usb_power import USBPowerController
 
@@ -78,6 +81,9 @@ CONTROLLER_REGISTRY = {
     },
     'desktop': {
         'bash': BashDesktopController,      # Bash desktop controller for executing commands
+    },
+    'web': {
+        'playwright': PlaywrightWebController,  # Playwright web automation controller
     }
 }
 

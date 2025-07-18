@@ -57,6 +57,7 @@ def _register_server_routes(app):
     server_route_modules = [
         ('server_remote_routes', 'server_remote_bp'),
         ('server_desktop_routes', 'server_desktop_bp'),  # ✅ Desktop controller proxy routes
+        ('server_web_routes', 'server_web_bp'),  # ✅ Web controller proxy routes
         ('server_av_routes', 'server_av_bp'),  # ✅ AV proxy routes
         ('server_stream_proxy_routes', 'server_stream_proxy_bp'),  # ✅ HTTP to HTTPS stream proxy
         ('server_navigation_routes', 'server_navigation_bp'),
@@ -112,6 +113,7 @@ def _register_host_routes(app):
     host_route_modules = [
         ('host_remote_routes', 'host_remote_bp'),  # ✅ Remote device control
         ('host_desktop_routes', 'host_desktop_bp'),  # ✅ Desktop controller execution
+        ('host_web_routes', 'host_web_bp'),  # ✅ Web controller execution
         ('host_aiagent_routes', 'host_aiagent_bp'),  # ✅ AI agent execution
         ('host_verification_image_routes', 'host_verification_image_bp'),  # ✅ Image verification
         ('host_verification_text_routes', 'host_verification_text_bp'),  # ✅ Text verification

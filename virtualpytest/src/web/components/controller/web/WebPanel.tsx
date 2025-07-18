@@ -10,8 +10,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { getConfigurableRemotePanelLayout, loadRemoteConfig } from '../../../config/remote';
 import { Host } from '../../../types/common/Host_Types';
 
-// TODO: Import web components when implemented
-// import { PlaywrightWebController } from './PlaywrightWebController';
+import { PlaywrightWebTerminal } from './PlaywrightWebTerminal';
 
 interface WebPanelProps {
   host: Host;
@@ -144,24 +143,31 @@ export const WebPanel = React.memo(
 
     const renderWebComponent = useMemo(() => {
       switch (deviceModel) {
-        case 'host_web':
-          // TODO: Implement when Playwright web controller is created
+        case 'host_vnc':
+          // Playwright Web Terminal for host_vnc devices with web capability
           return (
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%',
-                p: 2,
-              }}
-            >
-              <Typography variant="body2" color="textSecondary" textAlign="center">
-                Playwright Web Controller (TODO)
-                <br />
-                Browser automation via web controller
-              </Typography>
-            </Box>
+            <PlaywrightWebTerminal
+              host={host}
+              deviceId={deviceId}
+              onDisconnectComplete={onReleaseControl}
+              isCollapsed={isCollapsed}
+              panelWidth={currentWidth}
+              panelHeight={currentHeight}
+              streamContainerDimensions={stableStreamContainerDimensions}
+            />
+          );
+        case 'host_web':
+          // Legacy case - redirect to host_vnc behavior
+          return (
+            <PlaywrightWebTerminal
+              host={host}
+              deviceId={deviceId}
+              onDisconnectComplete={onReleaseControl}
+              isCollapsed={isCollapsed}
+              panelWidth={currentWidth}
+              panelHeight={currentHeight}
+              streamContainerDimensions={stableStreamContainerDimensions}
+            />
           );
         default:
           return (
@@ -176,6 +182,8 @@ export const WebPanel = React.memo(
             >
               <Typography variant="body2" color="textSecondary" textAlign="center">
                 Unsupported web device: {deviceModel}
+                <br />
+                Use 'host_vnc' with web capability instead
               </Typography>
             </Box>
           );
