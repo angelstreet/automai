@@ -77,7 +77,7 @@ def create_host_from_environment() -> Host:
             'vnc_ip': vnc_ip,
             'vnc_port': vnc_port,
             'vnc_password': vnc_password,
-            'vnc_capture_path': vnc_capture_path
+            'video_capture_path': vnc_capture_path
         }
         
         host_device = _create_device_with_controllers(host_device_config)

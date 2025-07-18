@@ -22,7 +22,7 @@ class VNCStreamController(AVControllerInterface):
     """VNC Stream controller that references continuously captured screenshots by timestamp."""
     
     def __init__(self, vnc_ip: str = None, vnc_port: str = None, vnc_password: str = None, 
-                 vnc_capture_path: str = None, **kwargs):
+                 video_capture_path: str = None, **kwargs):
         """
         Initialize the VNC Stream controller.
         
@@ -30,7 +30,7 @@ class VNCStreamController(AVControllerInterface):
             vnc_ip: VNC server IP address
             vnc_port: VNC server port
             vnc_password: VNC server password (optional)
-            vnc_capture_path: Local capture path (e.g., "/var/www/html/vnc/captures")
+            video_capture_path: Local capture path (e.g., "/var/www/html/vnc/captures")
         """
         super().__init__("VNC Stream Controller", "VNC")
         
@@ -39,8 +39,8 @@ class VNCStreamController(AVControllerInterface):
         self.vnc_port = vnc_port
         self.vnc_password = vnc_password
         
-        # Capture path
-        self.vnc_capture_path = vnc_capture_path
+        # Capture path (using standard video_capture_path for consistency)
+        self.video_capture_path = video_capture_path
         
         # Video capture state (timestamp-based, no FFmpeg)
         self.is_capturing_video = False
@@ -48,7 +48,7 @@ class VNCStreamController(AVControllerInterface):
         self.capture_duration = 0
         self.capture_session_id = None
         
-        print(f"VNC[{self.capture_source}]: Initialized - IP: {self.vnc_ip}:{self.vnc_port}, Capture: {self.vnc_capture_path}")
+        print(f"VNC[{self.capture_source}]: Initialized - IP: {self.vnc_ip}:{self.vnc_port}, Capture: {self.video_capture_path}")
 
         
     def restart_stream(self) -> bool:
@@ -89,7 +89,7 @@ class VNCStreamController(AVControllerInterface):
             timestamp = f"{year}{month}{day}{hours}{minutes}{seconds}"
             
             # Build local screenshot file path using capture path
-            captures_path = os.path.join(self.vnc_capture_path, 'captures')
+            captures_path = os.path.join(self.video_capture_path, 'captures')
             screenshot_path = f'{captures_path}/capture_{timestamp}.jpg'
             
             # Add 200ms delay before returning path (allows host to capture screenshot)
@@ -245,7 +245,7 @@ class VNCStreamController(AVControllerInterface):
         try:
             # For VNC, we check if the capture directory exists and is writable
             # This indicates the screenshot capture system is working
-            captures_path = os.path.join(self.vnc_capture_path, 'captures')
+            captures_path = os.path.join(self.video_capture_path, 'captures')
             
             if os.path.exists(captures_path) and os.access(captures_path, os.W_OK):
                 # Check if there are recent screenshots (within last 30 seconds)
