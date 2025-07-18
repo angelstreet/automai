@@ -103,18 +103,24 @@ export const useBashDesktop = (host: Host, deviceId: string) => {
 
         const result = await response.json();
 
-        console.log(`[@hook:useBashDesktop] Command result:`, {
-          success: result.success,
-          exit_code: result.exit_code,
-          output_length: result.output?.length || 0,
+        console.log(`[@hook:useBashDesktop] Raw command result:`, result);
+
+        // Handle nested response structure - actual result may be in result.success
+        const actualResult =
+          result.success && typeof result.success === 'object' ? result.success : result;
+
+        console.log(`[@hook:useBashDesktop] Processed command result:`, {
+          success: actualResult.success,
+          exit_code: actualResult.exit_code,
+          output_length: actualResult.output?.length || 0,
         });
 
         return {
-          success: result.success || false,
-          output: result.output || '',
-          error: result.error || '',
-          exit_code: result.exit_code || 0,
-          execution_time: result.execution_time || 0,
+          success: actualResult.success || false,
+          output: actualResult.output || '',
+          error: actualResult.error || '',
+          exit_code: actualResult.exit_code || 0,
+          execution_time: actualResult.execution_time || 0,
         };
       } catch (error) {
         console.error(`[@hook:useBashDesktop] Command execution error:`, error);
