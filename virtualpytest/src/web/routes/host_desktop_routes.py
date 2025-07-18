@@ -31,8 +31,8 @@ def execute_command():
                 'error': 'command is required'
             }), 400
         
-        # Get desktop controller for the host (no device_id needed for host_vnc)
-        desktop_controller = get_controller('device1', 'desktop')
+        # Get desktop controller for the host (no device_id needed for host operations)
+        desktop_controller = get_controller(None, 'desktop')
         
         if not desktop_controller:
             return jsonify({
@@ -73,8 +73,8 @@ def read_file():
                 'error': 'file_path is required'
             }), 400
         
-        # Get desktop controller for the host (no device_id needed for host_vnc)
-        desktop_controller = get_controller('device1', 'desktop')
+        # Get desktop controller for the host (no device_id needed for host operations)
+        desktop_controller = get_controller(None, 'desktop')
         
         if not desktop_controller:
             return jsonify({
@@ -128,8 +128,8 @@ def write_file():
                 'error': 'file_path and content are required'
             }), 400
         
-        # Get desktop controller for the host (no device_id needed for host_vnc)
-        desktop_controller = get_controller('device1', 'desktop')
+        # Get desktop controller for the host (no device_id needed for host operations)
+        desktop_controller = get_controller(None, 'desktop')
         
         if not desktop_controller:
             return jsonify({
@@ -172,8 +172,8 @@ def get_status():
     try:
         print(f"[@route:host_desktop:get_status] Getting status")
         
-        # Get desktop controller for the host (no device_id needed for host_vnc)
-        desktop_controller = get_controller('device1', 'desktop')
+        # Get desktop controller for the host (no device_id needed for host operations)
+        desktop_controller = get_controller(None, 'desktop')
         
         if not desktop_controller:
             return jsonify({

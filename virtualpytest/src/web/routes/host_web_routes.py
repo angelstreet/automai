@@ -31,8 +31,8 @@ def execute_command():
                 'error': 'command is required'
             }), 400
         
-        # Get web controller for the host (no device_id needed for host_vnc)
-        web_controller = get_controller('device1', 'web')
+        # Get web controller for the host (no device_id needed for host operations)
+        web_controller = get_controller(None, 'web')
         
         if not web_controller:
             return jsonify({
@@ -71,8 +71,8 @@ def navigate_to_url():
                 'error': 'url is required'
             }), 400
         
-        # Get web controller for the host (no device_id needed for host_vnc)
-        web_controller = get_controller('device1', 'web')
+        # Get web controller for the host (no device_id needed for host operations)
+        web_controller = get_controller(None, 'web')
         
         if not web_controller:
             return jsonify({
@@ -106,8 +106,8 @@ def get_page_info():
     try:
         print(f"[@route:host_web:get_page_info] Getting page info")
         
-        # Get web controller for the host (no device_id needed for host_vnc)
-        web_controller = get_controller('device1', 'web')
+        # Get web controller for the host (no device_id needed for host operations)
+        web_controller = get_controller(None, 'web')
         
         if not web_controller:
             return jsonify({
@@ -141,8 +141,8 @@ def get_status():
     try:
         print(f"[@route:host_web:get_status] Getting status")
         
-        # Get web controller for the host (no device_id needed for host_vnc)
-        web_controller = get_controller('device1', 'web')
+        # Get web controller for the host (no device_id needed for host operations)
+        web_controller = get_controller(None, 'web')
         
         if not web_controller:
             return jsonify({

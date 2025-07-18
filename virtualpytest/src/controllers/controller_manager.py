@@ -76,9 +76,9 @@ def create_host_from_environment() -> Host:
         
         # Create host VNC device (special device representing the host itself)
         host_device_config = {
-            'device_id': 'host_vnc',
-            'device_name': f'{host_name}_VNC',
-            'device_model': 'host_vnc',  # Special model for host VNC
+            'device_id': 'host',
+            'device_name': f'{host_name}_Host',
+            'device_model': 'host_vnc',  # Keep the model as host_vnc for controller configuration
             'video_stream_path': final_vnc_stream_path,  # Use same field name as HDMI
             'video_capture_path': video_capture_path
         }
@@ -240,6 +240,12 @@ def _create_controller_instance(controller_type: str, implementation: str, param
         if implementation == 'bash':
             return BashDesktopController(**params)
     
+    # Web Controllers
+    elif controller_type == 'web':
+        if implementation == 'playwright':
+            from ..controllers.web.playwright import PlaywrightWebController
+            return PlaywrightWebController(**params)
+    
     print(f"[@controller_manager:_create_controller_instance] WARNING: Unknown controller {controller_type}_{implementation}")
     return None
 
@@ -285,6 +291,7 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
     verification_controllers = [c for c in controller_list if c['type'] == 'verification']
     power_controllers = [c for c in controller_list if c['type'] == 'power']
     desktop_controllers = [c for c in controller_list if c['type'] == 'desktop']
+    web_controllers = [c for c in controller_list if c['type'] == 'web']
     
     # Step 1: Create AV controllers first (no dependencies)  
     av_controller = None
@@ -367,6 +374,18 @@ def _create_device_with_controllers(device_config: Dict[str, Any]) -> Device:
     
     # Step 6: Create desktop controllers (no dependencies)
     for controller_config in desktop_controllers:
+        controller_type = controller_config['type']
+        implementation = controller_config['implementation']
+        controller_params = controller_config['params']
+        
+        print(f"[@controller_manager:_create_device_with_controllers] Creating {controller_type} controller: {implementation}")
+        
+        controller = _create_controller_instance(controller_type, implementation, controller_params)
+        if controller:
+            device.add_controller(controller_type, controller)
+    
+    # Step 7: Create web controllers (no dependencies)
+    for controller_config in web_controllers:
         controller_type = controller_config['type']
         implementation = controller_config['implementation']
         controller_params = controller_config['params']
