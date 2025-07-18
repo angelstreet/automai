@@ -273,9 +273,11 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     }
   };
 
-  // Clean display values
+  // Clean display values - special handling for VNC devices
   const displayName = stableDevice
-    ? `${stableDevice.device_name} - ${stableHost.host_name}`
+    ? stableDevice.device_model === 'host_vnc'
+      ? stableHost.host_name // For VNC devices, show just the host name
+      : `${stableDevice.device_name} - ${stableHost.host_name}`
     : stableHost.host_name;
 
   return (
