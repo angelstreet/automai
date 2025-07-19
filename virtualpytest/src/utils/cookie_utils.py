@@ -270,11 +270,14 @@ class CookieManager:
                     await playwright_context.add_cookies(cookies)
                     total_cookies += len(cookies)
                     injected_configs.append(config.get('name', config_name))
+                    print(f"[CookieManager] ✅ Injected {len(cookies)} cookies for {config.get('name', config_name)}")
                     logger.info(f"Injected {len(cookies)} cookies for {config.get('name', config_name)}")
             
             if total_cookies > 0:
+                print(f"[CookieManager] 🍪 Successfully injected {total_cookies} cookies from {len(injected_configs)} configurations: {', '.join(injected_configs)}")
                 logger.info(f"Successfully injected {total_cookies} cookies from {len(injected_configs)} configurations: {', '.join(injected_configs)}")
             else:
+                print(f"[CookieManager] ⚠️ No cookies were injected")
                 logger.warning("No cookies were injected")
                 
         except Exception as e:
@@ -307,9 +310,11 @@ class CookieManager:
             configs_to_inject.append('gdpr')
         
         if configs_to_inject:
+            print(f"[CookieManager] 🎯 Auto-detected cookie configs for {url}: {configs_to_inject}")
             logger.info(f"Auto-detected cookie configs for {url}: {configs_to_inject}")
             await self.inject_cookies(playwright_context, configs_to_inject)
         else:
+            print(f"[CookieManager] ℹ️ No automatic cookie configurations found for {url}")
             logger.debug(f"No automatic cookie configurations found for {url}")
     
     async def inject_cookies_for_site(self, playwright_context, site_name: str):

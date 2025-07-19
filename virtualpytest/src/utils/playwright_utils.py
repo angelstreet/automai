@@ -334,17 +334,9 @@ class PlaywrightUtils:
         """Run async coroutine in sync context."""
         return self.async_executor.run_async(coro)
     
-    async def connect_to_chrome(self, cdp_url: str = 'http://localhost:9222'):
-        """Connect to Chrome via CDP."""
-        return await self.connection.connect_to_chrome(cdp_url)
-    
-    async def cleanup_connection(self, playwright, browser):
-        """Clean up connection."""
-        await self.connection.cleanup_connection(playwright, browser)
-    
-    async def connect_with_auto_cookies(self, cdp_url: str = 'http://localhost:9222', target_url: str = None):
+    async def connect_to_chrome(self, cdp_url: str = 'http://localhost:9222', target_url: str = None):
         """
-        Connect to Chrome and optionally inject cookies for a target URL.
+        Connect to Chrome via CDP with automatic cookie injection.
         
         Args:
             cdp_url: Chrome debug protocol URL
@@ -353,7 +345,7 @@ class PlaywrightUtils:
         Returns:
             Tuple of (playwright, browser, context, page)
         """
-        playwright, browser, context, page = await self.connect_to_chrome(cdp_url)
+        playwright, browser, context, page = await self.connection.connect_to_chrome(cdp_url)
         
         # Set viewport to match the window size for consistent scaling
         await page.set_viewport_size(self.viewport_size)
@@ -368,6 +360,12 @@ class PlaywrightUtils:
                 print(f'[PlaywrightUtils] Warning: Failed to inject cookies for {target_url}: {e}')
         
         return playwright, browser, context, page
+    
+    async def cleanup_connection(self, playwright, browser):
+        """Clean up connection."""
+        await self.connection.cleanup_connection(playwright, browser)
+    
+
     
     async def inject_cookies_for_sites(self, context, sites: list):
         """
@@ -430,4 +428,4 @@ async def get_playwright_context_with_cookies(target_url: str = None, window_siz
         Tuple of (playwright, browser, context, page)
     """
     utils = PlaywrightUtils(auto_accept_cookies=True, window_size=window_size)
-    return await utils.connect_with_auto_cookies(target_url=target_url) 
+    return await utils.connect_to_chrome(target_url=target_url) 

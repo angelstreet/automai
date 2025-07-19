@@ -104,7 +104,7 @@ class PlaywrightWebController(WebControllerInterface):
                     print(f"Web[{self.web_type.upper()}]: Chrome already connected")
                 
                 # Test connection to Chrome and ensure page is ready with proper scaling
-                playwright, browser, context, page = await self.utils.connect_with_auto_cookies(target_url='https://google.fr')
+                playwright, browser, context, page = await self.utils.connect_to_chrome(target_url='https://google.fr')
                 
                 # Navigate to Google France for a nicer default page
                 await page.goto('https://google.fr')
@@ -182,8 +182,8 @@ class PlaywrightWebController(WebControllerInterface):
                 # Update viewport for embedded context
                 self.utils.update_viewport_for_context("embedded")
                 
-                # Connect to Chrome via CDP
-                playwright, browser, context, page = await self.utils.connect_to_chrome()
+                # Connect to Chrome via CDP with auto-cookie injection for the target URL
+                playwright, browser, context, page = await self.utils.connect_to_chrome(target_url=normalized_url)
                 
                 # Navigate to URL with optional redirect control
                 if follow_redirects:

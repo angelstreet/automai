@@ -60,14 +60,8 @@ export const usePlaywrightWeb = (host: Host) => {
 
         console.log(`[@hook:usePlaywrightWeb] Raw command result:`, result);
 
-        return {
-          success: result.success || false,
-          url: result.url || '',
-          title: result.title || '',
-          result: result.result,
-          error: result.error || '',
-          execution_time: result.execution_time || 0,
-        };
+        // Return the raw server response instead of filtering it
+        return result;
       } catch (error) {
         console.error(`[@hook:usePlaywrightWeb] Command execution error:`, error);
         return {
