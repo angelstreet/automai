@@ -16,7 +16,7 @@ try:
     import os
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
     from browser_use import Agent
-    # Use browser-use's own ChatOpenAI implementation (migrated from langchain)
+    # Use browser-use's own ChatOpenAI implementation
     from browser_use.llm import ChatOpenAI
     print(f"[BrowserUseManager] Successfully imported browser-use dependencies")
 except ImportError as e:
@@ -51,7 +51,7 @@ class BrowserUseManager:
         print(f"[BrowserUseManager] Initialized with existing PlaywrightUtils instance")
         
     def _get_llm(self):
-        """Get LLM client using OpenRouter with browser-use's own ChatOpenAI implementation."""
+        """Get LLM client using OpenRouter with browser-use's ChatOpenAI implementation."""
         if self.llm is None:
             api_key = os.getenv('OPENROUTER_API_KEY')
             if not api_key:
@@ -59,13 +59,13 @@ class BrowserUseManager:
             
             print(f"[BrowserUseManager] Initializing OpenRouter LLM client with browser-use's ChatOpenAI")
             
-            # Use browser-use's own ChatOpenAI implementation (compatible with langchain methods)
+            # Use browser-use's own ChatOpenAI implementation
             self.llm = ChatOpenAI(
                 model='moonshotai/kimi-k2:free',
                 api_key=api_key,
                 base_url='https://openrouter.ai/api/v1',
                 temperature=0.0,
-                max_tokens=2000
+                max_completion_tokens=2000  # Use max_completion_tokens instead of max_tokens
             )
             
         return self.llm
