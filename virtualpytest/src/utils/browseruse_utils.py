@@ -10,15 +10,11 @@ import time
 import json
 from typing import Dict, Any
 
-# Import browser-use from local source
-import sys
-browseruse_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib', 'browser_use')
-if browseruse_path not in sys.path:
-    sys.path.insert(0, browseruse_path)
-
+# Import browser-use from local lib directory (using project pattern)
 try:
-    from browser_use import Agent
+    from src.lib.browser_use import Agent
     from langchain_openai import ChatOpenAI
+    print(f"[BrowserUseManager] Successfully imported browser-use dependencies")
 except ImportError as e:
     print(f"[BrowserUseManager] Warning: Failed to import browser-use dependencies: {e}")
     Agent = None
