@@ -57,7 +57,7 @@ def get_userinterfaces():
         return jsonify({'error': str(e)}), 500
 
 @server_userinterface_bp.route('/createUserInterface', methods=['POST'])
-def create_userinterface():
+def create_userinterface_route():
     """Create a new user interface"""
     error = check_supabase()
     if error:
@@ -89,7 +89,7 @@ def create_userinterface():
         return jsonify({'error': str(e)}), 500
 
 @server_userinterface_bp.route('/getUserInterface/<interface_id>', methods=['GET'])
-def get_userinterface(interface_id):
+def get_userinterface_route(interface_id):
     """Get a specific user interface by ID"""
     error = check_supabase()
     if error:
@@ -111,7 +111,7 @@ def get_userinterface(interface_id):
         return jsonify({'error': str(e)}), 500
 
 @server_userinterface_bp.route('/getUserInterfaceByName/<interface_name>', methods=['GET'])
-def get_userinterface_by_name(interface_name):
+def get_userinterface_by_name_route(interface_name):
     """Get a specific user interface by name (for navigation editor)"""
     error = check_supabase()
     if error:
@@ -129,7 +129,7 @@ def get_userinterface_by_name(interface_name):
         return jsonify({'error': str(e)}), 500
 
 @server_userinterface_bp.route('/updateUserInterface/<interface_id>', methods=['PUT'])
-def update_userinterface(interface_id):
+def update_userinterface_route(interface_id):
     """Update a specific user interface"""
     error = check_supabase()
     if error:
@@ -161,7 +161,7 @@ def update_userinterface(interface_id):
         return jsonify({'error': str(e)}), 500
 
 @server_userinterface_bp.route('/deleteUserInterface/<interface_id>', methods=['DELETE'])
-def delete_userinterface(interface_id):
+def delete_userinterface_route(interface_id):
     """Delete a specific user interface"""
     error = check_supabase()
     if error:
