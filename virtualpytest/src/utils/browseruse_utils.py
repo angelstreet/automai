@@ -12,7 +12,10 @@ from typing import Dict, Any
 
 # Import browser-use using the same pattern as other lib modules
 try:
-    from src.lib.browser_use import Agent
+    import sys
+    import os
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
+    from browser_use import Agent
     from langchain_openai import ChatOpenAI
     print(f"[BrowserUseManager] Successfully imported browser-use dependencies")
 except ImportError as e:
