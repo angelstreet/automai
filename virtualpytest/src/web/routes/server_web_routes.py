@@ -5,7 +5,7 @@ Server-side web automation proxy endpoints that forward requests to host web con
 """
 
 from flask import Blueprint, request, jsonify, current_app
-from src.web.utils.routeUtils import proxy_to_host, get_host_from_request
+from src.web.utils.routeUtils import proxy_to_host, proxy_to_host_direct, get_host_from_request
 from src.utils.task_manager import task_manager
 import threading
 import uuid
@@ -51,11 +51,23 @@ def execute_command():
             # Execute in background thread
             def execute_async():
                 try:
-                    response_data, status_code = proxy_to_host('/host/web/executeCommand', 'POST', host_request_data, timeout=600)
+                    print(f"[@route:server_web:execute_command] Starting background execution for task {task_id}")
+                    print(f"[@route:server_web:execute_command] Host request data: {host_request_data}")
+                    
+                    # Use proxy_to_host with direct host_info (no Flask request context needed)
+                    response_data, status_code = proxy_to_host_direct(host_info, '/host/web/executeCommand', 'POST', host_request_data, timeout=600)
+                    
+                    print(f"[@route:server_web:execute_command] Host response for task {task_id}: status={status_code}, data={response_data}")
+                    
                     if status_code != 200:
                         # Host execution failed, complete task with error
+                        print(f"[@route:server_web:execute_command] Host execution failed for task {task_id}")
                         task_manager.complete_task(task_id, {}, error=response_data.get('error', 'Host execution failed'))
+                    else:
+                        print(f"[@route:server_web:execute_command] Host execution completed for task {task_id}")
+                        # Task will be completed by the host's callback
                 except Exception as e:
+                    print(f"[@route:server_web:execute_command] Background execution error for task {task_id}: {e}")
                     task_manager.complete_task(task_id, {}, error=str(e))
             
             threading.Thread(target=execute_async, daemon=True).start()
