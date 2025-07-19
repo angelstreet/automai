@@ -35,8 +35,6 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     pageTitle,
     terminalOutput,
     isExecuting,
-    openBrowser,
-    closeBrowser,
     clearTerminal,
   } = usePlaywrightWeb(host); // Web automation operates directly on the host
 
@@ -202,7 +200,10 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setIsOpening(true);
     try {
       console.log('Starting browser open process...');
-      const result = await openBrowser();
+      const result = await executeCommand(JSON.stringify({
+        command: 'open_browser',
+        params: {},
+      }));
       if (result.success) {
         setIsBrowserOpen(true);
         console.log('Browser opened successfully');
@@ -221,7 +222,10 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setIsClosing(true);
     try {
       console.log('Starting browser close process...');
-      const result = await closeBrowser();
+      const result = await executeCommand(JSON.stringify({
+        command: 'close_browser',
+        params: {},
+      }));
       if (result.success) {
         // Reset local component state when browser is closed
         setIsBrowserOpen(false);
