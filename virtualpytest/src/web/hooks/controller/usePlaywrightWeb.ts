@@ -226,6 +226,17 @@ export const usePlaywrightWeb = (host: Host) => {
       });
 
       const result = await response.json();
+
+      // Update session state when browser is opened successfully
+      if (result.success) {
+        console.log(`[@hook:usePlaywrightWeb] Browser opened successfully, updating session state`);
+        setSession((prev) => ({
+          ...prev,
+          connected: true,
+          connectionTime: new Date(),
+        }));
+      }
+
       return {
         success: result.success || false,
         error: result.error || '',
@@ -253,6 +264,22 @@ export const usePlaywrightWeb = (host: Host) => {
       });
 
       const result = await response.json();
+
+      // Reset frontend state when browser is closed successfully
+      if (result.success) {
+        console.log(
+          `[@hook:usePlaywrightWeb] Browser closed successfully, resetting frontend state`,
+        );
+        setCurrentUrl('');
+        setPageTitle('');
+
+        // Update session state to reflect browser is closed
+        setSession((prev) => ({
+          ...prev,
+          connected: false,
+        }));
+      }
+
       return {
         success: result.success || false,
         error: result.error || '',
@@ -416,6 +443,21 @@ export const usePlaywrightWeb = (host: Host) => {
     setTerminalOutput('');
   }, []);
 
+  // Reset all state to initial values
+  const resetState = useCallback(() => {
+    console.log('[@hook:usePlaywrightWeb] Resetting all state to initial values');
+    setSession({
+      connected: false,
+      host,
+    });
+    setTerminalOutput('');
+    setCommandHistory([]);
+    setCurrentCommand('');
+    setCurrentUrl('');
+    setPageTitle('');
+    setIsExecuting(false);
+  }, [host]);
+
   // Handle disconnect
   const handleDisconnect = useCallback(async () => {
     setIsExecuting(false);
@@ -423,23 +465,14 @@ export const usePlaywrightWeb = (host: Host) => {
     try {
       console.log('[@hook:usePlaywrightWeb] Disconnecting from web session');
 
-      // Clear state
-      setSession({
-        connected: false,
-        host,
-      });
-
-      setTerminalOutput('');
-      setCommandHistory([]);
-      setCurrentCommand('');
-      setCurrentUrl('');
-      setPageTitle('');
+      // Use the resetState function for consistency
+      resetState();
 
       console.log('[@hook:usePlaywrightWeb] Disconnected successfully');
     } catch (error) {
       console.error('[@hook:usePlaywrightWeb] Disconnect error:', error);
     }
-  }, [host]);
+  }, [resetState]);
 
   return {
     // State
@@ -459,6 +492,7 @@ export const usePlaywrightWeb = (host: Host) => {
     inputText,
     getPageInfo,
     clearTerminal,
+    resetState,
     handleDisconnect,
     setCurrentCommand,
     getStatus,

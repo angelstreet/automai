@@ -35,7 +35,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     pageTitle,
     navigateToUrl,
     clickElement,
-    executeWebCommand,
+    executeCommand,
     openBrowser,
     closeBrowser,
   } = usePlaywrightWeb(host); // Web automation operates directly on the host
@@ -86,7 +86,14 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     try {
       const result = await closeBrowser();
       if (result.success) {
+        // Reset local component state when browser is closed
         setIsBrowserOpen(false);
+        setNavigateUrl('');
+        setClickSelector('');
+        setTapX('');
+        setTapY('');
+        setFindSelector('');
+        setIsResponseExpanded(false);
         console.log('Browser closed successfully');
       } else {
         console.error('Failed to close browser:', result.error);
@@ -122,13 +129,13 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   };
 
   // Handle tap coordinates action
-  const handleTapXY = async () => {
+  const handleTapCoordinates = async () => {
     const x = parseInt(tapX);
     const y = parseInt(tapY);
 
     if (isNaN(x) || isNaN(y) || isExecuting) return;
 
-    await executeWebCommand('tap_x_y', { x, y });
+    await executeCommand(`tap_x_y ${x} ${y}`);
     setTapX('');
     setTapY('');
 
@@ -140,27 +147,10 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const handleFindElement = async () => {
     if (!findSelector.trim() || isExecuting) return;
 
-    await executeWebCommand('execute_javascript', {
-      script: `
-        const element = document.querySelector('${findSelector.trim()}');
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          return {
-            found: true,
-            tag: element.tagName,
-            text: element.textContent ? element.textContent.substring(0, 100) : '',
-            position: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
-            visible: rect.width > 0 && rect.height > 0
-          };
-        } else {
-          return { found: false };
-        }
-      `,
-    });
-
+    await executeCommand(`click_element ${findSelector.trim()}`);
     setFindSelector('');
 
-    // Always show response area for find element
+    // Show response area
     setIsResponseExpanded(true);
   };
 
@@ -367,7 +357,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
               <Button
                 variant="contained"
                 size="small"
-                onClick={handleTapXY}
+                onClick={handleTapCoordinates}
                 disabled={!tapX.trim() || !tapY.trim() || isExecuting}
                 sx={{ minWidth: '60px' }}
               >
