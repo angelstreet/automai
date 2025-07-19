@@ -43,9 +43,12 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   // Local state for individual action inputs
   const [navigateUrl, setNavigateUrl] = useState('');
   const [clickSelector, setClickSelector] = useState('');
+  const [clickTimeout, setClickTimeout] = useState('30000');
   const [tapX, setTapX] = useState('');
   const [tapY, setTapY] = useState('');
   const [findSelector, setFindSelector] = useState('');
+  const [elementTypes, setElementTypes] = useState('all');
+  const [includeHidden, setIncludeHidden] = useState(false);
   const [isResponseExpanded, setIsResponseExpanded] = useState(false);
   const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
@@ -55,12 +58,14 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const [isClicking, setIsClicking] = useState(false);
   const [isTapping, setIsTapping] = useState(false);
   const [isFinding, setIsFinding] = useState(false);
+  const [isDumping, setIsDumping] = useState(false);
 
   // Success/failure states for visual feedback
   const [navigateStatus, setNavigateStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [clickStatus, setClickStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [tapStatus, setTapStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [findStatus, setFindStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [dumpStatus, setDumpStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const responseRef = useRef<HTMLDivElement>(null);
 
@@ -95,14 +100,18 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     if (findStatus !== 'idle') {
       timers.push(setTimeout(() => setFindStatus('idle'), 3000));
     }
+    if (dumpStatus !== 'idle') {
+      timers.push(setTimeout(() => setDumpStatus('idle'), 3000));
+    }
 
     return () => {
       timers.forEach((timer) => clearTimeout(timer));
     };
-  }, [navigateStatus, clickStatus, tapStatus, findStatus]);
+  }, [navigateStatus, clickStatus, tapStatus, findStatus, dumpStatus]);
 
   // Check if any action is executing
-  const isAnyActionExecuting = isNavigating || isClicking || isTapping || isFinding || isExecuting;
+  const isAnyActionExecuting =
+    isExecuting || isNavigating || isClicking || isTapping || isFinding || isDumping;
 
   // Handle browser open
   const handleOpenBrowser = async () => {
@@ -191,7 +200,15 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setClickStatus('idle');
 
     try {
-      const result = await clickElement(clickSelector.trim());
+      // Use proper JSON format for the command
+      const commandJson = JSON.stringify({
+        command: 'click_element',
+        params: {
+          selector: clickSelector.trim(),
+          timeout: parseInt(clickTimeout) || 30000,
+        },
+      });
+      const result = await executeCommand(commandJson);
       setClickSelector('');
 
       // Set visual feedback based on result
@@ -208,7 +225,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   };
 
   // Handle tap coordinates action
-  const handleTapCoordinates = async () => {
+  const handleTapXY = async () => {
     const x = parseInt(tapX);
     const y = parseInt(tapY);
 
@@ -218,7 +235,12 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setTapStatus('idle');
 
     try {
-      const result = await executeCommand(`tap_x_y ${x} ${y}`);
+      // Use proper JSON format for the command
+      const commandJson = JSON.stringify({
+        command: 'tap_x_y',
+        params: { x, y },
+      });
+      const result = await executeCommand(commandJson);
       setTapX('');
       setTapY('');
 
@@ -243,7 +265,12 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setFindStatus('idle');
 
     try {
-      const result = await executeCommand(`click_element ${findSelector.trim()}`);
+      // Use proper JSON format for the command
+      const commandJson = JSON.stringify({
+        command: 'click_element',
+        params: { selector: findSelector.trim() },
+      });
+      const result = await executeCommand(commandJson);
       setFindSelector('');
 
       // Set visual feedback based on result
@@ -256,6 +283,36 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
       console.error('Find error:', error);
     } finally {
       setIsFinding(false);
+    }
+  };
+
+  const handleDumpElements = async () => {
+    if (isAnyActionExecuting) return;
+
+    setIsDumping(true);
+    setDumpStatus('idle');
+
+    try {
+      // Use proper JSON format for the command
+      const commandJson = JSON.stringify({
+        command: 'dump_elements',
+        params: {
+          element_types: elementTypes,
+          include_hidden: includeHidden,
+        },
+      });
+      const result = await executeCommand(commandJson);
+
+      // Set visual feedback based on result
+      setDumpStatus(result.success ? 'success' : 'error');
+
+      // Show response area
+      setIsResponseExpanded(true);
+    } catch (error) {
+      setDumpStatus('error');
+      console.error('Dump elements error:', error);
+    } finally {
+      setIsDumping(false);
     }
   };
 
@@ -400,40 +457,60 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
           {/* Click Element Action */}
           <Box sx={{ mb: 2 }}>
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
-              Click Element
+              Click Element (CSS selector or text)
             </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <TextField
-                value={clickSelector}
-                onChange={(e) => setClickSelector(e.target.value)}
-                placeholder="CSS selector (e.g., button, #id, .class)"
-                variant="outlined"
-                size="small"
-                disabled={isExecuting}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleClickElement();
-                  }
-                }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: '0.875rem',
-                  },
-                }}
-              />
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleClickElement}
-                disabled={!clickSelector.trim() || isAnyActionExecuting}
-                color={getButtonColor(clickStatus)}
-                startIcon={isClicking ? <CircularProgress size={16} /> : undefined}
-                sx={{ minWidth: '60px' }}
-              >
-                {isClicking ? 'Clicking...' : 'Click'}
-              </Button>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <TextField
+                  value={clickSelector}
+                  onChange={(e) => setClickSelector(e.target.value)}
+                  placeholder="CSS selector or text content (e.g., 'Google', button, #id, .class)"
+                  variant="outlined"
+                  size="small"
+                  disabled={isExecuting}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleClickElement();
+                    }
+                  }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      fontSize: '0.875rem',
+                    },
+                  }}
+                />
+                <TextField
+                  value={clickTimeout}
+                  onChange={(e) => setClickTimeout(e.target.value)}
+                  placeholder="Timeout (ms)"
+                  variant="outlined"
+                  size="small"
+                  disabled={isExecuting}
+                  type="number"
+                  sx={{
+                    width: '100px',
+                    '& .MuiOutlinedInput-root': {
+                      fontSize: '0.875rem',
+                    },
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleClickElement}
+                  disabled={!clickSelector.trim() || isAnyActionExecuting}
+                  color={getButtonColor(clickStatus)}
+                  startIcon={isClicking ? <CircularProgress size={16} /> : undefined}
+                  sx={{ minWidth: '60px' }}
+                >
+                  {isClicking ? 'Clicking...' : 'Click'}
+                </Button>
+              </Box>
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
+                Supports both CSS selectors and text content search
+              </Typography>
             </Box>
           </Box>
 
@@ -478,7 +555,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
               <Button
                 variant="contained"
                 size="small"
-                onClick={handleTapCoordinates}
+                onClick={handleTapXY}
                 disabled={!tapX.trim() || !tapY.trim() || isAnyActionExecuting}
                 color={getButtonColor(tapStatus)}
                 startIcon={isTapping ? <CircularProgress size={16} /> : undefined}
@@ -528,6 +605,64 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
               >
                 {isFinding ? 'Finding...' : 'Find'}
               </Button>
+            </Box>
+          </Box>
+
+          <Divider sx={{ my: 1 }} />
+
+          {/* Dump Elements Action */}
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
+              Dump Elements
+            </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <TextField
+                  select
+                  value={elementTypes}
+                  onChange={(e) => setElementTypes(e.target.value)}
+                  variant="outlined"
+                  size="small"
+                  disabled={isExecuting}
+                  SelectProps={{
+                    native: true,
+                  }}
+                  sx={{
+                    minWidth: '120px',
+                    '& .MuiOutlinedInput-root': {
+                      fontSize: '0.875rem',
+                    },
+                  }}
+                >
+                  <option value="all">All Elements</option>
+                  <option value="interactive">Interactive</option>
+                  <option value="text">Text Only</option>
+                  <option value="links">Links Only</option>
+                </TextField>
+                <Button
+                  variant="contained"
+                  size="small"
+                  onClick={handleDumpElements}
+                  disabled={isAnyActionExecuting}
+                  color={getButtonColor(dumpStatus)}
+                  startIcon={isDumping ? <CircularProgress size={16} /> : undefined}
+                  sx={{ minWidth: '80px' }}
+                >
+                  {isDumping ? 'Dumping...' : 'Dump'}
+                </Button>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <input
+                  type="checkbox"
+                  id="includeHidden"
+                  checked={includeHidden}
+                  onChange={(e) => setIncludeHidden(e.target.checked)}
+                  disabled={isExecuting}
+                />
+                <Typography variant="caption" component="label" htmlFor="includeHidden">
+                  Include hidden elements
+                </Typography>
+              </Box>
             </Box>
           </Box>
 

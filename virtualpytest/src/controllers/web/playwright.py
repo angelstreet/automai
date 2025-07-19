@@ -34,8 +34,8 @@ class PlaywrightWebController(WebControllerInterface):
         """
         super().__init__("Playwright Web", "playwright")
         
-        # Initialize utils with auto-cookie acceptance enabled and VNC-optimized window size
-        self.utils = PlaywrightUtils(auto_accept_cookies=True, window_size="1280x1024")
+        # Initialize utils with auto-cookie acceptance enabled and dynamic sizing
+        self.utils = PlaywrightUtils(auto_accept_cookies=True, window_size="auto")
         
         # Command execution state
         self.last_command_output = ""
@@ -43,7 +43,7 @@ class PlaywrightWebController(WebControllerInterface):
         self.current_url = ""
         self.page_title = ""
         
-        print(f"[@controller:PlaywrightWeb] Initialized with async Playwright + Chrome remote debugging + auto-cookie acceptance + VNC window scaling")
+        print(f"[@controller:PlaywrightWeb] Initialized with async Playwright + Chrome remote debugging + auto-cookie acceptance + dynamic viewport sizing")
     
     def connect(self) -> bool:
         """Connect to Chrome (launch if needed)."""
@@ -171,17 +171,22 @@ class PlaywrightWebController(WebControllerInterface):
             }
     
     def navigate_to_url(self, url: str, timeout: int = 30000) -> Dict[str, Any]:
-        """Navigate to a URL using async CDP connection."""
+        """Navigate to a URL using async CDP connection with URL normalization."""
         async def _async_navigate_to_url():
             try:
-                print(f"Web[{self.web_type.upper()}]: Navigating to: {url}")
+                # Normalize URL (add https:// if missing)
+                normalized_url = self.utils.normalize_url(url)
+                print(f"Web[{self.web_type.upper()}]: Navigating to: {url} -> {normalized_url}")
                 start_time = time.time()
                 
+                # Update viewport for embedded context (browser automation panel)
+                self.utils.update_viewport_for_context("embedded")
+                
                 # Connect to Chrome via CDP with auto-cookie injection for target URL
-                playwright, browser, context, page = await self.utils.connect_with_auto_cookies(target_url=url)
+                playwright, browser, context, page = await self.utils.connect_with_auto_cookies(target_url=normalized_url)
                 
                 # Navigate to URL
-                await page.goto(url, timeout=timeout)
+                await page.goto(normalized_url, timeout=timeout)
                 
                 # Get page info
                 self.current_url = page.url
@@ -197,7 +202,8 @@ class PlaywrightWebController(WebControllerInterface):
                     'url': self.current_url,
                     'title': self.page_title,
                     'execution_time': execution_time,
-                    'error': ''
+                    'error': '',
+                    'normalized_url': normalized_url
                 }
                 
                 print(f"Web[{self.web_type.upper()}]: Navigation successful - {self.page_title}")
@@ -211,7 +217,9 @@ class PlaywrightWebController(WebControllerInterface):
                     'error': error_msg,
                     'url': self.current_url,
                     'title': self.page_title,
-                    'execution_time': 0
+                    'execution_time': 0,
+                    'original_url': url,
+                    'normalized_url': normalized_url if 'normalized_url' in locals() else url
                 }
         
         if not self.is_connected:
@@ -225,31 +233,146 @@ class PlaywrightWebController(WebControllerInterface):
         return self.utils.run_async(_async_navigate_to_url())
     
     def click_element(self, selector: str, timeout: int = 30000) -> Dict[str, Any]:
-        """Click an element by selector using async CDP connection."""
+        """Click an element by selector using async CDP connection.
+        
+        Args:
+            selector: CSS selector, or text content to search for
+            timeout: Timeout in milliseconds (default 30 seconds)
+        """
         async def _async_click_element():
             try:
                 print(f"Web[{self.web_type.upper()}]: Clicking element: {selector}")
                 start_time = time.time()
                 
+                # Update viewport for embedded context
+                self.utils.update_viewport_for_context("embedded")
+                
                 # Connect to Chrome via CDP
                 playwright, browser, context, page = await self.utils.connect_to_chrome()
                 
-                # Click element
-                await page.click(selector, timeout=timeout)
+                # Detect if selector is a CSS selector or text content
+                is_css_selector = (
+                    selector.startswith('#') or  # ID selector
+                    selector.startswith('.') or  # Class selector
+                    selector.startswith('[') or  # Attribute selector
+                    '>' in selector or          # Child combinator
+                    ' ' in selector and ('.' in selector or '#' in selector) or  # Complex selector
+                    selector.lower() in ['button', 'input', 'a', 'div', 'span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']  # Element tags
+                )
+                
+                click_successful = False
+                final_selector = selector
+                
+                if is_css_selector:
+                    # Try direct CSS selector click
+                    try:
+                        await page.click(selector, timeout=timeout)
+                        click_successful = True
+                        print(f"Web[{self.web_type.upper()}]: Direct CSS selector click successful")
+                    except Exception as e:
+                        print(f"Web[{self.web_type.upper()}]: Direct CSS selector failed: {e}")
+                else:
+                    # Text-based search - try multiple strategies
+                    print(f"Web[{self.web_type.upper()}]: Text-based search for: {selector}")
+                    
+                    # Strategy 1: Try exact text match in common clickable elements
+                    text_selectors = [
+                        f"button:has-text('{selector}')",
+                        f"a:has-text('{selector}')",
+                        f"[role='button']:has-text('{selector}')",
+                        f"input[value='{selector}']",
+                        f"*:text-is('{selector}')",
+                        f"*:text('{selector}')"
+                    ]
+                    
+                    for text_selector in text_selectors:
+                        try:
+                            await page.click(text_selector, timeout=5000)  # Shorter timeout for each attempt
+                            click_successful = True
+                            final_selector = text_selector
+                            print(f"Web[{self.web_type.upper()}]: Text selector click successful: {text_selector}")
+                            break
+                        except Exception:
+                            continue
+                    
+                    # Strategy 2: Use JavaScript to find and click element with text content
+                    if not click_successful:
+                        try:
+                            js_click_result = await page.evaluate(f"""
+                                () => {{
+                                    const text = '{selector}';
+                                    
+                                    // Find elements containing the text
+                                    const elements = Array.from(document.querySelectorAll('*')).filter(el => {{
+                                        const textContent = el.textContent?.trim();
+                                        const innerText = el.innerText?.trim();
+                                        return (textContent === text || innerText === text || 
+                                               textContent?.includes(text) || innerText?.includes(text)) &&
+                                               el.offsetWidth > 0 && el.offsetHeight > 0;  // Visible elements only
+                                    }});
+                                    
+                                    // Prioritize clickable elements
+                                    const clickableElements = elements.filter(el => {{
+                                        const tag = el.tagName.toLowerCase();
+                                        const role = el.getAttribute('role');
+                                        const onclick = el.onclick;
+                                        return tag === 'button' || tag === 'a' || role === 'button' || 
+                                               onclick || el.style.cursor === 'pointer';
+                                    }});
+                                    
+                                    const targetElement = clickableElements[0] || elements[0];
+                                    
+                                    if (targetElement) {{
+                                        targetElement.click();
+                                        return {{
+                                            success: true,
+                                            tagName: targetElement.tagName,
+                                            textContent: targetElement.textContent?.trim()?.substring(0, 50),
+                                                                                         selector: targetElement.id ? `#${{targetElement.id}}` : 
+                                                      targetElement.className ? `.${{targetElement.className.split(' ')[0]}}` :
+                                                      targetElement.tagName.toLowerCase()
+                                        }};
+                                    }}
+                                    
+                                    return {{ success: false, error: 'Element not found' }};
+                                }}
+                            """)
+                            
+                            if js_click_result.get('success'):
+                                click_successful = True
+                                final_selector = f"JS: {js_click_result.get('selector', selector)}"
+                                print(f"Web[{self.web_type.upper()}]: JavaScript click successful on {js_click_result.get('tagName')}")
+                            else:
+                                print(f"Web[{self.web_type.upper()}]: JavaScript click failed: {js_click_result.get('error')}")
+                        
+                        except Exception as e:
+                            print(f"Web[{self.web_type.upper()}]: JavaScript click error: {e}")
                 
                 # Cleanup connection
                 await self.utils.cleanup_connection(playwright, browser)
                 
                 execution_time = int((time.time() - start_time) * 1000)
                 
-                result = {
-                    'success': True,
-                    'error': '',
-                    'execution_time': execution_time
-                }
-                
-                print(f"Web[{self.web_type.upper()}]: Click successful")
-                return result
+                if click_successful:
+                    result = {
+                        'success': True,
+                        'error': '',
+                        'execution_time': execution_time,
+                        'selector_used': final_selector,
+                        'search_type': 'css' if is_css_selector else 'text'
+                    }
+                    print(f"Web[{self.web_type.upper()}]: Click successful using {final_selector}")
+                    return result
+                else:
+                    error_msg = f"Could not find clickable element with selector/text: {selector}"
+                    print(f"Web[{self.web_type.upper()}]: {error_msg}")
+                    return {
+                        'success': False,
+                        'error': error_msg,
+                        'execution_time': execution_time,
+                        'selector_attempted': selector,
+                        'search_type': 'css' if is_css_selector else 'text'
+                    }
                 
             except Exception as e:
                 error_msg = f"Click error: {e}"
@@ -257,7 +380,8 @@ class PlaywrightWebController(WebControllerInterface):
                 return {
                     'success': False,
                     'error': error_msg,
-                    'execution_time': 0
+                    'execution_time': 0,
+                    'selector_attempted': selector
                 }
         
         if not self.is_connected:
@@ -573,6 +697,11 @@ class PlaywrightWebController(WebControllerInterface):
         elif command == 'close_browser':
             return self.close_browser()
         
+        elif command == 'dump_elements':
+            element_types = params.get('element_types', 'all')
+            include_hidden = params.get('include_hidden', False)
+            return self.dump_elements(element_types=element_types, include_hidden=include_hidden)
+        
         else:
             print(f"Web[{self.web_type.upper()}]: Unknown command: {command}")
             return {
@@ -580,3 +709,194 @@ class PlaywrightWebController(WebControllerInterface):
                 'error': f'Unknown command: {command}',
                 'execution_time': 0
             }
+    
+    def dump_elements(self, element_types: str = "all", include_hidden: bool = False) -> Dict[str, Any]:
+        """
+        Dump all visible elements from the page for debugging and inspection.
+        
+        Args:
+            element_types: Types of elements to include ('all', 'interactive', 'text', 'links')
+            include_hidden: Whether to include hidden elements
+        """
+        async def _async_dump_elements():
+            try:
+                print(f"Web[{self.web_type.upper()}]: Dumping elements (type: {element_types}, include_hidden: {include_hidden})")
+                start_time = time.time()
+                
+                # Update viewport for embedded context
+                self.utils.update_viewport_for_context("embedded")
+                
+                # Connect to Chrome via CDP
+                playwright, browser, context, page = await self.utils.connect_to_chrome()
+                
+                # JavaScript code to extract visible elements
+                js_code = f"""
+                () => {{
+                    const elementTypes = '{element_types}';
+                    const includeHidden = {str(include_hidden).lower()};
+                    
+                    // Define element selectors based on type
+                    let selectors = [];
+                    
+                    if (elementTypes === 'all' || elementTypes === 'interactive') {{
+                        selectors.push(
+                            'button', 'input', 'select', 'textarea', 'a[href]', 
+                            '[onclick]', '[role="button"]', '[tabindex]'
+                        );
+                    }}
+                    
+                    if (elementTypes === 'all' || elementTypes === 'text') {{
+                        selectors.push('h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div');
+                    }}
+                    
+                    if (elementTypes === 'all' || elementTypes === 'links') {{
+                        selectors.push('a[href]');
+                    }}
+                    
+                    if (elementTypes === 'all') {{
+                        // Add form elements, media, etc.
+                        selectors.push('img', 'video', 'iframe', 'form', 'label');
+                    }}
+                    
+                    // Get all elements matching selectors
+                    const allElements = document.querySelectorAll(selectors.join(', '));
+                    const elements = [];
+                    
+                    allElements.forEach((el, index) => {{
+                        // Check if element is visible
+                        const rect = el.getBoundingClientRect();
+                        const style = window.getComputedStyle(el);
+                        const isVisible = rect.width > 0 && rect.height > 0 && 
+                                        style.visibility !== 'hidden' && 
+                                        style.display !== 'none' &&
+                                        rect.top < window.innerHeight && 
+                                        rect.bottom > 0;
+                        
+                        if (isVisible || includeHidden) {{
+                            // Generate selector for this element
+                            let selector = el.tagName.toLowerCase();
+                            
+                            // Add ID if available
+                            if (el.id) {{
+                                selector = `#${{el.id}}`;
+                            }} else {{
+                                // Add class if available
+                                if (el.className && typeof el.className === 'string') {{
+                                    const classes = el.className.trim().split(/\\s+/).slice(0, 2);
+                                    if (classes.length > 0) {{
+                                        selector += '.' + classes.join('.');
+                                    }}
+                                }}
+                                
+                                // Add nth-child if no unique identifier
+                                if (!el.id && (!el.className || el.className === '')) {{
+                                    const parent = el.parentNode;
+                                    if (parent) {{
+                                        const siblings = Array.from(parent.children).filter(child => 
+                                            child.tagName === el.tagName
+                                        );
+                                        if (siblings.length > 1) {{
+                                            const index = siblings.indexOf(el) + 1;
+                                            selector += `:nth-child(${{index}})`;
+                                        }}
+                                    }}
+                                }}
+                            }}
+                            
+                            // Get text content (limited to first 100 chars)
+                            let textContent = '';
+                            if (el.textContent) {{
+                                textContent = el.textContent.trim().substring(0, 100);
+                                if (el.textContent.trim().length > 100) {{
+                                    textContent += '...';
+                                }}
+                            }}
+                            
+                            // Get attributes of interest
+                            const attributes = {{}};
+                            if (el.href) attributes.href = el.href;
+                            if (el.value) attributes.value = el.value;
+                            if (el.placeholder) attributes.placeholder = el.placeholder;
+                            if (el.title) attributes.title = el.title;
+                            if (el.alt) attributes.alt = el.alt;
+                            if (el.type) attributes.type = el.type;
+                            if (el.name) attributes.name = el.name;
+                            
+                            elements.push({{
+                                index: index,
+                                tagName: el.tagName.toLowerCase(),
+                                selector: selector,
+                                textContent: textContent,
+                                attributes: attributes,
+                                position: {{
+                                    x: Math.round(rect.left),
+                                    y: Math.round(rect.top),
+                                    width: Math.round(rect.width),
+                                    height: Math.round(rect.height)
+                                }},
+                                isVisible: isVisible,
+                                className: el.className,
+                                id: el.id || null
+                            }});
+                        }}
+                    }});
+                    
+                    return {{
+                        elements: elements,
+                        totalCount: elements.length,
+                        visibleCount: elements.filter(el => el.isVisible).length,
+                        pageTitle: document.title,
+                        pageUrl: window.location.href,
+                        viewport: {{
+                            width: window.innerWidth,
+                            height: window.innerHeight
+                        }}
+                    }};
+                }}
+                """
+                
+                # Execute the JavaScript
+                result = await page.evaluate(js_code)
+                
+                # Cleanup connection
+                await self.utils.cleanup_connection(playwright, browser)
+                
+                execution_time = int((time.time() - start_time) * 1000)
+                
+                print(f"Web[{self.web_type.upper()}]: Found {result['totalCount']} elements ({result['visibleCount']} visible)")
+                
+                return {
+                    'success': True,
+                    'elements': result['elements'],
+                    'summary': {
+                        'total_count': result['totalCount'],
+                        'visible_count': result['visibleCount'],
+                        'page_title': result['pageTitle'],
+                        'page_url': result['pageUrl'],
+                        'viewport': result['viewport'],
+                        'element_types': element_types,
+                        'include_hidden': include_hidden
+                    },
+                    'execution_time': execution_time,
+                    'error': ''
+                }
+                
+            except Exception as e:
+                error_msg = f"Dump elements error: {e}"
+                print(f"Web[{self.web_type.upper()}]: {error_msg}")
+                return {
+                    'success': False,
+                    'error': error_msg,
+                    'elements': [],
+                    'summary': {}
+                }
+        
+        if not self.is_connected:
+            return {
+                'success': False,
+                'error': 'Not connected to browser',
+                'elements': [],
+                'summary': {}
+            }
+        
+        return self.utils.run_async(_async_dump_elements())

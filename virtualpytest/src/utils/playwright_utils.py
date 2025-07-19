@@ -207,13 +207,13 @@ class PlaywrightConnection:
 class PlaywrightUtils:
     """Main utility class combining Chrome management, Playwright operations, and cookie management."""
     
-    def __init__(self, auto_accept_cookies: bool = True, window_size: str = "1280x1024"):
+    def __init__(self, auto_accept_cookies: bool = True, window_size: str = "auto"):
         """
         Initialize PlaywrightUtils.
         
         Args:
             auto_accept_cookies: Whether to automatically inject consent cookies
-            window_size: Browser window size (optimized for VNC by default)
+            window_size: Browser window size ('auto' for dynamic sizing, or custom like '1280x1024')
         """
         self.chrome_manager = ChromeManager()
         self.async_executor = AsyncExecutor()
@@ -221,21 +221,110 @@ class PlaywrightUtils:
         self.cookie_manager = CookieManager() if auto_accept_cookies else None
         self.auto_accept_cookies = auto_accept_cookies
         self.window_size = window_size
-        self.viewport_size = self._parse_window_size(window_size)
+        self.viewport_size = self._calculate_viewport_size(window_size)
         print(f'[PlaywrightUtils] Initialized with auto_accept_cookies={auto_accept_cookies}, window_size={window_size}')
     
+    def _calculate_viewport_size(self, window_size: str) -> dict:
+        """Calculate viewport size based on panel visibility and window size."""
+        if window_size == "auto":
+            # Dynamic sizing based on typical panel configurations
+            # VNC desktop resolution is typically 1280x1024
+            base_width = 1280
+            base_height = 1024
+            
+            # Common panel configurations for web automation:
+            # 1. Full screen mode (VNC only) - use full VNC resolution
+            # 2. Split mode (VNC + Terminal) - reduce width to account for terminal panel
+            # 3. Embedded mode (VNC in browser page) - reduce both dimensions
+            
+            # For now, use a good default that works well in most cases
+            # This optimizes for the embedded browser panel in the web interface
+            viewport_width = int(base_width * 0.75)  # ~960px - leaves space for panels
+            viewport_height = int(base_height * 0.80)  # ~819px - leaves space for header/controls
+            
+            return {"width": viewport_width, "height": viewport_height}
+        else:
+            # Parse custom window size
+            try:
+                width, height = window_size.split('x')
+                return {"width": int(width), "height": int(height)}
+            except:
+                print(f'[PlaywrightUtils] Warning: Invalid window_size format "{window_size}", using auto-sizing')
+                return self._calculate_viewport_size("auto")
+    
+    def update_viewport_for_context(self, context: str = "embedded") -> dict:
+        """
+        Update viewport size based on usage context.
+        
+        Args:
+            context: 'embedded' (browser page), 'modal' (popup), 'fullscreen' (dedicated)
+            
+        Returns:
+            New viewport size dict
+        """
+        base_width = 1280
+        base_height = 1024
+        
+        if context == "embedded":
+            # Browser automation panel in web interface
+            viewport_width = int(base_width * 0.75)   # Account for side panels
+            viewport_height = int(base_height * 0.80)  # Account for header/controls
+        elif context == "modal":
+            # Popup/modal window
+            viewport_width = int(base_width * 0.90)   # Slight reduction for modal frame
+            viewport_height = int(base_height * 0.85)  # Account for modal header
+        elif context == "fullscreen":
+            # Full VNC resolution
+            viewport_width = base_width
+            viewport_height = base_height
+        else:
+            # Default to embedded mode
+            viewport_width = int(base_width * 0.75)
+            viewport_height = int(base_height * 0.80)
+        
+        self.viewport_size = {"width": viewport_width, "height": viewport_height}
+        print(f'[PlaywrightUtils] Updated viewport for {context} context: {viewport_width}x{viewport_height}')
+        return self.viewport_size
+    
+    def normalize_url(self, url: str) -> str:
+        """
+        Normalize URL by adding protocol if missing.
+        
+        Args:
+            url: Input URL that may be missing protocol
+            
+        Returns:
+            Normalized URL with https:// prefix if needed
+        """
+        if not url:
+            return url
+        
+        url = url.strip()
+        
+        # If URL already has a protocol, return as-is
+        if url.startswith(('http://', 'https://', 'ftp://', 'file://')):
+            return url
+        
+        # Special cases for local URLs
+        if url.startswith(('localhost', '127.0.0.1', '0.0.0.0')) or ':' in url.split('.')[0]:
+            return f'http://{url}'
+        
+        # For all other URLs, default to https
+        return f'https://{url}'
+    
     def _parse_window_size(self, window_size: str) -> dict:
-        """Parse window size string to viewport dict."""
-        try:
-            width, height = window_size.split('x')
-            return {"width": int(width), "height": int(height)}
-        except:
-            print(f'[PlaywrightUtils] Warning: Invalid window_size format "{window_size}", using default 1280x1024')
-            return {"width": 1280, "height": 1024}
+        """Parse window size string to viewport dict (legacy method for compatibility)."""
+        return self._calculate_viewport_size(window_size)
     
     def launch_chrome(self, debug_port: int = 9222) -> subprocess.Popen:
-        """Launch Chrome with remote debugging and VNC-optimized window size."""
-        return self.chrome_manager.launch_chrome_with_remote_debugging(debug_port, self.window_size)
+        """Launch Chrome with remote debugging and dynamic window size."""
+        # Convert viewport size back to window size for Chrome launch
+        if self.window_size == "auto":
+            chrome_window_size = f"{self.viewport_size['width']}x{self.viewport_size['height']}"
+        else:
+            chrome_window_size = self.window_size
+        
+        return self.chrome_manager.launch_chrome_with_remote_debugging(debug_port, chrome_window_size)
     
     def kill_chrome(self):
         """Kill Chrome instances."""
@@ -301,14 +390,20 @@ class PlaywrightUtils:
 
 
 # Convenience functions for external use
-def create_playwright_utils(auto_accept_cookies: bool = True, window_size: str = "1280x1024") -> PlaywrightUtils:
+def create_playwright_utils(auto_accept_cookies: bool = True, window_size: str = "auto") -> PlaywrightUtils:
     """Create a PlaywrightUtils instance."""
     return PlaywrightUtils(auto_accept_cookies=auto_accept_cookies, window_size=window_size)
 
 
-def launch_chrome_for_debugging(debug_port: int = 9222, window_size: str = "1280x1024") -> subprocess.Popen:
+def launch_chrome_for_debugging(debug_port: int = 9222, window_size: str = "auto") -> subprocess.Popen:
     """Quick function to launch Chrome with remote debugging."""
-    return ChromeManager.launch_chrome_with_remote_debugging(debug_port, window_size)
+    if window_size == "auto":
+        # Use default auto-sizing
+        utils = create_playwright_utils(window_size="auto")
+        computed_size = f"{utils.viewport_size['width']}x{utils.viewport_size['height']}"
+        return ChromeManager.launch_chrome_with_remote_debugging(debug_port, computed_size)
+    else:
+        return ChromeManager.launch_chrome_with_remote_debugging(debug_port, window_size)
 
 
 def run_async_playwright(coro):
@@ -323,13 +418,13 @@ def get_available_cookie_sites() -> list:
 
 
 # Browser-use compatibility functions
-async def get_playwright_context_with_cookies(target_url: str = None, window_size: str = "1280x1024"):
+async def get_playwright_context_with_cookies(target_url: str = None, window_size: str = "auto"):
     """
     Get a Playwright context with auto-injected cookies for browser-use compatibility.
     
     Args:
         target_url: URL to inject cookies for
-        window_size: Browser window size (VNC optimized by default)
+        window_size: Browser window size (auto-sizing by default)
         
     Returns:
         Tuple of (playwright, browser, context, page)
