@@ -32,7 +32,30 @@ class BrowserUseManager:
         start_time = time.time()
         execution_logs = []
         
-        # Capture print output during execution
+        # Capture both print and logging output during execution
+        import logging
+        import io
+        
+        # Create string buffer to capture logs
+        log_capture_string = io.StringIO()
+        
+        # Set up logging handler to capture browser-use logs
+        log_handler = logging.StreamHandler(log_capture_string)
+        log_handler.setLevel(logging.INFO)
+        
+        # Get root logger and browser-use specific loggers
+        root_logger = logging.getLogger()
+        browser_use_logger = logging.getLogger('browser_use')
+        
+        # Store original handlers
+        original_handlers = root_logger.handlers[:]
+        browser_use_original_handlers = browser_use_logger.handlers[:]
+        
+        # Add our capture handler
+        root_logger.addHandler(log_handler)
+        browser_use_logger.addHandler(log_handler)
+        
+        # Also capture print output
         original_print = print
         def capture_print(*args, **kwargs):
             # Call original print
@@ -75,14 +98,22 @@ class BrowserUseManager:
             )
             await agent.run(max_steps=10)
             
+            # Get captured logs
+            captured_logs = log_capture_string.getvalue()
+            all_logs = execution_logs + [captured_logs] if captured_logs else execution_logs
+            
             return {
                 'success': True,
                 'task': task,
                 'execution_time': int((time.time() - start_time) * 1000),
                 'result_summary': 'Task completed',
-                'execution_logs': '\n'.join(execution_logs)
+                'execution_logs': '\n'.join(all_logs)
             }
             
         finally:
             # Restore original print
-            builtins.print = original_print 
+            builtins.print = original_print
+            
+            # Restore original logging handlers
+            root_logger.handlers = original_handlers
+            browser_use_logger.handlers = browser_use_original_handlers 
