@@ -49,6 +49,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const [isResponseExpanded, setIsResponseExpanded] = useState(false);
   const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
 
   // Execution states for individual actions
   const [isNavigating, setIsNavigating] = useState(false);
@@ -108,7 +109,14 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
 
   // Check if any action is executing
   const isAnyActionExecuting =
-    isExecuting || isNavigating || isClicking || isTapping || isFinding || isDumping;
+    isExecuting ||
+    isNavigating ||
+    isClicking ||
+    isTapping ||
+    isFinding ||
+    isDumping ||
+    isOpening ||
+    isClosing;
 
   // Handle browser open
   const handleOpenBrowser = async () => {
@@ -131,7 +139,9 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
 
   // Handle browser close
   const handleCloseBrowser = async () => {
+    setIsClosing(true);
     try {
+      console.log('Starting browser close process...');
       const result = await closeBrowser();
       if (result.success) {
         // Reset local component state when browser is closed
@@ -159,6 +169,8 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
       }
     } catch (error) {
       console.error('Failed to close browser:', error);
+    } finally {
+      setIsClosing(false);
     }
     // Don't call onDisconnectComplete here - that's for closing the entire panel, not just the browser
   };
@@ -376,12 +388,12 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
             variant={isBrowserOpen ? 'contained' : 'outlined'}
             size="small"
             onClick={handleCloseBrowser}
-            disabled={!isBrowserOpen || isOpening || isAnyActionExecuting}
-            startIcon={<StopIcon />}
+            disabled={!isBrowserOpen || isClosing || isAnyActionExecuting}
+            startIcon={isClosing ? <CircularProgress size={16} /> : <StopIcon />}
             color="error"
             sx={{ flex: 1 }}
           >
-            Close
+            {isClosing ? 'Closing...' : 'Close'}
           </Button>
         </Box>
       </Box>

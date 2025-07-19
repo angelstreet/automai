@@ -48,26 +48,34 @@ class CookieManager:
             "cookies": [
                 {
                     "name": "CONSENT",
-                    "value": "YES+cb.20210328-17-p0.en+FX+1",
+                    "value": "PENDING+987",
                     "domain": ".youtube.com",
                     "path": "/",
-                    "secure": True,
+                    "secure": False,
+                    "httpOnly": False
+                },
+                {
+                    "name": "CONSENT",
+                    "value": "PENDING+987",
+                    "domain": ".google.com",
+                    "path": "/",
+                    "secure": False,
                     "httpOnly": False
                 },
                 {
                     "name": "SOCS",
-                    "value": "CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg",
+                    "value": "CAESHAgEEhJnd3NfMjAyMzEyMTMtMF9SQzIaAmVuIAEaBgiA_LyaBg",
                     "domain": ".youtube.com",
                     "path": "/",
-                    "secure": True,
+                    "secure": False,
                     "httpOnly": False
                 },
                 {
-                    "name": "__Secure-YEC",
-                    "value": "CgtaWVJzVjBsVFVnOCiB8-2oBjIKCgJGUhIEGgAgVw%3D%3D",
-                    "domain": ".youtube.com",
+                    "name": "SOCS",
+                    "value": "CAESHAgEEhJnd3NfMjAyMzEyMTMtMF9SQzIaAmVuIAEaBgiA_LyaBg",
+                    "domain": ".google.com",
                     "path": "/",
-                    "secure": True,
+                    "secure": False,
                     "httpOnly": False
                 }
             ]
@@ -81,26 +89,42 @@ class CookieManager:
             "cookies": [
                 {
                     "name": "CONSENT",
-                    "value": "YES+cb.20210328-17-p0.en+FX+1",
+                    "value": "PENDING+987",
                     "domain": ".google.com",
                     "path": "/",
-                    "secure": True,
+                    "secure": False,
                     "httpOnly": False
                 },
                 {
                     "name": "CONSENT",
-                    "value": "YES+cb.20210328-17-p0.en+FX+1",
+                    "value": "PENDING+987",
                     "domain": ".google.fr",
                     "path": "/",
-                    "secure": True,
+                    "secure": False,
+                    "httpOnly": False
+                },
+                {
+                    "name": "CONSENT",
+                    "value": "PENDING+987",
+                    "domain": ".google.co.uk",
+                    "path": "/",
+                    "secure": False,
+                    "httpOnly": False
+                },
+                {
+                    "name": "CONSENT",
+                    "value": "PENDING+987",
+                    "domain": ".google.de",
+                    "path": "/",
+                    "secure": False,
                     "httpOnly": False
                 },
                 {
                     "name": "SOCS",
-                    "value": "CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg",
+                    "value": "CAESHAgEEhJnd3NfMjAyMzEyMTMtMF9SQzIaAmVuIAEaBgiA_LyaBg",
                     "domain": ".google.com",
                     "path": "/",
-                    "secure": True,
+                    "secure": False,
                     "httpOnly": False
                 }
             ]
@@ -271,6 +295,8 @@ class CookieManager:
         # Auto-detect based on URL
         if 'youtube.com' in url_lower:
             configs_to_inject.append('youtube')
+            # Also inject Google cookies for YouTube since it's owned by Google
+            configs_to_inject.append('google')
         elif any(domain in url_lower for domain in ['google.com', 'google.fr', 'google.co.uk', 'google.de']):
             configs_to_inject.append('google')
         elif 'facebook.com' in url_lower or 'meta.com' in url_lower:
