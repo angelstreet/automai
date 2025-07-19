@@ -21,10 +21,10 @@ class BrowserUseManager:
     def _get_llm(self):
         if self.llm is None:
             self.llm = ChatOpenAI(
-                model='moonshotai/kimi-k2:free',
+                model='qwen/qwen3-14b:free',  # Best free model for browser automation
                 api_key=os.getenv('OPENROUTER_API_KEY'),
                 base_url='https://openrouter.ai/api/v1',
-                temperature=0.0
+                temperature=0.1  # Lower temperature for more consistent behavior
             )
         return self.llm
 
@@ -34,8 +34,15 @@ class BrowserUseManager:
         # Connect to existing browser
         _, _, _, page = await self.playwright_utils.connect_to_chrome()
         
-        # Create and run agent
-        agent = Agent(task=task, llm=self._get_llm(), page=page)
+        # Create and run agent with better configuration
+        agent = Agent(
+            task=task, 
+            llm=self._get_llm(), 
+            page=page,
+            use_vision=True,
+            max_failures=5,  # Allow more failures before stopping
+            retry_delay=2    # Shorter retry delay
+        )
         await agent.run(max_steps=10)
         
         return {
