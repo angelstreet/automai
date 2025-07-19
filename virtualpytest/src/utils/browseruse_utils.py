@@ -27,28 +27,29 @@ print(f"[BrowserUseManager] Browser_use directory exists: {os.path.exists(browse
 print(f"[BrowserUseManager] Init file exists: {os.path.exists(os.path.join(browser_use_dir, '__init__.py'))}")
 
 try:
-    # Test basic import first
-    print(f"[BrowserUseManager] Testing basic browser_use import...")
-    import browser_use
-    print(f"[BrowserUseManager] Basic browser_use import successful")
-    
-    # Test Agent import
-    print(f"[BrowserUseManager] Testing Agent import...")
-    from browser_use import Agent
-    print(f"[BrowserUseManager] Agent import successful")
-    
-    # Test langchain import
+    # Test langchain import first (most likely to succeed)
     print(f"[BrowserUseManager] Testing langchain import...")
     from langchain_openai import ChatOpenAI
+    print(f"[BrowserUseManager] Langchain import successful")
+    
+    # Test browser_use import (may fail due to missing dependencies)
+    print(f"[BrowserUseManager] Testing browser_use import...")
+    from browser_use import Agent
     print(f"[BrowserUseManager] Successfully imported all browser-use dependencies")
     
 except ImportError as e:
-    print(f"[BrowserUseManager] Warning: Failed to import browser-use dependencies: {e}")
-    print(f"[BrowserUseManager] Lib path: {lib_dir}")
-    print(f"[BrowserUseManager] Browser-use path: {browser_use_dir}")
-    print(f"[BrowserUseManager] Python path: {sys.path[:5]}")
-    import traceback
-    print(f"[BrowserUseManager] Full traceback: {traceback.format_exc()}")
+    error_msg = str(e)
+    print(f"[BrowserUseManager] Warning: Failed to import browser-use dependencies: {error_msg}")
+    
+    # Provide helpful guidance based on the specific error
+    if 'patchright' in error_msg:
+        print(f"[BrowserUseManager] Missing patchright dependency. Browser-use functionality will be disabled.")
+        print(f"[BrowserUseManager] To enable browser-use, install patchright: pip install patchright")
+    elif 'langchain_openai' in error_msg:
+        print(f"[BrowserUseManager] Missing langchain_openai dependency. Install: pip install langchain_openai")
+    else:
+        print(f"[BrowserUseManager] Unexpected import error. Browser-use functionality will be disabled.")
+    
     Agent = None
     ChatOpenAI = None
 
