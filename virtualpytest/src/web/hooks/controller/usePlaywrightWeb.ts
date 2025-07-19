@@ -170,67 +170,30 @@ export const usePlaywrightWeb = (host: Host) => {
         // Execute command
         const result = await executeWebCommand(command, params || {});
 
-        // Build output with only useful data - no command echo or generic success messages
-        let resultOutput = '';
-        if (result.success) {
-          // Special handling for dump_elements command - show only the elements data
-          if (
-            command === 'dump_elements' &&
-            'elements' in result &&
-            Array.isArray(result.elements)
-          ) {
-            const elements = result.elements as any[];
-            const summary = (result as any).summary || {};
-
-            resultOutput = JSON.stringify(
-              {
-                summary: summary,
-                elements: elements,
-              },
-              null,
-              2,
-            );
-          } else if (command === 'navigate_to_url') {
-            // For navigation, show URL and title
-            if (result.url) {
-              resultOutput += `URL: ${result.url}\n`;
-            }
-            if (result.title) {
-              resultOutput += `Title: ${result.title}`;
-            }
-          } else if (result.result !== undefined) {
-            // For other commands with result data, show the JSON result
-            resultOutput = JSON.stringify(result.result, null, 2);
-          } else {
-            // For commands without specific result data, show a simple completion message
-            resultOutput = `✅ Command completed`;
-          }
-
-          // Update page state for navigation commands
-          if (command === 'navigate_to_url' || command === 'get_page_info') {
-            setCurrentUrl(result.url || '');
-            setPageTitle(result.title || '');
-          }
-        } else {
-          resultOutput = `❌ Error: ${result.error || 'Command failed'}`;
-        }
-
-        // Update terminal output with only the result - no command echo
+        // Always show full JSON response
+        let resultOutput = JSON.stringify(result, null, 2);
         setTerminalOutput(resultOutput);
+
+        // Keep page state updates
+        if (command === 'navigate_to_url' || command === 'get_page_info') {
+          setCurrentUrl(result.url || '');
+          setPageTitle(result.title || '');
+        }
 
         return result;
       } catch (error) {
         console.error('[@hook:usePlaywrightWeb] Command execution error:', error);
 
-        const errorOutput = `❌ Error: ${error}`;
+        const errorResult = { success: false, error: String(error) };
+        const errorOutput = JSON.stringify(errorResult, null, 2);
         setTerminalOutput(errorOutput);
 
-        return { success: false, error: String(error) };
+        return errorResult;
       } finally {
         setIsExecuting(false);
       }
     },
-    [session.connected, isExecuting, terminalOutput, commandHistory, executeWebCommand],
+    [session.connected, isExecuting, commandHistory, executeWebCommand],
   );
 
   // Open browser (convenience method)
