@@ -34,8 +34,12 @@ def execute_command():
         # Remove host from request data before sending to host (host doesn't need its own info)
         host_request_data = {k: v for k, v in request_data.items() if k != 'host'}
         
+        # Use longer timeout for browser-use tasks (10 minutes)
+        command = request_data.get('command', '')
+        timeout = 600 if command == 'execute_browser_use_task' else 30
+        
         # Proxy to host
-        response_data, status_code = proxy_to_host('/host/web/executeCommand', 'POST', host_request_data)
+        response_data, status_code = proxy_to_host('/host/web/executeCommand', 'POST', host_request_data, timeout=timeout)
         
         return jsonify(response_data), status_code
         

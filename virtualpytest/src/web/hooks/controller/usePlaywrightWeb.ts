@@ -54,6 +54,7 @@ export const usePlaywrightWeb = (host: Host) => {
             command: command,
             params: params,
           }),
+          signal: AbortSignal.timeout(600000), // 10 minutes timeout
         });
 
         const result = await response.json();
