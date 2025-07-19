@@ -3,15 +3,12 @@ Playwright Web Controller Implementation
 
 This controller provides web browser automation functionality using Playwright.
 Key features: Chrome remote debugging for thread-safe automation, async Playwright with sync wrappers for browser-use compatibility.
-Based on Chrome CDP connection pattern from utils.py.
+Uses playwright_utils for Chrome management and async execution.
 """
 
 import os
 import json
 import time
-import subprocess
-import socket
-import asyncio
 from typing import Dict, Any, Optional
 from ..base_controller import WebControllerInterface
 
@@ -20,6 +17,8 @@ import sys
 src_utils_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'utils')
 if src_utils_path not in sys.path:
     sys.path.insert(0, src_utils_path)
+
+from playwright_utils import PlaywrightUtils
 
 
 class PlaywrightWebController(WebControllerInterface):
@@ -35,6 +34,9 @@ class PlaywrightWebController(WebControllerInterface):
         """
         super().__init__("Playwright Web", "playwright")
         
+        # Initialize utils
+        self.utils = PlaywrightUtils()
+        
         # Command execution state
         self.last_command_output = ""
         self.last_command_error = ""
@@ -43,113 +45,12 @@ class PlaywrightWebController(WebControllerInterface):
         
         print(f"[@controller:PlaywrightWeb] Initialized with async Playwright + Chrome remote debugging")
     
-    @classmethod
-    def _kill_chrome_instances(cls):
-        """Kill any existing Chrome instances (Linux only)."""
-        print('[@controller:PlaywrightWeb] Killing any existing Chrome instances...')
-        os.system('pkill -9 "Google Chrome"')
-        os.system('pkill -9 "chrome"')
-        os.system('pkill -9 "chromium"')
-        time.sleep(2)
-    
-    @classmethod
-    def _is_port_in_use(cls, port):
-        """Check if a port is in use."""
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(1)
-            try:
-                s.bind(('127.0.0.1', port))
-                return False
-            except socket.error:
-                return True
-    
-    @classmethod
-    def _launch_browser_with_remote_debugging(cls):
-        """Launch Chrome with remote debugging enabled (Linux only)."""
-        # Kill existing Chrome instances
-        cls._kill_chrome_instances()
-        
-        # Kill any process using port 9222
-        if cls._is_port_in_use(9222):
-            print('[@controller:PlaywrightWeb] Port 9222 is in use. Killing processes...')
-            os.system('lsof -ti:9222 | xargs kill -9')
-            time.sleep(1)
-        
-        # Find Chrome executable (Linux only)
-        executable_path = None
-        possible_paths = ['/usr/bin/google-chrome', '/usr/bin/chromium-browser']
-        for path in possible_paths:
-            if os.path.exists(path):
-                executable_path = path
-                break
-        
-        if not executable_path:
-            raise ValueError('No Chrome executable found in common Linux paths')
-        
-        print(f'[@controller:PlaywrightWeb] Launching Chrome with remote debugging: {executable_path}')
-        
-        # Prepare Chrome flags
-        debug_port = 9222
-        user_data_dir = "/tmp/chrome_debug_profile"
-        os.makedirs(user_data_dir, exist_ok=True)
-        
-        chrome_flags = [
-            f'--remote-debugging-port={debug_port}',
-            f'--user-data-dir={user_data_dir}',
-            '--no-first-run',
-            '--no-default-browser-check',
-            '--disable-features=Translate',
-            '--disable-extensions',
-            '--window-position=0,0',
-            '--window-size=1920,1080',
-            '--disable-gpu',
-            '--enable-unsafe-swiftshader',
-            '--no-sandbox',  # Important for containers
-            '--disable-setuid-sandbox'
-        ]
-        
-        # Launch Chrome with DISPLAY=:1 for VNC visibility
-        cmd_line = [executable_path] + chrome_flags
-        print(f'[@controller:PlaywrightWeb] Chrome command: {" ".join(cmd_line)}')
-        
-        env = os.environ.copy()
-        env["DISPLAY"] = ":1"
-        
-        process = subprocess.Popen(cmd_line, env=env)
-        print(f'[@controller:PlaywrightWeb] Chrome launched with PID: {process.pid}')
-        
-        # Wait for Chrome to be ready
-        max_wait = 30
-        print(f'[@controller:PlaywrightWeb] Waiting up to {max_wait} seconds for Chrome on port {debug_port}...')
-        
-        start_time = time.time()
-        port_open = False
-        
-        while time.time() - start_time < max_wait:
-            try:
-                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.settimeout(1)
-                s.connect(('127.0.0.1', debug_port))
-                s.close()
-                port_open = True
-                elapsed = time.time() - start_time
-                print(f'[@controller:PlaywrightWeb] Chrome ready! Port {debug_port} open after {elapsed:.2f}s')
-                time.sleep(2)  # Ensure Chrome is fully initialized
-                break
-            except (socket.timeout, socket.error):
-                time.sleep(1)
-        
-        if not port_open:
-            print(f'[@controller:PlaywrightWeb] WARNING: Timed out waiting for Chrome port {debug_port}')
-        
-        return process
-    
     def connect(self) -> bool:
         """Connect to Chrome (launch if needed)."""
         if not self._chrome_running:
             try:
                 print(f"Web[{self.web_type.upper()}]: Chrome not running, launching new Chrome process...")
-                self.__class__._chrome_process = self._launch_browser_with_remote_debugging()
+                self.__class__._chrome_process = self.utils.launch_chrome()
                 self.__class__._chrome_running = True
                 print(f"Web[{self.web_type.upper()}]: Chrome launched with remote debugging successfully")
             except Exception as e:
@@ -175,48 +76,12 @@ class PlaywrightWebController(WebControllerInterface):
             except Exception as e:
                 print(f"Web[{self.web_type.upper()}]: Error terminating Chrome: {e}")
                 # Force cleanup
-                self._kill_chrome_instances()
+                self.utils.kill_chrome()
                 self.__class__._chrome_process = None
                 self.__class__._chrome_running = False
         
         self.is_connected = False
         return True
-    
-    async def _async_connect_to_chrome(self):
-        """Async connect to Chrome via CDP and return page."""
-        from playwright.async_api import async_playwright
-        
-        playwright = await async_playwright().start()
-        browser = await playwright.chromium.connect_over_cdp('http://localhost:9222')
-        
-        if len(browser.contexts) == 0:
-            context = await browser.new_context()
-            page = await context.new_page()
-        else:
-            context = browser.contexts[0]
-            if len(context.pages) == 0:
-                page = await context.new_page()
-            else:
-                page = context.pages[0]
-        
-        return playwright, browser, context, page
-    
-    def _run_async(self, coro):
-        """Run async coroutine in sync context."""
-        try:
-            # Try to get existing event loop
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # If loop is running, create a new thread for this
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(asyncio.run, coro)
-                    return future.result()
-            else:
-                return loop.run_until_complete(coro)
-        except RuntimeError:
-            # No event loop exists, create one
-            return asyncio.run(coro)
     
     def open_browser(self) -> Dict[str, Any]:
         """Open/launch the browser window."""
@@ -239,21 +104,20 @@ class PlaywrightWebController(WebControllerInterface):
                     print(f"Web[{self.web_type.upper()}]: Chrome already connected")
                 
                 # Test connection to Chrome and ensure page is ready
-                playwright, browser, context, page = await self._async_connect_to_chrome()
+                playwright, browser, context, page = await self.utils.connect_to_chrome()
                 
                 # Set viewport for consistent behavior
                 await page.set_viewport_size({"width": 1920, "height": 1080})
                 
-                # Navigate to a blank page to ensure browser is ready
-                await page.goto('about:blank')
+                # Navigate to Google France for a nicer default page
+                await page.goto('https://google.fr')
                 
                 # Update page state
                 self.current_url = page.url
-                self.page_title = await page.title() or "New Tab"
+                self.page_title = await page.title() or "Google"
                 
                 # Cleanup connection
-                await browser.close()
-                await playwright.stop()
+                await self.utils.cleanup_connection(playwright, browser)
                 
                 execution_time = int((time.time() - start_time) * 1000)
                 
@@ -275,7 +139,7 @@ class PlaywrightWebController(WebControllerInterface):
                     'connected': False
                 }
         
-        return self._run_async(_async_open_browser())
+        return self.utils.run_async(_async_open_browser())
     
     def close_browser(self) -> Dict[str, Any]:
         """Close browser (disconnect Chrome)."""
@@ -317,7 +181,7 @@ class PlaywrightWebController(WebControllerInterface):
                 start_time = time.time()
                 
                 # Connect to Chrome via CDP
-                playwright, browser, context, page = await self._async_connect_to_chrome()
+                playwright, browser, context, page = await self.utils.connect_to_chrome()
                 
                 # Navigate to URL
                 await page.goto(url, timeout=timeout)
@@ -327,8 +191,7 @@ class PlaywrightWebController(WebControllerInterface):
                 self.page_title = await page.title()
                 
                 # Cleanup connection
-                await browser.close()
-                await playwright.stop()
+                await self.utils.cleanup_connection(playwright, browser)
                 
                 execution_time = int((time.time() - start_time) * 1000)
                 
@@ -362,7 +225,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'title': ''
             }
         
-        return self._run_async(_async_navigate_to_url())
+        return self.utils.run_async(_async_navigate_to_url())
     
     def click_element(self, selector: str, timeout: int = 30000) -> Dict[str, Any]:
         """Click an element by selector using async CDP connection."""
@@ -372,14 +235,13 @@ class PlaywrightWebController(WebControllerInterface):
                 start_time = time.time()
                 
                 # Connect to Chrome via CDP
-                playwright, browser, context, page = await self._async_connect_to_chrome()
+                playwright, browser, context, page = await self.utils.connect_to_chrome()
                 
                 # Click element
                 await page.click(selector, timeout=timeout)
                 
                 # Cleanup connection
-                await browser.close()
-                await playwright.stop()
+                await self.utils.cleanup_connection(playwright, browser)
                 
                 execution_time = int((time.time() - start_time) * 1000)
                 
@@ -408,7 +270,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
         
-        return self._run_async(_async_click_element())
+        return self.utils.run_async(_async_click_element())
     
     def input_text(self, selector: str, text: str, timeout: int = 30000) -> Dict[str, Any]:
         """Input text into an element using async CDP connection."""
@@ -418,14 +280,13 @@ class PlaywrightWebController(WebControllerInterface):
                 start_time = time.time()
                 
                 # Connect to Chrome via CDP
-                playwright, browser, context, page = await self._async_connect_to_chrome()
+                playwright, browser, context, page = await self.utils.connect_to_chrome()
                 
                 # Input text
                 await page.fill(selector, text, timeout=timeout)
                 
                 # Cleanup connection
-                await browser.close()
-                await playwright.stop()
+                await self.utils.cleanup_connection(playwright, browser)
                 
                 execution_time = int((time.time() - start_time) * 1000)
                 
@@ -454,7 +315,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
         
-        return self._run_async(_async_input_text())
+        return self.utils.run_async(_async_input_text())
     
     def tap_x_y(self, x: int, y: int) -> Dict[str, Any]:
         """Tap/click at specific coordinates using async CDP connection."""
@@ -464,14 +325,13 @@ class PlaywrightWebController(WebControllerInterface):
                 start_time = time.time()
                 
                 # Connect to Chrome via CDP
-                playwright, browser, context, page = await self._async_connect_to_chrome()
+                playwright, browser, context, page = await self.utils.connect_to_chrome()
                 
                 # Click at coordinates
                 await page.mouse.click(x, y)
                 
                 # Cleanup connection
-                await browser.close()
-                await playwright.stop()
+                await self.utils.cleanup_connection(playwright, browser)
                 
                 execution_time = int((time.time() - start_time) * 1000)
                 
@@ -500,7 +360,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
         
-        return self._run_async(_async_tap_x_y())
+        return self.utils.run_async(_async_tap_x_y())
     
     def execute_javascript(self, script: str) -> Dict[str, Any]:
         """Execute JavaScript code in the page using async CDP connection."""
@@ -510,14 +370,13 @@ class PlaywrightWebController(WebControllerInterface):
                 start_time = time.time()
                 
                 # Connect to Chrome via CDP
-                playwright, browser, context, page = await self._async_connect_to_chrome()
+                playwright, browser, context, page = await self.utils.connect_to_chrome()
                 
                 # Execute JavaScript
                 result = await page.evaluate(script)
                 
                 # Cleanup connection
-                await browser.close()
-                await playwright.stop()
+                await self.utils.cleanup_connection(playwright, browser)
                 
                 execution_time = int((time.time() - start_time) * 1000)
                 
@@ -546,7 +405,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
         
-        return self._run_async(_async_execute_javascript())
+        return self.utils.run_async(_async_execute_javascript())
     
     def get_page_info(self) -> Dict[str, Any]:
         """Get current page information using async CDP connection."""
@@ -556,15 +415,14 @@ class PlaywrightWebController(WebControllerInterface):
                 start_time = time.time()
                 
                 # Connect to Chrome via CDP
-                playwright, browser, context, page = await self._async_connect_to_chrome()
+                playwright, browser, context, page = await self.utils.connect_to_chrome()
                 
                 # Get page info
                 self.current_url = page.url
                 self.page_title = await page.title()
                 
                 # Cleanup connection
-                await browser.close()
-                await playwright.stop()
+                await self.utils.cleanup_connection(playwright, browser)
                 
                 execution_time = int((time.time() - start_time) * 1000)
                 
@@ -599,7 +457,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
         
-        return self._run_async(_async_get_page_info())
+        return self.utils.run_async(_async_get_page_info())
     
     def get_status(self) -> Dict[str, Any]:
         """Get controller status."""
@@ -725,19 +583,3 @@ class PlaywrightWebController(WebControllerInterface):
                 'error': f'Unknown command: {command}',
                 'execution_time': 0
             }
-    
-    # Browser-use compatibility methods
-    async def get_page(self):
-        """Get the current page object for browser-use compatibility."""
-        playwright, browser, context, page = await self._async_connect_to_chrome()
-        return page
-    
-    async def get_browser(self):
-        """Get the current browser object for browser-use compatibility."""
-        playwright, browser, context, page = await self._async_connect_to_chrome()
-        return browser
-    
-    async def get_context(self):
-        """Get the current context object for browser-use compatibility."""
-        playwright, browser, context, page = await self._async_connect_to_chrome()
-        return context 

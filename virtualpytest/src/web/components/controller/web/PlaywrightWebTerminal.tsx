@@ -50,6 +50,18 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
 
+  // Execution states for individual actions
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [isClicking, setIsClicking] = useState(false);
+  const [isTapping, setIsTapping] = useState(false);
+  const [isFinding, setIsFinding] = useState(false);
+
+  // Success/failure states for visual feedback
+  const [navigateStatus, setNavigateStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [clickStatus, setClickStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [tapStatus, setTapStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [findStatus, setFindStatus] = useState<'idle' | 'success' | 'error'>('idle');
+
   const responseRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll response area when new output arrives
@@ -66,6 +78,31 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     const browserOpen = session.connected && Boolean(currentUrl && pageTitle);
     setIsBrowserOpen(browserOpen);
   }, [session.connected, currentUrl, pageTitle]);
+
+  // Reset status after 3 seconds
+  useEffect(() => {
+    const timers: NodeJS.Timeout[] = [];
+
+    if (navigateStatus !== 'idle') {
+      timers.push(setTimeout(() => setNavigateStatus('idle'), 3000));
+    }
+    if (clickStatus !== 'idle') {
+      timers.push(setTimeout(() => setClickStatus('idle'), 3000));
+    }
+    if (tapStatus !== 'idle') {
+      timers.push(setTimeout(() => setTapStatus('idle'), 3000));
+    }
+    if (findStatus !== 'idle') {
+      timers.push(setTimeout(() => setFindStatus('idle'), 3000));
+    }
+
+    return () => {
+      timers.forEach((timer) => clearTimeout(timer));
+    };
+  }, [navigateStatus, clickStatus, tapStatus, findStatus]);
+
+  // Check if any action is executing
+  const isAnyActionExecuting = isNavigating || isClicking || isTapping || isFinding || isExecuting;
 
   // Handle browser open
   const handleOpenBrowser = async () => {
@@ -99,6 +136,17 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
         setTapY('');
         setFindSelector('');
         setIsResponseExpanded(false);
+
+        // Reset all action states and status
+        setIsNavigating(false);
+        setIsClicking(false);
+        setIsTapping(false);
+        setIsFinding(false);
+        setNavigateStatus('idle');
+        setClickStatus('idle');
+        setTapStatus('idle');
+        setFindStatus('idle');
+
         console.log('Browser closed successfully');
       } else {
         console.error('Failed to close browser:', result.error);
@@ -111,26 +159,52 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
 
   // Handle navigate action
   const handleNavigate = async () => {
-    if (!navigateUrl.trim() || isExecuting) return;
+    if (!navigateUrl.trim() || isAnyActionExecuting) return;
 
-    const result = await navigateToUrl(navigateUrl.trim());
-    setNavigateUrl('');
+    setIsNavigating(true);
+    setNavigateStatus('idle');
 
-    // Show response area if successful
-    if (result.success) {
-      setIsResponseExpanded(true);
+    try {
+      const result = await navigateToUrl(navigateUrl.trim());
+      setNavigateUrl('');
+
+      // Set visual feedback based on result
+      setNavigateStatus(result.success ? 'success' : 'error');
+
+      // Show response area if successful
+      if (result.success) {
+        setIsResponseExpanded(true);
+      }
+    } catch (error) {
+      setNavigateStatus('error');
+      console.error('Navigate error:', error);
+    } finally {
+      setIsNavigating(false);
     }
   };
 
   // Handle click element action
   const handleClickElement = async () => {
-    if (!clickSelector.trim() || isExecuting) return;
+    if (!clickSelector.trim() || isAnyActionExecuting) return;
 
-    await clickElement(clickSelector.trim());
-    setClickSelector('');
+    setIsClicking(true);
+    setClickStatus('idle');
 
-    // Show response area
-    setIsResponseExpanded(true);
+    try {
+      const result = await clickElement(clickSelector.trim());
+      setClickSelector('');
+
+      // Set visual feedback based on result
+      setClickStatus(result.success ? 'success' : 'error');
+
+      // Show response area
+      setIsResponseExpanded(true);
+    } catch (error) {
+      setClickStatus('error');
+      console.error('Click error:', error);
+    } finally {
+      setIsClicking(false);
+    }
   };
 
   // Handle tap coordinates action
@@ -138,25 +212,63 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     const x = parseInt(tapX);
     const y = parseInt(tapY);
 
-    if (isNaN(x) || isNaN(y) || isExecuting) return;
+    if (isNaN(x) || isNaN(y) || isAnyActionExecuting) return;
 
-    await executeCommand(`tap_x_y ${x} ${y}`);
-    setTapX('');
-    setTapY('');
+    setIsTapping(true);
+    setTapStatus('idle');
 
-    // Show response area
-    setIsResponseExpanded(true);
+    try {
+      const result = await executeCommand(`tap_x_y ${x} ${y}`);
+      setTapX('');
+      setTapY('');
+
+      // Set visual feedback based on result
+      setTapStatus(result.success ? 'success' : 'error');
+
+      // Show response area
+      setIsResponseExpanded(true);
+    } catch (error) {
+      setTapStatus('error');
+      console.error('Tap error:', error);
+    } finally {
+      setIsTapping(false);
+    }
   };
 
   // Handle find element action
   const handleFindElement = async () => {
-    if (!findSelector.trim() || isExecuting) return;
+    if (!findSelector.trim() || isAnyActionExecuting) return;
 
-    await executeCommand(`click_element ${findSelector.trim()}`);
-    setFindSelector('');
+    setIsFinding(true);
+    setFindStatus('idle');
 
-    // Show response area
-    setIsResponseExpanded(true);
+    try {
+      const result = await executeCommand(`click_element ${findSelector.trim()}`);
+      setFindSelector('');
+
+      // Set visual feedback based on result
+      setFindStatus(result.success ? 'success' : 'error');
+
+      // Show response area
+      setIsResponseExpanded(true);
+    } catch (error) {
+      setFindStatus('error');
+      console.error('Find error:', error);
+    } finally {
+      setIsFinding(false);
+    }
+  };
+
+  // Helper function to get button color based on status
+  const getButtonColor = (status: 'idle' | 'success' | 'error') => {
+    switch (status) {
+      case 'success':
+        return 'success';
+      case 'error':
+        return 'error';
+      default:
+        return 'primary';
+    }
   };
 
   const formatResponse = (output: string) => {
@@ -200,7 +312,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
             variant={isBrowserOpen ? 'outlined' : 'contained'}
             size="small"
             onClick={handleOpenBrowser}
-            disabled={isBrowserOpen || isExecuting || isOpening}
+            disabled={isBrowserOpen || isAnyActionExecuting || isOpening}
             startIcon={isOpening ? <CircularProgress size={16} /> : <PlayIcon />}
             color="success"
             sx={{ flex: 1 }}
@@ -211,7 +323,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
             variant={isBrowserOpen ? 'contained' : 'outlined'}
             size="small"
             onClick={handleCloseBrowser}
-            disabled={!isBrowserOpen || isOpening}
+            disabled={!isBrowserOpen || isOpening || isAnyActionExecuting}
             startIcon={<StopIcon />}
             color="error"
             sx={{ flex: 1 }}
@@ -273,10 +385,12 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                 variant="contained"
                 size="small"
                 onClick={handleNavigate}
-                disabled={!navigateUrl.trim() || isExecuting}
+                disabled={!navigateUrl.trim() || isAnyActionExecuting}
+                color={getButtonColor(navigateStatus)}
+                startIcon={isNavigating ? <CircularProgress size={16} /> : undefined}
                 sx={{ minWidth: '60px' }}
               >
-                Go
+                {isNavigating ? 'Going...' : 'Go'}
               </Button>
             </Box>
           </Box>
@@ -313,10 +427,12 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                 variant="contained"
                 size="small"
                 onClick={handleClickElement}
-                disabled={!clickSelector.trim() || isExecuting}
+                disabled={!clickSelector.trim() || isAnyActionExecuting}
+                color={getButtonColor(clickStatus)}
+                startIcon={isClicking ? <CircularProgress size={16} /> : undefined}
                 sx={{ minWidth: '60px' }}
               >
-                Click
+                {isClicking ? 'Clicking...' : 'Click'}
               </Button>
             </Box>
           </Box>
@@ -363,10 +479,12 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                 variant="contained"
                 size="small"
                 onClick={handleTapCoordinates}
-                disabled={!tapX.trim() || !tapY.trim() || isExecuting}
+                disabled={!tapX.trim() || !tapY.trim() || isAnyActionExecuting}
+                color={getButtonColor(tapStatus)}
+                startIcon={isTapping ? <CircularProgress size={16} /> : undefined}
                 sx={{ minWidth: '60px' }}
               >
-                Tap
+                {isTapping ? 'Tapping...' : 'Tap'}
               </Button>
             </Box>
           </Box>
@@ -403,10 +521,12 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                 variant="contained"
                 size="small"
                 onClick={handleFindElement}
-                disabled={!findSelector.trim() || isExecuting}
+                disabled={!findSelector.trim() || isAnyActionExecuting}
+                color={getButtonColor(findStatus)}
+                startIcon={isFinding ? <CircularProgress size={16} /> : undefined}
                 sx={{ minWidth: '60px' }}
               >
-                Find
+                {isFinding ? 'Finding...' : 'Find'}
               </Button>
             </Box>
           </Box>
