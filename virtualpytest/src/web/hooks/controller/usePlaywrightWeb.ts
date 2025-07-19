@@ -165,10 +165,6 @@ export const usePlaywrightWeb = (host: Host) => {
           setPageTitle(result.title || '');
         }
 
-        if (command === 'browser_use_task') {
-          console.log('[@hook:usePlaywrightWeb] Executing browser_use_task');
-        }
-
         return result;
       } catch (error) {
         console.error('[@hook:usePlaywrightWeb] Command execution error:', error);

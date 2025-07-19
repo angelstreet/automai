@@ -547,7 +547,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                     variant="contained"
                     size="small"
                     onClick={handleTaskExecution}
-                    disabled={isAnyActionExecuting}
+                    disabled={!taskInput.trim() || isAnyActionExecuting}
                     color={getButtonColor(taskStatus)}
                     startIcon={isTaskExecuting ? <CircularProgress size={16} /> : undefined}
                     sx={{ minWidth: '80px' }}
