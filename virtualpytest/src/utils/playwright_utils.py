@@ -2,6 +2,7 @@
 Playwright Utilities
 
 Chrome process management and async execution utilities for Playwright web automation.
+Includes cookie management for automatic consent cookie injection.
 Extracted from PlaywrightWebController to improve maintainability.
 """
 
@@ -11,6 +12,17 @@ import subprocess
 import socket
 import asyncio
 from typing import Dict, Any, Tuple
+
+# Import the cookie utils
+try:
+    from .cookie_utils import CookieManager, auto_accept_cookies
+except ImportError:
+    # Fallback import for direct usage
+    import sys
+    current_dir = os.path.dirname(__file__)
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    from cookie_utils import CookieManager, auto_accept_cookies
 
 
 class ChromeManager:
@@ -46,8 +58,15 @@ class ChromeManager:
         raise ValueError('No Chrome executable found in common Linux paths')
     
     @staticmethod
-    def get_chrome_flags(debug_port: int = 9222, user_data_dir: str = "/tmp/chrome_debug_profile") -> list:
-        """Get Chrome launch flags for remote debugging."""
+    def get_chrome_flags(debug_port: int = 9222, user_data_dir: str = "/tmp/chrome_debug_profile", window_size: str = "1280x1024") -> list:
+        """
+        Get Chrome launch flags for remote debugging.
+        
+        Args:
+            debug_port: Debug port for remote debugging
+            user_data_dir: Chrome user data directory
+            window_size: Browser window size (e.g., "1280x1024" for VNC)
+        """
         return [
             f'--remote-debugging-port={debug_port}',
             f'--user-data-dir={user_data_dir}',
@@ -56,16 +75,21 @@ class ChromeManager:
             '--disable-features=Translate',
             '--disable-extensions',
             '--window-position=0,0',
-            '--window-size=1920,1080',
+            f'--window-size={window_size}',
             '--disable-gpu',
             '--enable-unsafe-swiftshader',
-            '--no-sandbox',  # Important for containers
-            '--disable-setuid-sandbox'
+            '--no-sandbox'  # Important for containers
         ]
     
     @classmethod
-    def launch_chrome_with_remote_debugging(cls, debug_port: int = 9222) -> subprocess.Popen:
-        """Launch Chrome with remote debugging enabled (Linux only)."""
+    def launch_chrome_with_remote_debugging(cls, debug_port: int = 9222, window_size: str = "1280x1024") -> subprocess.Popen:
+        """
+        Launch Chrome with remote debugging enabled (Linux only).
+        
+        Args:
+            debug_port: Port for remote debugging
+            window_size: Browser window size (default optimized for VNC)
+        """
         # Kill existing Chrome instances
         cls.kill_chrome_instances()
         
@@ -82,11 +106,12 @@ class ChromeManager:
         # Prepare Chrome flags and user data directory
         user_data_dir = "/tmp/chrome_debug_profile"
         os.makedirs(user_data_dir, exist_ok=True)
-        chrome_flags = cls.get_chrome_flags(debug_port, user_data_dir)
+        chrome_flags = cls.get_chrome_flags(debug_port, user_data_dir, window_size)
         
         # Launch Chrome with DISPLAY=:1 for VNC visibility
         cmd_line = [executable_path] + chrome_flags
         print(f'[ChromeManager] Chrome command: {" ".join(cmd_line)}')
+        print(f'[ChromeManager] Using window size: {window_size} (VNC optimized)')
         
         env = os.environ.copy()
         env["DISPLAY"] = ":1"
@@ -180,16 +205,37 @@ class PlaywrightConnection:
 
 
 class PlaywrightUtils:
-    """Main utility class combining Chrome management and Playwright operations."""
+    """Main utility class combining Chrome management, Playwright operations, and cookie management."""
     
-    def __init__(self):
+    def __init__(self, auto_accept_cookies: bool = True, window_size: str = "1280x1024"):
+        """
+        Initialize PlaywrightUtils.
+        
+        Args:
+            auto_accept_cookies: Whether to automatically inject consent cookies
+            window_size: Browser window size (optimized for VNC by default)
+        """
         self.chrome_manager = ChromeManager()
         self.async_executor = AsyncExecutor()
         self.connection = PlaywrightConnection()
+        self.cookie_manager = CookieManager() if auto_accept_cookies else None
+        self.auto_accept_cookies = auto_accept_cookies
+        self.window_size = window_size
+        self.viewport_size = self._parse_window_size(window_size)
+        print(f'[PlaywrightUtils] Initialized with auto_accept_cookies={auto_accept_cookies}, window_size={window_size}')
+    
+    def _parse_window_size(self, window_size: str) -> dict:
+        """Parse window size string to viewport dict."""
+        try:
+            width, height = window_size.split('x')
+            return {"width": int(width), "height": int(height)}
+        except:
+            print(f'[PlaywrightUtils] Warning: Invalid window_size format "{window_size}", using default 1280x1024')
+            return {"width": 1280, "height": 1024}
     
     def launch_chrome(self, debug_port: int = 9222) -> subprocess.Popen:
-        """Launch Chrome with remote debugging."""
-        return self.chrome_manager.launch_chrome_with_remote_debugging(debug_port)
+        """Launch Chrome with remote debugging and VNC-optimized window size."""
+        return self.chrome_manager.launch_chrome_with_remote_debugging(debug_port, self.window_size)
     
     def kill_chrome(self):
         """Kill Chrome instances."""
@@ -206,19 +252,87 @@ class PlaywrightUtils:
     async def cleanup_connection(self, playwright, browser):
         """Clean up connection."""
         await self.connection.cleanup_connection(playwright, browser)
+    
+    async def connect_with_auto_cookies(self, cdp_url: str = 'http://localhost:9222', target_url: str = None):
+        """
+        Connect to Chrome and optionally inject cookies for a target URL.
+        
+        Args:
+            cdp_url: Chrome debug protocol URL
+            target_url: URL that will be visited (for auto-cookie detection)
+            
+        Returns:
+            Tuple of (playwright, browser, context, page)
+        """
+        playwright, browser, context, page = await self.connect_to_chrome(cdp_url)
+        
+        # Set viewport to match the window size for consistent scaling
+        await page.set_viewport_size(self.viewport_size)
+        print(f'[PlaywrightUtils] Set viewport to {self.viewport_size["width"]}x{self.viewport_size["height"]} (matches window size)')
+        
+        # Auto-inject cookies if enabled and target URL provided
+        if self.auto_accept_cookies and self.cookie_manager and target_url:
+            try:
+                await self.cookie_manager.auto_accept_cookies_for_url(context, target_url)
+                print(f'[PlaywrightUtils] Auto-injected cookies for {target_url}')
+            except Exception as e:
+                print(f'[PlaywrightUtils] Warning: Failed to inject cookies for {target_url}: {e}')
+        
+        return playwright, browser, context, page
+    
+    async def inject_cookies_for_sites(self, context, sites: list):
+        """
+        Manually inject cookies for specific sites.
+        
+        Args:
+            context: Playwright browser context
+            sites: List of site names (e.g., ['youtube', 'google'])
+        """
+        if self.cookie_manager:
+            await self.cookie_manager.inject_cookies(context, sites)
+        else:
+            print('[PlaywrightUtils] Warning: Cookie manager not initialized')
+    
+    def get_available_cookie_configs(self) -> list:
+        """Get list of available cookie configurations."""
+        if self.cookie_manager:
+            return self.cookie_manager.get_available_configs()
+        return []
 
 
 # Convenience functions for external use
-def create_playwright_utils() -> PlaywrightUtils:
+def create_playwright_utils(auto_accept_cookies: bool = True, window_size: str = "1280x1024") -> PlaywrightUtils:
     """Create a PlaywrightUtils instance."""
-    return PlaywrightUtils()
+    return PlaywrightUtils(auto_accept_cookies=auto_accept_cookies, window_size=window_size)
 
 
-def launch_chrome_for_debugging(debug_port: int = 9222) -> subprocess.Popen:
+def launch_chrome_for_debugging(debug_port: int = 9222, window_size: str = "1280x1024") -> subprocess.Popen:
     """Quick function to launch Chrome with remote debugging."""
-    return ChromeManager.launch_chrome_with_remote_debugging(debug_port)
+    return ChromeManager.launch_chrome_with_remote_debugging(debug_port, window_size)
 
 
 def run_async_playwright(coro):
     """Quick function to run async Playwright code in sync context."""
-    return AsyncExecutor.run_async(coro) 
+    return AsyncExecutor.run_async(coro)
+
+
+def get_available_cookie_sites() -> list:
+    """Quick function to get available cookie sites."""
+    manager = CookieManager()
+    return manager.get_available_configs()
+
+
+# Browser-use compatibility functions
+async def get_playwright_context_with_cookies(target_url: str = None, window_size: str = "1280x1024"):
+    """
+    Get a Playwright context with auto-injected cookies for browser-use compatibility.
+    
+    Args:
+        target_url: URL to inject cookies for
+        window_size: Browser window size (VNC optimized by default)
+        
+    Returns:
+        Tuple of (playwright, browser, context, page)
+    """
+    utils = PlaywrightUtils(auto_accept_cookies=True, window_size=window_size)
+    return await utils.connect_with_auto_cookies(target_url=target_url) 

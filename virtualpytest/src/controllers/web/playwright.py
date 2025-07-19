@@ -34,8 +34,8 @@ class PlaywrightWebController(WebControllerInterface):
         """
         super().__init__("Playwright Web", "playwright")
         
-        # Initialize utils
-        self.utils = PlaywrightUtils()
+        # Initialize utils with auto-cookie acceptance enabled and VNC-optimized window size
+        self.utils = PlaywrightUtils(auto_accept_cookies=True, window_size="1280x1024")
         
         # Command execution state
         self.last_command_output = ""
@@ -43,7 +43,7 @@ class PlaywrightWebController(WebControllerInterface):
         self.current_url = ""
         self.page_title = ""
         
-        print(f"[@controller:PlaywrightWeb] Initialized with async Playwright + Chrome remote debugging")
+        print(f"[@controller:PlaywrightWeb] Initialized with async Playwright + Chrome remote debugging + auto-cookie acceptance + VNC window scaling")
     
     def connect(self) -> bool:
         """Connect to Chrome (launch if needed)."""
@@ -103,11 +103,8 @@ class PlaywrightWebController(WebControllerInterface):
                 else:
                     print(f"Web[{self.web_type.upper()}]: Chrome already connected")
                 
-                # Test connection to Chrome and ensure page is ready
-                playwright, browser, context, page = await self.utils.connect_to_chrome()
-                
-                # Set viewport for consistent behavior
-                await page.set_viewport_size({"width": 1920, "height": 1080})
+                # Test connection to Chrome and ensure page is ready with proper scaling
+                playwright, browser, context, page = await self.utils.connect_with_auto_cookies(target_url='https://google.fr')
                 
                 # Navigate to Google France for a nicer default page
                 await page.goto('https://google.fr')
@@ -180,8 +177,8 @@ class PlaywrightWebController(WebControllerInterface):
                 print(f"Web[{self.web_type.upper()}]: Navigating to: {url}")
                 start_time = time.time()
                 
-                # Connect to Chrome via CDP
-                playwright, browser, context, page = await self.utils.connect_to_chrome()
+                # Connect to Chrome via CDP with auto-cookie injection for target URL
+                playwright, browser, context, page = await self.utils.connect_with_auto_cookies(target_url=url)
                 
                 # Navigate to URL
                 await page.goto(url, timeout=timeout)
