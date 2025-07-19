@@ -10,33 +10,11 @@ import time
 import json
 from typing import Dict, Any
 
-# Import browser-use by adding its directory to sys.path
-import sys
-import os
-
-# Add lib directory to Python path so it can find browser_use module
-lib_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib')
-browser_use_dir = os.path.join(lib_dir, 'browser_use')
-if lib_dir not in sys.path:
-    sys.path.insert(0, lib_dir)
-
-print(f"[BrowserUseManager] Added lib path: {lib_dir}")
-print(f"[BrowserUseManager] Browser_use directory: {browser_use_dir}")
-print(f"[BrowserUseManager] Lib directory exists: {os.path.exists(lib_dir)}")
-print(f"[BrowserUseManager] Browser_use directory exists: {os.path.exists(browser_use_dir)}")
-print(f"[BrowserUseManager] Init file exists: {os.path.exists(os.path.join(browser_use_dir, '__init__.py'))}")
-
+# Import browser-use using the same pattern as other lib modules
 try:
-    # Test langchain import first (most likely to succeed)
-    print(f"[BrowserUseManager] Testing langchain import...")
+    from src.lib.browser_use import Agent
     from langchain_openai import ChatOpenAI
-    print(f"[BrowserUseManager] Langchain import successful")
-    
-    # Test browser_use import (may fail due to missing dependencies)
-    print(f"[BrowserUseManager] Testing browser_use import...")
-    from browser_use import Agent
-    print(f"[BrowserUseManager] Successfully imported all browser-use dependencies")
-    
+    print(f"[BrowserUseManager] Successfully imported browser-use dependencies")
 except ImportError as e:
     error_msg = str(e)
     print(f"[BrowserUseManager] Warning: Failed to import browser-use dependencies: {error_msg}")
@@ -44,7 +22,7 @@ except ImportError as e:
     # Provide helpful guidance based on the specific error
     if 'patchright' in error_msg:
         print(f"[BrowserUseManager] Missing patchright dependency. Browser-use functionality will be disabled.")
-        print(f"[BrowserUseManager] To enable browser-use, install patchright: pip install patchright")
+        print(f"[BrowserUseManager] To enable browser-use, install: pip install patchright")
     elif 'langchain_openai' in error_msg:
         print(f"[BrowserUseManager] Missing langchain_openai dependency. Install: pip install langchain_openai")
     else:

@@ -19,3 +19,4 @@ Pillow==10.0.1
 coral-ai-tpu==2.0.0
 langdetect
 langchain-openai
+patchright
