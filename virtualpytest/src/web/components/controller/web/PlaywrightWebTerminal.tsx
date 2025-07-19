@@ -47,6 +47,8 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const [tapY, setTapY] = useState('');
   const [findSelector, setFindSelector] = useState('');
   const [isResponseExpanded, setIsResponseExpanded] = useState(false);
+  const [isBrowserUseExpanded, setIsBrowserUseExpanded] = useState(true);
+  const [isPlaywrightExpanded, setIsPlaywrightExpanded] = useState(true);
   const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -57,6 +59,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const [isTapping, setIsTapping] = useState(false);
   const [isFinding, setIsFinding] = useState(false);
   const [isDumping, setIsDumping] = useState(false);
+  const [isTaskExecuting, setIsTaskExecuting] = useState(false);
 
   // Success/failure states for visual feedback
   const [navigateStatus, setNavigateStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -64,6 +67,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const [tapStatus, setTapStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [findStatus, setFindStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [dumpStatus, setDumpStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [taskStatus, setTaskStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Tap animation state
   const [tapAnimation, setTapAnimation] = useState<{ x: number; y: number; show: boolean }>({
@@ -139,11 +143,47 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     if (dumpStatus !== 'idle') {
       timers.push(setTimeout(() => setDumpStatus('idle'), 3000));
     }
+    if (taskStatus !== 'idle') {
+      timers.push(setTimeout(() => setTaskStatus('idle'), 3000));
+    }
 
     return () => {
       timers.forEach((timer) => clearTimeout(timer));
     };
-  }, [navigateStatus, clickStatus, tapStatus, findStatus, dumpStatus]);
+  }, [navigateStatus, clickStatus, tapStatus, findStatus, dumpStatus, taskStatus]);
+
+  // Handle task execution (placeholder)
+  const handleTaskExecution = async () => {
+    if (isAnyActionExecuting) return;
+
+    setIsTaskExecuting(true);
+    setTaskStatus('idle');
+
+    try {
+      // Clear response area before new task
+      clearTerminal();
+
+      // Simulate task execution with delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Create a fake successful result for display
+      const fakeResult = {
+        success: true,
+        result: { message: 'Task completed successfully' },
+      };
+
+      setTaskStatus('success');
+      setIsResponseExpanded(true);
+
+      return fakeResult;
+    } catch (error) {
+      setTaskStatus('error');
+      console.error('Task error:', error);
+      return { success: false, error: 'Task failed' };
+    } finally {
+      setIsTaskExecuting(false);
+    }
+  };
 
   // Check if any action is executing
   const isAnyActionExecuting =
@@ -154,7 +194,8 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     isFinding ||
     isDumping ||
     isOpening ||
-    isClosing;
+    isClosing ||
+    isTaskExecuting;
 
   // Handle browser open
   const handleOpenBrowser = async () => {
@@ -446,254 +487,325 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
         </Box>
       </Box>
 
-      {/* Action Buttons */}
+      {/* Action Sections */}
       {isBrowserOpen && (
         <Box sx={{ flex: 1, overflow: 'auto' }}>
-          {/* Navigate Action */}
+          {/* Browser-Use Section */}
           <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
-              Navigate to URL
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <TextField
-                value={navigateUrl}
-                onChange={(e) => setNavigateUrl(e.target.value)}
-                placeholder="https://example.com"
-                variant="outlined"
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', flex: 1 }}>
+                Browser-Use
+              </Typography>
+              <IconButton
                 size="small"
-                disabled={isExecuting}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleNavigate();
-                  }
-                }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: '0.875rem',
-                  },
-                }}
-              />
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleNavigate}
-                disabled={!navigateUrl.trim() || isAnyActionExecuting}
-                color={getButtonColor(navigateStatus)}
-                startIcon={isNavigating ? <CircularProgress size={16} /> : undefined}
-                sx={{ minWidth: '60px' }}
+                onClick={() => setIsBrowserUseExpanded(!isBrowserUseExpanded)}
               >
-                {isNavigating ? 'Going...' : 'Go'}
-              </Button>
+                {isBrowserUseExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              </IconButton>
             </Box>
-          </Box>
-
-          <Divider sx={{ my: 1 }} />
-
-          {/* Click Element Action */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
-              Click Element
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField
-                  value={clickSelector}
-                  onChange={(e) => setClickSelector(e.target.value)}
-                  placeholder="CSS selector or text content (e.g., 'Google', button, #id, .class)"
-                  variant="outlined"
-                  size="small"
-                  disabled={isExecuting}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleClickElement();
-                    }
-                  }}
-                  sx={{
-                    flex: 1,
-                    '& .MuiOutlinedInput-root': {
-                      fontSize: '0.875rem',
-                    },
-                  }}
-                />
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleClickElement}
-                  disabled={!clickSelector.trim() || isAnyActionExecuting}
-                  color={getButtonColor(clickStatus)}
-                  startIcon={isClicking ? <CircularProgress size={16} /> : undefined}
-                  sx={{ minWidth: '60px' }}
+            <Collapse in={isBrowserUseExpanded}>
+              <Box sx={{ mb: 2 }}>
+                <Typography
+                  variant="caption"
+                  sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}
                 >
-                  {isClicking ? 'Clicking...' : 'Click'}
-                </Button>
-              </Box>
-            </Box>
-          </Box>
-
-          <Divider sx={{ my: 1 }} />
-
-          {/* Tap X,Y Action */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
-              Tap Coordinates
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <TextField
-                value={tapX}
-                onChange={(e) => setTapX(e.target.value)}
-                placeholder="X"
-                variant="outlined"
-                size="small"
-                type="number"
-                disabled={isExecuting}
-                sx={{
-                  width: '80px',
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: '0.875rem',
-                  },
-                }}
-              />
-              <TextField
-                value={tapY}
-                onChange={(e) => setTapY(e.target.value)}
-                placeholder="Y"
-                variant="outlined"
-                size="small"
-                type="number"
-                disabled={isExecuting}
-                sx={{
-                  width: '80px',
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: '0.875rem',
-                  },
-                }}
-              />
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleTapXY}
-                disabled={!tapX.trim() || !tapY.trim() || isAnyActionExecuting}
-                color={getButtonColor(tapStatus)}
-                startIcon={isTapping ? <CircularProgress size={16} /> : undefined}
-                sx={{ minWidth: '60px' }}
-              >
-                {isTapping ? 'Tapping...' : 'Tap'}
-              </Button>
-            </Box>
-          </Box>
-
-          <Divider sx={{ my: 1 }} />
-
-          {/* Find Element Action */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
-              Find Element
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <TextField
-                value={findSelector}
-                onChange={(e) => setFindSelector(e.target.value)}
-                placeholder="CSS selector to find"
-                variant="outlined"
-                size="small"
-                disabled={isExecuting}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleFindElement();
-                  }
-                }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    fontSize: '0.875rem',
-                  },
-                }}
-              />
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleFindElement}
-                disabled={!findSelector.trim() || isAnyActionExecuting}
-                color={getButtonColor(findStatus)}
-                startIcon={isFinding ? <CircularProgress size={16} /> : undefined}
-                sx={{ minWidth: '60px' }}
-              >
-                {isFinding ? 'Finding...' : 'Find'}
-              </Button>
-            </Box>
-          </Box>
-
-          <Divider sx={{ my: 1 }} />
-
-          {/* Dump Elements Action */}
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
-              Dump Elements
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <Box sx={{ display: 'flex', gap: 1 }}>
+                  Task Execution
+                </Typography>
                 <Button
                   variant="contained"
                   size="small"
-                  onClick={handleDumpElements}
+                  onClick={handleTaskExecution}
                   disabled={isAnyActionExecuting}
-                  color={getButtonColor(dumpStatus)}
-                  startIcon={isDumping ? <CircularProgress size={16} /> : undefined}
+                  color={getButtonColor(taskStatus)}
+                  startIcon={isTaskExecuting ? <CircularProgress size={16} /> : undefined}
                   sx={{ minWidth: '80px' }}
                 >
-                  {isDumping ? 'Dumping...' : 'Dump'}
+                  {isTaskExecuting ? 'Running...' : 'Task'}
                 </Button>
               </Box>
-            </Box>
+            </Collapse>
           </Box>
 
-          {/* Response Area - Collapsible */}
-          {terminalOutput && (
-            <Box>
-              <Divider sx={{ my: 1 }} />
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <Typography variant="caption" sx={{ fontWeight: 'bold', flex: 1 }}>
-                  Response
-                </Typography>
-                <IconButton size="small" onClick={() => setIsResponseExpanded(!isResponseExpanded)}>
-                  {isResponseExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                </IconButton>
-              </Box>
-              <Collapse in={isResponseExpanded}>
-                <Paper
-                  ref={responseRef}
-                  sx={{
-                    p: 1,
-                    backgroundColor: '#1e1e1e',
-                    color: '#00ff00',
-                    fontFamily: 'monospace',
-                    fontSize: '0.75rem',
-                    overflow: 'auto',
-                    border: '1px solid #333',
-                    maxHeight: '200px',
-                  }}
-                >
-                  <Box
-                    component="pre"
-                    sx={{
-                      margin: 0,
-                      fontFamily: 'monospace',
-                      fontSize: '0.75rem',
-                      lineHeight: 1.2,
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-word',
-                    }}
-                  >
-                    {terminalOutput}
-                  </Box>
-                </Paper>
-              </Collapse>
+          <Divider sx={{ my: 2 }} />
+
+          {/* Playwright Section */}
+          <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', flex: 1 }}>
+                Playwright
+              </Typography>
+              <IconButton
+                size="small"
+                onClick={() => setIsPlaywrightExpanded(!isPlaywrightExpanded)}
+              >
+                {isPlaywrightExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              </IconButton>
             </Box>
-          )}
+            <Collapse in={isPlaywrightExpanded}>
+              <Box>
+                {/* Navigate Action */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}
+                  >
+                    Navigate to URL
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <TextField
+                      value={navigateUrl}
+                      onChange={(e) => setNavigateUrl(e.target.value)}
+                      placeholder="https://example.com"
+                      variant="outlined"
+                      size="small"
+                      disabled={isExecuting}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleNavigate();
+                        }
+                      }}
+                      sx={{
+                        flex: 1,
+                        '& .MuiOutlinedInput-root': {
+                          fontSize: '0.875rem',
+                        },
+                      }}
+                    />
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleNavigate}
+                      disabled={!navigateUrl.trim() || isAnyActionExecuting}
+                      color={getButtonColor(navigateStatus)}
+                      startIcon={isNavigating ? <CircularProgress size={16} /> : undefined}
+                      sx={{ minWidth: '60px' }}
+                    >
+                      {isNavigating ? 'Going...' : 'Go'}
+                    </Button>
+                  </Box>
+                </Box>
+
+                <Divider sx={{ my: 1 }} />
+
+                {/* Click Element Action */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}
+                  >
+                    Click Element
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <TextField
+                        value={clickSelector}
+                        onChange={(e) => setClickSelector(e.target.value)}
+                        placeholder="CSS selector or text content (e.g., 'Google', button, #id, .class)"
+                        variant="outlined"
+                        size="small"
+                        disabled={isExecuting}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleClickElement();
+                          }
+                        }}
+                        sx={{
+                          flex: 1,
+                          '& .MuiOutlinedInput-root': {
+                            fontSize: '0.875rem',
+                          },
+                        }}
+                      />
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={handleClickElement}
+                        disabled={!clickSelector.trim() || isAnyActionExecuting}
+                        color={getButtonColor(clickStatus)}
+                        startIcon={isClicking ? <CircularProgress size={16} /> : undefined}
+                        sx={{ minWidth: '60px' }}
+                      >
+                        {isClicking ? 'Clicking...' : 'Click'}
+                      </Button>
+                    </Box>
+                  </Box>
+                </Box>
+
+                <Divider sx={{ my: 1 }} />
+
+                {/* Tap X,Y Action */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}
+                  >
+                    Tap Coordinates
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <TextField
+                      value={tapX}
+                      onChange={(e) => setTapX(e.target.value)}
+                      placeholder="X"
+                      variant="outlined"
+                      size="small"
+                      type="number"
+                      disabled={isExecuting}
+                      sx={{
+                        width: '80px',
+                        '& .MuiOutlinedInput-root': {
+                          fontSize: '0.875rem',
+                        },
+                      }}
+                    />
+                    <TextField
+                      value={tapY}
+                      onChange={(e) => setTapY(e.target.value)}
+                      placeholder="Y"
+                      variant="outlined"
+                      size="small"
+                      type="number"
+                      disabled={isExecuting}
+                      sx={{
+                        width: '80px',
+                        '& .MuiOutlinedInput-root': {
+                          fontSize: '0.875rem',
+                        },
+                      }}
+                    />
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleTapXY}
+                      disabled={!tapX.trim() || !tapY.trim() || isAnyActionExecuting}
+                      color={getButtonColor(tapStatus)}
+                      startIcon={isTapping ? <CircularProgress size={16} /> : undefined}
+                      sx={{ minWidth: '60px' }}
+                    >
+                      {isTapping ? 'Tapping...' : 'Tap'}
+                    </Button>
+                  </Box>
+                </Box>
+
+                <Divider sx={{ my: 1 }} />
+
+                {/* Find Element Action */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}
+                  >
+                    Find Element
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <TextField
+                      value={findSelector}
+                      onChange={(e) => setFindSelector(e.target.value)}
+                      placeholder="CSS selector to find"
+                      variant="outlined"
+                      size="small"
+                      disabled={isExecuting}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleFindElement();
+                        }
+                      }}
+                      sx={{
+                        flex: 1,
+                        '& .MuiOutlinedInput-root': {
+                          fontSize: '0.875rem',
+                        },
+                      }}
+                    />
+                    <Button
+                      variant="contained"
+                      size="small"
+                      onClick={handleFindElement}
+                      disabled={!findSelector.trim() || isAnyActionExecuting}
+                      color={getButtonColor(findStatus)}
+                      startIcon={isFinding ? <CircularProgress size={16} /> : undefined}
+                      sx={{ minWidth: '60px' }}
+                    >
+                      {isFinding ? 'Finding...' : 'Find'}
+                    </Button>
+                  </Box>
+                </Box>
+
+                <Divider sx={{ my: 1 }} />
+
+                {/* Dump Elements Action */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}
+                  >
+                    Dump Elements
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={handleDumpElements}
+                        disabled={isAnyActionExecuting}
+                        color={getButtonColor(dumpStatus)}
+                        startIcon={isDumping ? <CircularProgress size={16} /> : undefined}
+                        sx={{ minWidth: '80px' }}
+                      >
+                        {isDumping ? 'Dumping...' : 'Dump'}
+                      </Button>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+            </Collapse>
+          </Box>
+        </Box>
+      )}
+
+      {/* Response Area - Collapsible */}
+      {terminalOutput && (
+        <Box>
+          <Divider sx={{ my: 1 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            <Typography variant="caption" sx={{ fontWeight: 'bold', flex: 1 }}>
+              Response
+            </Typography>
+            <IconButton size="small" onClick={() => setIsResponseExpanded(!isResponseExpanded)}>
+              {isResponseExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </IconButton>
+          </Box>
+          <Collapse in={isResponseExpanded}>
+            <Paper
+              ref={responseRef}
+              sx={{
+                p: 1,
+                backgroundColor: '#1e1e1e',
+                color: '#00ff00',
+                fontFamily: 'monospace',
+                fontSize: '0.75rem',
+                overflow: 'auto',
+                border: '1px solid #333',
+                maxHeight: '200px',
+              }}
+            >
+              <Box
+                component="pre"
+                sx={{
+                  margin: 0,
+                  fontFamily: 'monospace',
+                  fontSize: '0.75rem',
+                  lineHeight: 1.2,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {terminalOutput}
+              </Box>
+            </Paper>
+          </Collapse>
         </Box>
       )}
 
