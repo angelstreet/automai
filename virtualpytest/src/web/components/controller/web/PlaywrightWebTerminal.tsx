@@ -65,7 +65,45 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const [findStatus, setFindStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [dumpStatus, setDumpStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
+  // Tap animation state
+  const [tapAnimation, setTapAnimation] = useState<{ x: number; y: number; show: boolean }>({
+    x: 0,
+    y: 0,
+    show: false,
+  });
+
+  // Element highlight state
+  const [elementHighlight, setElementHighlight] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    show: boolean;
+  }>({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0,
+    show: false,
+  });
+
   const responseRef = useRef<HTMLDivElement>(null);
+
+  // Helper function to extract element coordinates from response
+  const showElementHighlight = (result: any) => {
+    if (result.success && result.result) {
+      const { x, y, width, height } = result.result;
+      if (
+        typeof x === 'number' &&
+        typeof y === 'number' &&
+        typeof width === 'number' &&
+        typeof height === 'number'
+      ) {
+        setElementHighlight({ x, y, width, height, show: true });
+        setTimeout(() => setElementHighlight((prev) => ({ ...prev, show: false })), 2000);
+      }
+    }
+  };
 
   // Auto-scroll response area when new output arrives
   useEffect(() => {
@@ -229,6 +267,9 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
       const result = await executeCommand(commandJson);
       setClickSelector('');
 
+      // Show element highlight if coordinates are available
+      showElementHighlight(result);
+
       // Set visual feedback based on result
       setClickStatus(result.success ? 'success' : 'error');
 
@@ -251,6 +292,10 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
 
     setIsTapping(true);
     setTapStatus('idle');
+
+    // Show tap animation at coordinates
+    setTapAnimation({ x, y, show: true });
+    setTimeout(() => setTapAnimation((prev) => ({ ...prev, show: false })), 1000);
 
     try {
       // Clear response area before new command
@@ -297,6 +342,9 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
 
       const result = await executeCommand(commandJson);
       setFindSelector('');
+
+      // Show element highlight if coordinates are available
+      showElementHighlight(result);
 
       // Set visual feedback based on result
       setFindStatus(result.success ? 'success' : 'error');
@@ -663,6 +711,67 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
         >
           <Typography variant="body2">Click "Open Browser" to start web automation</Typography>
         </Box>
+      )}
+
+      {/* Tap Animation Overlay */}
+      {tapAnimation.show && (
+        <Box
+          sx={{
+            position: 'fixed',
+            left: tapAnimation.x - 20,
+            top: tapAnimation.y - 20,
+            width: 40,
+            height: 40,
+            borderRadius: '50%',
+            backgroundColor: 'rgba(33, 150, 243, 0.6)',
+            border: '2px solid #2196f3',
+            pointerEvents: 'none',
+            zIndex: 9999,
+            animation: 'ripple 1s ease-out',
+            '@keyframes ripple': {
+              '0%': {
+                transform: 'scale(0)',
+                opacity: 1,
+              },
+              '100%': {
+                transform: 'scale(2)',
+                opacity: 0,
+              },
+            },
+          }}
+        />
+      )}
+
+      {/* Element Highlight Overlay */}
+      {elementHighlight.show && (
+        <Box
+          sx={{
+            position: 'fixed',
+            left: elementHighlight.x,
+            top: elementHighlight.y,
+            width: elementHighlight.width,
+            height: elementHighlight.height,
+            backgroundColor: 'rgba(255, 193, 7, 0.3)',
+            border: '2px solid #ffc107',
+            pointerEvents: 'none',
+            zIndex: 9998,
+            animation: 'highlight 2s ease-out',
+            '@keyframes highlight': {
+              '0%': {
+                opacity: 0,
+                transform: 'scale(1.1)',
+              },
+              '20%': {
+                opacity: 1,
+                transform: 'scale(1)',
+              },
+              '100%': {
+                opacity: 0,
+                transform: 'scale(1)',
+              },
+            },
+          }}
+        />
       )}
     </Box>
   );
