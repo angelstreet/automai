@@ -21,10 +21,10 @@ class BrowserUseManager:
     def _get_llm(self):
         if self.llm is None:
             self.llm = ChatOpenAI(
-                model='qwen/qwen3-14b:free',  # Best free model for browser automation
+                model='o4-mini',  # Best free model for browser automation
                 api_key=os.getenv('OPENROUTER_API_KEY'),
                 base_url='https://openrouter.ai/api/v1',
-                temperature=0.1  # Lower temperature for more consistent behavior
+                temperature=1.0  # Lower temperature for more consistent behavior
             )
         return self.llm
 
