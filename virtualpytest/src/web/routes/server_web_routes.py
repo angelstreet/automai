@@ -15,7 +15,7 @@ server_web_bp = Blueprint('server_web', __name__, url_prefix='/server/web')
 # =====================================================
 
 @server_web_bp.route('/executeCommand', methods=['POST'])
-async def execute_command():
+def execute_command():
     """Proxy execute web command request to selected host"""
     try:
         print("[@route:server_web:execute_command] Proxying execute command request")
@@ -46,7 +46,7 @@ async def execute_command():
         }), 500
 
 @server_web_bp.route('/navigateToUrl', methods=['POST'])
-async def navigate_to_url():
+def navigate_to_url():
     """Proxy navigate to URL request to selected host"""
     try:
         print("[@route:server_web:navigate_to_url] Proxying navigate to URL request")
@@ -77,7 +77,7 @@ async def navigate_to_url():
         }), 500
 
 @server_web_bp.route('/getPageInfo', methods=['POST'])
-async def get_page_info():
+def get_page_info():
     """Proxy get page info request to selected host"""
     try:
         print("[@route:server_web:get_page_info] Proxying get page info request")
@@ -108,7 +108,7 @@ async def get_page_info():
         }), 500
 
 @server_web_bp.route('/openBrowser', methods=['POST'])
-async def open_browser():
+def open_browser():
     """Proxy open browser request to selected host"""
     try:
         print("[@route:server_web:open_browser] Proxying open browser request")
@@ -139,7 +139,7 @@ async def open_browser():
         }), 500
 
 @server_web_bp.route('/closeBrowser', methods=['POST'])
-async def close_browser():
+def close_browser():
     """Proxy close browser request to selected host"""
     try:
         print("[@route:server_web:close_browser] Proxying close browser request")
@@ -170,7 +170,7 @@ async def close_browser():
         }), 500
 
 @server_web_bp.route('/getStatus', methods=['POST'])
-async def get_status():
+def get_status():
     """Proxy get web controller status request to selected host"""
     try:
         print("[@route:server_web:get_status] Proxying get status request")

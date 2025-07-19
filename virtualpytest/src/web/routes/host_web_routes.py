@@ -6,7 +6,6 @@ Host-side web automation endpoints that execute commands using instantiated web 
 
 from flask import Blueprint, request, jsonify
 from src.utils.host_utils import get_controller, get_device_by_id
-import asyncio
 
 # Create blueprint
 host_web_bp = Blueprint('host_web', __name__, url_prefix='/host/web')
@@ -16,8 +15,8 @@ host_web_bp = Blueprint('host_web', __name__, url_prefix='/host/web')
 # =====================================================
 
 @host_web_bp.route('/executeCommand', methods=['POST'])
-async def execute_command():
-    """Execute a web automation command using web controller (fire-and-forget)."""
+def execute_command():
+    """Execute a web automation command using web controller."""
     try:
         # Get request data
         data = request.get_json() or {}
@@ -43,14 +42,10 @@ async def execute_command():
         
         print(f"[@route:host_web:execute_command] Using web controller: {type(web_controller).__name__}")
         
-        # Start command in background (fire-and-forget)
-        asyncio.create_task(web_controller.execute_command(command, params))
+        # Execute command and wait for result
+        result = web_controller.execute_command(command, params)
         
-        # Return immediately
-        return jsonify({
-            'success': True,
-            'message': f'Command {command} started in background'
-        })
+        return jsonify(result)
             
     except Exception as e:
         print(f"[@route:host_web:execute_command] Error: {str(e)}")
@@ -60,8 +55,8 @@ async def execute_command():
         }), 500
 
 @host_web_bp.route('/navigateToUrl', methods=['POST'])
-async def navigate_to_url():
-    """Navigate to URL using web controller (fire-and-forget)."""
+def navigate_to_url():
+    """Navigate to URL using web controller."""
     try:
         # Get request data
         data = request.get_json() or {}
@@ -87,14 +82,10 @@ async def navigate_to_url():
         
         print(f"[@route:host_web:navigate_to_url] Using web controller: {type(web_controller).__name__}")
         
-        # Navigate to URL in background (fire-and-forget)
-        asyncio.create_task(web_controller.navigate_to_url(url, timeout=timeout))
+        # Navigate to URL and wait for result
+        result = web_controller.navigate_to_url(url, timeout=timeout)
         
-        # Return immediately
-        return jsonify({
-            'success': True,
-            'message': f'Navigation to {url} started in background'
-        })
+        return jsonify(result)
             
     except Exception as e:
         print(f"[@route:host_web:navigate_to_url] Error: {str(e)}")
@@ -103,43 +94,8 @@ async def navigate_to_url():
             'error': f'Navigation error: {str(e)}'
         }), 500
 
-@host_web_bp.route('/getPageInfo', methods=['POST'])
-async def get_page_info():
-    """Get page information using web controller."""
-    try:
-        print(f"[@route:host_web:get_page_info] Getting page info")
-        
-        # Get web controller for the host (no device_id needed for host operations)
-        web_controller = get_controller(None, 'web')
-        
-        if not web_controller:
-            return jsonify({
-                'success': False,
-                'error': 'No web controller found for host'
-            }), 404
-        
-        print(f"[@route:host_web:get_page_info] Using web controller: {type(web_controller).__name__}")
-        
-        # Get page info
-        if not hasattr(web_controller, 'get_page_info'):
-            return jsonify({
-                'success': False,
-                'error': 'Page info not supported by this web controller'
-            }), 400
-        
-        result = await web_controller.get_page_info()
-        
-        return jsonify(result)
-            
-    except Exception as e:
-        print(f"[@route:host_web:get_page_info] Error: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': f'Page info error: {str(e)}'
-        }), 500
-
 @host_web_bp.route('/openBrowser', methods=['POST'])
-async def open_browser():
+def open_browser():
     """Open browser using web controller."""
     try:
         print(f"[@route:host_web:open_browser] Opening browser")
@@ -155,14 +111,8 @@ async def open_browser():
         
         print(f"[@route:host_web:open_browser] Using web controller: {type(web_controller).__name__}")
         
-        # Open browser
-        if not hasattr(web_controller, 'open_browser'):
-            return jsonify({
-                'success': False,
-                'error': 'Browser open not supported by this web controller'
-            }), 400
-        
-        result = await web_controller.open_browser()
+        # Open browser and wait for result
+        result = web_controller.open_browser()
         
         return jsonify(result)
             
@@ -174,7 +124,7 @@ async def open_browser():
         }), 500
 
 @host_web_bp.route('/closeBrowser', methods=['POST'])
-async def close_browser():
+def close_browser():
     """Close browser using web controller."""
     try:
         print(f"[@route:host_web:close_browser] Closing browser")
@@ -190,14 +140,8 @@ async def close_browser():
         
         print(f"[@route:host_web:close_browser] Using web controller: {type(web_controller).__name__}")
         
-        # Close browser
-        if not hasattr(web_controller, 'close_browser'):
-            return jsonify({
-                'success': False,
-                'error': 'Browser close not supported by this web controller'
-            }), 400
-        
-        result = await web_controller.close_browser()
+        # Close browser and wait for result
+        result = web_controller.close_browser()
         
         return jsonify(result)
             
@@ -208,8 +152,37 @@ async def close_browser():
             'error': f'Browser close error: {str(e)}'
         }), 500
 
+@host_web_bp.route('/getPageInfo', methods=['POST'])
+def get_page_info():
+    """Get page information using web controller."""
+    try:
+        print(f"[@route:host_web:get_page_info] Getting page info")
+        
+        # Get web controller for the host (no device_id needed for host operations)
+        web_controller = get_controller(None, 'web')
+        
+        if not web_controller:
+            return jsonify({
+                'success': False,
+                'error': 'No web controller found for host'
+            }), 404
+        
+        print(f"[@route:host_web:get_page_info] Using web controller: {type(web_controller).__name__}")
+        
+        # Get page info and wait for result
+        result = web_controller.get_page_info()
+        
+        return jsonify(result)
+            
+    except Exception as e:
+        print(f"[@route:host_web:get_page_info] Error: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': f'Page info error: {str(e)}'
+        }), 500
+
 @host_web_bp.route('/getStatus', methods=['POST'])
-async def get_status():
+def get_status():
     """Get web controller status."""
     try:
         print(f"[@route:host_web:get_status] Getting status")
@@ -225,8 +198,8 @@ async def get_status():
         
         print(f"[@route:host_web:get_status] Using web controller: {type(web_controller).__name__}")
         
-        # Get controller status
-        status = await web_controller.get_status()
+        # Get controller status and wait for result
+        status = web_controller.get_status()
         
         return jsonify({
             'success': True,

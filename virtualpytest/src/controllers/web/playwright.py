@@ -9,7 +9,6 @@ Based on the BashDesktopController pattern but for web automation.
 import os
 import json
 import time
-import asyncio
 from typing import Dict, Any, Optional
 from ..base_controller import WebControllerInterface
 
@@ -53,7 +52,7 @@ class PlaywrightWebController(WebControllerInterface):
         self.is_connected = False
         return True
     
-    async def open_browser(self) -> Dict[str, Any]:
+    def open_browser(self) -> Dict[str, Any]:
         """Open/launch the browser window."""
         if not self.is_connected:
             self.connect()
@@ -74,17 +73,17 @@ class PlaywrightWebController(WebControllerInterface):
             # Set the DISPLAY environment variable for VNC
             os.environ["DISPLAY"] = ":1"
             
-            # Initialize Playwright if needed
-            if not self.playwright:
-                from playwright.async_api import async_playwright
-                self.playwright = await async_playwright().start()
+            # Use sync Playwright API like working example
+            from playwright.sync_api import sync_playwright
+            
+            self.playwright = sync_playwright().start()
             
             # Launch browser with headless=False to show the UI
-            self.browser = await self.playwright.chromium.launch(headless=False)
-            self.page = await self.browser.new_page()
+            self.browser = self.playwright.chromium.launch(headless=False)
+            self.page = self.browser.new_page()
             
             # Set viewport for consistent behavior
-            await self.page.set_viewport_size({"width": 1920, "height": 1080})
+            self.page.set_viewport_size({"width": 1920, "height": 1080})
             
             execution_time = int((time.time() - start_time) * 1000)
             
@@ -106,7 +105,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'connected': False
             }
     
-    async def close_browser(self) -> Dict[str, Any]:
+    def close_browser(self) -> Dict[str, Any]:
         """Close the browser window."""
         if not self.browser:
             return {
@@ -122,12 +121,16 @@ class PlaywrightWebController(WebControllerInterface):
             start_time = time.time()
             
             if self.page:
-                await self.page.close()
+                self.page.close()
                 self.page = None
                 
             if self.browser:
-                await self.browser.close()
+                self.browser.close()
                 self.browser = None
+            
+            if self.playwright:
+                self.playwright.stop()
+                self.playwright = None
             
             # Clear page state
             self.current_url = ""
@@ -149,6 +152,7 @@ class PlaywrightWebController(WebControllerInterface):
             # Force cleanup even if error
             self.page = None
             self.browser = None
+            self.playwright = None
             self.current_url = ""
             self.page_title = ""
             return {
@@ -158,7 +162,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'connected': False
             }
     
-    async def navigate_to_url(self, url: str, timeout: int = 30000) -> Dict[str, Any]:
+    def navigate_to_url(self, url: str, timeout: int = 30000) -> Dict[str, Any]:
         """
         Navigate to a URL.
         
@@ -181,7 +185,7 @@ class PlaywrightWebController(WebControllerInterface):
             print(f"Web[{self.web_type.upper()}]: Navigating to: {url}")
             
             start_time = time.time()
-            await self.page.goto(url, timeout=timeout)
+            self.page.goto(url, timeout=timeout)
             execution_time = int((time.time() - start_time) * 1000)
             
             # Update current state
@@ -210,7 +214,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
     
-    async def click_element(self, selector: str, timeout: int = 30000) -> Dict[str, Any]:
+    def click_element(self, selector: str, timeout: int = 30000) -> Dict[str, Any]:
         """
         Click an element by selector.
         
@@ -232,7 +236,7 @@ class PlaywrightWebController(WebControllerInterface):
             print(f"Web[{self.web_type.upper()}]: Clicking element: {selector}")
             
             start_time = time.time()
-            await self.page.click(selector, timeout=timeout)
+            self.page.click(selector, timeout=timeout)
             execution_time = int((time.time() - start_time) * 1000)
             
             result = {
@@ -253,7 +257,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
     
-    async def input_text(self, selector: str, text: str, timeout: int = 30000) -> Dict[str, Any]:
+    def input_text(self, selector: str, text: str, timeout: int = 30000) -> Dict[str, Any]:
         """
         Input text into an element.
         
@@ -276,7 +280,7 @@ class PlaywrightWebController(WebControllerInterface):
             print(f"Web[{self.web_type.upper()}]: Inputting text to: {selector}")
             
             start_time = time.time()
-            await self.page.fill(selector, text, timeout=timeout)
+            self.page.fill(selector, text, timeout=timeout)
             execution_time = int((time.time() - start_time) * 1000)
             
             result = {
@@ -297,7 +301,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
     
-    async def tap_x_y(self, x: int, y: int) -> Dict[str, Any]:
+    def tap_x_y(self, x: int, y: int) -> Dict[str, Any]:
         """
         Tap/click at specific coordinates.
         
@@ -319,7 +323,7 @@ class PlaywrightWebController(WebControllerInterface):
             print(f"Web[{self.web_type.upper()}]: Tapping at coordinates: ({x}, {y})")
             
             start_time = time.time()
-            await self.page.mouse.click(x, y)
+            self.page.mouse.click(x, y)
             execution_time = int((time.time() - start_time) * 1000)
             
             result = {
@@ -340,7 +344,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
     
-    async def execute_javascript(self, script: str) -> Dict[str, Any]:
+    def execute_javascript(self, script: str) -> Dict[str, Any]:
         """
         Execute JavaScript code in the page.
         
@@ -362,7 +366,7 @@ class PlaywrightWebController(WebControllerInterface):
             print(f"Web[{self.web_type.upper()}]: Executing JavaScript")
             
             start_time = time.time()
-            result = await self.page.evaluate(script)
+            result = self.page.evaluate(script)
             execution_time = int((time.time() - start_time) * 1000)
             
             return {
@@ -382,7 +386,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
     
-    async def get_page_info(self) -> Dict[str, Any]:
+    def get_page_info(self) -> Dict[str, Any]:
         """
         Get current page information.
         
@@ -428,7 +432,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
     
-    async def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> Dict[str, Any]:
         """Get controller status."""
         try:
             if self.is_connected and self.page:
@@ -452,7 +456,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'connected': False
             }
     
-    async def execute_command(self, command: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
+    def execute_command(self, command: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Execute web automation command with JSON parameters.
         
@@ -479,7 +483,7 @@ class PlaywrightWebController(WebControllerInterface):
                     'execution_time': 0
                 }
                 
-            return await self.navigate_to_url(url, timeout=timeout)
+            return self.navigate_to_url(url, timeout=timeout)
         
         elif command == 'click_element':
             selector = params.get('selector')
@@ -492,7 +496,7 @@ class PlaywrightWebController(WebControllerInterface):
                     'execution_time': 0
                 }
                 
-            return await self.click_element(selector, timeout=timeout)
+            return self.click_element(selector, timeout=timeout)
         
         elif command == 'input_text':
             selector = params.get('selector')
@@ -506,7 +510,7 @@ class PlaywrightWebController(WebControllerInterface):
                     'execution_time': 0
                 }
                 
-            return await self.input_text(selector, text, timeout=timeout)
+            return self.input_text(selector, text, timeout=timeout)
         
         elif command == 'tap_x_y':
             x = params.get('x')
@@ -519,7 +523,7 @@ class PlaywrightWebController(WebControllerInterface):
                     'execution_time': 0
                 }
                 
-            return await self.tap_x_y(x, y)
+            return self.tap_x_y(x, y)
         
         elif command == 'execute_javascript':
             script = params.get('script')
@@ -531,16 +535,16 @@ class PlaywrightWebController(WebControllerInterface):
                     'execution_time': 0
                 }
                 
-            return await self.execute_javascript(script)
+            return self.execute_javascript(script)
         
         elif command == 'get_page_info':
-            return await self.get_page_info()
+            return self.get_page_info()
         
         elif command == 'open_browser':
-            return await self.open_browser()
+            return self.open_browser()
         
         elif command == 'close_browser':
-            return await self.close_browser()
+            return self.close_browser()
         
         else:
             print(f"Web[{self.web_type.upper()}]: Unknown command: {command}")
