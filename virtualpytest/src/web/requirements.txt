@@ -20,3 +20,4 @@ coral-ai-tpu==2.0.0
 langdetect
 langchain-openai
 patchright
+posthog

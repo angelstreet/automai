@@ -153,7 +153,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
 
   // Handle task execution (placeholder)
   const handleTaskExecution = async () => {
-    if (isAnyActionExecuting) return;
+    if (!taskInput.trim() || isAnyActionExecuting) return;
 
     setIsTaskExecuting(true);
     setTaskStatus('idle');
@@ -162,19 +162,21 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
       // Clear response area before new task
       clearTerminal();
 
-      // Simulate task execution with delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const commandJson = JSON.stringify({
+        command: 'browser_use_task',
+        params: { task: taskInput.trim() },
+      });
+      const result = await executeCommand(commandJson);
 
-      // Create a fake successful result for display
-      const fakeResult = {
-        success: true,
-        result: { message: 'Task completed successfully' },
-      };
+      setTaskInput(''); // Clear input after execution
 
-      setTaskStatus('success');
+      // Set visual feedback based on result
+      setTaskStatus(result.success ? 'success' : 'error');
+
+      // Show response area
       setIsResponseExpanded(true);
 
-      return fakeResult;
+      return result;
     } catch (error) {
       setTaskStatus('error');
       console.error('Task error:', error);
@@ -550,7 +552,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                     startIcon={isTaskExecuting ? <CircularProgress size={16} /> : undefined}
                     sx={{ minWidth: '80px' }}
                   >
-                    {isTaskExecuting ? 'Running...' : 'Task'}
+                    {isTaskExecuting ? 'Running...' : 'Run'}
                   </Button>
                 </Box>
               </Box>
