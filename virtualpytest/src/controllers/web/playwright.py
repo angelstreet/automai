@@ -2,7 +2,7 @@
 Playwright Web Controller Implementation
 
 This controller provides web browser automation functionality using Playwright.
-Key features: Chrome remote debugging for thread-safe automation, non-headless execution for VNC visibility.
+Key features: Chrome remote debugging for thread-safe automation, async Playwright with sync wrappers for browser-use compatibility.
 Based on Chrome CDP connection pattern from utils.py.
 """
 
@@ -11,6 +11,7 @@ import json
 import time
 import subprocess
 import socket
+import asyncio
 from typing import Dict, Any, Optional
 from ..base_controller import WebControllerInterface
 
@@ -22,7 +23,7 @@ if src_utils_path not in sys.path:
 
 
 class PlaywrightWebController(WebControllerInterface):
-    """Playwright web controller using Chrome remote debugging for thread-safe automation."""
+    """Playwright web controller using async Playwright with sync wrappers for browser-use compatibility."""
     
     # Class-level Chrome process management
     _chrome_process = None
@@ -40,7 +41,7 @@ class PlaywrightWebController(WebControllerInterface):
         self.current_url = ""
         self.page_title = ""
         
-        print(f"[@controller:PlaywrightWeb] Initialized with Chrome remote debugging")
+        print(f"[@controller:PlaywrightWeb] Initialized with async Playwright + Chrome remote debugging")
     
     @classmethod
     def _kill_chrome_instances(cls):
@@ -181,80 +182,100 @@ class PlaywrightWebController(WebControllerInterface):
         self.is_connected = False
         return True
     
-    def _connect_to_chrome(self):
-        """Connect to Chrome via CDP and return page."""
-        from playwright.sync_api import sync_playwright
+    async def _async_connect_to_chrome(self):
+        """Async connect to Chrome via CDP and return page."""
+        from playwright.async_api import async_playwright
         
-        playwright = sync_playwright().start()
-        browser = playwright.chromium.connect_over_cdp('http://localhost:9222')
+        playwright = await async_playwright().start()
+        browser = await playwright.chromium.connect_over_cdp('http://localhost:9222')
         
         if len(browser.contexts) == 0:
-            context = browser.new_context()
-            page = context.new_page()
+            context = await browser.new_context()
+            page = await context.new_page()
         else:
             context = browser.contexts[0]
             if len(context.pages) == 0:
-                page = context.new_page()
+                page = await context.new_page()
             else:
                 page = context.pages[0]
         
         return playwright, browser, context, page
     
+    def _run_async(self, coro):
+        """Run async coroutine in sync context."""
+        try:
+            # Try to get existing event loop
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # If loop is running, create a new thread for this
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(asyncio.run, coro)
+                    return future.result()
+            else:
+                return loop.run_until_complete(coro)
+        except RuntimeError:
+            # No event loop exists, create one
+            return asyncio.run(coro)
+    
     def open_browser(self) -> Dict[str, Any]:
         """Open/launch the browser window."""
-        try:
-            print(f"Web[{self.web_type.upper()}]: Opening browser")
-            start_time = time.time()
-            
-            # First, ensure Chrome is launched (this will launch if not running)
-            if not self.is_connected:
-                print(f"Web[{self.web_type.upper()}]: Chrome not connected, launching...")
-                if not self.connect():
-                    return {
-                        'success': False,
-                        'error': 'Failed to launch Chrome',
-                        'execution_time': 0,
-                        'connected': False
-                    }
-            else:
-                print(f"Web[{self.web_type.upper()}]: Chrome already connected")
-            
-            # Test connection to Chrome and ensure page is ready
-            playwright, browser, context, page = self._connect_to_chrome()
-            
-            # Set viewport for consistent behavior
-            page.set_viewport_size({"width": 1920, "height": 1080})
-            
-            # Navigate to a blank page to ensure browser is ready
-            page.goto('about:blank')
-            
-            # Update page state
-            self.current_url = page.url
-            self.page_title = page.title() or "New Tab"
-            
-            # Cleanup connection
-            browser.close()
-            playwright.stop()
-            
-            execution_time = int((time.time() - start_time) * 1000)
-            
-            print(f"Web[{self.web_type.upper()}]: Browser opened and ready")
-            return {
-                'success': True,
-                'error': '',
-                'execution_time': execution_time,
-                'connected': True
-            }
-            
-        except Exception as e:
-            error_msg = f"Browser open error: {e}"
-            print(f"Web[{self.web_type.upper()}]: {error_msg}")
-            return {
-                'success': False,
-                'error': error_msg,
-                'execution_time': 0,
-                'connected': False
-            }
+        async def _async_open_browser():
+            try:
+                print(f"Web[{self.web_type.upper()}]: Opening browser")
+                start_time = time.time()
+                
+                # First, ensure Chrome is launched (this will launch if not running)
+                if not self.is_connected:
+                    print(f"Web[{self.web_type.upper()}]: Chrome not connected, launching...")
+                    if not self.connect():
+                        return {
+                            'success': False,
+                            'error': 'Failed to launch Chrome',
+                            'execution_time': 0,
+                            'connected': False
+                        }
+                else:
+                    print(f"Web[{self.web_type.upper()}]: Chrome already connected")
+                
+                # Test connection to Chrome and ensure page is ready
+                playwright, browser, context, page = await self._async_connect_to_chrome()
+                
+                # Set viewport for consistent behavior
+                await page.set_viewport_size({"width": 1920, "height": 1080})
+                
+                # Navigate to a blank page to ensure browser is ready
+                await page.goto('about:blank')
+                
+                # Update page state
+                self.current_url = page.url
+                self.page_title = await page.title() or "New Tab"
+                
+                # Cleanup connection
+                await browser.close()
+                await playwright.stop()
+                
+                execution_time = int((time.time() - start_time) * 1000)
+                
+                print(f"Web[{self.web_type.upper()}]: Browser opened and ready")
+                return {
+                    'success': True,
+                    'error': '',
+                    'execution_time': execution_time,
+                    'connected': True
+                }
+                
+            except Exception as e:
+                error_msg = f"Browser open error: {e}"
+                print(f"Web[{self.web_type.upper()}]: {error_msg}")
+                return {
+                    'success': False,
+                    'error': error_msg,
+                    'execution_time': 0,
+                    'connected': False
+                }
+        
+        return self._run_async(_async_open_browser())
     
     def close_browser(self) -> Dict[str, Any]:
         """Close browser (disconnect Chrome)."""
@@ -289,16 +310,50 @@ class PlaywrightWebController(WebControllerInterface):
             }
     
     def navigate_to_url(self, url: str, timeout: int = 30000) -> Dict[str, Any]:
-        """
-        Navigate to a URL using CDP connection.
+        """Navigate to a URL using async CDP connection."""
+        async def _async_navigate_to_url():
+            try:
+                print(f"Web[{self.web_type.upper()}]: Navigating to: {url}")
+                start_time = time.time()
+                
+                # Connect to Chrome via CDP
+                playwright, browser, context, page = await self._async_connect_to_chrome()
+                
+                # Navigate to URL
+                await page.goto(url, timeout=timeout)
+                
+                # Get page info
+                self.current_url = page.url
+                self.page_title = await page.title()
+                
+                # Cleanup connection
+                await browser.close()
+                await playwright.stop()
+                
+                execution_time = int((time.time() - start_time) * 1000)
+                
+                result = {
+                    'success': True,
+                    'url': self.current_url,
+                    'title': self.page_title,
+                    'execution_time': execution_time,
+                    'error': ''
+                }
+                
+                print(f"Web[{self.web_type.upper()}]: Navigation successful - {self.page_title}")
+                return result
+                
+            except Exception as e:
+                error_msg = f"Navigation error: {e}"
+                print(f"Web[{self.web_type.upper()}]: {error_msg}")
+                return {
+                    'success': False,
+                    'error': error_msg,
+                    'url': self.current_url,
+                    'title': self.page_title,
+                    'execution_time': 0
+                }
         
-        Args:
-            url: URL to navigate to
-            timeout: Navigation timeout in milliseconds
-            
-        Returns:
-            Dict with success, url, title, and error
-        """
         if not self.is_connected:
             return {
                 'success': False,
@@ -307,59 +362,45 @@ class PlaywrightWebController(WebControllerInterface):
                 'title': ''
             }
         
-        try:
-            print(f"Web[{self.web_type.upper()}]: Navigating to: {url}")
-            start_time = time.time()
-            
-            # Connect to Chrome via CDP
-            playwright, browser, context, page = self._connect_to_chrome()
-            
-            # Navigate to URL
-            page.goto(url, timeout=timeout)
-            
-            # Get page info
-            self.current_url = page.url
-            self.page_title = page.title()
-            
-            # Cleanup connection
-            browser.close()
-            playwright.stop()
-            
-            execution_time = int((time.time() - start_time) * 1000)
-            
-            result = {
-                'success': True,
-                'url': self.current_url,
-                'title': self.page_title,
-                'execution_time': execution_time,
-                'error': ''
-            }
-            
-            print(f"Web[{self.web_type.upper()}]: Navigation successful - {self.page_title}")
-            return result
-            
-        except Exception as e:
-            error_msg = f"Navigation error: {e}"
-            print(f"Web[{self.web_type.upper()}]: {error_msg}")
-            return {
-                'success': False,
-                'error': error_msg,
-                'url': self.current_url,
-                'title': self.page_title,
-                'execution_time': 0
-            }
+        return self._run_async(_async_navigate_to_url())
     
     def click_element(self, selector: str, timeout: int = 30000) -> Dict[str, Any]:
-        """
-        Click an element by selector using CDP connection.
+        """Click an element by selector using async CDP connection."""
+        async def _async_click_element():
+            try:
+                print(f"Web[{self.web_type.upper()}]: Clicking element: {selector}")
+                start_time = time.time()
+                
+                # Connect to Chrome via CDP
+                playwright, browser, context, page = await self._async_connect_to_chrome()
+                
+                # Click element
+                await page.click(selector, timeout=timeout)
+                
+                # Cleanup connection
+                await browser.close()
+                await playwright.stop()
+                
+                execution_time = int((time.time() - start_time) * 1000)
+                
+                result = {
+                    'success': True,
+                    'error': '',
+                    'execution_time': execution_time
+                }
+                
+                print(f"Web[{self.web_type.upper()}]: Click successful")
+                return result
+                
+            except Exception as e:
+                error_msg = f"Click error: {e}"
+                print(f"Web[{self.web_type.upper()}]: {error_msg}")
+                return {
+                    'success': False,
+                    'error': error_msg,
+                    'execution_time': 0
+                }
         
-        Args:
-            selector: CSS selector for the element
-            timeout: Wait timeout in milliseconds
-            
-        Returns:
-            Dict with success, error, and execution_time
-        """
         if not self.is_connected:
             return {
                 'success': False,
@@ -367,52 +408,45 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
         
-        try:
-            print(f"Web[{self.web_type.upper()}]: Clicking element: {selector}")
-            start_time = time.time()
-            
-            # Connect to Chrome via CDP
-            playwright, browser, context, page = self._connect_to_chrome()
-            
-            # Click element
-            page.click(selector, timeout=timeout)
-            
-            # Cleanup connection
-            browser.close()
-            playwright.stop()
-            
-            execution_time = int((time.time() - start_time) * 1000)
-            
-            result = {
-                'success': True,
-                'error': '',
-                'execution_time': execution_time
-            }
-            
-            print(f"Web[{self.web_type.upper()}]: Click successful")
-            return result
-            
-        except Exception as e:
-            error_msg = f"Click error: {e}"
-            print(f"Web[{self.web_type.upper()}]: {error_msg}")
-            return {
-                'success': False,
-                'error': error_msg,
-                'execution_time': 0
-            }
+        return self._run_async(_async_click_element())
     
     def input_text(self, selector: str, text: str, timeout: int = 30000) -> Dict[str, Any]:
-        """
-        Input text into an element using CDP connection.
+        """Input text into an element using async CDP connection."""
+        async def _async_input_text():
+            try:
+                print(f"Web[{self.web_type.upper()}]: Inputting text to: {selector}")
+                start_time = time.time()
+                
+                # Connect to Chrome via CDP
+                playwright, browser, context, page = await self._async_connect_to_chrome()
+                
+                # Input text
+                await page.fill(selector, text, timeout=timeout)
+                
+                # Cleanup connection
+                await browser.close()
+                await playwright.stop()
+                
+                execution_time = int((time.time() - start_time) * 1000)
+                
+                result = {
+                    'success': True,
+                    'error': '',
+                    'execution_time': execution_time
+                }
+                
+                print(f"Web[{self.web_type.upper()}]: Text input successful")
+                return result
+                
+            except Exception as e:
+                error_msg = f"Input error: {e}"
+                print(f"Web[{self.web_type.upper()}]: {error_msg}")
+                return {
+                    'success': False,
+                    'error': error_msg,
+                    'execution_time': 0
+                }
         
-        Args:
-            selector: CSS selector for the input element
-            text: Text to input
-            timeout: Wait timeout in milliseconds
-            
-        Returns:
-            Dict with success, error, and execution_time
-        """
         if not self.is_connected:
             return {
                 'success': False,
@@ -420,51 +454,45 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
         
-        try:
-            print(f"Web[{self.web_type.upper()}]: Inputting text to: {selector}")
-            start_time = time.time()
-            
-            # Connect to Chrome via CDP
-            playwright, browser, context, page = self._connect_to_chrome()
-            
-            # Input text
-            page.fill(selector, text, timeout=timeout)
-            
-            # Cleanup connection
-            browser.close()
-            playwright.stop()
-            
-            execution_time = int((time.time() - start_time) * 1000)
-            
-            result = {
-                'success': True,
-                'error': '',
-                'execution_time': execution_time
-            }
-            
-            print(f"Web[{self.web_type.upper()}]: Text input successful")
-            return result
-            
-        except Exception as e:
-            error_msg = f"Input error: {e}"
-            print(f"Web[{self.web_type.upper()}]: {error_msg}")
-            return {
-                'success': False,
-                'error': error_msg,
-                'execution_time': 0
-            }
+        return self._run_async(_async_input_text())
     
     def tap_x_y(self, x: int, y: int) -> Dict[str, Any]:
-        """
-        Tap/click at specific coordinates using CDP connection.
+        """Tap/click at specific coordinates using async CDP connection."""
+        async def _async_tap_x_y():
+            try:
+                print(f"Web[{self.web_type.upper()}]: Tapping at coordinates: ({x}, {y})")
+                start_time = time.time()
+                
+                # Connect to Chrome via CDP
+                playwright, browser, context, page = await self._async_connect_to_chrome()
+                
+                # Click at coordinates
+                await page.mouse.click(x, y)
+                
+                # Cleanup connection
+                await browser.close()
+                await playwright.stop()
+                
+                execution_time = int((time.time() - start_time) * 1000)
+                
+                result = {
+                    'success': True,
+                    'error': '',
+                    'execution_time': execution_time
+                }
+                
+                print(f"Web[{self.web_type.upper()}]: Tap successful")
+                return result
+                
+            except Exception as e:
+                error_msg = f"Tap error: {e}"
+                print(f"Web[{self.web_type.upper()}]: {error_msg}")
+                return {
+                    'success': False,
+                    'error': error_msg,
+                    'execution_time': 0
+                }
         
-        Args:
-            x: X coordinate
-            y: Y coordinate
-            
-        Returns:
-            Dict with success, error, and execution_time
-        """
         if not self.is_connected:
             return {
                 'success': False,
@@ -472,50 +500,44 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
         
-        try:
-            print(f"Web[{self.web_type.upper()}]: Tapping at coordinates: ({x}, {y})")
-            start_time = time.time()
-            
-            # Connect to Chrome via CDP
-            playwright, browser, context, page = self._connect_to_chrome()
-            
-            # Click at coordinates
-            page.mouse.click(x, y)
-            
-            # Cleanup connection
-            browser.close()
-            playwright.stop()
-            
-            execution_time = int((time.time() - start_time) * 1000)
-            
-            result = {
-                'success': True,
-                'error': '',
-                'execution_time': execution_time
-            }
-            
-            print(f"Web[{self.web_type.upper()}]: Tap successful")
-            return result
-            
-        except Exception as e:
-            error_msg = f"Tap error: {e}"
-            print(f"Web[{self.web_type.upper()}]: {error_msg}")
-            return {
-                'success': False,
-                'error': error_msg,
-                'execution_time': 0
-            }
+        return self._run_async(_async_tap_x_y())
     
     def execute_javascript(self, script: str) -> Dict[str, Any]:
-        """
-        Execute JavaScript code in the page using CDP connection.
+        """Execute JavaScript code in the page using async CDP connection."""
+        async def _async_execute_javascript():
+            try:
+                print(f"Web[{self.web_type.upper()}]: Executing JavaScript")
+                start_time = time.time()
+                
+                # Connect to Chrome via CDP
+                playwright, browser, context, page = await self._async_connect_to_chrome()
+                
+                # Execute JavaScript
+                result = await page.evaluate(script)
+                
+                # Cleanup connection
+                await browser.close()
+                await playwright.stop()
+                
+                execution_time = int((time.time() - start_time) * 1000)
+                
+                return {
+                    'success': True,
+                    'result': result,
+                    'error': '',
+                    'execution_time': execution_time
+                }
+                
+            except Exception as e:
+                error_msg = f"JavaScript execution error: {e}"
+                print(f"Web[{self.web_type.upper()}]: {error_msg}")
+                return {
+                    'success': False,
+                    'result': None,
+                    'error': error_msg,
+                    'execution_time': 0
+                }
         
-        Args:
-            script: JavaScript code to execute
-            
-        Returns:
-            Dict with success, result, error, and execution_time
-        """
         if not self.is_connected:
             return {
                 'success': False,
@@ -524,46 +546,50 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
         
-        try:
-            print(f"Web[{self.web_type.upper()}]: Executing JavaScript")
-            start_time = time.time()
-            
-            # Connect to Chrome via CDP
-            playwright, browser, context, page = self._connect_to_chrome()
-            
-            # Execute JavaScript
-            result = page.evaluate(script)
-            
-            # Cleanup connection
-            browser.close()
-            playwright.stop()
-            
-            execution_time = int((time.time() - start_time) * 1000)
-            
-            return {
-                'success': True,
-                'result': result,
-                'error': '',
-                'execution_time': execution_time
-            }
-            
-        except Exception as e:
-            error_msg = f"JavaScript execution error: {e}"
-            print(f"Web[{self.web_type.upper()}]: {error_msg}")
-            return {
-                'success': False,
-                'result': None,
-                'error': error_msg,
-                'execution_time': 0
-            }
+        return self._run_async(_async_execute_javascript())
     
     def get_page_info(self) -> Dict[str, Any]:
-        """
-        Get current page information using CDP connection.
+        """Get current page information using async CDP connection."""
+        async def _async_get_page_info():
+            try:
+                print(f"Web[{self.web_type.upper()}]: Getting page info")
+                start_time = time.time()
+                
+                # Connect to Chrome via CDP
+                playwright, browser, context, page = await self._async_connect_to_chrome()
+                
+                # Get page info
+                self.current_url = page.url
+                self.page_title = await page.title()
+                
+                # Cleanup connection
+                await browser.close()
+                await playwright.stop()
+                
+                execution_time = int((time.time() - start_time) * 1000)
+                
+                result = {
+                    'success': True,
+                    'url': self.current_url,
+                    'title': self.page_title,
+                    'error': '',
+                    'execution_time': execution_time
+                }
+                
+                print(f"Web[{self.web_type.upper()}]: Page info retrieved - {self.page_title}")
+                return result
+                
+            except Exception as e:
+                error_msg = f"Get page info error: {e}"
+                print(f"Web[{self.web_type.upper()}]: {error_msg}")
+                return {
+                    'success': False,
+                    'error': error_msg,
+                    'url': '',
+                    'title': '',
+                    'execution_time': 0
+                }
         
-        Returns:
-            Dict with success, url, title, error, and execution_time
-        """
         if not self.is_connected:
             return {
                 'success': False,
@@ -573,44 +599,7 @@ class PlaywrightWebController(WebControllerInterface):
                 'execution_time': 0
             }
         
-        try:
-            print(f"Web[{self.web_type.upper()}]: Getting page info")
-            start_time = time.time()
-            
-            # Connect to Chrome via CDP
-            playwright, browser, context, page = self._connect_to_chrome()
-            
-            # Get page info
-            self.current_url = page.url
-            self.page_title = page.title()
-            
-            # Cleanup connection
-            browser.close()
-            playwright.stop()
-            
-            execution_time = int((time.time() - start_time) * 1000)
-            
-            result = {
-                'success': True,
-                'url': self.current_url,
-                'title': self.page_title,
-                'error': '',
-                'execution_time': execution_time
-            }
-            
-            print(f"Web[{self.web_type.upper()}]: Page info retrieved - {self.page_title}")
-            return result
-            
-        except Exception as e:
-            error_msg = f"Get page info error: {e}"
-            print(f"Web[{self.web_type.upper()}]: {error_msg}")
-            return {
-                'success': False,
-                'error': error_msg,
-                'url': '',
-                'title': '',
-                'execution_time': 0
-            }
+        return self._run_async(_async_get_page_info())
     
     def get_status(self) -> Dict[str, Any]:
         """Get controller status."""
@@ -735,4 +724,20 @@ class PlaywrightWebController(WebControllerInterface):
                 'success': False,
                 'error': f'Unknown command: {command}',
                 'execution_time': 0
-            } 
+            }
+    
+    # Browser-use compatibility methods
+    async def get_page(self):
+        """Get the current page object for browser-use compatibility."""
+        playwright, browser, context, page = await self._async_connect_to_chrome()
+        return page
+    
+    async def get_browser(self):
+        """Get the current browser object for browser-use compatibility."""
+        playwright, browser, context, page = await self._async_connect_to_chrome()
+        return browser
+    
+    async def get_context(self):
+        """Get the current context object for browser-use compatibility."""
+        playwright, browser, context, page = await self._async_connect_to_chrome()
+        return context 
