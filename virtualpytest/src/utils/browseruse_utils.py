@@ -34,11 +34,25 @@ class BrowserUseManager:
         # Connect to existing browser
         _, _, _, page = await self.playwright_utils.connect_to_chrome()
         
-        # Create and run agent with better configuration
+        # Get current viewport to preserve it
+        current_viewport = await page.evaluate("""() => ({
+            width: window.innerWidth,
+            height: window.innerHeight
+        })""")
+        
+        # Create browser profile that preserves current viewport
+        from browser_use.browser.profile import BrowserProfile
+        browser_profile = BrowserProfile(
+            viewport=current_viewport,
+            no_viewport=False
+        )
+        
+        # Create and run agent with existing page and preserved viewport
         agent = Agent(
             task=task, 
             llm=self._get_llm(), 
             page=page,
+            browser_profile=browser_profile,
             use_vision=True,
             max_failures=5,  # Allow more failures before stopping
             retry_delay=2    # Shorter retry delay
