@@ -14,13 +14,16 @@ from typing import Dict, Any
 import sys
 import os
 
-# Add browser_use directory to Python path so it can find its internal imports
-browser_use_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib', 'browser_use')
-if browser_use_dir not in sys.path:
-    sys.path.insert(0, browser_use_dir)
+# Add lib directory to Python path so it can find browser_use module
+lib_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib')
+browser_use_dir = os.path.join(lib_dir, 'browser_use')
+if lib_dir not in sys.path:
+    sys.path.insert(0, lib_dir)
 
-print(f"[BrowserUseManager] Added browser_use path: {browser_use_dir}")
-print(f"[BrowserUseManager] Directory exists: {os.path.exists(browser_use_dir)}")
+print(f"[BrowserUseManager] Added lib path: {lib_dir}")
+print(f"[BrowserUseManager] Browser_use directory: {browser_use_dir}")
+print(f"[BrowserUseManager] Lib directory exists: {os.path.exists(lib_dir)}")
+print(f"[BrowserUseManager] Browser_use directory exists: {os.path.exists(browser_use_dir)}")
 print(f"[BrowserUseManager] Init file exists: {os.path.exists(os.path.join(browser_use_dir, '__init__.py'))}")
 
 try:
@@ -41,6 +44,7 @@ try:
     
 except ImportError as e:
     print(f"[BrowserUseManager] Warning: Failed to import browser-use dependencies: {e}")
+    print(f"[BrowserUseManager] Lib path: {lib_dir}")
     print(f"[BrowserUseManager] Browser-use path: {browser_use_dir}")
     print(f"[BrowserUseManager] Python path: {sys.path[:5]}")
     import traceback
