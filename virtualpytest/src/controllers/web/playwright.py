@@ -637,7 +637,7 @@ class PlaywrightWebController(WebControllerInterface):
             try:
                 print(f"Web[{self.web_type.upper()}]: Executing browser-use task: {task}")
                 
-                # Create browser-use manager with existing utils
+                # Create browser-use manager with existing browser session reuse
                 browseruse_manager = BrowserUseManager(self.utils)
                 
                 # Execute task
