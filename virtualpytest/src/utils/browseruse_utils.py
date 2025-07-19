@@ -60,7 +60,7 @@ class BrowserUseManager:
             
             # Use Qwen model compatible with browser-use
             self.llm = ChatOpenAI(
-                model='qwen/qwen-2.5-72b-instruct',
+                model='moonshotai/kimi-k2:free',
                 openai_api_key=api_key,
                 openai_api_base='https://openrouter.ai/api/v1',
                 temperature=0.0,

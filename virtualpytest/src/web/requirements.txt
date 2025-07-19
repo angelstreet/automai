@@ -21,3 +21,7 @@ langdetect
 langchain-openai
 patchright
 posthog
+browseruse
+langchain-openai==0.3.11
+langchain-core==0.3.49
+langchain==0.3.21
