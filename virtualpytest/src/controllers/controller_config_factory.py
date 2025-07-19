@@ -43,6 +43,15 @@ DEVICE_CONTROLLER_MAP = {
         'network': [],
         'ai': ['ai_agent']
     },
+    'tizen': {
+        'av': ['camera_stream'], 
+        'remote': [],
+        'desktop': [],
+        'web': [],
+        'power': [],
+        'network': [],
+        'ai': ['ai_agent']
+    },
     'host_vnc': {
         'av': ['vnc_stream'], 
         'remote': [],
@@ -183,6 +192,11 @@ def _get_av_params(implementation: str, device_config: dict) -> dict:
         return {
             'video_stream_path': device_config.get('video_stream_path', '/host/stream/capture1'),
             'video_capture_path': device_config.get('video_capture_path', '/var/www/html/stream/capture1')
+        }
+    elif implementation == 'camera_stream':
+        return {
+            'video_stream_path': device_config.get('video_stream_path', '/host/camera/stream'),
+            'video_capture_path': device_config.get('video_capture_path', '/var/www/html/camera/captures')
         }
     elif implementation == 'vnc_stream':
         return {

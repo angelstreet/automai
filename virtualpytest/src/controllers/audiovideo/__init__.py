@@ -6,10 +6,13 @@ Each controller provides AV functionality for different capture sources and meth
 
 Available Controllers:
 - HDMIStreamController: HDMI stream URL controller for video streaming
+- CameraStreamController: Camera stream controller with calibration capabilities
 """
 
 from .hdmi_stream import HDMIStreamController
+from .camera_stream import CameraStreamController
 
 __all__ = [
-    'HDMIStreamController'
+    'HDMIStreamController',
+    'CameraStreamController'
 ]
