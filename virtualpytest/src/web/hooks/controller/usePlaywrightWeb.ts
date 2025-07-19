@@ -139,9 +139,11 @@ export const usePlaywrightWeb = (host: Host) => {
               setIsBrowserUseExecuting(false);
               setCurrentTaskId(null);
 
-              // Show result in terminal
-              const resultOutput = JSON.stringify(data.result || { error: data.error }, null, 2);
-              setTerminalOutput(resultOutput);
+              // Show execution logs in terminal if available, otherwise show result
+              const terminalOutput =
+                data.execution_logs ||
+                JSON.stringify(data.result || { error: data.error }, null, 2);
+              setTerminalOutput(terminalOutput);
             } else {
               console.log('[@hook:usePlaywrightWeb] Task IDs do not match - ignoring event');
             }

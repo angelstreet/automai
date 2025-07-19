@@ -54,10 +54,11 @@ def execute_command():
                     print(f"[@route:host_web:execute_command] Starting async browser_use_task {task_id}")
                     result = web_controller.execute_command(command, params)
                     
-                    # Send callback with result
+                    # Send callback with result and execution logs
                     callback_data = {
                         'task_id': task_id,
                         'result': result,
+                        'execution_logs': result.get('execution_logs', ''),
                         'error': None
                     }
                     
