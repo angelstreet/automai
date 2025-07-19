@@ -1,5 +1,6 @@
 Flask==3.0.0
 Flask-CORS==4.0.0
+langchain-openai
 supabase
 python-dotenv==1.0.0
 psycopg2-binary==2.9.9 
@@ -17,3 +18,4 @@ numpy==1.24.3
 Pillow==10.0.1
 coral-ai-tpu==2.0.0
 langdetect
+langchain-openai

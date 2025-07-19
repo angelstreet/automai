@@ -19,6 +19,7 @@ if src_utils_path not in sys.path:
     sys.path.insert(0, src_utils_path)
 
 from playwright_utils import PlaywrightUtils
+from browseruse_utils import BrowserUseManager
 
 
 class PlaywrightWebController(WebControllerInterface):
@@ -630,6 +631,46 @@ class PlaywrightWebController(WebControllerInterface):
                 'chrome_running': False
             }
     
+    def browser_use_task(self, task: str) -> Dict[str, Any]:
+        """Execute browser-use task using existing Chrome instance."""
+        async def _async_browser_use_task():
+            try:
+                print(f"Web[{self.web_type.upper()}]: Executing browser-use task: {task}")
+                
+                # Create browser-use manager with existing utils
+                browseruse_manager = BrowserUseManager(self.utils)
+                
+                # Execute task
+                result = await browseruse_manager.execute_task(task)
+                
+                # Update page state if successful
+                if result.get('success') and result.get('page_info', {}).get('final_url'):
+                    self.current_url = result['page_info']['final_url']
+                    if result.get('page_info', {}).get('final_title'):
+                        self.page_title = result['page_info']['final_title']
+                
+                return result
+                
+            except Exception as e:
+                error_msg = f"Browser-use task error: {e}"
+                print(f"Web[{self.web_type.upper()}]: {error_msg}")
+                return {
+                    'success': False,
+                    'error': error_msg,
+                    'task': task,
+                    'execution_time': 0
+                }
+        
+        if not self.is_connected:
+            return {
+                'success': False,
+                'error': 'Not connected to browser',
+                'task': task,
+                'execution_time': 0
+            }
+        
+        return self.utils.run_async(_async_browser_use_task())
+    
     def execute_command(self, command: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Execute web automation command with JSON parameters.
@@ -724,6 +765,18 @@ class PlaywrightWebController(WebControllerInterface):
             element_types = params.get('element_types', 'all')
             include_hidden = params.get('include_hidden', False)
             return self.dump_elements(element_types=element_types, include_hidden=include_hidden)
+        
+        elif command == 'browser_use_task':
+            task = params.get('task', '')
+            
+            if not task:
+                return {
+                    'success': False,
+                    'error': 'Task parameter is required',
+                    'execution_time': 0
+                }
+            
+            return self.browser_use_task(task)
         
         else:
             print(f"Web[{self.web_type.upper()}]: Unknown command: {command}")
