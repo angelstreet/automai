@@ -147,12 +147,15 @@ class PlaywrightWebController(WebControllerInterface):
         """Connect to Chrome (launch if needed)."""
         if not self._chrome_running:
             try:
+                print(f"Web[{self.web_type.upper()}]: Chrome not running, launching new Chrome process...")
                 self.__class__._chrome_process = self._launch_browser_with_remote_debugging()
                 self.__class__._chrome_running = True
-                print(f"Web[{self.web_type.upper()}]: Chrome launched with remote debugging")
+                print(f"Web[{self.web_type.upper()}]: Chrome launched with remote debugging successfully")
             except Exception as e:
                 print(f"Web[{self.web_type.upper()}]: Failed to launch Chrome: {e}")
                 return False
+        else:
+            print(f"Web[{self.web_type.upper()}]: Chrome process already running (PID: {self._chrome_process.pid if self._chrome_process else 'unknown'})")
         
         self.is_connected = True
         return True
@@ -198,25 +201,36 @@ class PlaywrightWebController(WebControllerInterface):
         return playwright, browser, context, page
     
     def open_browser(self) -> Dict[str, Any]:
-        """Open/ensure browser is ready."""
-        if not self.is_connected:
-            if not self.connect():
-                return {
-                    'success': False,
-                    'error': 'Failed to connect to Chrome',
-                    'execution_time': 0,
-                    'connected': False
-                }
-        
+        """Open/launch the browser window."""
         try:
-            print(f"Web[{self.web_type.upper()}]: Ensuring browser is ready")
+            print(f"Web[{self.web_type.upper()}]: Opening browser")
             start_time = time.time()
             
-            # Test connection to Chrome
+            # First, ensure Chrome is launched (this will launch if not running)
+            if not self.is_connected:
+                print(f"Web[{self.web_type.upper()}]: Chrome not connected, launching...")
+                if not self.connect():
+                    return {
+                        'success': False,
+                        'error': 'Failed to launch Chrome',
+                        'execution_time': 0,
+                        'connected': False
+                    }
+            else:
+                print(f"Web[{self.web_type.upper()}]: Chrome already connected")
+            
+            # Test connection to Chrome and ensure page is ready
             playwright, browser, context, page = self._connect_to_chrome()
             
             # Set viewport for consistent behavior
             page.set_viewport_size({"width": 1920, "height": 1080})
+            
+            # Navigate to a blank page to ensure browser is ready
+            page.goto('about:blank')
+            
+            # Update page state
+            self.current_url = page.url
+            self.page_title = page.title() or "New Tab"
             
             # Cleanup connection
             browser.close()
@@ -224,7 +238,7 @@ class PlaywrightWebController(WebControllerInterface):
             
             execution_time = int((time.time() - start_time) * 1000)
             
-            print(f"Web[{self.web_type.upper()}]: Browser ready")
+            print(f"Web[{self.web_type.upper()}]: Browser opened and ready")
             return {
                 'success': True,
                 'error': '',
@@ -233,7 +247,7 @@ class PlaywrightWebController(WebControllerInterface):
             }
             
         except Exception as e:
-            error_msg = f"Browser ready check error: {e}"
+            error_msg = f"Browser open error: {e}"
             print(f"Web[{self.web_type.upper()}]: {error_msg}")
             return {
                 'success': False,
