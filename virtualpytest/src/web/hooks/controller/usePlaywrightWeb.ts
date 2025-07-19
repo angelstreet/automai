@@ -170,11 +170,10 @@ export const usePlaywrightWeb = (host: Host) => {
         // Execute command
         const result = await executeWebCommand(command, params || {});
 
-        // Build complete output with command and result
-        const commandLine = `$ ${commandStr}\n`;
+        // Build output with only useful data - no command echo or generic success messages
         let resultOutput = '';
         if (result.success) {
-          // Special handling for dump_elements command - show the elements data
+          // Special handling for dump_elements command - show only the elements data
           if (
             command === 'dump_elements' &&
             'elements' in result &&
@@ -183,28 +182,28 @@ export const usePlaywrightWeb = (host: Host) => {
             const elements = result.elements as any[];
             const summary = (result as any).summary || {};
 
-            resultOutput += `Found ${elements.length} elements:\n\n`;
-            resultOutput +=
-              JSON.stringify(
-                {
-                  summary: summary,
-                  elements: elements,
-                },
-                null,
-                2,
-              ) + '\n';
-          } else {
-            // Standard output for other commands
+            resultOutput = JSON.stringify(
+              {
+                summary: summary,
+                elements: elements,
+              },
+              null,
+              2,
+            );
+          } else if (command === 'navigate_to_url') {
+            // For navigation, show URL and title
             if (result.url) {
               resultOutput += `URL: ${result.url}\n`;
             }
             if (result.title) {
-              resultOutput += `Title: ${result.title}\n`;
+              resultOutput += `Title: ${result.title}`;
             }
-            if (result.result !== undefined) {
-              resultOutput += `Result: ${JSON.stringify(result.result, null, 2)}\n`;
-            }
-            resultOutput += `✅ Success (${result.execution_time}ms)\n`;
+          } else if (result.result !== undefined) {
+            // For other commands with result data, show the JSON result
+            resultOutput = JSON.stringify(result.result, null, 2);
+          } else {
+            // For commands without specific result data, show a simple completion message
+            resultOutput = `✅ Command completed`;
           }
 
           // Update page state for navigation commands
@@ -213,20 +212,18 @@ export const usePlaywrightWeb = (host: Host) => {
             setPageTitle(result.title || '');
           }
         } else {
-          resultOutput = `❌ Error: ${result.error || 'Command failed'}\n`;
+          resultOutput = `❌ Error: ${result.error || 'Command failed'}`;
         }
 
-        // Update terminal output with command + result
-        const newOutput = terminalOutput + commandLine + resultOutput + '\n';
-        setTerminalOutput(newOutput);
+        // Update terminal output with only the result - no command echo
+        setTerminalOutput(resultOutput);
 
         return result;
       } catch (error) {
         console.error('[@hook:usePlaywrightWeb] Command execution error:', error);
 
-        const commandLine = `$ ${commandStr}\n`;
-        const errorOutput = `❌ Error: ${error}\n`;
-        setTerminalOutput(terminalOutput + commandLine + errorOutput);
+        const errorOutput = `❌ Error: ${error}`;
+        setTerminalOutput(errorOutput);
 
         return { success: false, error: String(error) };
       } finally {
