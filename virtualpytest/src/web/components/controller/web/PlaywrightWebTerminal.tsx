@@ -343,77 +343,6 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     }
   };
 
-  const formatResponse = (output: string) => {
-    // Filter and format the output to show only useful information
-    const lines = output.split('\n');
-    const filteredLines: string[] = [];
-
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-
-      // Skip empty lines and simple success messages
-      if (!trimmedLine) continue;
-
-      // Skip generic success messages without useful info
-      if (trimmedLine === '✅ Success') continue;
-      if (trimmedLine.match(/^✅ Success \(\d+ms\)$/)) continue;
-      if (trimmedLine === 'Command executed successfully') continue;
-
-      // Skip command echo lines (lines that start with $ and contain JSON)
-      if (trimmedLine.startsWith('$ {') && trimmedLine.includes('"command":')) continue;
-
-      // Keep useful information
-      if (
-        trimmedLine.startsWith('URL:') ||
-        trimmedLine.startsWith('Title:') ||
-        trimmedLine.startsWith('Error:') ||
-        trimmedLine.startsWith('❌') ||
-        trimmedLine.includes('"error":') ||
-        trimmedLine.includes('"success":') ||
-        trimmedLine.includes('"selector_used":') ||
-        trimmedLine.includes('"search_type":') ||
-        trimmedLine.includes('"execution_time":') ||
-        trimmedLine.includes('elements found') ||
-        trimmedLine.includes('Element clicked') ||
-        trimmedLine.includes('Element found') ||
-        trimmedLine.includes('Navigation completed') ||
-        (trimmedLine.startsWith('{') && trimmedLine.includes('"'))
-      ) {
-        filteredLines.push(trimmedLine);
-      }
-    }
-
-    // If no useful info was found, show a simple status
-    if (filteredLines.length === 0) {
-      filteredLines.push('✅ Command completed');
-    }
-
-    return filteredLines.map((line, index) => (
-      <Box
-        key={index}
-        component="pre"
-        sx={{
-          margin: 0,
-          fontFamily: 'monospace',
-          fontSize: '0.75rem',
-          lineHeight: 1.2,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          color:
-            line.includes('Error:') || line.includes('❌')
-              ? '#ff6b6b'
-              : line.startsWith('URL:') || line.startsWith('Title:')
-                ? '#4dabf7'
-                : line.includes('"success": true')
-                  ? '#51cf66'
-                  : 'inherit',
-        }}
-      >
-        {line}
-      </Box>
-    ));
-  };
-
   return (
     <Box
       sx={{
@@ -505,7 +434,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
           {/* Click Element Action */}
           <Box sx={{ mb: 2 }}>
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
-              Click Element (CSS selector or text)
+              Click Element
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Box sx={{ display: 'flex', gap: 1 }}>
@@ -541,9 +470,6 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                   {isClicking ? 'Clicking...' : 'Click'}
                 </Button>
               </Box>
-              <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-                Supports both CSS selectors and text content search
-              </Typography>
             </Box>
           </Box>
 
@@ -691,7 +617,19 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                     maxHeight: '200px',
                   }}
                 >
-                  {formatResponse(terminalOutput)}
+                  <Box
+                    component="pre"
+                    sx={{
+                      margin: 0,
+                      fontFamily: 'monospace',
+                      fontSize: '0.75rem',
+                      lineHeight: 1.2,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {terminalOutput}
+                  </Box>
                 </Paper>
               </Collapse>
             </Box>
