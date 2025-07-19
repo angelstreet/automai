@@ -13,6 +13,7 @@ from ..controllers.controller_config_factory import create_controller_configs_fr
 # Import controller classes
 from ..controllers.audiovideo.hdmi_stream import HDMIStreamController
 from ..controllers.audiovideo.vnc_stream import VNCStreamController
+from ..controllers.audiovideo.camera_stream import CameraStreamController
 from ..controllers.remote.android_mobile import AndroidMobileRemoteController
 from ..controllers.remote.android_tv import AndroidTVRemoteController
 from ..controllers.remote.appium_remote import AppiumRemoteController
@@ -205,6 +206,8 @@ def _create_controller_instance(controller_type: str, implementation: str, param
             return HDMIStreamController(**params)
         elif implementation == 'vnc_stream':
             return VNCStreamController(**params)
+        elif implementation == 'camera_stream':
+            return CameraStreamController(**params)
     
     # Remote Controllers
     elif controller_type == 'remote':

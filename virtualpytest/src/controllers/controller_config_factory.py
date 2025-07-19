@@ -66,6 +66,7 @@ DEVICE_CONTROLLER_MAP = {
 # Controller → Verification Capabilities
 CONTROLLER_VERIFICATION_MAP = {
     'hdmi_stream': ['image', 'text', 'video'],
+    'camera_stream': ['image', 'text', 'video'],  # Camera supports same verification as HDMI
     'vnc_stream': ['image', 'text', 'video'],  # VNC supports same verification as HDMI
     'android_mobile': ['adb'],
     'android_tv': [],  # No verification for android_tv remote

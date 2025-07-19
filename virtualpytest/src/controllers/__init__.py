@@ -22,6 +22,7 @@ from .base_controller import (
 # Import AV implementations
 from .audiovideo.hdmi_stream import HDMIStreamController
 from .audiovideo.vnc_stream import VNCStreamController
+from .audiovideo.camera_stream import CameraStreamController
 
 # Import real implementations
 from .remote.android_tv import AndroidTVRemoteController
@@ -62,6 +63,7 @@ CONTROLLER_REGISTRY = {
     'av': {
         'hdmi_stream': HDMIStreamController, # HDMI stream URL controller
         'vnc_stream': VNCStreamController,   # VNC stream URL controller
+        'camera_stream': CameraStreamController, # Camera stream URL controller
     },
     'ai': {
         'ai_agent': AIAgentController,       # AI task execution agent
