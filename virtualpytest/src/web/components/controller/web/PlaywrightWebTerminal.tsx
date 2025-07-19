@@ -400,25 +400,6 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
         </Box>
       </Box>
 
-      {/* Page Info Display */}
-      {isBrowserOpen && (currentUrl || pageTitle) && (
-        <Paper
-          sx={{
-            p: 1,
-            mb: 2,
-            backgroundColor: '#2d2d30',
-            color: '#cccccc',
-            border: '1px solid #3e3e42',
-          }}
-        >
-          <Typography variant="caption" sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}>
-            {pageTitle && `📄 ${pageTitle}`}
-            {pageTitle && currentUrl && ' | '}
-            {currentUrl && `🌐 ${currentUrl}`}
-          </Typography>
-        </Paper>
-      )}
-
       {/* Action Buttons */}
       {isBrowserOpen && (
         <Box sx={{ flex: 1, overflow: 'auto' }}>
