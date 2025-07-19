@@ -17,48 +17,74 @@ class BaseTelemetryEvent(ABC):
 
 
 @dataclass
-class RegisteredFunction:
-	name: str
-	params: dict[str, Any]
-
-
-@dataclass
-class ControllerRegisteredFunctionsTelemetryEvent(BaseTelemetryEvent):
-	registered_functions: list[RegisteredFunction]
-	name: str = 'controller_registered_functions'
-
-
-@dataclass
-class AgentStepTelemetryEvent(BaseTelemetryEvent):
-	agent_id: str
-	step: int
-	step_error: list[str]
-	consecutive_failures: int
-	actions: list[dict]
-	name: str = 'agent_step'
-
-
-@dataclass
-class AgentRunTelemetryEvent(BaseTelemetryEvent):
-	agent_id: str
-	use_vision: bool
+class AgentTelemetryEvent(BaseTelemetryEvent):
+	# start details
 	task: str
-	model_name: str
-	chat_model_library: str
+	model: str
+	model_provider: str
+	planner_llm: str | None
+	max_steps: int
+	max_actions_per_step: int
+	use_vision: bool
+	use_validation: bool
 	version: str
 	source: str
-	name: str = 'agent_run'
+	cdp_url: str | None
+	# step details
+	action_errors: Sequence[str | None]
+	action_history: Sequence[list[dict] | None]
+	urls_visited: Sequence[str | None]
+	# end details
+	steps: int
+	total_input_tokens: int
+	total_duration_seconds: float
+	success: bool | None
+	final_result_response: str | None
+	error_message: str | None
+
+	name: str = 'agent_event'
 
 
 @dataclass
-class AgentEndTelemetryEvent(BaseTelemetryEvent):
-	agent_id: str
-	steps: int
-	max_steps_reached: bool
-	is_done: bool
-	success: bool | None
-	total_input_tokens: int
-	total_duration_seconds: float
+class MCPClientTelemetryEvent(BaseTelemetryEvent):
+	"""Telemetry event for MCP client usage"""
 
-	errors: Sequence[str | None]
-	name: str = 'agent_end'
+	server_name: str
+	command: str
+	tools_discovered: int
+	version: str
+	action: str  # 'connect', 'disconnect', 'tool_call'
+	tool_name: str | None = None
+	duration_seconds: float | None = None
+	error_message: str | None = None
+
+	name: str = 'mcp_client_event'
+
+
+@dataclass
+class MCPServerTelemetryEvent(BaseTelemetryEvent):
+	"""Telemetry event for MCP server usage"""
+
+	version: str
+	action: str  # 'start', 'stop', 'tool_call'
+	tool_name: str | None = None
+	duration_seconds: float | None = None
+	error_message: str | None = None
+	parent_process_cmdline: str | None = None
+
+	name: str = 'mcp_server_event'
+
+
+@dataclass
+class CLITelemetryEvent(BaseTelemetryEvent):
+	"""Telemetry event for CLI usage"""
+
+	version: str
+	action: str  # 'start', 'message_sent', 'task_completed', 'error'
+	mode: str  # 'interactive', 'oneshot', 'mcp_server'
+	model: str | None = None
+	model_provider: str | None = None
+	duration_seconds: float | None = None
+	error_message: str | None = None
+
+	name: str = 'cli_event'

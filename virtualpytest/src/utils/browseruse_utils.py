@@ -16,7 +16,7 @@ try:
     import os
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
     from browser_use import Agent
-    # Use browser-use's own ChatOpenAI implementation
+    # Use browser-use's own ChatOpenAI implementation (latest version)
     from browser_use.llm import ChatOpenAI
     print(f"[BrowserUseManager] Successfully imported browser-use dependencies")
 except ImportError as e:
@@ -26,29 +26,22 @@ except ImportError as e:
     # Provide helpful guidance based on the specific error
     if 'patchright' in error_msg:
         print(f"[BrowserUseManager] Missing patchright dependency. Browser-use functionality will be disabled.")
-        print(f"[BrowserUseManager] To enable browser-use, install: pip install patchright")
+        print(f"[BrowserUseManager] Install with: pip install patchright")
     elif 'browser_use' in error_msg:
-        print(f"[BrowserUseManager] Missing browser-use dependency. Install: pip install browser-use")
+        print(f"[BrowserUseManager] Browser-use library not found. Install with: pip install browser-use")
     else:
-        print(f"[BrowserUseManager] Unexpected import error. Browser-use functionality will be disabled.")
+        print(f"[BrowserUseManager] General import error. Check browser-use installation.")
     
+    # Set None to indicate import failure
     Agent = None
     ChatOpenAI = None
 
-
 class BrowserUseManager:
-    """Manages browser-use task execution using existing Chrome instance."""
+    """Manager for browser-use AI agent execution"""
     
-    def __init__(self, playwright_utils):
-        """
-        Initialize with existing PlaywrightUtils instance.
-        
-        Args:
-            playwright_utils: Existing PlaywrightUtils instance with Chrome connection
-        """
-        self.playwright_utils = playwright_utils
+    def __init__(self):
         self.llm = None
-        print(f"[BrowserUseManager] Initialized with existing PlaywrightUtils instance")
+        self.page_info = {}
         
     def _get_llm(self):
         """Get LLM client using OpenRouter with browser-use's ChatOpenAI implementation."""
@@ -59,163 +52,107 @@ class BrowserUseManager:
             
             print(f"[BrowserUseManager] Initializing OpenRouter LLM client with browser-use's ChatOpenAI")
             
-            # Use browser-use's own ChatOpenAI implementation
+            # Use browser-use's own ChatOpenAI implementation (no max_completion_tokens parameter)
             self.llm = ChatOpenAI(
                 model='moonshotai/kimi-k2:free',
                 api_key=api_key,
                 base_url='https://openrouter.ai/api/v1',
-                temperature=0.0,
-                max_completion_tokens=2000  # Use max_completion_tokens instead of max_tokens
+                temperature=0.0
             )
             
-        return self.llm
-    
-    async def execute_task(self, task: str) -> Dict[str, Any]:
-        """
-        Execute browser-use task using existing Chrome instance.
+            print(f"[BrowserUseManager] LLM client initialized successfully")
         
-        Args:
-            task: Task description for the AI agent to execute
-            
-        Returns:
-            Dict with execution results matching other command formats
-        """
-        if not Agent or not ChatOpenAI:
-            return {
-                'success': False,
-                'error': 'Browser-use dependencies not available',
-                'task': task,
-                'execution_time': 0
-            }
+        return self.llm
+
+    async def execute_task(self, task: str, browser_context=None) -> Dict[str, Any]:
+        """Execute a task using browser-use agent"""
+        start_time = time.time()
+        result = {
+            'task': task,
+            'success': False,
+            'result_summary': '',
+            'actions_performed': [],
+            'page_info': {},
+            'execution_time': 0,
+            'error': None
+        }
         
         try:
-            print(f"[BrowserUseManager] Starting browser-use task: {task}")
-            start_time = time.time()
+            if not Agent or not ChatOpenAI:
+                raise ImportError("Browser-use dependencies not available")
             
-            # Connect to existing Chrome instance (inherit context/page state)
-            playwright, browser, context, page = await self.playwright_utils.connect_to_chrome()
+            llm = self._get_llm()
             
-            try:
-                print(f"[BrowserUseManager] Connected to existing Chrome instance")
-                
-                # Get current page info for context
-                current_url = page.url
-                current_title = await page.title()
-                print(f"[BrowserUseManager] Current page: {current_title} ({current_url})")
-                
-                # Create browser-use Agent with task and LLM
-                print(f"[BrowserUseManager] Creating browser-use Agent")
-                agent = Agent(
-                    task=task,
-                    llm=self._get_llm(),
-                    browser_context=context,  # Use existing context with cookies and state
-                    use_vision=True,
-                    save_conversation_path=None,  # Don't save conversations
-                    max_actions_per_step=3
-                )
-                
-                print(f"[BrowserUseManager] Executing browser-use task with max 10 steps")
-                
-                # Execute the task
-                result = await agent.run(max_steps=10)
-                
-                # Get final page state
-                final_url = page.url
-                final_title = await page.title()
-                
-                execution_time = int((time.time() - start_time) * 1000)
-                
-                print(f"[BrowserUseManager] Task completed in {execution_time}ms")
-                print(f"[BrowserUseManager] Final page: {final_title} ({final_url})")
-                
-                # Extract action information from result
-                actions_performed = []
-                if hasattr(result, 'action_names') and callable(result.action_names):
-                    actions_performed = result.action_names()
-                elif hasattr(result, 'actions'):
-                    actions_performed = [str(action) for action in result.actions[:5]]  # Limit to 5 for brevity
-                
-                # Build success response
-                response = {
-                    'success': True,
-                    'task': task,
-                    'execution_time': execution_time,
-                    'actions_performed': actions_performed,
-                    'page_info': {
-                        'initial_url': current_url,
-                        'initial_title': current_title,
-                        'final_url': final_url,
-                        'final_title': final_title,
-                        'navigation_occurred': final_url != current_url
-                    },
-                    'result_summary': str(result) if result else 'Task completed successfully',
-                    'error': ''
-                }
-                
-                return response
-                
-            finally:
-                # Cleanup connection
-                await self.playwright_utils.cleanup_connection(playwright, browser)
-                print(f"[BrowserUseManager] Cleaned up browser connection")
-                
+            print(f"[BrowserUseManager] Creating browser-use agent for task: {task}")
+            agent = Agent(task=task, llm=llm)
+            
+            print(f"[BrowserUseManager] Executing task...")
+            agent_result = await agent.run(max_steps=10)
+            
+            # Extract useful information from agent result
+            if hasattr(agent_result, 'success') and agent_result.success:
+                result['success'] = True
+                result['result_summary'] = f"Task completed successfully"
+            else:
+                result['result_summary'] = f"Task completed with issues or partial success"
+            
+            # Try to get actions performed (if available in result)
+            if hasattr(agent_result, 'actions'):
+                result['actions_performed'] = [str(action) for action in agent_result.actions]
+            
+            # Try to get page info (if available)
+            if hasattr(agent_result, 'page_info'):
+                result['page_info'] = agent_result.page_info
+            
+            print(f"[BrowserUseManager] Task execution completed successfully")
+            
         except Exception as e:
-            execution_time = int((time.time() - start_time) * 1000) if 'start_time' in locals() else 0
-            error_msg = f"Browser-use task execution error: {str(e)}"
-            print(f"[BrowserUseManager] {error_msg}")
-            
-            return {
-                'success': False,
-                'error': error_msg,
-                'task': task,
-                'execution_time': execution_time,
-                'actions_performed': [],
-                'page_info': {},
-                'result_summary': f'Task failed: {str(e)}'
-            }
-    
-    def get_available_models(self) -> list:
-        """Get list of available OpenRouter models for browser-use."""
-        return [
-            'qwen/qwen-2.5-72b-instruct',
-            'anthropic/claude-3.5-sonnet',
-            'openai/gpt-4o',
-            'google/gemini-pro-1.5'
-        ]
-    
-    def validate_environment(self) -> Dict[str, Any]:
-        """Validate that all required dependencies and environment variables are available."""
-        issues = []
+            error_msg = str(e)
+            result['error'] = f"Browser-use task execution error: {error_msg}"
+            result['result_summary'] = f"Task failed: {error_msg}"
+            print(f"[BrowserUseManager] Task execution failed: {error_msg}")
         
-        # Check browser-use dependencies
+        finally:
+            result['execution_time'] = int((time.time() - start_time) * 1000)
+        
+        return result
+
+    def validate_setup(self) -> Dict[str, Any]:
+        """Validate browser-use setup and dependencies"""
+        issues = []
+        warnings = []
+        
+        # Check if browser-use is available
         if not Agent:
             issues.append("browser-use Agent class not available")
+        
+        # Check if ChatOpenAI is available
         if not ChatOpenAI:
-            issues.append("langchain_openai ChatOpenAI class not available")
+            issues.append("browser-use ChatOpenAI class not available")
         
         # Check environment variables
         if not os.getenv('OPENROUTER_API_KEY'):
             issues.append("OPENROUTER_API_KEY environment variable not set")
         
-        # Check playwright utils
-        if not self.playwright_utils:
-            issues.append("PlaywrightUtils instance not provided")
-        
         return {
             'valid': len(issues) == 0,
             'issues': issues,
-            'available_models': self.get_available_models() if len(issues) == 0 else []
+            'warnings': warnings,
+            'components': {
+                'browser_use_agent': Agent is not None,
+                'chat_openai': ChatOpenAI is not None,
+                'openrouter_key': bool(os.getenv('OPENROUTER_API_KEY'))
+            }
         }
 
+# Global instance
+browser_use_manager = BrowserUseManager()
 
-def create_browseruse_manager(playwright_utils) -> BrowserUseManager:
-    """
-    Factory function to create BrowserUseManager instance.
-    
-    Args:
-        playwright_utils: Existing PlaywrightUtils instance
-        
-    Returns:
-        BrowserUseManager instance
-    """
-    return BrowserUseManager(playwright_utils) 
+def execute_browser_use_task(task: str, browser_context=None) -> Dict[str, Any]:
+    """Execute a browser-use task"""
+    import asyncio
+    return asyncio.run(browser_use_manager.execute_task(task, browser_context))
+
+def validate_browser_use_setup() -> Dict[str, Any]:
+    """Validate browser-use setup"""
+    return browser_use_manager.validate_setup() 

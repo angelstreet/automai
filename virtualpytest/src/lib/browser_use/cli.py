@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 import asyncio
 import json
 import logging
@@ -7,16 +8,25 @@ import time
 from pathlib import Path
 from typing import Any
 
-import click
-import langchain_anthropic
-import langchain_google_genai
-import langchain_openai
 from dotenv import load_dotenv
-from textual import events
-from textual.app import App, ComposeResult
-from textual.binding import Binding
-from textual.containers import Container, HorizontalGroup, VerticalScroll
-from textual.widgets import Footer, Header, Input, Label, Link, RichLog, Static
+
+from browser_use.llm.anthropic.chat import ChatAnthropic
+from browser_use.llm.google.chat import ChatGoogle
+from browser_use.llm.openai.chat import ChatOpenAI
+
+load_dotenv()
+
+try:
+	import click
+	from textual import events
+	from textual.app import App, ComposeResult
+	from textual.binding import Binding
+	from textual.containers import Container, HorizontalGroup, VerticalScroll
+	from textual.widgets import Footer, Header, Input, Label, Link, RichLog, Static
+except ImportError:
+	print('⚠️ CLI addon is not installed. Please install it with: `pip install "browser-use[cli]"` and try again.')
+	sys.exit(1)
+
 
 try:
 	import readline
@@ -26,13 +36,26 @@ except ImportError:
 	# readline not available on Windows by default
 	READLINE_AVAILABLE = False
 
-from browser_use import Agent, Browser, BrowserConfig, BrowserContextConfig, Controller
-from browser_use.agent.views import AgentSettings
-from browser_use.logging_config import addLoggingLevel
 
-# User settings file
-USER_CONFIG_FILE = Path.home() / '.browser_use.json'
+os.environ['BROWSER_USE_LOGGING_LEVEL'] = 'result'
+
+from browser_use import Agent, Controller
+from browser_use.agent.views import AgentSettings
+from browser_use.browser import BrowserProfile, BrowserSession
+from browser_use.config import CONFIG
+from browser_use.logging_config import addLoggingLevel
+from browser_use.telemetry import CLITelemetryEvent, ProductTelemetry
+from browser_use.utils import get_browser_use_version
+
+USER_DATA_DIR = CONFIG.BROWSER_USE_PROFILES_DIR / 'cli'
+
+# Default User settings
 MAX_HISTORY_LENGTH = 100
+
+# Ensure directories exist
+CONFIG.BROWSER_USE_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+USER_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
 
 # Logo components with styling for rich panels
 BROWSER_LOGO = """
@@ -62,66 +85,73 @@ TEXTUAL_BORDER_STYLES = {'logo': 'blue', 'info': 'blue', 'input': 'orange3', 'wo
 
 
 def get_default_config() -> dict[str, Any]:
-	"""Return default configuration dictionary."""
+	"""Return default configuration dictionary using the new config system."""
+	# Load config from the new config system
+	config_data = CONFIG.load_config()
+
+	# Extract browser profile, llm, and agent configs
+	browser_profile = config_data.get('browser_profile', {})
+	llm_config = config_data.get('llm', {})
+	agent_config = config_data.get('agent', {})
+
 	return {
 		'model': {
-			'name': None,
-			'temperature': 0.0,
+			'name': llm_config.get('model'),
+			'temperature': llm_config.get('temperature', 0.0),
 			'api_keys': {
-				'OPENAI_API_KEY': os.getenv('OPENAI_API_KEY', ''),
-				'ANTHROPIC_API_KEY': os.getenv('ANTHROPIC_API_KEY', ''),
-				'GEMINI_API_KEY': os.getenv('GEMINI_API_KEY', ''),
-				'DEEPSEEK_API_KEY': os.getenv('DEEPSEEK_API_KEY', ''),
-				'GROK_API_KEY': os.getenv('GROK_API_KEY', ''),
+				'OPENAI_API_KEY': llm_config.get('api_key', CONFIG.OPENAI_API_KEY),
+				'ANTHROPIC_API_KEY': CONFIG.ANTHROPIC_API_KEY,
+				'GOOGLE_API_KEY': CONFIG.GOOGLE_API_KEY,
+				'DEEPSEEK_API_KEY': CONFIG.DEEPSEEK_API_KEY,
+				'GROK_API_KEY': CONFIG.GROK_API_KEY,
 			},
 		},
-		'agent': {},  # AgentSettings will use defaults
+		'agent': agent_config,
 		'browser': {
-			'headless': True,
-		},
-		'browser_context': {
-			'keep_alive': True,
-			'ignore_https_errors': False,
+			'headless': browser_profile.get('headless', True),
+			'keep_alive': browser_profile.get('keep_alive', True),
+			'ignore_https_errors': browser_profile.get('ignore_https_errors', False),
+			'user_data_dir': browser_profile.get('user_data_dir'),
+			'allowed_domains': browser_profile.get('allowed_domains'),
+			'wait_between_actions': browser_profile.get('wait_between_actions'),
+			'is_mobile': browser_profile.get('is_mobile'),
+			'device_scale_factor': browser_profile.get('device_scale_factor'),
+			'disable_security': browser_profile.get('disable_security'),
 		},
 		'command_history': [],
 	}
 
 
 def load_user_config() -> dict[str, Any]:
-	"""Load user configuration from file."""
-	if not USER_CONFIG_FILE.exists():
-		# Create default config
-		config = get_default_config()
-		save_user_config(config)
-		return config
+	"""Load user configuration using the new config system."""
+	# Just get the default config which already loads from the new system
+	config = get_default_config()
 
-	try:
-		with open(USER_CONFIG_FILE) as f:
-			data = json.load(f)
-			# Ensure data is a dictionary, not a list
-			if isinstance(data, list):
-				# If it's a list, it's probably just command history from previous version
-				config = get_default_config()
-				config['command_history'] = data  # Use the list as command history
-				return config
-			return data
-	except (json.JSONDecodeError, FileNotFoundError):
-		# If file is corrupted, start with empty config
-		return get_default_config()
+	# Load command history from a separate file if it exists
+	history_file = CONFIG.BROWSER_USE_CONFIG_DIR / 'command_history.json'
+	if history_file.exists():
+		try:
+			with open(history_file) as f:
+				config['command_history'] = json.load(f)
+		except (FileNotFoundError, json.JSONDecodeError):
+			config['command_history'] = []
+
+	return config
 
 
 def save_user_config(config: dict[str, Any]) -> None:
-	"""Save user configuration to file."""
-	# Ensure command history doesn't exceed maximum length
+	"""Save command history only (config is saved via the new system)."""
+	# Only save command history to a separate file
 	if 'command_history' in config and isinstance(config['command_history'], list):
-		if len(config['command_history']) > MAX_HISTORY_LENGTH:
-			config['command_history'] = config['command_history'][-MAX_HISTORY_LENGTH:]
+		# Ensure command history doesn't exceed maximum length
+		history = config['command_history']
+		if len(history) > MAX_HISTORY_LENGTH:
+			history = history[-MAX_HISTORY_LENGTH:]
 
-	# Create parent directories if they don't exist
-	USER_CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-
-	with open(USER_CONFIG_FILE, 'w') as f:
-		json.dump(config, f, indent=2)
+		# Save to separate history file
+		history_file = CONFIG.BROWSER_USE_CONFIG_DIR / 'command_history.json'
+		with open(history_file, 'w') as f:
+			json.dump(history, f, indent=2)
 
 
 def update_config_with_click_args(config: dict[str, Any], ctx: click.Context) -> dict[str, Any]:
@@ -131,8 +161,6 @@ def update_config_with_click_args(config: dict[str, Any], ctx: click.Context) ->
 		config['model'] = {}
 	if 'browser' not in config:
 		config['browser'] = {}
-	if 'browser_context' not in config:
-		config['browser_context'] = {}
 
 	# Update configuration with command-line args if provided
 	if ctx.params.get('model'):
@@ -141,12 +169,14 @@ def update_config_with_click_args(config: dict[str, Any], ctx: click.Context) ->
 		config['browser']['headless'] = ctx.params['headless']
 	if ctx.params.get('window_width'):
 		config['browser']['window_width'] = ctx.params['window_width']
-		if 'viewport_width' in config['browser_context']:
-			config['browser_context']['viewport_width'] = ctx.params['window_width']
 	if ctx.params.get('window_height'):
 		config['browser']['window_height'] = ctx.params['window_height']
-		if 'viewport_height' in config['browser_context']:
-			config['browser_context']['viewport_height'] = ctx.params['window_height']
+	if ctx.params.get('user_data_dir'):
+		config['browser']['user_data_dir'] = ctx.params['user_data_dir']
+	if ctx.params.get('profile_directory'):
+		config['browser']['profile_directory'] = ctx.params['profile_directory']
+	if ctx.params.get('cdp_url'):
+		config['browser']['cdp_url'] = ctx.params['cdp_url']
 
 	return config
 
@@ -163,43 +193,37 @@ def setup_readline_history(history: list[str]) -> None:
 
 def get_llm(config: dict[str, Any]):
 	"""Get the language model based on config and available API keys."""
-	# Set API keys from config if available
-	api_keys = config.get('model', {}).get('api_keys', {})
-	model_name = config.get('model', {}).get('name')
-	temperature = config.get('model', {}).get('temperature', 0.0)
+	model_config = config.get('model', {})
+	model_name = model_config.get('name')
+	temperature = model_config.get('temperature', 0.0)
 
-	# Set environment variables if they're in the config but not in the environment
-	if api_keys.get('openai') and not os.getenv('OPENAI_API_KEY'):
-		os.environ['OPENAI_API_KEY'] = api_keys['openai']
-	if api_keys.get('anthropic') and not os.getenv('ANTHROPIC_API_KEY'):
-		os.environ['ANTHROPIC_API_KEY'] = api_keys['anthropic']
-	if api_keys.get('google') and not os.getenv('GOOGLE_API_KEY'):
-		os.environ['GOOGLE_API_KEY'] = api_keys['google']
+	# Get API key from config or environment
+	api_key = model_config.get('api_keys', {}).get('OPENAI_API_KEY') or CONFIG.OPENAI_API_KEY
 
 	if model_name:
 		if model_name.startswith('gpt'):
-			if not os.getenv('OPENAI_API_KEY'):
+			if not api_key and not CONFIG.OPENAI_API_KEY:
 				print('⚠️  OpenAI API key not found. Please update your config or set OPENAI_API_KEY environment variable.')
 				sys.exit(1)
-			return langchain_openai.ChatOpenAI(model=model_name, temperature=temperature)
+			return ChatOpenAI(model=model_name, temperature=temperature, api_key=api_key or CONFIG.OPENAI_API_KEY)
 		elif model_name.startswith('claude'):
-			if not os.getenv('ANTHROPIC_API_KEY'):
+			if not CONFIG.ANTHROPIC_API_KEY:
 				print('⚠️  Anthropic API key not found. Please update your config or set ANTHROPIC_API_KEY environment variable.')
 				sys.exit(1)
-			return langchain_anthropic.ChatAnthropic(model=model_name, temperature=temperature)
+			return ChatAnthropic(model=model_name, temperature=temperature)
 		elif model_name.startswith('gemini'):
-			if not os.getenv('GOOGLE_API_KEY'):
+			if not CONFIG.GOOGLE_API_KEY:
 				print('⚠️  Google API key not found. Please update your config or set GOOGLE_API_KEY environment variable.')
 				sys.exit(1)
-			return langchain_google_genai.ChatGoogleGenerativeAI(model=model_name, temperature=temperature)
+			return ChatGoogle(model=model_name, temperature=temperature)
 
 	# Auto-detect based on available API keys
-	if os.getenv('OPENAI_API_KEY'):
-		return langchain_openai.ChatOpenAI(model='gpt-4o', temperature=temperature)
-	elif os.getenv('ANTHROPIC_API_KEY'):
-		return langchain_anthropic.ChatAnthropic(model='claude-3.5-sonnet-exp', temperature=temperature)
-	elif os.getenv('GOOGLE_API_KEY'):
-		return langchain_google_genai.ChatGoogleGenerativeAI(model='gemini-2.0-flash-lite', temperature=temperature)
+	if api_key or CONFIG.OPENAI_API_KEY:
+		return ChatOpenAI(model='gpt-4o', temperature=temperature, api_key=api_key or CONFIG.OPENAI_API_KEY)
+	elif CONFIG.ANTHROPIC_API_KEY:
+		return ChatAnthropic(model='claude-3-5-sonnet-20241022', temperature=temperature)
+	elif CONFIG.GOOGLE_API_KEY:
+		return ChatGoogle(model='gemini-2.0-flash-exp', temperature=temperature)
 	else:
 		print(
 			'⚠️  No API keys found. Please update your config or set one of: OPENAI_API_KEY, ANTHROPIC_API_KEY, or GOOGLE_API_KEY.'
@@ -403,13 +427,15 @@ class BrowserUseApp(App):
 	def __init__(self, config: dict[str, Any], *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		self.config = config
-		self.browser = None  # Will be set before app.run_async()
-		self.controller = None  # Will be set before app.run_async()
-		self.agent = None
-		self.llm = None  # Will be set before app.run_async()
+		self.browser_session: BrowserSession | None = None  # Will be set before app.run_async()
+		self.controller: Controller | None = None  # Will be set before app.run_async()
+		self.agent: Agent | None = None
+		self.llm: Any | None = None  # Will be set before app.run_async()
 		self.task_history = config.get('command_history', [])
 		# Track current position in history for up/down navigation
 		self.history_index = len(self.task_history)
+		# Initialize telemetry
+		self._telemetry = ProductTelemetry()
 
 	def setup_richlog_logging(self) -> None:
 		"""Set up logging to redirect to RichLog widget instead of stdout."""
@@ -420,16 +446,16 @@ class BrowserUseApp(App):
 			pass  # Level already exists, which is fine
 
 		# Get the RichLog widget
-		rich_log = self.query_one('#results-log')
+		rich_log = self.query_one('#results-log', RichLog)
 
 		# Create and set up the custom handler
 		log_handler = RichLogHandler(rich_log)
-		log_type = os.getenv('BROWSER_USE_LOGGING_LEVEL', 'info').lower()
+		log_type = os.getenv('BROWSER_USE_LOGGING_LEVEL', 'result').lower()
 
 		class BrowserUseFormatter(logging.Formatter):
 			def format(self, record):
-				if isinstance(record.name, str) and record.name.startswith('browser_use.'):
-					record.name = record.name.split('.')[-2]
+				# if isinstance(record.name, str) and record.name.startswith('browser_use.'):
+				# 	record.name = record.name.split('.')[-2]
 				return super().format(record)
 
 		# Set up the formatter based on log type
@@ -468,7 +494,6 @@ class BrowserUseApp(App):
 			'playwright',
 			'urllib3',
 			'asyncio',
-			'langchain',
 			'openai',
 			'httpcore',
 			'charset_normalizer',
@@ -513,29 +538,11 @@ class BrowserUseApp(App):
 		# Step 3: Focus the input field
 		logger.debug('Focusing input field...')
 		try:
-			input_field = self.query_one('#task-input')
+			input_field = self.query_one('#task-input', Input)
 			input_field.focus()
 			logger.debug('Input field focused')
 		except Exception as e:
 			logger.error(f'Error focusing input field: {str(e)}', exc_info=True)
-			# Non-critical, continue
-
-		# Step 4: Initialize panels with test content
-		logger.debug('Testing panel initialization...')
-		try:
-			browser_info = self.query_one('#browser-info')
-			browser_info.write('DEBUG: Panel initialized')
-			logger.debug('Browser panel initialized')
-
-			model_info = self.query_one('#model-info')
-			model_info.write('DEBUG: Panel initialized')
-			logger.debug('Model panel initialized')
-
-			tasks_info = self.query_one('#tasks-info')
-			tasks_info.write('DEBUG: Panel initialized')
-			logger.debug('Tasks panel initialized')
-		except Exception as e:
-			logger.error(f'Error initializing panels: {str(e)}', exc_info=True)
 			# Non-critical, continue
 
 		# Step 5: Start continuous info panel updates
@@ -547,12 +554,24 @@ class BrowserUseApp(App):
 			logger.error(f'Error starting info panel updates: {str(e)}', exc_info=True)
 			# Non-critical, continue
 
+		# Capture telemetry for CLI start
+		self._telemetry.capture(
+			CLITelemetryEvent(
+				version=get_browser_use_version(),
+				action='start',
+				mode='interactive',
+				model=self.llm.model if self.llm and hasattr(self.llm, 'model') else None,
+				model_provider=self.llm.provider if self.llm and hasattr(self.llm, 'provider') else None,
+			)
+		)
+
 		logger.debug('on_mount() completed successfully')
 
 	def on_input_key_up(self, event: events.Key) -> None:
 		"""Handle up arrow key in the input field."""
-		# Check if event is from the input field
-		if event.sender.id != 'task-input':
+		# For textual key events, we need to check focus manually
+		input_field = self.query_one('#task-input', Input)
+		if not input_field.has_focus:
 			return
 
 		# Only process if we have history
@@ -562,9 +581,10 @@ class BrowserUseApp(App):
 		# Move back in history if possible
 		if self.history_index > 0:
 			self.history_index -= 1
-			self.query_one('#task-input').value = self.task_history[self.history_index]
+			task_input = self.query_one('#task-input', Input)
+			task_input.value = self.task_history[self.history_index]
 			# Move cursor to end of text
-			self.query_one('#task-input').cursor_position = len(self.query_one('#task-input').value)
+			task_input.cursor_position = len(task_input.value)
 
 		# Prevent default behavior (cursor movement)
 		event.prevent_default()
@@ -572,8 +592,9 @@ class BrowserUseApp(App):
 
 	def on_input_key_down(self, event: events.Key) -> None:
 		"""Handle down arrow key in the input field."""
-		# Check if event is from the input field
-		if event.sender.id != 'task-input':
+		# For textual key events, we need to check focus manually
+		input_field = self.query_one('#task-input', Input)
+		if not input_field.has_focus:
 			return
 
 		# Only process if we have history
@@ -583,13 +604,14 @@ class BrowserUseApp(App):
 		# Move forward in history or clear input if at the end
 		if self.history_index < len(self.task_history) - 1:
 			self.history_index += 1
-			self.query_one('#task-input').value = self.task_history[self.history_index]
+			task_input = self.query_one('#task-input', Input)
+			task_input.value = self.task_history[self.history_index]
 			# Move cursor to end of text
-			self.query_one('#task-input').cursor_position = len(self.query_one('#task-input').value)
+			task_input.cursor_position = len(task_input.value)
 		elif self.history_index == len(self.task_history) - 1:
 			# At the end of history, go to "new line" state
 			self.history_index += 1
-			self.query_one('#task-input').value = ''
+			self.query_one('#task-input', Input).value = ''
 
 		# Prevent default behavior (cursor movement)
 		event.prevent_default()
@@ -650,16 +672,6 @@ class BrowserUseApp(App):
 				info_panels.display = True
 				tasks_panel.display = True
 
-				# Directly force content into panels for debugging
-				browser_info = self.query_one('#browser-info')
-				browser_info.write('Showing browser info...')
-
-				model_info = self.query_one('#model-info')
-				model_info.write('Showing model info...')
-
-				tasks_info = self.query_one('#tasks-info')
-				tasks_info.write('Showing tasks info...')
-
 				# Make results container take full height
 				results_container = self.query_one('#results-container')
 				results_container.styles.height = '1fr'
@@ -675,19 +687,6 @@ class BrowserUseApp(App):
 	def update_info_panels(self) -> None:
 		"""Update all information panels with current state."""
 		try:
-			# Force initial content into panels to ensure they're not empty
-			browser_info = self.query_one('#browser-info')
-			if not browser_info.lines:
-				browser_info.write('Initializing browser info...')
-
-			model_info = self.query_one('#model-info')
-			if not model_info.lines:
-				model_info.write('Initializing model info...')
-
-			tasks_info = self.query_one('#tasks-info')
-			if not tasks_info.lines:
-				tasks_info.write('Initializing tasks info...')
-
 			# Update actual content
 			self.update_browser_panel()
 			self.update_model_panel()
@@ -701,102 +700,102 @@ class BrowserUseApp(App):
 
 	def update_browser_panel(self) -> None:
 		"""Update browser information panel with details about the browser."""
-		browser_info = self.query_one('#browser-info')
+		browser_info = self.query_one('#browser-info', RichLog)
 		browser_info.clear()
 
-		if self.browser:
-			# Get basic browser info
-			browser_type = self.browser.__class__.__name__
-			headless = self.browser.config.headless
-			browser_class = self.browser.config.browser_class
+		# Try to use the agent's browser session if available
+		browser_session = self.browser_session
+		if hasattr(self, 'agent') and self.agent and hasattr(self.agent, 'browser_session'):
+			browser_session = self.agent.browser_session
 
-			# Determine connection type based on config
-			connection_type = 'playwright'  # Default
-			if self.browser.config.cdp_url:
-				connection_type = 'CDP'
-			elif self.browser.config.wss_url:
-				connection_type = 'WSS'
-			elif self.browser.config.browser_binary_path:
-				connection_type = 'user-provided'
-
-			# Get window size details
-			window_width = self.browser.config.new_context_config.window_width
-			window_height = self.browser.config.new_context_config.window_height
-
-			# Try to get browser PID
-			browser_pid = 'Unknown'
-			connected = False
-			browser_status = '[red]Disconnected[/]'
-
+		if browser_session:
 			try:
-				# First check if Chrome subprocess is available directly
-				if hasattr(self.browser, '_chrome_subprocess') and self.browser._chrome_subprocess:
-					try:
-						if hasattr(self.browser._chrome_subprocess, 'pid'):
-							browser_pid = str(self.browser._chrome_subprocess.pid)
-							connected = True
-							browser_status = '[green]Connected[/]'
-					except Exception as e:
-						browser_pid = f'Error: {str(e)}'
-				# Then check if we have a playwright browser connection
-				elif hasattr(self.browser, 'playwright_browser') and self.browser.playwright_browser:
-					connected = True
-					browser_status = '[green]Connected[/]'
+				# Check if browser session has a browser context
+				if not hasattr(browser_session, 'browser_context') or browser_session.browser_context is None:
+					browser_info.write('[yellow]Browser session created, waiting for browser to launch...[/]')
+					return
 
-					# Try to get PID from related processes by checking for Chrome/Firefox
-					import psutil
+				# Update our reference if we're using the agent's session
+				if browser_session != self.browser_session:
+					self.browser_session = browser_session
 
-					for proc in psutil.process_iter(['pid', 'name']):
-						try:
-							if (
-								browser_class in proc.name().lower()
-								or 'chrome' in proc.name().lower()
-								or 'chromium' in proc.name().lower()
-								or 'firefox' in proc.name().lower()
-							):
-								browser_pid = str(proc.pid)
-								break
-						except (psutil.NoSuchProcess, psutil.AccessDenied):
-							pass
-			except Exception as e:
-				browser_pid = f'Error: {str(e)}'
+				# Get basic browser info from browser_profile
+				browser_type = 'Chromium'
+				headless = browser_session.browser_profile.headless
 
-			# Display browser information
-			browser_info.write(f'[bold cyan]{browser_class}[/] Browser ({browser_status})')
-			browser_info.write(
-				f'Type: [yellow]{connection_type}[/] [{"green" if not headless else "red"}]{" (headless)" if headless else ""}[/]'
-			)
-			browser_info.write(f'PID: [dim]{browser_pid}[/]')
-			browser_info.write(f'CDP Port: {self.browser.config.chrome_remote_debugging_port}')
+				# Determine connection type based on config
+				connection_type = 'playwright'  # Default
+				if browser_session.cdp_url:
+					connection_type = 'CDP'
+				elif browser_session.wss_url:
+					connection_type = 'WSS'
+				elif browser_session.browser_profile.executable_path:
+					connection_type = 'user-provided'
 
-			if window_width and window_height:
-				browser_info.write(f'Window: [blue]{window_width}[/] × [blue]{window_height}[/]')
+				# Get window size details from browser_profile
+				window_width = None
+				window_height = None
+				if browser_session.browser_profile.viewport:
+					window_width = browser_session.browser_profile.viewport.get('width')
+					window_height = browser_session.browser_profile.viewport.get('height')
 
-			# Include additional information about the browser if needed
-			if connected and hasattr(self, 'agent') and self.agent:
+				# Try to get browser PID
+				browser_pid = 'Unknown'
+				connected = False
+				browser_status = '[red]Disconnected[/]'
+
 				try:
-					# Show when the browser was connected
-					timestamp = int(time.time())
-					current_time = time.strftime('%H:%M:%S', time.localtime(timestamp))
-					browser_info.write(f'Last updated: [dim]{current_time}[/]')
+					# Check if browser PID is available
+					if hasattr(browser_session, 'browser_pid') and browser_session.browser_pid:
+						browser_pid = str(browser_session.browser_pid)
+						connected = True
+						browser_status = '[green]Connected[/]'
+					# Otherwise just check if we have a browser context
+					elif browser_session.browser_context is not None:
+						connected = True
+						browser_status = '[green]Connected[/]'
+						browser_pid = 'N/A'
 				except Exception as e:
-					pass
+					browser_pid = f'Error: {str(e)}'
 
-				# Show the agent's current page URL if available
-				if hasattr(self.agent.browser_context, 'agent_current_page') and self.agent.browser_context.agent_current_page:
-					current_url = (
-						self.agent.browser_context.agent_current_page.url.replace('https://', '')
-						.replace('http://', '')
-						.replace('www.', '')[:36]
-						+ '…'
-					)
-					browser_info.write(f'👁️  [green]{current_url}[/]')
+				# Display browser information
+				browser_info.write(f'[bold cyan]Chromium[/] Browser ({browser_status})')
+				browser_info.write(
+					f'Type: [yellow]{connection_type}[/] [{"green" if not headless else "red"}]{" (headless)" if headless else ""}[/]'
+				)
+				browser_info.write(f'PID: [dim]{browser_pid}[/]')
+				browser_info.write(f'CDP Port: {browser_session.cdp_url}')
+
+				if window_width and window_height:
+					browser_info.write(f'Window: [blue]{window_width}[/] × [blue]{window_height}[/]')
+
+				# Include additional information about the browser if needed
+				if connected and hasattr(self, 'agent') and self.agent:
+					try:
+						# Show when the browser was connected
+						timestamp = int(time.time())
+						current_time = time.strftime('%H:%M:%S', time.localtime(timestamp))
+						browser_info.write(f'Last updated: [dim]{current_time}[/]')
+					except Exception:
+						pass
+
+					# Show the agent's current page URL if available
+					if browser_session.agent_current_page:
+						current_url = (
+							browser_session.agent_current_page.url.replace('https://', '')
+							.replace('http://', '')
+							.replace('www.', '')[:36]
+							+ '…'
+						)
+						browser_info.write(f'👁️  [green]{current_url}[/]')
+			except Exception as e:
+				browser_info.write(f'[red]Error updating browser info: {str(e)}[/]')
 		else:
 			browser_info.write('[red]Browser not initialized[/]')
 
 	def update_model_panel(self) -> None:
 		"""Update model information panel with details about the LLM."""
-		model_info = self.query_one('#model-info')
+		model_info = self.query_one('#model-info', RichLog)
 		model_info.clear()
 
 		if self.llm:
@@ -811,10 +810,9 @@ class BrowserUseApp(App):
 			if self.agent:
 				temp_str = f'{self.llm.temperature}ºC ' if self.llm.temperature else ''
 				vision_str = '+ vision ' if self.agent.settings.use_vision else ''
-				memory_str = '+ memory ' if self.agent.enable_memory else ''
 				planner_str = '+ planner' if self.agent.settings.planner_llm else ''
 				model_info.write(
-					f'[white]LLM:[/] [blue]{self.llm.__class__.__name__} [yellow]{model_name}[/] {temp_str}{vision_str}{memory_str}{planner_str}'
+					f'[white]LLM:[/] [blue]{self.llm.__class__.__name__} [yellow]{model_name}[/] {temp_str}{vision_str}{planner_str}'
 				)
 			else:
 				model_info.write(f'[white]LLM:[/] [blue]{self.llm.__class__.__name__} [yellow]{model_name}[/]')
@@ -822,24 +820,27 @@ class BrowserUseApp(App):
 			# Show token usage statistics if agent exists and has history
 			if self.agent and hasattr(self.agent, 'state') and hasattr(self.agent.state, 'history'):
 				# Get total tokens used
-				total_tokens = self.agent.state.history.total_input_tokens()
-				model_info.write(f'[white]Input tokens:[/] [green]{total_tokens:,}[/]')
+				# total_tokens = self.agent.state.history.total_input_tokens()
+				# model_info.write(f'[white]Input tokens:[/] [green]{total_tokens:,}[/]')
 
 				# Calculate tokens per step
 				num_steps = len(self.agent.state.history.history)
-				if num_steps > 0:
-					avg_tokens_per_step = total_tokens / num_steps
-					model_info.write(f'[white]Avg tokens/step:[/] [green]{avg_tokens_per_step:,.1f}[/]')
+				# if num_steps > 0:
+				# avg_tokens_per_step = total_tokens / num_steps
+				# model_info.write(f'[white]Avg tokens/step:[/] [green]{avg_tokens_per_step:,.1f}[/]')
 
-					# Get the last step metadata to show the most recent LLM response time
+				# Get the last step metadata to show the most recent LLM response time
 				if num_steps > 0 and self.agent.state.history.history[-1].metadata:
 					last_step = self.agent.state.history.history[-1]
-					step_duration = last_step.metadata.duration_seconds
-					step_tokens = last_step.metadata.input_tokens
+					if last_step.metadata:
+						step_duration = last_step.metadata.duration_seconds
+					else:
+						step_duration = 0
+					# step_tokens = last_step.metadata.input_tokens
 
-					if step_tokens > 0:
-						tokens_per_second = step_tokens / step_duration if step_duration > 0 else 0
-						model_info.write(f'[white]Avg tokens/sec:[/] [magenta]{tokens_per_second:.1f}[/]')
+					# if step_tokens > 0:
+					# 	tokens_per_second = step_tokens / step_duration if step_duration > 0 else 0
+					# 	model_info.write(f'[white]Avg tokens/sec:[/] [magenta]{tokens_per_second:.1f}[/]')
 
 				# Show total duration
 				total_duration = self.agent.state.history.total_duration_seconds()
@@ -851,7 +852,7 @@ class BrowserUseApp(App):
 
 				# Add current state information
 				if hasattr(self.agent, 'running'):
-					if self.agent.running:
+					if getattr(self.agent, 'running', False):
 						model_info.write('[yellow]LLM is thinking[blink]...[/][/]')
 					elif hasattr(self.agent, 'state') and hasattr(self.agent.state, 'paused') and self.agent.state.paused:
 						model_info.write('[orange]LLM paused[/]')
@@ -860,7 +861,7 @@ class BrowserUseApp(App):
 
 	def update_tasks_panel(self) -> None:
 		"""Update tasks information panel with details about the tasks and steps hierarchy."""
-		tasks_info = self.query_one('#tasks-info')
+		tasks_info = self.query_one('#tasks-info', RichLog)
 		tasks_info.clear()
 
 		if self.agent:
@@ -870,13 +871,13 @@ class BrowserUseApp(App):
 
 			# Try to extract tasks by looking at message history
 			if hasattr(self.agent, '_message_manager') and self.agent._message_manager:
-				message_history = self.agent._message_manager.state.history.messages
+				message_history = self.agent._message_manager.state.history.get_messages()
 
 				# Extract original task(s)
 				original_tasks = []
 				for msg in message_history:
-					if hasattr(msg, 'message') and hasattr(msg.message, 'content'):
-						content = msg.message.content
+					if hasattr(msg, 'content'):
+						content = msg.content
 						if isinstance(content, str) and 'Your ultimate task is:' in content:
 							task_text = content.split('"""')[1].strip()
 							original_tasks.append(task_text)
@@ -917,13 +918,6 @@ class BrowserUseApp(App):
 
 						# Show goal if available
 						if item.model_output and hasattr(item.model_output, 'current_state'):
-							# Show memory (context) for this step
-							memory = item.model_output.current_state.memory
-							if memory:
-								memory_lines = memory.strip().split('\n')
-								memory_summary = memory_lines[0]
-								tasks_info.write(f'   [dim]Memory:[/] {memory_summary}')
-
 							# Show goal for this step
 							goal = item.model_output.current_state.next_goal
 							if goal:
@@ -966,7 +960,7 @@ class BrowserUseApp(App):
 						tasks_info.write('')
 
 			# If agent is actively running, show a status indicator
-			if hasattr(self.agent, 'running') and self.agent.running:
+			if hasattr(self.agent, 'running') and getattr(self.agent, 'running', False):
 				tasks_info.write('[yellow]Agent is actively working[blink]...[/][/]')
 			elif hasattr(self.agent, 'state') and hasattr(self.agent.state, 'paused') and self.agent.state.paused:
 				tasks_info.write('[orange]Agent is paused (press Enter to resume)[/]')
@@ -997,17 +991,23 @@ class BrowserUseApp(App):
 		self.update_info_panels()
 
 		# Clear the log to start fresh
-		rich_log = self.query_one('#results-log')
+		rich_log = self.query_one('#results-log', RichLog)
 		rich_log.clear()
 
 		if self.agent is None:
+			if not self.llm:
+				raise RuntimeError('LLM not initialized')
 			self.agent = Agent(
 				task=task,
 				llm=self.llm,
-				controller=self.controller,
-				browser=self.browser,
+				controller=self.controller if self.controller else Controller(),
+				browser_session=self.browser_session,
+				source='cli',
 				**agent_settings.model_dump(),
 			)
+			# Update our browser_session reference to point to the agent's
+			if hasattr(self.agent, 'browser_session'):
+				self.browser_session = self.agent.browser_session
 		else:
 			self.agent.add_new_task(task)
 
@@ -1016,21 +1016,53 @@ class BrowserUseApp(App):
 			logger.debug('\n🚀 Working on task: %s', task)
 
 			# Set flags to indicate the agent is running
-			self.agent.running = True
-			self.agent.last_response_time = 0
+			if self.agent:
+				self.agent.running = True  # type: ignore
+				self.agent.last_response_time = 0  # type: ignore
 
 			# Panel updates are already happening via the timer in update_info_panels
 
+			task_start_time = time.time()
+			error_msg = None
+
 			try:
+				# Capture telemetry for message sent
+				self._telemetry.capture(
+					CLITelemetryEvent(
+						version=get_browser_use_version(),
+						action='message_sent',
+						mode='interactive',
+						model=self.llm.model if self.llm and hasattr(self.llm, 'model') else None,
+						model_provider=self.llm.provider if self.llm and hasattr(self.llm, 'provider') else None,
+					)
+				)
+
 				# Run the agent task, redirecting output to RichLog through our handler
-				await self.agent.run()
+				if self.agent:
+					await self.agent.run()
 			except Exception as e:
+				error_msg = str(e)
 				logger.error('\nError running agent: %s', str(e))
 			finally:
 				# Clear the running flag
-				self.agent.running = False
+				if self.agent:
+					self.agent.running = False  # type: ignore
 
 				# No need to call update_info_panels() here as it's already updating via timer
+
+				# Capture telemetry for task completion
+				duration = time.time() - task_start_time
+				self._telemetry.capture(
+					CLITelemetryEvent(
+						version=get_browser_use_version(),
+						action='task_completed' if error_msg is None else 'error',
+						mode='interactive',
+						model=self.llm.model if self.llm and hasattr(self.llm, 'model') else None,
+						model_provider=self.llm.provider if self.llm and hasattr(self.llm, 'provider') else None,
+						duration_seconds=duration,
+						error_message=error_msg,
+					)
+				)
 
 				logger.debug('\n✅ Task completed!')
 
@@ -1039,7 +1071,7 @@ class BrowserUseApp(App):
 				task_input_container.display = True
 
 				# Refocus the input field
-				input_field = self.query_one('#task-input')
+				input_field = self.query_one('#task-input', Input)
 				input_field.focus()
 
 				# Ensure the input is visible by scrolling to it
@@ -1051,7 +1083,7 @@ class BrowserUseApp(App):
 	def action_input_history_prev(self) -> None:
 		"""Navigate to the previous item in command history."""
 		# Only process if we have history and input is focused
-		input_field = self.query_one('#task-input')
+		input_field = self.query_one('#task-input', Input)
 		if not input_field.has_focus or not self.task_history:
 			return
 
@@ -1065,7 +1097,7 @@ class BrowserUseApp(App):
 	def action_input_history_next(self) -> None:
 		"""Navigate to the next item in command history or clear input."""
 		# Only process if we have history and input is focused
-		input_field = self.query_one('#task-input')
+		input_field = self.query_one('#task-input', Input)
 		if not input_field.has_focus or not self.task_history:
 			return
 
@@ -1082,13 +1114,13 @@ class BrowserUseApp(App):
 
 	async def action_quit(self) -> None:
 		"""Quit the application and clean up resources."""
-		# Close the browser if it exists
-		if self.browser:
-			try:
-				await self.browser.close()
-				logging.debug('Browser closed successfully')
-			except Exception as e:
-				logging.error(f'Error closing browser: {str(e)}')
+		# Note: We don't need to close the browser session here because:
+		# 1. If an agent exists, it already called browser_session.stop() in its run() method
+		# 2. If keep_alive=True (default), we want to leave the browser running anyway
+		# This prevents the duplicate "stop() called" messages in the logs
+
+		# Flush telemetry before exiting
+		self._telemetry.flush()
 
 		# Exit the application
 		self.exit()
@@ -1151,7 +1183,7 @@ class BrowserUseApp(App):
 
 			# Paths panel
 			yield Static(
-				f' ⚙️  Settings & history saved to:    {str(USER_CONFIG_FILE.resolve()).replace(str(Path.home()), "~")}\n'
+				f' ⚙️  Settings saved to:              {str(CONFIG.BROWSER_USE_CONFIG_FILE.resolve()).replace(str(Path.home()), "~")}\n'
 				f' 📁 Outputs & recordings saved to:  {str(Path(".").resolve()).replace(str(Path.home()), "~")}',
 				id='paths-panel',
 				markup=True,
@@ -1167,6 +1199,110 @@ class BrowserUseApp(App):
 				yield Input(placeholder='Enter your task...', id='task-input')
 
 		yield Footer()
+
+
+async def run_prompt_mode(prompt: str, ctx: click.Context, debug: bool = False):
+	"""Run browser-use in non-interactive mode with a single prompt."""
+	# Import and call setup_logging to ensure proper initialization
+	from browser_use.logging_config import setup_logging
+
+	# Set up logging to only show results by default
+	os.environ['BROWSER_USE_LOGGING_LEVEL'] = 'result'
+
+	# Re-run setup_logging to apply the new log level
+	setup_logging()
+
+	# The logging is now properly configured by setup_logging()
+	# No need to manually configure handlers since setup_logging() handles it
+
+	# Initialize telemetry
+	telemetry = ProductTelemetry()
+	start_time = time.time()
+	error_msg = None
+
+	try:
+		# Load config
+		config = load_user_config()
+		config = update_config_with_click_args(config, ctx)
+
+		# Get LLM
+		llm = get_llm(config)
+
+		# Capture telemetry for CLI start in oneshot mode
+		telemetry.capture(
+			CLITelemetryEvent(
+				version=get_browser_use_version(),
+				action='start',
+				mode='oneshot',
+				model=llm.model if hasattr(llm, 'model') else None,
+				model_provider=llm.__class__.__name__ if llm else None,
+			)
+		)
+
+		# Get agent settings from config
+		agent_settings = AgentSettings.model_validate(config.get('agent', {}))
+
+		# Create browser session with config parameters
+		browser_config = config.get('browser', {})
+		# Remove None values from browser_config
+		browser_config = {k: v for k, v in browser_config.items() if v is not None}
+		# Create BrowserProfile with user_data_dir
+		profile = BrowserProfile(user_data_dir=str(USER_DATA_DIR), **browser_config)
+		browser_session = BrowserSession(
+			browser_profile=profile,
+		)
+
+		# Create and run agent
+		agent = Agent(
+			task=prompt,
+			llm=llm,
+			browser_session=browser_session,
+			source='cli',
+			**agent_settings.model_dump(),
+		)
+
+		await agent.run()
+
+		# Note: We don't close the browser session here because:
+		# 1. The agent already called browser_session.stop() in its run() method
+		# 2. This prevents duplicate "stop() called" messages in the logs
+
+		# Capture telemetry for successful completion
+		telemetry.capture(
+			CLITelemetryEvent(
+				version=get_browser_use_version(),
+				action='task_completed',
+				mode='oneshot',
+				model=llm.model if hasattr(llm, 'model') else None,
+				model_provider=llm.__class__.__name__ if llm else None,
+				duration_seconds=time.time() - start_time,
+			)
+		)
+
+	except Exception as e:
+		error_msg = str(e)
+		# Capture telemetry for error
+		telemetry.capture(
+			CLITelemetryEvent(
+				version=get_browser_use_version(),
+				action='error',
+				mode='oneshot',
+				model=llm.model if hasattr(llm, 'model') else None,
+				model_provider=llm.__class__.__name__ if llm and 'llm' in locals() else None,
+				duration_seconds=time.time() - start_time,
+				error_message=error_msg,
+			)
+		)
+		if debug:
+			import traceback
+
+			traceback.print_exc()
+		else:
+			print(f'Error: {str(e)}', file=sys.stderr)
+		sys.exit(1)
+	finally:
+		# Ensure telemetry is flushed
+		telemetry.flush()
 
 
 async def textual_interface(config: dict[str, Any]):
@@ -1187,42 +1323,40 @@ async def textual_interface(config: dict[str, Any]):
 
 	logger.debug('Setting up Browser, Controller, and LLM...')
 
-	# Step 1: Configure BrowserUse components
-	logger.debug('Validating browser configs...')
+	# Step 1: Initialize BrowserSession with config
+	logger.debug('Initializing BrowserSession...')
 	try:
-		browser_config = BrowserConfig.model_validate(config.get('browser', {}))
-		context_config = BrowserContextConfig.model_validate(config.get('browser_context', {}))
-		browser_config.new_context_config = context_config
-		logger.info(f'Browser type: {browser_config.browser_class}')
-		if browser_config.browser_binary_path:
-			logger.info(f'Browser binary: {browser_config.browser_binary_path}')
-		if browser_config.headless:
+		# Get browser config from the config dict
+		browser_config = config.get('browser', {})
+
+		logger.info('Browser type: chromium')  # BrowserSession only supports chromium
+		if browser_config.get('executable_path'):
+			logger.info(f'Browser binary: {browser_config["executable_path"]}')
+		if browser_config.get('headless'):
 			logger.info('Browser mode: headless')
 		else:
 			logger.info('Browser mode: visible')
-		logger.debug('Browser configs validated successfully')
-	except Exception as e:
-		logger.error(f'Error validating browser configs: {str(e)}', exc_info=True)
-		raise RuntimeError(f'Failed to validate browser configuration: {str(e)}')
 
-	# Step 2: Initialize Browser
-	logger.debug('Initializing Browser...')
-	try:
-		browser = Browser(config=browser_config)
-		logger.debug('Browser initialized successfully')
+		# Create BrowserSession directly with config parameters
+		# Remove None values from browser_config
+		browser_config = {k: v for k, v in browser_config.items() if v is not None}
+		# Create BrowserProfile with user_data_dir
+		profile = BrowserProfile(user_data_dir=str(USER_DATA_DIR), **browser_config)
+		browser_session = BrowserSession(
+			browser_profile=profile,
+		)
+		logger.debug('BrowserSession initialized successfully')
 
 		# Log browser version if available
 		try:
-			if hasattr(browser, 'version') and browser.version:
-				logger.info(f'Browser version: {browser.version}')
-			elif hasattr(browser, 'playwright_browser') and browser.playwright_browser:
-				version = browser.playwright_browser.version
+			if hasattr(browser_session, 'browser') and browser_session.browser:
+				version = browser_session.browser.version
 				logger.info(f'Browser version: {version}')
 		except Exception as e:
 			logger.debug(f'Could not determine browser version: {e}')
 	except Exception as e:
-		logger.error(f'Error initializing Browser: {str(e)}', exc_info=True)
-		raise RuntimeError(f'Failed to initialize Browser: {str(e)}')
+		logger.error(f'Error initializing BrowserSession: {str(e)}', exc_info=True)
+		raise RuntimeError(f'Failed to initialize BrowserSession: {str(e)}')
 
 	# Step 3: Initialize Controller
 	logger.debug('Initializing Controller...')
@@ -1251,7 +1385,7 @@ async def textual_interface(config: dict[str, Any]):
 	try:
 		app = BrowserUseApp(config)
 		# Pass the initialized components to the app
-		app.browser = browser
+		app.browser_session = browser_session
 		app.controller = controller
 		app.llm = llm
 
@@ -1259,9 +1393,9 @@ async def textual_interface(config: dict[str, Any]):
 		setup_textual_logging()
 
 		# Log browser and model configuration that will be used
-		browser_type = config.get('browser', {}).get('browser_class', 'Chrome')
+		browser_type = 'Chromium'  # BrowserSession only supports Chromium
 		model_name = config.get('model', {}).get('name', 'auto-detected')
-		headless = config.get('browser', {}).get('headless', True)
+		headless = config.get('browser', {}).get('headless', False)
 		headless_str = 'headless' if headless else 'visible'
 
 		logger.info(f'Preparing {browser_type} browser ({headless_str}) with {model_name} LLM')
@@ -1271,21 +1405,70 @@ async def textual_interface(config: dict[str, Any]):
 		await app.run_async()
 	except Exception as e:
 		logger.error(f'Error in textual_interface: {str(e)}', exc_info=True)
-		# Make sure to close browser if app initialization fails
-		if 'browser' in locals():
-			await browser.close()
+		# Note: We don't close the browser session here to avoid duplicate stop() calls
+		# The browser session will be cleaned up by its __del__ method if needed
 		raise
 
 
 @click.command()
+@click.option('--version', is_flag=True, help='Print version and exit')
 @click.option('--model', type=str, help='Model to use (e.g., gpt-4o, claude-3-opus-20240229, gemini-pro)')
 @click.option('--debug', is_flag=True, help='Enable verbose startup logging')
 @click.option('--headless', is_flag=True, help='Run browser in headless mode', default=None)
 @click.option('--window-width', type=int, help='Browser window width')
 @click.option('--window-height', type=int, help='Browser window height')
+@click.option(
+	'--user-data-dir', type=str, help='Path to Chrome user data directory (e.g. ~/Library/Application Support/Google/Chrome)'
+)
+@click.option('--profile-directory', type=str, help='Chrome profile directory name (e.g. "Default", "Profile 1")')
+@click.option('--cdp-url', type=str, help='Connect to existing Chrome via CDP URL (e.g. http://localhost:9222)')
+@click.option('-p', '--prompt', type=str, help='Run a single task without the TUI (headless mode)')
+@click.option('--mcp', is_flag=True, help='Run as MCP server (exposes JSON RPC via stdin/stdout)')
 @click.pass_context
 def main(ctx: click.Context, debug: bool = False, **kwargs):
-	"""Browser-Use Interactive TUI"""
+	"""Browser-Use Interactive TUI or Command Line Executor
+
+	Use --user-data-dir to specify a local Chrome profile directory.
+	Common Chrome profile locations:
+	  macOS: ~/Library/Application Support/Google/Chrome
+	  Linux: ~/.config/google-chrome
+	  Windows: %LOCALAPPDATA%\\Google\\Chrome\\User Data
+
+	Use --profile-directory to specify which profile within the user data directory.
+	Examples: "Default", "Profile 1", "Profile 2", etc.
+	"""
+
+	if kwargs['version']:
+		from importlib.metadata import version
+
+		print(version('browser-use'))
+		sys.exit(0)
+
+	# Check if MCP server mode is activated
+	if kwargs.get('mcp'):
+		# Capture telemetry for MCP server mode via CLI
+		telemetry = ProductTelemetry()
+		telemetry.capture(
+			CLITelemetryEvent(
+				version=get_browser_use_version(),
+				action='start',
+				mode='mcp_server',
+			)
+		)
+		# Run as MCP server
+		from browser_use.mcp.server import main as mcp_main
+
+		asyncio.run(mcp_main())
+		return
+
+	# Check if prompt mode is activated
+	if kwargs.get('prompt'):
+		# Set environment variable for prompt mode before running
+		os.environ['BROWSER_USE_LOGGING_LEVEL'] = 'result'
+		# Run in non-interactive mode
+		asyncio.run(run_prompt_mode(kwargs['prompt'], ctx, debug))
+		return
+
 	# Configure console logging
 	console_handler = logging.StreamHandler(sys.stdout)
 	console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', '%H:%M:%S'))
@@ -1308,7 +1491,7 @@ def main(ctx: click.Context, debug: bool = False, **kwargs):
 	logger.debug('Loading user configuration...')
 	try:
 		config = load_user_config()
-		logger.debug(f'User configuration loaded from {USER_CONFIG_FILE}')
+		logger.debug(f'User configuration loaded from {CONFIG.BROWSER_USE_CONFIG_FILE}')
 	except Exception as e:
 		logger.error(f'Error loading user configuration: {str(e)}', exc_info=True)
 		print(f'Error loading configuration: {str(e)}')
@@ -1338,9 +1521,9 @@ def main(ctx: click.Context, debug: bool = False, **kwargs):
 	logger.debug('Setting up handlers for Textual UI...')
 
 	# Log browser and model configuration that will be used
-	browser_type = config.get('browser', {}).get('browser_class', 'Chrome')
+	browser_type = 'Chromium'  # BrowserSession only supports Chromium
 	model_name = config.get('model', {}).get('name', 'auto-detected')
-	headless = config.get('browser', {}).get('headless', True)
+	headless = config.get('browser', {}).get('headless', False)
 	headless_str = 'headless' if headless else 'visible'
 
 	logger.info(f'Preparing {browser_type} browser ({headless_str}) with {model_name} LLM')

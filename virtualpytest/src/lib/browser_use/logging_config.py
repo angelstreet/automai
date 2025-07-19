@@ -1,10 +1,11 @@
 import logging
-import os
 import sys
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+from browser_use.config import CONFIG
 
 
 def addLoggingLevel(levelName, levelNum, methodName=None):
@@ -58,18 +59,25 @@ def addLoggingLevel(levelName, levelNum, methodName=None):
 	setattr(logging, methodName, logToRoot)
 
 
-def setup_logging():
+def setup_logging(stream=None, log_level=None, force_setup=False):
+	"""Setup logging configuration for browser-use.
+
+	Args:
+		stream: Output stream for logs (default: sys.stdout). Can be sys.stderr for MCP mode.
+		log_level: Override log level (default: uses CONFIG.BROWSER_USE_LOGGING_LEVEL)
+		force_setup: Force reconfiguration even if handlers already exist
+	"""
 	# Try to add RESULT level, but ignore if it already exists
 	try:
 		addLoggingLevel('RESULT', 35)  # This allows ERROR, FATAL and CRITICAL
 	except AttributeError:
 		pass  # Level already exists, which is fine
 
-	log_type = os.getenv('BROWSER_USE_LOGGING_LEVEL', 'info').lower()
+	log_type = log_level or CONFIG.BROWSER_USE_LOGGING_LEVEL
 
 	# Check if handlers are already set up
-	if logging.getLogger().hasHandlers():
-		return
+	if logging.getLogger().hasHandlers() and not force_setup:
+		return logging.getLogger('browser_use')
 
 	# Clear existing handlers
 	root = logging.getLogger()
@@ -77,12 +85,12 @@ def setup_logging():
 
 	class BrowserUseFormatter(logging.Formatter):
 		def format(self, record):
-			if isinstance(record.name, str) and record.name.startswith('browser_use.'):
-				record.name = record.name.split('.')[-2]
+			# if isinstance(record.name, str) and record.name.startswith('browser_use.'):
+			# 	record.name = record.name.split('.')[-2]
 			return super().format(record)
 
 	# Setup single handler for all loggers
-	console = logging.StreamHandler(sys.stdout)
+	console = logging.StreamHandler(stream or sys.stdout)
 
 	# adittional setLevel here to filter logs
 	if log_type == 'result':
@@ -110,15 +118,16 @@ def setup_logging():
 
 	logger = logging.getLogger('browser_use')
 	# logger.info('BrowserUse logging setup complete with level %s', log_type)
-	# Silence third-party loggers
-	for logger in [
+	# Silence or adjust third-party loggers
+	third_party_loggers = [
 		'WDM',
 		'httpx',
 		'selenium',
 		'playwright',
 		'urllib3',
 		'asyncio',
-		'langchain',
+		'langsmith',
+		'langsmith.client',
 		'openai',
 		'httpcore',
 		'charset_normalizer',
@@ -126,7 +135,13 @@ def setup_logging():
 		'PIL.PngImagePlugin',
 		'trafilatura.htmlprocessing',
 		'trafilatura',
-	]:
-		third_party = logging.getLogger(logger)
+		'groq',
+		'portalocker',
+		'portalocker.utils',
+	]
+	for logger_name in third_party_loggers:
+		third_party = logging.getLogger(logger_name)
 		third_party.setLevel(logging.ERROR)
 		third_party.propagate = False
+
+	return logger
