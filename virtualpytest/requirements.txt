@@ -24,3 +24,10 @@ langdetect>=1.0.9
 # Appium WebDriver support for universal device automation
 Appium-Python-Client>=3.1.0
 selenium>=4.15.0 
+
+# Environment variables support
+python-dotenv>=1.0.0
+
+# LangChain and OpenAI support
+langchain-openai>=0.0.1
+openai>=1.0.0 
