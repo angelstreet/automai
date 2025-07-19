@@ -44,6 +44,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const [tapX, setTapX] = useState('');
   const [tapY, setTapY] = useState('');
   const [findSelector, setFindSelector] = useState('');
+  const [taskInput, setTaskInput] = useState('');
   const [isResponseExpanded, setIsResponseExpanded] = useState(false);
   const [isBrowserUseExpanded, setIsBrowserUseExpanded] = useState(true);
   const [isPlaywrightExpanded, setIsPlaywrightExpanded] = useState(true);
@@ -200,10 +201,12 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setIsOpening(true);
     try {
       console.log('Starting browser open process...');
-      const result = await executeCommand(JSON.stringify({
-        command: 'open_browser',
-        params: {},
-      }));
+      const result = await executeCommand(
+        JSON.stringify({
+          command: 'open_browser',
+          params: {},
+        }),
+      );
       if (result.success) {
         setIsBrowserOpen(true);
         console.log('Browser opened successfully');
@@ -222,10 +225,12 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setIsClosing(true);
     try {
       console.log('Starting browser close process...');
-      const result = await executeCommand(JSON.stringify({
-        command: 'close_browser',
-        params: {},
-      }));
+      const result = await executeCommand(
+        JSON.stringify({
+          command: 'close_browser',
+          params: {},
+        }),
+      );
       if (result.success) {
         // Reset local component state when browser is closed
         setIsBrowserOpen(false);
@@ -515,17 +520,39 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                 >
                   Task Execution
                 </Typography>
-                <Button
-                  variant="contained"
-                  size="small"
-                  onClick={handleTaskExecution}
-                  disabled={isAnyActionExecuting}
-                  color={getButtonColor(taskStatus)}
-                  startIcon={isTaskExecuting ? <CircularProgress size={16} /> : undefined}
-                  sx={{ minWidth: '80px' }}
-                >
-                  {isTaskExecuting ? 'Running...' : 'Task'}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <TextField
+                    value={taskInput}
+                    onChange={(e) => setTaskInput(e.target.value)}
+                    placeholder="Enter task description (e.g., 'Search for cats on Google')"
+                    variant="outlined"
+                    size="small"
+                    disabled={isExecuting}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleTaskExecution();
+                      }
+                    }}
+                    sx={{
+                      flex: 1,
+                      '& .MuiOutlinedInput-root': {
+                        fontSize: '0.875rem',
+                      },
+                    }}
+                  />
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={handleTaskExecution}
+                    disabled={isAnyActionExecuting}
+                    color={getButtonColor(taskStatus)}
+                    startIcon={isTaskExecuting ? <CircularProgress size={16} /> : undefined}
+                    sx={{ minWidth: '80px' }}
+                  >
+                    {isTaskExecuting ? 'Running...' : 'Task'}
+                  </Button>
+                </Box>
               </Box>
             </Collapse>
           </Box>
