@@ -426,11 +426,11 @@ const RecHostStreamModalContent: React.FC<{
                   !isControlActive
                     ? 'Take control first to use web automation'
                     : showWeb
-                      ? 'Hide Web Panel'
-                      : 'Show Web Panel'
+                      ? 'Hide Web'
+                      : 'Show Web '
                 }
               >
-                {showWeb ? 'Hide Web' : 'Web Panel'}
+                {showWeb ? 'Hide Web' : 'Show Web'}
               </Button>
             )}
 

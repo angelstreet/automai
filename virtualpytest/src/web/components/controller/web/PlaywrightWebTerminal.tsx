@@ -171,6 +171,9 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setNavigateStatus('idle');
 
     try {
+      // Clear response area before new command
+      clearTerminal();
+
       // Use proper JSON format for the command
       const commandJson = JSON.stringify({
         command: 'navigate_to_url',
@@ -203,6 +206,9 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setClickStatus('idle');
 
     try {
+      // Clear response area before new command
+      clearTerminal();
+
       // Use proper JSON format for the command
       const commandJson = JSON.stringify({
         command: 'click_element',
@@ -235,6 +241,9 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setTapStatus('idle');
 
     try {
+      // Clear response area before new command
+      clearTerminal();
+
       // Use proper JSON format for the command
       const commandJson = JSON.stringify({
         command: 'tap_x_y',
@@ -268,21 +277,17 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
       // Clear response area before new find
       clearTerminal();
 
-      // Use proper JSON format for the command - find elements, don't click them
+      // Use proper JSON format for the command - find specific element
       const commandJson = JSON.stringify({
-        command: 'dump_elements',
-        params: {
-          element_types: 'all',
-        },
+        command: 'find_element',
+        params: { selector: findSelector.trim() },
       });
 
-      // Execute dump command to find all elements
-      await executeCommand(commandJson);
-
+      const result = await executeCommand(commandJson);
       setFindSelector('');
 
-      // Set visual feedback as success since we're just finding elements
-      setFindStatus('success');
+      // Set visual feedback based on result
+      setFindStatus(result.success ? 'success' : 'error');
 
       // Show response area
       setIsResponseExpanded(true);
@@ -339,7 +344,51 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   };
 
   const formatResponse = (output: string) => {
-    return output.split('\n').map((line, index) => (
+    // Filter and format the output to show only useful information
+    const lines = output.split('\n');
+    const filteredLines: string[] = [];
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+
+      // Skip empty lines and simple success messages
+      if (!trimmedLine) continue;
+
+      // Skip generic success messages without useful info
+      if (trimmedLine === '✅ Success') continue;
+      if (trimmedLine.match(/^✅ Success \(\d+ms\)$/)) continue;
+      if (trimmedLine === 'Command executed successfully') continue;
+
+      // Skip command echo lines (lines that start with $ and contain JSON)
+      if (trimmedLine.startsWith('$ {') && trimmedLine.includes('"command":')) continue;
+
+      // Keep useful information
+      if (
+        trimmedLine.startsWith('URL:') ||
+        trimmedLine.startsWith('Title:') ||
+        trimmedLine.startsWith('Error:') ||
+        trimmedLine.startsWith('❌') ||
+        trimmedLine.includes('"error":') ||
+        trimmedLine.includes('"success":') ||
+        trimmedLine.includes('"selector_used":') ||
+        trimmedLine.includes('"search_type":') ||
+        trimmedLine.includes('"execution_time":') ||
+        trimmedLine.includes('elements found') ||
+        trimmedLine.includes('Element clicked') ||
+        trimmedLine.includes('Element found') ||
+        trimmedLine.includes('Navigation completed') ||
+        (trimmedLine.startsWith('{') && trimmedLine.includes('"'))
+      ) {
+        filteredLines.push(trimmedLine);
+      }
+    }
+
+    // If no useful info was found, show a simple status
+    if (filteredLines.length === 0) {
+      filteredLines.push('✅ Command completed');
+    }
+
+    return filteredLines.map((line, index) => (
       <Box
         key={index}
         component="pre"
@@ -350,6 +399,14 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
           lineHeight: 1.2,
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
+          color:
+            line.includes('Error:') || line.includes('❌')
+              ? '#ff6b6b'
+              : line.startsWith('URL:') || line.startsWith('Title:')
+                ? '#4dabf7'
+                : line.includes('"success": true')
+                  ? '#51cf66'
+                  : 'inherit',
         }}
       >
         {line}
