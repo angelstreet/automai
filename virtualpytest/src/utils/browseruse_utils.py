@@ -16,7 +16,8 @@ try:
     import os
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'lib')))
     from browser_use import Agent
-    from langchain_openai import ChatOpenAI
+    # Use browser-use's own ChatOpenAI implementation (migrated from langchain)
+    from browser_use.llm import ChatOpenAI
     print(f"[BrowserUseManager] Successfully imported browser-use dependencies")
 except ImportError as e:
     error_msg = str(e)
@@ -26,8 +27,8 @@ except ImportError as e:
     if 'patchright' in error_msg:
         print(f"[BrowserUseManager] Missing patchright dependency. Browser-use functionality will be disabled.")
         print(f"[BrowserUseManager] To enable browser-use, install: pip install patchright")
-    elif 'langchain_openai' in error_msg:
-        print(f"[BrowserUseManager] Missing langchain_openai dependency. Install: pip install langchain_openai")
+    elif 'browser_use' in error_msg:
+        print(f"[BrowserUseManager] Missing browser-use dependency. Install: pip install browser-use")
     else:
         print(f"[BrowserUseManager] Unexpected import error. Browser-use functionality will be disabled.")
     
@@ -50,19 +51,19 @@ class BrowserUseManager:
         print(f"[BrowserUseManager] Initialized with existing PlaywrightUtils instance")
         
     def _get_llm(self):
-        """Get LLM client using OpenRouter (same pattern as ai_agent.py)."""
+        """Get LLM client using OpenRouter with browser-use's own ChatOpenAI implementation."""
         if self.llm is None:
             api_key = os.getenv('OPENROUTER_API_KEY')
             if not api_key:
                 raise ValueError("OPENROUTER_API_KEY not found in environment variables")
             
-            print(f"[BrowserUseManager] Initializing OpenRouter LLM client")
+            print(f"[BrowserUseManager] Initializing OpenRouter LLM client with browser-use's ChatOpenAI")
             
-            # Use Qwen model compatible with browser-use
+            # Use browser-use's own ChatOpenAI implementation (compatible with langchain methods)
             self.llm = ChatOpenAI(
                 model='moonshotai/kimi-k2:free',
-                openai_api_key=api_key,
-                openai_api_base='https://openrouter.ai/api/v1',
+                api_key=api_key,
+                base_url='https://openrouter.ai/api/v1',
                 temperature=0.0,
                 max_tokens=2000
             )

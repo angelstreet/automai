@@ -18,10 +18,6 @@ numpy==1.24.3
 Pillow==10.0.1
 coral-ai-tpu==2.0.0
 langdetect
-langchain-openai
 patchright
 posthog
 browseruse
-langchain-openai==0.3.11
-langchain-core==0.3.49
-langchain==0.3.21
