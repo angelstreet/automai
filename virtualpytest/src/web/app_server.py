@@ -15,6 +15,7 @@ import sys
 import os
 import time
 import atexit
+import uuid
 
 # CLEAN PATH SETUP - Only add what's absolutely necessary
 current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web
@@ -100,41 +101,25 @@ def register_all_server_routes(app):
         return False
 
 def start_server(app):
-    """Start Flask server with Gunicorn 10-minute timeout"""
+    """Start Flask server with SocketIO and WebSocket support"""
     server_port = int(os.getenv('SERVER_PORT', '5109'))
     
     print("🎉 Server ready!")
-    print(f"🚀 Starting server on port {server_port} with 10-minute timeout")
+    print(f"🚀 Starting server on port {server_port} with WebSocket support")
     print(f"🌐 Server URL: http://0.0.0.0:{server_port}")
+    print(f"🔌 WebSocket enabled for async task notifications")
     
     try:
-        import gunicorn.app.base
-        
-        class StandaloneApplication(gunicorn.app.base.BaseApplication):
-            def __init__(self, app, options=None):
-                self.options = options or {}
-                self.application = app
-                super().__init__()
-
-            def load_config(self):
-                config = {key: value for key, value in self.options.items()
-                        if key in self.cfg.settings and value is not None}
-                for key, value in config.items():
-                    self.cfg.set(key.lower(), value)
-
-            def load(self):
-                return self.application
-
-        options = {
-            'bind': f'0.0.0.0:{server_port}',
-            'workers': 1,
-            'timeout': 600,  # 10 minutes for browser-use tasks
-        }
-        
-        StandaloneApplication(app, options).run()
+        # Use SocketIO to run the server
+        socketio = app.socketio
+        socketio.run(app, 
+                    host='0.0.0.0', 
+                    port=server_port, 
+                    debug=False,
+                    allow_unsafe_werkzeug=True)
         
     except ImportError:
-        print("❌ Gunicorn required. Install: pip install gunicorn")
+        print("❌ Flask-SocketIO required. Install: pip install flask-socketio")
         sys.exit(1)
     except KeyboardInterrupt:
         print("🛑 Server shutting down...")

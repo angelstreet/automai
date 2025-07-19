@@ -18,6 +18,9 @@ typing-extensions>=4.0.0
 # Navigation pathfinding support
 networkx>=3.2.1
 
+# WebSocket support for async task notifications
+flask-socketio>=5.3.0
+
 # langdetect for free local language detection with confidence scores
 langdetect>=1.0.9 
 

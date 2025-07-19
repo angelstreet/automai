@@ -178,7 +178,7 @@ def main():
         options = {
             'bind': f'0.0.0.0:{host_port}',
             'workers': 1,
-            'timeout': 600,  # 10 minutes for browser-use tasks
+            'timeout': 60,  # 1 minute for browser-use tasks
         }
         
         StandaloneApplication(app, options).run()

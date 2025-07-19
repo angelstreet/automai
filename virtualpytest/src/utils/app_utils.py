@@ -66,7 +66,7 @@ def kill_process_on_port(port):
         print(f"❌ Error during port cleanup: {e}")
 
 def setup_flask_app(app_name="VirtualPyTest"):
-    """Setup and configure Flask application with CORS"""
+    """Setup and configure Flask application with CORS and WebSocket support"""
     app = Flask(app_name)
 
     # Configure Flask secret key for session management
@@ -87,6 +87,11 @@ def setup_flask_app(app_name="VirtualPyTest"):
          allow_headers=["Content-Type", "Authorization", "Accept"],
          supports_credentials=False
     )
+
+    # Add WebSocket support for async task notifications
+    from flask_socketio import SocketIO
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+    app.socketio = socketio
 
     return app
 

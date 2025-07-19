@@ -6,6 +6,9 @@ Host-side web automation endpoints that execute commands using instantiated web 
 
 from flask import Blueprint, request, jsonify
 from src.utils.host_utils import get_controller, get_device_by_id
+import threading
+import requests
+import time
 
 # Create blueprint
 host_web_bp = Blueprint('host_web', __name__, url_prefix='/host/web')
@@ -22,6 +25,8 @@ def execute_command():
         data = request.get_json() or {}
         command = data.get('command')
         params = data.get('params', {})
+        callback_url = data.get('callback_url')
+        task_id = data.get('task_id')
         
         print(f"[@route:host_web:execute_command] Executing command: {command} with params: {params}")
         
@@ -42,10 +47,53 @@ def execute_command():
         
         print(f"[@route:host_web:execute_command] Using web controller: {type(web_controller).__name__}")
         
-        # Execute command and wait for result
-        result = web_controller.execute_command(command, params)
+        # Handle browser_use_task asynchronously with callback
+        if command == 'browser_use_task' and callback_url and task_id:
+            def execute_async():
+                try:
+                    print(f"[@route:host_web:execute_command] Starting async browser_use_task {task_id}")
+                    result = web_controller.execute_command(command, params)
+                    
+                    # Send callback with result
+                    callback_data = {
+                        'task_id': task_id,
+                        'result': result,
+                        'error': None
+                    }
+                    
+                    try:
+                        callback_response = requests.post(callback_url, json=callback_data, timeout=30, verify=False)
+                        print(f"[@route:host_web:execute_command] Callback sent for task {task_id}, status: {callback_response.status_code}")
+                    except Exception as callback_error:
+                        print(f"[@route:host_web:execute_command] Callback failed for task {task_id}: {callback_error}")
+                        
+                except Exception as e:
+                    print(f"[@route:host_web:execute_command] Async execution failed for task {task_id}: {e}")
+                    # Send callback with error
+                    callback_data = {
+                        'task_id': task_id,
+                        'result': {},
+                        'error': str(e)
+                    }
+                    
+                    try:
+                        requests.post(callback_url, json=callback_data, timeout=30, verify=False)
+                    except:
+                        pass  # Ignore callback errors when already handling an error
+            
+            # Start background execution
+            threading.Thread(target=execute_async, daemon=True).start()
+            
+            return jsonify({
+                'success': True,
+                'message': f'Browser-use task {task_id} started in background',
+                'task_id': task_id
+            }), 202
         
-        return jsonify(result)
+        else:
+            # Execute other commands synchronously as before
+            result = web_controller.execute_command(command, params)
+            return jsonify(result)
             
     except Exception as e:
         print(f"[@route:host_web:execute_command] Error: {str(e)}")

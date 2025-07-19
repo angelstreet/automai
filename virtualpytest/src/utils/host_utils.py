@@ -300,7 +300,7 @@ def send_ping_to_server():
         
         ping_url = client_registration_state['urls'].get('ping')
         if ping_url:
-            response = requests.post(ping_url, json=ping_data, timeout=10, verify=False)
+            response = requests.post(ping_url, json=ping_data, timeout=60, verify=False)
             
             if response.status_code == 200:
                 # Reset failure counter on success
