@@ -48,6 +48,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const [findSelector, setFindSelector] = useState('');
   const [isResponseExpanded, setIsResponseExpanded] = useState(false);
   const [isBrowserOpen, setIsBrowserOpen] = useState(false);
+  const [isOpening, setIsOpening] = useState(false);
 
   const responseRef = useRef<HTMLDivElement>(null);
 
@@ -68,7 +69,9 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
 
   // Handle browser open
   const handleOpenBrowser = async () => {
+    setIsOpening(true);
     try {
+      console.log('Starting browser open process...');
       const result = await openBrowser();
       if (result.success) {
         setIsBrowserOpen(true);
@@ -78,6 +81,8 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
       }
     } catch (error) {
       console.error('Failed to open browser:', error);
+    } finally {
+      setIsOpening(false);
     }
   };
 
@@ -195,18 +200,18 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
             variant={isBrowserOpen ? 'outlined' : 'contained'}
             size="small"
             onClick={handleOpenBrowser}
-            disabled={isBrowserOpen || isExecuting}
-            startIcon={<PlayIcon />}
+            disabled={isBrowserOpen || isExecuting || isOpening}
+            startIcon={isOpening ? <CircularProgress size={16} /> : <PlayIcon />}
             color="success"
             sx={{ flex: 1 }}
           >
-            Open
+            {isOpening ? 'Opening...' : 'Open'}
           </Button>
           <Button
             variant={isBrowserOpen ? 'contained' : 'outlined'}
             size="small"
             onClick={handleCloseBrowser}
-            disabled={!isBrowserOpen}
+            disabled={!isBrowserOpen || isOpening}
             startIcon={<StopIcon />}
             color="error"
             sx={{ flex: 1 }}

@@ -334,6 +334,10 @@ export const loadRemoteConfig = (deviceModel: string): any => {
       case 'ios_mobile':
         config = appiumRemoteConfig;
         break;
+      case 'host_vnc':
+        // VNC hosts don't need a specific remote config, use default layout
+        config = null;
+        break;
       default:
         console.warn(
           `[@config:remotePanelLayout] No config found for device model: ${deviceModel}`,
