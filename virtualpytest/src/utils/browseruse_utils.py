@@ -19,14 +19,32 @@ browser_use_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'lib'
 if browser_use_dir not in sys.path:
     sys.path.insert(0, browser_use_dir)
 
+print(f"[BrowserUseManager] Added browser_use path: {browser_use_dir}")
+print(f"[BrowserUseManager] Directory exists: {os.path.exists(browser_use_dir)}")
+print(f"[BrowserUseManager] Init file exists: {os.path.exists(os.path.join(browser_use_dir, '__init__.py'))}")
+
 try:
-    # Import directly from browser_use (now that it's in sys.path)
+    # Test basic import first
+    print(f"[BrowserUseManager] Testing basic browser_use import...")
+    import browser_use
+    print(f"[BrowserUseManager] Basic browser_use import successful")
+    
+    # Test Agent import
+    print(f"[BrowserUseManager] Testing Agent import...")
     from browser_use import Agent
+    print(f"[BrowserUseManager] Agent import successful")
+    
+    # Test langchain import
+    print(f"[BrowserUseManager] Testing langchain import...")
     from langchain_openai import ChatOpenAI
-    print(f"[BrowserUseManager] Successfully imported browser-use dependencies")
+    print(f"[BrowserUseManager] Successfully imported all browser-use dependencies")
+    
 except ImportError as e:
     print(f"[BrowserUseManager] Warning: Failed to import browser-use dependencies: {e}")
     print(f"[BrowserUseManager] Browser-use path: {browser_use_dir}")
+    print(f"[BrowserUseManager] Python path: {sys.path[:5]}")
+    import traceback
+    print(f"[BrowserUseManager] Full traceback: {traceback.format_exc()}")
     Agent = None
     ChatOpenAI = None
 
