@@ -43,8 +43,9 @@ def execute_command():
             # Create task and return immediately
             task_id = task_manager.create_task(command, request_data.get('params', {}))
             
-            # Add callback URL to host request
-            callback_url = f"{request.host_url.rstrip('/')}/server/web/taskComplete"
+            # Add callback URL to host request - use buildServerUrl for consistency
+            from src.utils.build_url_utils import buildServerUrl
+            callback_url = buildServerUrl('server/web/taskComplete')
             host_request_data['callback_url'] = callback_url
             host_request_data['task_id'] = task_id
             
