@@ -123,13 +123,17 @@ export const usePlaywrightWeb = (host: Host) => {
           // Initialize WebSocket connection for async task notifications
           const socket = io('/server', {
             path: '/server/socket.io',
+            transports: ['polling'], // Use only polling to avoid transport switching issues
           });
           socketRef.current = socket;
 
           socket.on('task_complete', (data) => {
             console.log('[@hook:usePlaywrightWeb] Task completed:', data);
+            console.log('[@hook:usePlaywrightWeb] Current task ID:', currentTaskId);
+            console.log('[@hook:usePlaywrightWeb] Received task ID:', data.task_id);
 
             if (data.task_id === currentTaskId) {
+              console.log('[@hook:usePlaywrightWeb] Task IDs match - updating UI');
               setTaskStatus(data.success ? 'completed' : 'failed');
               setIsExecuting(false);
               setIsBrowserUseExecuting(false);
@@ -138,6 +142,8 @@ export const usePlaywrightWeb = (host: Host) => {
               // Show result in terminal
               const resultOutput = JSON.stringify(data.result || { error: data.error }, null, 2);
               setTerminalOutput(resultOutput);
+            } else {
+              console.log('[@hook:usePlaywrightWeb] Task IDs do not match - ignoring event');
             }
           });
 
@@ -147,6 +153,10 @@ export const usePlaywrightWeb = (host: Host) => {
 
           socket.on('disconnect', () => {
             console.log('[@hook:usePlaywrightWeb] WebSocket disconnected');
+          });
+
+          socket.on('connect_error', (error) => {
+            console.error('[@hook:usePlaywrightWeb] WebSocket connection error:', error);
           });
 
           console.log('[@hook:usePlaywrightWeb] Connection established successfully');
