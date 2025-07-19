@@ -100,17 +100,42 @@ def register_all_server_routes(app):
         return False
 
 def start_server(app):
-    """Start the Flask server"""
+    """Start Flask server with Gunicorn 10-minute timeout"""
     server_port = int(os.getenv('SERVER_PORT', '5109'))
-    debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
     
     print("🎉 Server ready!")
-    print(f"🚀 Starting server on port {server_port}")
+    print(f"🚀 Starting server on port {server_port} with 10-minute timeout")
     print(f"🌐 Server URL: http://0.0.0.0:{server_port}")
-    print(f"🐛 Debug mode: {'ENABLED' if debug_mode else 'DISABLED'}")
     
     try:
-        app.run(host='0.0.0.0', port=server_port, debug=debug_mode, use_reloader=debug_mode)
+        import gunicorn.app.base
+        
+        class StandaloneApplication(gunicorn.app.base.BaseApplication):
+            def __init__(self, app, options=None):
+                self.options = options or {}
+                self.application = app
+                super().__init__()
+
+            def load_config(self):
+                config = {key: value for key, value in self.options.items()
+                        if key in self.cfg.settings and value is not None}
+                for key, value in config.items():
+                    self.cfg.set(key.lower(), value)
+
+            def load(self):
+                return self.application
+
+        options = {
+            'bind': f'0.0.0.0:{server_port}',
+            'workers': 1,
+            'timeout': 600,  # 10 minutes for browser-use tasks
+        }
+        
+        StandaloneApplication(app, options).run()
+        
+    except ImportError:
+        print("❌ Gunicorn required. Install: pip install gunicorn")
+        sys.exit(1)
     except KeyboardInterrupt:
         print("🛑 Server shutting down...")
     except Exception as e:

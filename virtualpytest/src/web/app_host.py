@@ -152,18 +152,45 @@ def main():
     # Start background services
     start_background_services()
     
-    # Start Flask application
+    # Start Flask application with Gunicorn 10-minute timeout
     print("[@host:main:main] 🎉 Host ready!")
-    print(f"[@host:main:main] 🚀 Starting host on port {host_port}")
+    print(f"[@host:main:main] 🚀 Starting host on port {host_port} with 10-minute timeout")
     print(f"[@host:main:main] 📡 Attempting to register with server...")
-    print(f"[@host:main:main] 🐛 Debug mode: {'ENABLED' if debug_mode else 'DISABLED'}")
     
     try:
-        app.run(host='0.0.0.0', port=host_port, debug=debug_mode, use_reloader=debug_mode)
+        import gunicorn.app.base
+        
+        class StandaloneApplication(gunicorn.app.base.BaseApplication):
+            def __init__(self, app, options=None):
+                self.options = options or {}
+                self.application = app
+                super().__init__()
+
+            def load_config(self):
+                config = {key: value for key, value in self.options.items()
+                        if key in self.cfg.settings and value is not None}
+                for key, value in config.items():
+                    self.cfg.set(key.lower(), value)
+
+            def load(self):
+                return self.application
+
+        options = {
+            'bind': f'0.0.0.0:{host_port}',
+            'workers': 1,
+            'timeout': 600,  # 10 minutes for browser-use tasks
+        }
+        
+        StandaloneApplication(app, options).run()
+        
+    except ImportError:
+        print("[@host:main:main] ❌ Gunicorn required. Install: pip install gunicorn")
+        sys.exit(1)
     except KeyboardInterrupt:
         print(f"[@host:main:main] 🛑 Host shutting down...")
     except Exception as e:
         print(f"[@host:main:main] ❌ Error starting host: {e}")
+        sys.exit(1)
     finally:
         print(f"[@host:main:main] 👋 Host application stopped")
 
