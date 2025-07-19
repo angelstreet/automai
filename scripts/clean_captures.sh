@@ -24,6 +24,7 @@ reset_log_if_large "$CLEAN_LOG"
 
 # Array of possible capture directories
 CAPTURE_DIRS=(
+  "/var/www/html/stream/capture/captures"
   "/var/www/html/stream/capture1/captures"
   "/var/www/html/stream/capture2/captures"
   "/var/www/html/stream/capture3/captures"
