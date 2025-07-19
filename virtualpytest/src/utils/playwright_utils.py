@@ -77,8 +77,8 @@ class ChromeManager:
             '--window-position=0,0',
             f'--window-size={window_size}',
             '--disable-gpu',
-            '--enable-unsafe-swiftshader',
-            '--no-sandbox'  # Important for containers
+            '--enable-unsafe-swiftshader'
+            #'--no-sandbox'  # Important for containers
         ]
     
     @classmethod
