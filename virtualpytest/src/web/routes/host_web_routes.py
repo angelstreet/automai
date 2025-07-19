@@ -6,6 +6,7 @@ Host-side web automation endpoints that execute commands using instantiated web 
 
 from flask import Blueprint, request, jsonify
 from src.utils.host_utils import get_controller, get_device_by_id
+import asyncio
 
 # Create blueprint
 host_web_bp = Blueprint('host_web', __name__, url_prefix='/host/web')
@@ -16,7 +17,7 @@ host_web_bp = Blueprint('host_web', __name__, url_prefix='/host/web')
 
 @host_web_bp.route('/executeCommand', methods=['POST'])
 async def execute_command():
-    """Execute a web automation command using web controller."""
+    """Execute a web automation command using web controller (fire-and-forget)."""
     try:
         # Get request data
         data = request.get_json() or {}
@@ -42,10 +43,14 @@ async def execute_command():
         
         print(f"[@route:host_web:execute_command] Using web controller: {type(web_controller).__name__}")
         
-        # Use controller-specific abstraction - single line!
-        result = await web_controller.execute_command(command, params)
+        # Start command in background (fire-and-forget)
+        asyncio.create_task(web_controller.execute_command(command, params))
         
-        return jsonify(result)
+        # Return immediately
+        return jsonify({
+            'success': True,
+            'message': f'Command {command} started in background'
+        })
             
     except Exception as e:
         print(f"[@route:host_web:execute_command] Error: {str(e)}")
@@ -56,7 +61,7 @@ async def execute_command():
 
 @host_web_bp.route('/navigateToUrl', methods=['POST'])
 async def navigate_to_url():
-    """Navigate to URL using web controller."""
+    """Navigate to URL using web controller (fire-and-forget)."""
     try:
         # Get request data
         data = request.get_json() or {}
@@ -82,16 +87,14 @@ async def navigate_to_url():
         
         print(f"[@route:host_web:navigate_to_url] Using web controller: {type(web_controller).__name__}")
         
-        # Navigate to URL
-        if not hasattr(web_controller, 'navigate_to_url'):
-            return jsonify({
-                'success': False,
-                'error': 'URL navigation not supported by this web controller'
-            }), 400
+        # Navigate to URL in background (fire-and-forget)
+        asyncio.create_task(web_controller.navigate_to_url(url, timeout=timeout))
         
-        result = await web_controller.navigate_to_url(url, timeout=timeout)
-        
-        return jsonify(result)
+        # Return immediately
+        return jsonify({
+            'success': True,
+            'message': f'Navigation to {url} started in background'
+        })
             
     except Exception as e:
         print(f"[@route:host_web:navigate_to_url] Error: {str(e)}")
