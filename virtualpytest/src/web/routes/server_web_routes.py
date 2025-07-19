@@ -36,7 +36,7 @@ def execute_command():
         
         # Use longer timeout for browser-use tasks (10 minutes)
         command = request_data.get('command', '')
-        timeout = 600 if command == 'execute_browser_use_task' else 30
+        timeout = 600 if command == 'browser_use_task' else 30
         
         # Proxy to host
         response_data, status_code = proxy_to_host('/host/web/executeCommand', 'POST', host_request_data, timeout=timeout)
