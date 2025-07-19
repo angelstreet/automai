@@ -4,6 +4,7 @@ Playwright Web Controller Implementation
 This controller provides web browser automation functionality using Playwright.
 Key features: browser automation via Playwright, non-headless execution for VNC visibility.
 Based on the BashDesktopController pattern but for web automation.
+Uses singleton pattern to maintain same Playwright session across requests.
 """
 
 import os
@@ -20,17 +21,19 @@ if src_utils_path not in sys.path:
 
 
 class PlaywrightWebController(WebControllerInterface):
-    """Playwright web controller for browser automation."""
+    """Playwright web controller for browser automation with persistent session."""
+    
+    # Class-level variables to maintain session across instances
+    _playwright_instance = None
+    _browser_instance = None
+    _page_instance = None
+    _session_initialized = False
     
     def __init__(self, **kwargs):
         """
         Initialize the Playwright web controller.
         """
         super().__init__("Playwright Web", "playwright")
-        
-        self.browser = None
-        self.page = None
-        self.playwright = None
         
         # Command execution state
         self.last_command_output = ""
@@ -40,14 +43,85 @@ class PlaywrightWebController(WebControllerInterface):
         
         print(f"[@controller:PlaywrightWeb] Initialized with Playwright's built-in Chromium")
     
+    @classmethod
+    def _initialize_playwright_session(cls):
+        """Initialize the shared Playwright session if not already done."""
+        if cls._session_initialized:
+            return True
+            
+        try:
+            print(f"[@controller:PlaywrightWeb] Initializing persistent Playwright session")
+            
+            # Set the DISPLAY environment variable for VNC
+            os.environ["DISPLAY"] = ":1"
+            
+            # Use sync Playwright API
+            from playwright.sync_api import sync_playwright
+            
+            cls._playwright_instance = sync_playwright().start()
+            cls._session_initialized = True
+            
+            print(f"[@controller:PlaywrightWeb] Playwright session initialized successfully")
+            return True
+            
+        except Exception as e:
+            print(f"[@controller:PlaywrightWeb] Failed to initialize Playwright session: {e}")
+            return False
+    
+    @classmethod
+    def _cleanup_playwright_session(cls):
+        """Clean up the shared Playwright session."""
+        try:
+            if cls._page_instance:
+                cls._page_instance.close()
+                cls._page_instance = None
+                
+            if cls._browser_instance:
+                cls._browser_instance.close()
+                cls._browser_instance = None
+            
+            if cls._playwright_instance:
+                cls._playwright_instance.stop()
+                cls._playwright_instance = None
+            
+            cls._session_initialized = False
+            print(f"[@controller:PlaywrightWeb] Playwright session cleaned up")
+            
+        except Exception as e:
+            print(f"[@controller:PlaywrightWeb] Error during session cleanup: {e}")
+            # Force reset even if cleanup fails
+            cls._page_instance = None
+            cls._browser_instance = None
+            cls._playwright_instance = None
+            cls._session_initialized = False
+    
+    @property
+    def browser(self):
+        """Get the shared browser instance."""
+        return self.__class__._browser_instance
+    
+    @property
+    def page(self):
+        """Get the shared page instance."""
+        return self.__class__._page_instance
+    
+    @property
+    def playwright(self):
+        """Get the shared playwright instance."""
+        return self.__class__._playwright_instance
+    
     def connect(self) -> bool:
-        """Connect to Playwright (always true for local execution)."""
+        """Connect to Playwright (initialize session if needed)."""
+        if not self._initialize_playwright_session():
+            return False
+            
         print(f"Web[{self.web_type.upper()}]: Playwright ready for browser automation")
         self.is_connected = True
         return True
     
     def disconnect(self) -> bool:
-        """Disconnect from Playwright (always true for local execution)."""
+        """Disconnect from Playwright (cleanup session)."""
+        self._cleanup_playwright_session()
         print(f"Web[{self.web_type.upper()}]: Playwright disconnected")
         self.is_connected = False
         return True
@@ -70,17 +144,9 @@ class PlaywrightWebController(WebControllerInterface):
             
             start_time = time.time()
             
-            # Set the DISPLAY environment variable for VNC
-            os.environ["DISPLAY"] = ":1"
-            
-            # Use sync Playwright API like working example
-            from playwright.sync_api import sync_playwright
-            
-            self.playwright = sync_playwright().start()
-            
             # Launch browser with headless=False to show the UI
-            self.browser = self.playwright.chromium.launch(headless=False)
-            self.page = self.browser.new_page()
+            self.__class__._browser_instance = self.playwright.chromium.launch(headless=False)
+            self.__class__._page_instance = self.browser.new_page()
             
             # Set viewport for consistent behavior
             self.page.set_viewport_size({"width": 1920, "height": 1080})
@@ -122,15 +188,11 @@ class PlaywrightWebController(WebControllerInterface):
             
             if self.page:
                 self.page.close()
-                self.page = None
+                self.__class__._page_instance = None
                 
             if self.browser:
                 self.browser.close()
-                self.browser = None
-            
-            if self.playwright:
-                self.playwright.stop()
-                self.playwright = None
+                self.__class__._browser_instance = None
             
             # Clear page state
             self.current_url = ""
@@ -150,9 +212,8 @@ class PlaywrightWebController(WebControllerInterface):
             error_msg = f"Browser close error: {e}"
             print(f"Web[{self.web_type.upper()}]: {error_msg}")
             # Force cleanup even if error
-            self.page = None
-            self.browser = None
-            self.playwright = None
+            self.__class__._page_instance = None
+            self.__class__._browser_instance = None
             self.current_url = ""
             self.page_title = ""
             return {
