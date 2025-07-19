@@ -170,25 +170,40 @@ class PlaywrightWebController(WebControllerInterface):
                 'connected': False
             }
     
-    def navigate_to_url(self, url: str, timeout: int = 30000) -> Dict[str, Any]:
-        """Navigate to a URL using async CDP connection with URL normalization."""
+    def navigate_to_url(self, url: str, timeout: int = 30000, follow_redirects: bool = True) -> Dict[str, Any]:
+        """Navigate to a URL using async CDP connection."""
         async def _async_navigate_to_url():
             try:
-                # Normalize URL (add https:// if missing)
+                # Normalize URL to add protocol if missing
                 normalized_url = self.utils.normalize_url(url)
-                print(f"Web[{self.web_type.upper()}]: Navigating to: {url} -> {normalized_url}")
+                print(f"Web[{self.web_type.upper()}]: Navigating to {url} (normalized: {normalized_url})")
                 start_time = time.time()
                 
-                # Update viewport for embedded context (browser automation panel)
+                # Update viewport for embedded context
                 self.utils.update_viewport_for_context("embedded")
                 
-                # Connect to Chrome via CDP with auto-cookie injection for target URL
-                playwright, browser, context, page = await self.utils.connect_with_auto_cookies(target_url=normalized_url)
+                # Connect to Chrome via CDP
+                playwright, browser, context, page = await self.utils.connect_to_chrome()
                 
-                # Navigate to URL
-                await page.goto(normalized_url, timeout=timeout)
+                # Navigate to URL with optional redirect control
+                if follow_redirects:
+                    # Default behavior - follow redirects
+                    await page.goto(normalized_url, timeout=timeout, wait_until='load')
+                else:
+                    # Disable redirects by intercepting navigation
+                    print(f"Web[{self.web_type.upper()}]: Navigation with redirects disabled")
+                    
+                    # Set up request interception to block redirects
+                    await page.route('**/*', lambda route: (
+                        route.fulfill(status=200, body=f'<html><body><h1>Redirect blocked</h1><p>Original URL: {normalized_url}</p><p>This page would normally redirect to another domain.</p></body></html>')
+                        if route.request.is_navigation_request() and route.request.url != normalized_url
+                        else route.continue_()
+                    ))
+                    
+                    await page.goto(normalized_url, timeout=timeout, wait_until='load')
                 
-                # Get page info
+                # Get page info after navigation
+                await page.wait_for_load_state('networkidle', timeout=10000)
                 self.current_url = page.url
                 self.page_title = await page.title()
                 
@@ -203,10 +218,15 @@ class PlaywrightWebController(WebControllerInterface):
                     'title': self.page_title,
                     'execution_time': execution_time,
                     'error': '',
-                    'normalized_url': normalized_url
+                    'normalized_url': normalized_url,
+                    'redirected': self.current_url != normalized_url,
+                    'follow_redirects': follow_redirects
                 }
                 
-                print(f"Web[{self.web_type.upper()}]: Navigation successful - {self.page_title}")
+                if result['redirected']:
+                    print(f"Web[{self.web_type.upper()}]: Navigation completed with redirect: {normalized_url} -> {self.current_url}")
+                else:
+                    print(f"Web[{self.web_type.upper()}]: Navigation successful - {self.page_title}")
                 return result
                 
             except Exception as e:
@@ -219,7 +239,8 @@ class PlaywrightWebController(WebControllerInterface):
                     'title': self.page_title,
                     'execution_time': 0,
                     'original_url': url,
-                    'normalized_url': normalized_url if 'normalized_url' in locals() else url
+                    'normalized_url': normalized_url if 'normalized_url' in locals() else url,
+                    'follow_redirects': follow_redirects
                 }
         
         if not self.is_connected:
@@ -232,12 +253,11 @@ class PlaywrightWebController(WebControllerInterface):
         
         return self.utils.run_async(_async_navigate_to_url())
     
-    def click_element(self, selector: str, timeout: int = 30000) -> Dict[str, Any]:
+    def click_element(self, selector: str) -> Dict[str, Any]:
         """Click an element by selector using async CDP connection.
         
         Args:
             selector: CSS selector, or text content to search for
-            timeout: Timeout in milliseconds (default 30 seconds)
         """
         async def _async_click_element():
             try:
@@ -249,6 +269,9 @@ class PlaywrightWebController(WebControllerInterface):
                 
                 # Connect to Chrome via CDP
                 playwright, browser, context, page = await self.utils.connect_to_chrome()
+                
+                # Use fixed 1 second timeout
+                timeout = 1000
                 
                 # Detect if selector is a CSS selector or text content
                 is_css_selector = (
@@ -287,7 +310,7 @@ class PlaywrightWebController(WebControllerInterface):
                     
                     for text_selector in text_selectors:
                         try:
-                            await page.click(text_selector, timeout=5000)  # Shorter timeout for each attempt
+                            await page.click(text_selector, timeout=timeout)
                             click_successful = True
                             final_selector = text_selector
                             print(f"Web[{self.web_type.upper()}]: Text selector click successful: {text_selector}")
@@ -328,9 +351,9 @@ class PlaywrightWebController(WebControllerInterface):
                                             success: true,
                                             tagName: targetElement.tagName,
                                             textContent: targetElement.textContent?.trim()?.substring(0, 50),
-                                                                                         selector: targetElement.id ? `#${{targetElement.id}}` : 
-                                                      targetElement.className ? `.${{targetElement.className.split(' ')[0]}}` :
-                                                      targetElement.tagName.toLowerCase()
+                                            selector: targetElement.id ? `#${{targetElement.id}}` : 
+                                                     targetElement.className ? `.${{targetElement.className.split(' ')[0]}}` :
+                                                     targetElement.tagName.toLowerCase()
                                         }};
                                     }}
                                     
@@ -626,6 +649,7 @@ class PlaywrightWebController(WebControllerInterface):
         if command == 'navigate_to_url':
             url = params.get('url')
             timeout = params.get('timeout', 30000)
+            follow_redirects = params.get('follow_redirects', True)
             
             if not url:
                 return {
@@ -634,11 +658,10 @@ class PlaywrightWebController(WebControllerInterface):
                     'execution_time': 0
                 }
                 
-            return self.navigate_to_url(url, timeout=timeout)
+            return self.navigate_to_url(url, timeout=timeout, follow_redirects=follow_redirects)
         
         elif command == 'click_element':
             selector = params.get('selector')
-            timeout = params.get('timeout', 30000)
             
             if not selector:
                 return {
@@ -647,7 +670,7 @@ class PlaywrightWebController(WebControllerInterface):
                     'execution_time': 0
                 }
                 
-            return self.click_element(selector, timeout=timeout)
+            return self.click_element(selector)
         
         elif command == 'input_text':
             selector = params.get('selector')

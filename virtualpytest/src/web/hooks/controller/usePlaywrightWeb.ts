@@ -157,7 +157,7 @@ export const usePlaywrightWeb = (host: Host) => {
           );
         }
 
-        const { command, ...params } = parsedCommand;
+        const { command, params } = parsedCommand;
 
         if (!command) {
           throw new Error('Command field is required in JSON');
@@ -168,22 +168,44 @@ export const usePlaywrightWeb = (host: Host) => {
         setCommandHistory(newHistory);
 
         // Execute command
-        const result = await executeWebCommand(command, params);
+        const result = await executeWebCommand(command, params || {});
 
         // Build complete output with command and result
         const commandLine = `$ ${commandStr}\n`;
         let resultOutput = '';
         if (result.success) {
-          if (result.url) {
-            resultOutput += `URL: ${result.url}\n`;
+          // Special handling for dump_elements command - show the elements data
+          if (
+            command === 'dump_elements' &&
+            'elements' in result &&
+            Array.isArray(result.elements)
+          ) {
+            const elements = result.elements as any[];
+            const summary = (result as any).summary || {};
+
+            resultOutput += `Found ${elements.length} elements:\n\n`;
+            resultOutput +=
+              JSON.stringify(
+                {
+                  summary: summary,
+                  elements: elements,
+                },
+                null,
+                2,
+              ) + '\n';
+          } else {
+            // Standard output for other commands
+            if (result.url) {
+              resultOutput += `URL: ${result.url}\n`;
+            }
+            if (result.title) {
+              resultOutput += `Title: ${result.title}\n`;
+            }
+            if (result.result !== undefined) {
+              resultOutput += `Result: ${JSON.stringify(result.result, null, 2)}\n`;
+            }
+            resultOutput += `✅ Success (${result.execution_time}ms)\n`;
           }
-          if (result.title) {
-            resultOutput += `Title: ${result.title}\n`;
-          }
-          if (result.result !== undefined) {
-            resultOutput += `Result: ${JSON.stringify(result.result, null, 2)}\n`;
-          }
-          resultOutput += `✅ Success (${result.execution_time}ms)\n`;
 
           // Update page state for navigation commands
           if (command === 'navigate_to_url' || command === 'get_page_info') {

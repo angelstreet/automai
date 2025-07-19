@@ -28,27 +28,24 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   host,
 }: PlaywrightWebTerminalProps) {
   const {
-    isExecuting,
-    terminalOutput,
+    executeCommand,
+    // Removed unused destructured properties to fix linter errors
     session,
     currentUrl,
     pageTitle,
-    navigateToUrl,
-    clickElement,
-    executeCommand,
+    terminalOutput,
+    isExecuting,
     openBrowser,
     closeBrowser,
+    clearTerminal,
   } = usePlaywrightWeb(host); // Web automation operates directly on the host
 
   // Local state for individual action inputs
   const [navigateUrl, setNavigateUrl] = useState('');
   const [clickSelector, setClickSelector] = useState('');
-  const [clickTimeout, setClickTimeout] = useState('30000');
   const [tapX, setTapX] = useState('');
   const [tapY, setTapY] = useState('');
   const [findSelector, setFindSelector] = useState('');
-  const [elementTypes, setElementTypes] = useState('all');
-  const [includeHidden, setIncludeHidden] = useState(false);
   const [isResponseExpanded, setIsResponseExpanded] = useState(false);
   const [isBrowserOpen, setIsBrowserOpen] = useState(false);
   const [isOpening, setIsOpening] = useState(false);
@@ -174,16 +171,22 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setNavigateStatus('idle');
 
     try {
-      const result = await navigateToUrl(navigateUrl.trim());
+      // Use proper JSON format for the command
+      const commandJson = JSON.stringify({
+        command: 'navigate_to_url',
+        params: {
+          url: navigateUrl.trim(),
+          follow_redirects: true, // Always follow redirects for navigation
+        },
+      });
+      const result = await executeCommand(commandJson);
       setNavigateUrl('');
 
       // Set visual feedback based on result
       setNavigateStatus(result.success ? 'success' : 'error');
 
-      // Show response area if successful
-      if (result.success) {
-        setIsResponseExpanded(true);
-      }
+      // Show response area
+      setIsResponseExpanded(true);
     } catch (error) {
       setNavigateStatus('error');
       console.error('Navigate error:', error);
@@ -203,10 +206,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
       // Use proper JSON format for the command
       const commandJson = JSON.stringify({
         command: 'click_element',
-        params: {
-          selector: clickSelector.trim(),
-          timeout: parseInt(clickTimeout) || 30000,
-        },
+        params: { selector: clickSelector.trim() },
       });
       const result = await executeCommand(commandJson);
       setClickSelector('');
@@ -265,16 +265,24 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setFindStatus('idle');
 
     try {
-      // Use proper JSON format for the command
+      // Clear response area before new find
+      clearTerminal();
+
+      // Use proper JSON format for the command - find elements, don't click them
       const commandJson = JSON.stringify({
-        command: 'click_element',
-        params: { selector: findSelector.trim() },
+        command: 'dump_elements',
+        params: {
+          element_types: 'all',
+        },
       });
-      const result = await executeCommand(commandJson);
+
+      // Execute dump command to find all elements
+      await executeCommand(commandJson);
+
       setFindSelector('');
 
-      // Set visual feedback based on result
-      setFindStatus(result.success ? 'success' : 'error');
+      // Set visual feedback as success since we're just finding elements
+      setFindStatus('success');
 
       // Show response area
       setIsResponseExpanded(true);
@@ -293,12 +301,14 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     setDumpStatus('idle');
 
     try {
+      // Clear response area before new dump
+      clearTerminal();
+
       // Use proper JSON format for the command
       const commandJson = JSON.stringify({
         command: 'dump_elements',
         params: {
-          element_types: elementTypes,
-          include_hidden: includeHidden,
+          element_types: 'all',
         },
       });
       const result = await executeCommand(commandJson);
@@ -415,7 +425,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
           {/* Navigate Action */}
           <Box sx={{ mb: 2 }}>
             <Typography variant="caption" sx={{ display: 'block', mb: 0.5, fontWeight: 'bold' }}>
-              Navigate
+              Navigate to URL
             </Typography>
             <Box sx={{ display: 'flex', gap: 1 }}>
               <TextField
@@ -476,21 +486,6 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                   }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
-                      fontSize: '0.875rem',
-                    },
-                  }}
-                />
-                <TextField
-                  value={clickTimeout}
-                  onChange={(e) => setClickTimeout(e.target.value)}
-                  placeholder="Timeout (ms)"
-                  variant="outlined"
-                  size="small"
-                  disabled={isExecuting}
-                  type="number"
-                  sx={{
-                    width: '100px',
                     '& .MuiOutlinedInput-root': {
                       fontSize: '0.875rem',
                     },
@@ -617,28 +612,6 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
             </Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <TextField
-                  select
-                  value={elementTypes}
-                  onChange={(e) => setElementTypes(e.target.value)}
-                  variant="outlined"
-                  size="small"
-                  disabled={isExecuting}
-                  SelectProps={{
-                    native: true,
-                  }}
-                  sx={{
-                    minWidth: '120px',
-                    '& .MuiOutlinedInput-root': {
-                      fontSize: '0.875rem',
-                    },
-                  }}
-                >
-                  <option value="all">All Elements</option>
-                  <option value="interactive">Interactive</option>
-                  <option value="text">Text Only</option>
-                  <option value="links">Links Only</option>
-                </TextField>
                 <Button
                   variant="contained"
                   size="small"
@@ -650,18 +623,6 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                 >
                   {isDumping ? 'Dumping...' : 'Dump'}
                 </Button>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <input
-                  type="checkbox"
-                  id="includeHidden"
-                  checked={includeHidden}
-                  onChange={(e) => setIncludeHidden(e.target.checked)}
-                  disabled={isExecuting}
-                />
-                <Typography variant="caption" component="label" htmlFor="includeHidden">
-                  Include hidden elements
-                </Typography>
               </Box>
             </Box>
           </Box>
@@ -713,29 +674,6 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
           }}
         >
           <Typography variant="body2">Click "Open Browser" to start web automation</Typography>
-        </Box>
-      )}
-
-      {/* Executing Indicator */}
-      {isExecuting && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1,
-            backgroundColor: 'rgba(0,0,0,0.8)',
-            color: 'white',
-            p: 2,
-            borderRadius: 1,
-            zIndex: 1000,
-          }}
-        >
-          <CircularProgress size={20} />
-          <Typography variant="body2">Executing...</Typography>
         </Box>
       )}
     </Box>
