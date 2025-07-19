@@ -62,6 +62,8 @@ def execute_command():
                     }
                     
                     try:
+                        print(f"[@route:host_web:execute_command] Sending callback to: {callback_url}")
+                        print(f"[@route:host_web:execute_command] Callback data: {callback_data}")
                         callback_response = requests.post(callback_url, json=callback_data, timeout=30, verify=False)
                         print(f"[@route:host_web:execute_command] Callback sent for task {task_id}, status: {callback_response.status_code}")
                     except Exception as callback_error:

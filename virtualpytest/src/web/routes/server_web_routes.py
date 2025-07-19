@@ -48,6 +48,9 @@ def execute_command():
             host_request_data['callback_url'] = callback_url
             host_request_data['task_id'] = task_id
             
+            print(f"[@route:server_web:execute_command] Generated callback URL: {callback_url}")
+            print(f"[@route:server_web:execute_command] Task ID: {task_id}")
+            
             # Execute in background thread
             def execute_async():
                 try:

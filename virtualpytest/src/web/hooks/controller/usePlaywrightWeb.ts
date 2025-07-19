@@ -27,6 +27,7 @@ export const usePlaywrightWeb = (host: Host) => {
   const [taskStatus, setTaskStatus] = useState<'idle' | 'executing' | 'completed' | 'failed'>(
     'idle',
   );
+  const [isBrowserUseExecuting, setIsBrowserUseExecuting] = useState(false);
 
   // Page state
   const [currentUrl, setCurrentUrl] = useState<string>('');
@@ -129,6 +130,7 @@ export const usePlaywrightWeb = (host: Host) => {
             if (data.task_id === currentTaskId) {
               setTaskStatus(data.success ? 'completed' : 'failed');
               setIsExecuting(false);
+              setIsBrowserUseExecuting(false);
               setCurrentTaskId(null);
 
               // Show result in terminal
@@ -205,6 +207,7 @@ export const usePlaywrightWeb = (host: Host) => {
           // This is an async task - store task_id and wait for WebSocket notification
           setCurrentTaskId(result.task_id);
           setTaskStatus('executing');
+          setIsBrowserUseExecuting(true);
 
           // Show initial status in terminal
           const statusOutput = JSON.stringify(
@@ -268,6 +271,7 @@ export const usePlaywrightWeb = (host: Host) => {
     setIsExecuting(false);
     setCurrentTaskId(null);
     setTaskStatus('idle');
+    setIsBrowserUseExecuting(false);
   }, [host]);
 
   // Handle disconnect
@@ -300,6 +304,7 @@ export const usePlaywrightWeb = (host: Host) => {
     // Async task state
     currentTaskId,
     taskStatus,
+    isBrowserUseExecuting,
 
     // Actions
     executeCommand,

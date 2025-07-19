@@ -35,6 +35,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     pageTitle,
     terminalOutput,
     isExecuting,
+    isBrowserUseExecuting,
     clearTerminal,
   } = usePlaywrightWeb(host); // Web automation operates directly on the host
 
@@ -58,7 +59,6 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
   const [isTapping, setIsTapping] = useState(false);
   const [isFinding, setIsFinding] = useState(false);
   const [isDumping, setIsDumping] = useState(false);
-  const [isTaskExecuting, setIsTaskExecuting] = useState(false);
 
   // Success/failure states for visual feedback
   const [navigateStatus, setNavigateStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -153,9 +153,8 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
 
   // Handle task execution (placeholder)
   const handleTaskExecution = async () => {
-    if (!taskInput.trim() || isAnyActionExecuting) return;
+    if (!taskInput.trim() || isBrowserUseExecuting) return;
 
-    setIsTaskExecuting(true);
     setTaskStatus('idle');
 
     try {
@@ -181,8 +180,6 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
       setTaskStatus('error');
       console.error('Task error:', error);
       return { success: false, error: 'Task failed' };
-    } finally {
-      setIsTaskExecuting(false);
     }
   };
 
@@ -196,7 +193,7 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
     isDumping ||
     isOpening ||
     isClosing ||
-    isTaskExecuting;
+    isBrowserUseExecuting;
 
   // Handle browser open
   const handleOpenBrowser = async () => {
@@ -547,12 +544,12 @@ export const PlaywrightWebTerminal = React.memo(function PlaywrightWebTerminal({
                     variant="contained"
                     size="small"
                     onClick={handleTaskExecution}
-                    disabled={!taskInput.trim() || isAnyActionExecuting}
+                    disabled={!taskInput.trim() || isBrowserUseExecuting}
                     color={getButtonColor(taskStatus)}
-                    startIcon={isTaskExecuting ? <CircularProgress size={16} /> : undefined}
+                    startIcon={isBrowserUseExecuting ? <CircularProgress size={16} /> : undefined}
                     sx={{ minWidth: '80px' }}
                   >
-                    {isTaskExecuting ? 'Running...' : 'Run'}
+                    {isBrowserUseExecuting ? 'Running...' : 'Run'}
                   </Button>
                 </Box>
               </Box>
