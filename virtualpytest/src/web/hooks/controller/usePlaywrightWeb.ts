@@ -121,7 +121,9 @@ export const usePlaywrightWeb = (host: Host) => {
           });
 
           // Initialize WebSocket connection for async task notifications
-          const socket = io('/server');
+          const socket = io('/server', {
+            path: '/server/socket.io',
+          });
           socketRef.current = socket;
 
           socket.on('task_complete', (data) => {

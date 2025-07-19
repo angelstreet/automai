@@ -90,7 +90,7 @@ def setup_flask_app(app_name="VirtualPyTest"):
 
     # Add WebSocket support for async task notifications
     from flask_socketio import SocketIO
-    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading', path='/server/socket.io')
     app.socketio = socketio
 
     return app
