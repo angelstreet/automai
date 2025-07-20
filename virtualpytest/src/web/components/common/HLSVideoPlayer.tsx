@@ -13,6 +13,7 @@ interface HLSVideoPlayerProps {
   model?: string;
   layoutConfig?: StreamViewerLayoutConfig;
   isExpanded?: boolean;
+  muted?: boolean; // Add muted prop
 }
 
 /**
@@ -37,6 +38,7 @@ export function HLSVideoPlayer({
   model,
   layoutConfig,
   isExpanded = false,
+  muted = true, // Default to muted for autoplay compliance
 }: HLSVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<any>(null);
@@ -388,7 +390,7 @@ export function HLSVideoPlayer({
         }}
         autoPlay
         playsInline
-        muted
+        muted={muted}
         draggable={false}
         preload="none"
         crossOrigin="anonymous"

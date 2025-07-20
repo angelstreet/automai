@@ -4,6 +4,8 @@ import {
   Analytics as AnalyticsIcon,
   SmartToy as AIIcon,
   Language as WebIcon,
+  VolumeOff as VolumeOffIcon,
+  VolumeUp as VolumeUpIcon,
 } from '@mui/icons-material';
 import { Box, IconButton, Typography, Button, CircularProgress, TextField } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
@@ -65,6 +67,7 @@ const RecHostStreamModalContent: React.FC<{
   const [showWeb, setShowWeb] = useState<boolean>(false);
   const [monitoringMode, setMonitoringMode] = useState<boolean>(false);
   const [aiAgentMode, setAiAgentMode] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(true); // Start muted by default
 
   // Set global modal state when component mounts/unmounts
   useEffect(() => {
@@ -332,6 +335,16 @@ const RecHostStreamModalContent: React.FC<{
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Volume Toggle Button */}
+            <IconButton
+              onClick={() => setIsMuted((prev) => !prev)}
+              sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}
+              aria-label={isMuted ? 'Unmute' : 'Mute'}
+              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+            >
+              {isMuted ? <VolumeOffIcon /> : <VolumeUpIcon />}
+            </IconButton>
+
             {/* Take Control Button */}
             <Button
               variant={isControlActive ? 'contained' : 'outlined'}
@@ -563,6 +576,7 @@ const RecHostStreamModalContent: React.FC<{
                     isMobileModel, // Use our mobile detection result
                   }}
                   isExpanded={false}
+                  muted={isMuted}
                   sx={{
                     width: '100%',
                     height: '100%',
