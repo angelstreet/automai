@@ -259,7 +259,7 @@ export const useMonitoring = ({
             const data = await response.json();
             analysis = data.analysis || null;
 
-            // Try to load audio data
+            // Try to load audio data - preserve existing audio data if file not found
             if (analysis) {
               try {
                 // Use exact same format: capture_YYYYMMDDHHMMSS_audio.json (in captures folder)
@@ -273,9 +273,23 @@ export const useMonitoring = ({
                       volume_percentage: audioData.audio_analysis.volume_percentage,
                     };
                   }
+                } else {
+                  // Audio file not found - preserve previous audio data if available
+                  const currentFrameWithAudio = frames.find(
+                    (frame, index) => index < currentIndex && frame.analysis?.audio,
+                  );
+                  if (currentFrameWithAudio?.analysis?.audio) {
+                    analysis.audio = currentFrameWithAudio.analysis.audio;
+                  }
                 }
               } catch {
-                // Audio loading failed, continue without audio data
+                // Audio loading failed - preserve previous audio data if available
+                const currentFrameWithAudio = frames.find(
+                  (frame, index) => index < currentIndex && frame.analysis?.audio,
+                );
+                if (currentFrameWithAudio?.analysis?.audio) {
+                  analysis.audio = currentFrameWithAudio.analysis.audio;
+                }
               }
             }
           }

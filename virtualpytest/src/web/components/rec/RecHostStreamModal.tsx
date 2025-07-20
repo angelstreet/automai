@@ -335,15 +335,17 @@ const RecHostStreamModalContent: React.FC<{
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {/* Volume Toggle Button */}
-            <IconButton
-              onClick={() => setIsMuted((prev) => !prev)}
-              sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}
-              aria-label={isMuted ? 'Unmute' : 'Mute'}
-              title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
-            >
-              {isMuted ? <VolumeOffIcon /> : <VolumeUpIcon />}
-            </IconButton>
+            {/* Volume Toggle Button - Only show when NOT in monitoring mode */}
+            {!monitoringMode && (
+              <IconButton
+                onClick={() => setIsMuted((prev) => !prev)}
+                sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}
+                aria-label={isMuted ? 'Unmute' : 'Mute'}
+                title={isMuted ? 'Unmute Audio' : 'Mute Audio'}
+              >
+                {isMuted ? <VolumeOffIcon /> : <VolumeUpIcon />}
+              </IconButton>
+            )}
 
             {/* Take Control Button */}
             <Button
