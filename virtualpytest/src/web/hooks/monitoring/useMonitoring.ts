@@ -263,8 +263,8 @@ export const useMonitoring = ({
             if (analysis) {
               try {
                 const audioUrl = selectedFrame.jsonUrl
-                  .replace('_thumbnail.json', '.json')
-                  .replace('capture_', 'audio_');
+                  .replace('/captures/capture_', '/audio_')
+                  .replace('_thumbnail.json', '.json');
                 const audioResponse = await fetch(audioUrl);
                 if (audioResponse.ok) {
                   const audioData = await audioResponse.json();
