@@ -34,13 +34,13 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   // Global modal state
   const { isAnyModalOpen } = useModal();
 
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-  const [previousThumbnailUrl, setPreviousThumbnailUrl] = useState<string | null>(null);
+  // Simple 2-image state
+  const [image1Url, setImage1Url] = useState<string | null>(null);
+  const [image2Url, setImage2Url] = useState<string | null>(null);
+  const [activeImage, setActiveImage] = useState<1 | 2>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [imageLoadError, setImageLoadError] = useState(false);
 
   // Detect if this is a mobile device model for proper sizing
   const isMobile = useMemo(() => {
@@ -61,31 +61,19 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   // Hook for notifications only
   const { showError } = useToast();
 
-  // State to track if polling paused message has been logged
-  const [hasLoggedPaused, setHasLoggedPaused] = useState(false);
-
   // Stabilize host and device objects to prevent infinite re-renders
-  // Only recreate when the actual data changes, not the object reference
   const stableHost = useMemo(() => host, [host]);
-
   const stableDevice = useMemo(() => device, [device]);
 
-  // Handle smooth transition when new image loads
-  const handleImageLoad = useCallback(() => {
-    if (isTransitioning) {
-      // Clear the previous image after a brief delay to allow smooth transition
-      setTimeout(() => {
-        setPreviousThumbnailUrl(null);
-        setIsTransitioning(false);
-      }, 300); // Small delay for smooth transition
-    }
-  }, [isTransitioning]);
+  // Handle when an image loads successfully
+  const handleImageLoad = useCallback((imageNumber: 1 | 2) => {
+    setActiveImage(imageNumber); // Switch to the newly loaded image
+  }, []);
 
-  // Process screenshot URL with conditional HTTP to HTTPS proxy (similar to ScreenshotCapture)
-  // Use processed URL directly from backend
+  // Process screenshot URL with conditional HTTP to HTTPS proxy
   const getImageUrl = useCallback((screenshotPath: string) => screenshotPath || '', []);
 
-  // Optimized approach - just generate URL with current timestamp (no server calls after init)
+  // Simple screenshot taking logic
   const handleTakeScreenshot = useCallback(async () => {
     // Skip screenshots for VNC devices - they use iframe
     if (isVncDevice) {
@@ -108,20 +96,19 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     setError(null);
 
     try {
-      // Generate thumbnail URL directly with current timestamp (no server call)
+      // Generate thumbnail URL directly with current timestamp
       const newThumbnailUrl = generateThumbnailUrl(stableHost, stableDevice);
 
       if (newThumbnailUrl) {
-        // Add 1 second delay to ensure thumbnail is properly generated and available
+        // Add 1.5 second delay to ensure thumbnail is properly generated and available
         setTimeout(() => {
-          // Smooth transition: store previous URL and set new one
-          if (thumbnailUrl && thumbnailUrl !== newThumbnailUrl) {
-            setPreviousThumbnailUrl(thumbnailUrl);
-            setIsTransitioning(true);
+          // Simple algorithm: alternate between image1 and image2
+          if (activeImage === 1) {
+            setImage2Url(newThumbnailUrl); // Preload image2
+          } else {
+            setImage1Url(newThumbnailUrl); // Preload image1
           }
-          setThumbnailUrl(newThumbnailUrl);
-          setImageLoadError(false); // Reset error state when setting new URL
-        }, 1000); // 1 second delay to ensure server has generated the thumbnail
+        }, 1500);
       } else {
         setError('Base URL not initialized');
 
@@ -148,7 +135,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   }, [
     stableHost,
     stableDevice,
-    thumbnailUrl,
+    activeImage,
     generateThumbnailUrl,
     initializeBaseUrl,
     isAnyModalOpen,
@@ -170,10 +157,9 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     if (!stableHost || !stableDevice || !initializeBaseUrl || !generateThumbnailUrl) return;
 
     let screenshotInterval: NodeJS.Timeout | null = null;
-    let isMounted = true; // Track mount status to prevent race conditions
+    let isMounted = true;
 
     const initializeAndStartUpdates = async () => {
-      // Early return if component was unmounted during async operation
       if (!isMounted) {
         return;
       }
@@ -182,7 +168,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         // Initialize base URL pattern (only called once)
         const initialized = await initializeBaseUrl(stableHost, stableDevice);
 
-        // Check if still mounted after async operation
         if (!isMounted) {
           return;
         }
@@ -190,7 +175,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
         if (initialized) {
           // Wait a moment for state to settle, then take initial screenshot
           setTimeout(() => {
-            if (!isMounted) return; // Check mount status before proceeding
+            if (!isMounted) return;
 
             handleTakeScreenshot();
 
@@ -222,7 +207,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
 
     // Cleanup function
     return () => {
-      isMounted = false; // Mark as unmounted
+      isMounted = false;
       if (screenshotInterval) {
         clearInterval(screenshotInterval);
         screenshotInterval = null;
@@ -239,33 +224,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
     isVncDevice,
   ]);
 
-  // Log modal state changes for debugging (only once per state change)
-  useEffect(() => {
-    if (isStreamModalOpen || isAnyModalOpen) {
-      if (!hasLoggedPaused) {
-        console.log(
-          `[RecHostPreview] ${stableHost.host_name}-${stableDevice?.device_id}: Polling paused (modal open)`,
-        );
-        setHasLoggedPaused(true);
-      }
-    } else {
-      setHasLoggedPaused(false); // Reset for next time modal opens
-      if (hasLoggedPaused) {
-        // Only log resume if we previously logged pause
-        console.log(
-          `[RecHostPreview] ${stableHost.host_name}-${stableDevice?.device_id}: Polling resumed`,
-        );
-      }
-    }
-  }, [
-    isStreamModalOpen,
-    isAnyModalOpen,
-    stableHost.host_name,
-    stableDevice?.device_id,
-    hasLoggedPaused,
-  ]);
-
-  // Handle opening stream modal - control will be handled by the modal itself
+  // Handle opening stream modal
   const handleOpenStreamModal = useCallback(() => {
     // Basic check if host is online
     if (stableHost.status !== 'online') {
@@ -303,21 +262,21 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   return (
     <Card
       sx={{
-        height: 200, // Revert back to fixed height
+        height: 200,
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        p: 0, // Remove all padding from Card
-        backgroundColor: 'transparent', // Transparent background
-        backgroundImage: 'none', // Remove any background image
-        boxShadow: 'none', // Remove default shadow
-        border: '1px solid rgba(255, 255, 255, 0.1)', // Subtle border for definition
+        p: 0,
+        backgroundColor: 'transparent',
+        backgroundImage: 'none',
+        boxShadow: 'none',
+        border: '1px solid rgba(255, 255, 255, 0.1)',
         '&:hover': {
-          boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.3)', // Darker shadow on hover
-          border: '1px solid rgba(255, 255, 255, 0.2)', // Slightly more visible border on hover
+          boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.3)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
         },
         '& .MuiCard-root': {
-          padding: 0, // Ensure no default card padding
+          padding: 0,
         },
       }}
     >
@@ -369,12 +328,12 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                 <iframe
                   src={vncStreamUrl}
                   style={{
-                    width: '400%', // Make iframe larger to contain full desktop
-                    height: '400%', // Make iframe larger to contain full desktop
+                    width: '400%',
+                    height: '400%',
                     border: 'none',
                     backgroundColor: '#000',
-                    pointerEvents: 'none', // Disable interaction in preview
-                    transform: 'scale(0.25)', // Scale down to 25% to fit the preview
+                    pointerEvents: 'none',
+                    transform: 'scale(0.25)',
                     transformOrigin: 'top left',
                   }}
                   title="VNC Desktop Preview"
@@ -414,7 +373,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
               </Box>
             )
           ) : (
-            // Non-VNC devices: Show screenshot thumbnails
+            // Non-VNC devices: Show screenshot thumbnails with simple 2-image algorithm
             <>
               {error ? (
                 <Box
@@ -432,7 +391,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                     {error}
                   </Typography>
                 </Box>
-              ) : thumbnailUrl ? (
+              ) : image1Url || image2Url ? (
                 <Box
                   sx={{
                     position: 'relative',
@@ -442,61 +401,63 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                     overflow: 'hidden',
                   }}
                 >
-                  {/* Previous image - keep visible if current fails */}
-                  {previousThumbnailUrl && (isTransitioning || imageLoadError) && (
+                  {/* Image 1 */}
+                  {image1Url && (
                     <Box
                       component="img"
-                      src={getImageUrl(previousThumbnailUrl)}
-                      alt="Previous screenshot"
+                      src={getImageUrl(image1Url)}
+                      alt="Screenshot 1"
                       sx={{
                         position: 'absolute',
                         top: 0,
                         left: 0,
-                        width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
-                        height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
-                        objectFit: 'cover', // Fill entire container
-                        objectPosition: 'top center', // Center horizontally, anchor to top
-                        opacity: imageLoadError ? 1 : isTransitioning ? 0 : 1, // Stay visible if current image failed
+                        width: isMobile ? 'auto' : '100%',
+                        height: isMobile ? '100%' : 'auto',
+                        objectFit: 'cover',
+                        objectPosition: 'top center',
+                        opacity: activeImage === 1 ? 1 : 0,
                         transition: 'opacity 300ms ease-in-out',
                         cursor: 'pointer',
                       }}
                       draggable={false}
+                      onLoad={() => handleImageLoad(1)}
+                      onError={() => {
+                        console.log(
+                          `[RecHostPreview] Image 1 failed to load: ${image1Url} - keeping current image`,
+                        );
+                        // Do nothing - keep current active image
+                      }}
                     />
                   )}
 
-                  {/* Current image - fading in */}
-                  <Box
-                    component="img"
-                    src={getImageUrl(thumbnailUrl)}
-                    alt="Current screenshot"
-                    sx={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: isMobile ? 'auto' : '100%', // Mobile: auto width, Non-mobile: full width
-                      height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
-                      objectFit: 'cover', // Fill entire container
-                      objectPosition: 'top center', // Center horizontally, anchor to top
-                      opacity: 1,
-                      transition: 'opacity 300ms ease-in-out',
-                      cursor: 'pointer',
-                    }}
-                    draggable={false}
-                    onLoad={() => {
-                      setImageLoadError(false); // Image loaded successfully
-                      handleImageLoad();
-                    }}
-                    onError={(_e) => {
-                      console.log(
-                        `[RecHostPreview] ${host.host_name}-${device?.device_id}: Image not available: ${thumbnailUrl} - waiting for next capture`,
-                      );
-                      setImageLoadError(true); // Mark image as failed to load
-                      // Don't reset transition state - keep previous image visible
-                    }}
-                    style={{
-                      display: imageLoadError ? 'none' : 'block', // Hide broken images
-                    }}
-                  />
+                  {/* Image 2 */}
+                  {image2Url && (
+                    <Box
+                      component="img"
+                      src={getImageUrl(image2Url)}
+                      alt="Screenshot 2"
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: isMobile ? 'auto' : '100%',
+                        height: isMobile ? '100%' : 'auto',
+                        objectFit: 'cover',
+                        objectPosition: 'top center',
+                        opacity: activeImage === 2 ? 1 : 0,
+                        transition: 'opacity 300ms ease-in-out',
+                        cursor: 'pointer',
+                      }}
+                      draggable={false}
+                      onLoad={() => handleImageLoad(2)}
+                      onError={() => {
+                        console.log(
+                          `[RecHostPreview] Image 2 failed to load: ${image2Url} - keeping current image`,
+                        );
+                        // Do nothing - keep current active image
+                      }}
+                    />
+                  )}
 
                   {/* Click overlay to open stream modal */}
                   <Box
