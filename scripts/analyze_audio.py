@@ -94,12 +94,33 @@ def main():
         }
     }
     
-    # Save JSON file
-    json_filename = f"audio_{timestamp}.json"
-    json_path = os.path.join(capture_dir, json_filename)
+    # Save JSON file in captures subfolder (same as frame analysis)
+    captures_dir = os.path.join(capture_dir, "captures")
+    if not os.path.exists(captures_dir):
+        captures_dir = capture_dir  # Fallback to main dir if captures doesn't exist
     
-    with open(json_path, 'w') as f:
-        json.dump(audio_result, f, indent=2)
+    json_filename = f"capture_{timestamp}_audio.json"
+    json_path = os.path.join(captures_dir, json_filename)
+    
+    # Debug: Check directory permissions and path
+    print(f"Attempting to save to: {json_path}")
+    print(f"Captures directory exists: {os.path.exists(captures_dir)}")
+    print(f"Captures directory writable: {os.access(captures_dir, os.W_OK)}")
+    
+    try:
+        with open(json_path, 'w') as f:
+            json.dump(audio_result, f, indent=2)
+        print(f"Successfully created: {json_filename}")
+    except Exception as e:
+        print(f"Failed to create JSON file: {e}")
+        # Try creating in /tmp as fallback for debugging
+        fallback_path = f"/tmp/{json_filename}"
+        try:
+            with open(fallback_path, 'w') as f:
+                json.dump(audio_result, f, indent=2)
+            print(f"Created fallback file: {fallback_path}")
+        except Exception as e2:
+            print(f"Fallback also failed: {e2}")
     
     print(f"Audio analysis: {volume_percentage}% volume, audio={'Yes' if has_audio else 'No'}")
 
