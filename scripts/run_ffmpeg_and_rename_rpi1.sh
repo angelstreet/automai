@@ -60,7 +60,7 @@ start_grabber() {
     -filter_complex split=2[stream][capture]\;[stream]scale=640:360,format=yuv420p[streamout]\;[capture]fps=2[captureout] \
     -map \"[streamout]\" -map 1:a \
     -c:v libx264 -preset ultrafast -tune zerolatency -b:v 500k -maxrate 600k -bufsize 100k -g 5 -keyint_min 5 \
-    -sc_threshold 0 -flags low_delay+global_header -threads 2 -an -x264opts rc-lookahead=0:sync-lookahead=0:ref=1:bframes=0 \
+    -sc_threshold 0 -flags low_delay+global_header -threads 2 -x264opts rc-lookahead=0:sync-lookahead=0:ref=1:bframes=0 \
     -c:a mp3 -b:a 32k -ar 22050 -ac 1 \
     -f hls -hls_time 0.5 -hls_list_size 2 -hls_flags delete_segments+discont_start+split_by_time+independent_segments \
     -hls_segment_type mpegts -hls_init_time 0.5 \
@@ -69,13 +69,16 @@ start_grabber() {
     -map [captureout] -c:v mjpeg -q:v 4 -r 1 -f image2 \
     $capture_dir/captures/test_capture_%06d.jpg"
 
+  # Debug: Print the FFMPEG command
+  printf "FFMPEG Command for %s:\n%s\n\n" "$video_device" "$audio_device" "$FFMPEG_CMD"
+
   # Start ffmpeg
-  echo "Starting ffmpeg for $video_device..."
+  echo "Starting ffmpeg for $video_device $audio_device..."
   local FFMPEG_LOG="/tmp/ffmpeg_output_${index}.log"
   reset_log_if_large "$FFMPEG_LOG"
   eval $FFMPEG_CMD > "$FFMPEG_LOG" 2>&1 &
   local FFMPEG_PID=$!
-  echo "Started ffmpeg for $video_device with PID: $FFMPEG_PID"
+  echo "Started ffmpeg for $video_device $audio_device with PID: $FFMPEG_PID"
 
   # Start rename script
   /usr/local/bin/rename_captures.sh "$capture_dir" &

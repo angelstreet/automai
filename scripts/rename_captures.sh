@@ -22,10 +22,12 @@ reset_log_if_large() {
 # Log files
 RENAME_LOG="/tmp/rename.log"
 MONITORING_LOG="/tmp/monitoring.log"
+AUDIO_LOG="/tmp/audio.log"
 
 # Check logs on startup
 reset_log_if_large "$RENAME_LOG"
 reset_log_if_large "$MONITORING_LOG"
+reset_log_if_large "$AUDIO_LOG"
 
 # Array of possible capture directories
 CAPTURE_DIRS=(
@@ -101,6 +103,37 @@ if [ ${#EXISTING_DIRS[@]} -eq 0 ]; then
   echo "No valid directories to watch, exiting." >> "$RENAME_LOG"
   exit 1
 fi
+
+# Function to run audio analysis every 5 seconds
+run_audio_analysis() {
+  while true; do
+    sleep 5
+    for CAPTURE_DIR in "${EXISTING_DIRS[@]}"; do
+      # Get parent directory (remove /captures suffix for main capture dir)
+      MAIN_CAPTURE_DIR=$(dirname "$CAPTURE_DIR")
+      if [ -d "$MAIN_CAPTURE_DIR" ]; then
+        (
+          source /home/sunri-pi1/myvenv/bin/activate && python /usr/local/bin/analyze_audio.py "$MAIN_CAPTURE_DIR"
+        ) >> "$AUDIO_LOG" 2>&1
+      fi
+    done
+    reset_log_if_large "$AUDIO_LOG"
+  done
+}
+
+# Start audio analysis in background
+run_audio_analysis &
+AUDIO_PID=$!
+echo "Started audio analysis with PID: $AUDIO_PID" >> "$RENAME_LOG"
+
+# Cleanup function for audio process
+cleanup_audio() {
+  if [ -n "$AUDIO_PID" ]; then
+    kill "$AUDIO_PID" 2>/dev/null
+    echo "Killed audio analysis (PID: $AUDIO_PID)" >> "$RENAME_LOG"
+  fi
+}
+trap cleanup_audio EXIT SIGINT SIGTERM
 
 # Watch all existing directories with a single inotifywait
 inotifywait -m "${EXISTING_DIRS[@]}" -e create -e moved_to --format '%w%f' |
