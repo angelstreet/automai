@@ -432,7 +432,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                     {error}
                   </Typography>
                 </Box>
-              ) : thumbnailUrl && !imageLoadError ? (
+              ) : thumbnailUrl ? (
                 <Box
                   sx={{
                     position: 'relative',
@@ -442,8 +442,8 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                     overflow: 'hidden',
                   }}
                 >
-                  {/* Previous image - fading out */}
-                  {previousThumbnailUrl && isTransitioning && (
+                  {/* Previous image - keep visible if current fails */}
+                  {previousThumbnailUrl && (isTransitioning || imageLoadError) && (
                     <Box
                       component="img"
                       src={getImageUrl(previousThumbnailUrl)}
@@ -456,7 +456,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                         height: isMobile ? '100%' : 'auto', // Mobile: full height, Non-mobile: auto height
                         objectFit: 'cover', // Fill entire container
                         objectPosition: 'top center', // Center horizontally, anchor to top
-                        opacity: isTransitioning ? 0 : 1,
+                        opacity: imageLoadError ? 1 : isTransitioning ? 0 : 1, // Stay visible if current image failed
                         transition: 'opacity 300ms ease-in-out',
                         cursor: 'pointer',
                       }}
@@ -491,11 +491,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                         `[RecHostPreview] ${host.host_name}-${device?.device_id}: Image not available: ${thumbnailUrl} - waiting for next capture`,
                       );
                       setImageLoadError(true); // Mark image as failed to load
-                      // Reset transition state if needed
-                      if (isTransitioning) {
-                        setPreviousThumbnailUrl(null);
-                        setIsTransitioning(false);
-                      }
+                      // Don't reset transition state - keep previous image visible
                     }}
                     style={{
                       display: imageLoadError ? 'none' : 'block', // Hide broken images
