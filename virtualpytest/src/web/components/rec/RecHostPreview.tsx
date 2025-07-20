@@ -40,6 +40,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isStreamModalOpen, setIsStreamModalOpen] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
 
   // Detect if this is a mobile device model for proper sizing
   const isMobile = useMemo(() => {
@@ -119,6 +120,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
             setIsTransitioning(true);
           }
           setThumbnailUrl(newThumbnailUrl);
+          setImageLoadError(false); // Reset error state when setting new URL
         }, 1500); // 1 second delay to ensure server has generated the thumbnail
       } else {
         setError('Base URL not initialized');
@@ -430,7 +432,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                     {error}
                   </Typography>
                 </Box>
-              ) : thumbnailUrl ? (
+              ) : thumbnailUrl && !imageLoadError ? (
                 <Box
                   sx={{
                     position: 'relative',
@@ -480,48 +482,23 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                       cursor: 'pointer',
                     }}
                     draggable={false}
-                    onLoad={handleImageLoad}
+                    onLoad={() => {
+                      setImageLoadError(false); // Image loaded successfully
+                      handleImageLoad();
+                    }}
                     onError={(_e) => {
-                      console.error(
-                        `[RecHostPreview] ${host.host_name}-${device?.device_id}: Failed to load image: ${thumbnailUrl}`,
+                      console.log(
+                        `[RecHostPreview] ${host.host_name}-${device?.device_id}: Image not available: ${thumbnailUrl} - waiting for next capture`,
                       );
-                      // Only retry if polling is active and modal is not open
-                      if (generateThumbnailUrl && device && !isStreamModalOpen && !isAnyModalOpen) {
-                        // Generate a URL with timestamp 1 second earlier
-                        const now = new Date(Date.now() - 1000); // 1 second ago
-                        const timestamp =
-                          now.getFullYear().toString() +
-                          (now.getMonth() + 1).toString().padStart(2, '0') +
-                          now.getDate().toString().padStart(2, '0') +
-                          now.getHours().toString().padStart(2, '0') +
-                          now.getMinutes().toString().padStart(2, '0') +
-                          now.getSeconds().toString().padStart(2, '0');
-
-                        // Get base pattern and create retry URL
-                        const retryUrl = generateThumbnailUrl(host, device)?.replace(
-                          /capture_\d{14}\.jpg$/,
-                          `capture_${timestamp}.jpg`,
-                        );
-
-                        if (retryUrl && retryUrl !== thumbnailUrl) {
-                          setThumbnailUrl(retryUrl);
-                        } else {
-                          // If retry fails, reset transition state
-                          if (isTransitioning) {
-                            setPreviousThumbnailUrl(null);
-                            setIsTransitioning(false);
-                          }
-                        }
-                      } else {
-                        console.log(
-                          `[RecHostPreview] ${host.host_name}-${device?.device_id}: Image retry skipped (modal open)`,
-                        );
-                        // Just reset transition state without generating new URLs
-                        if (isTransitioning) {
-                          setPreviousThumbnailUrl(null);
-                          setIsTransitioning(false);
-                        }
+                      setImageLoadError(true); // Mark image as failed to load
+                      // Reset transition state if needed
+                      if (isTransitioning) {
+                        setPreviousThumbnailUrl(null);
+                        setIsTransitioning(false);
                       }
+                    }}
+                    style={{
+                      display: imageLoadError ? 'none' : 'block', // Hide broken images
                     }}
                   />
 
