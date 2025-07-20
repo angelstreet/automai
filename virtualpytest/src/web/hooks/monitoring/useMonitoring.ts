@@ -25,6 +25,10 @@ interface MonitoringAnalysis {
   text: string;
   language?: string;
   confidence: number;
+  audio?: {
+    has_audio: boolean;
+    volume_percentage: number;
+  };
 }
 
 interface ErrorTrendData {
@@ -249,25 +253,40 @@ export const useMonitoring = ({
         // Load analysis for this frame
         try {
           const response = await fetch(selectedFrame.jsonUrl);
+          let analysis = null;
+
           if (response.ok) {
             const data = await response.json();
-            const analysis = data.analysis || null;
+            analysis = data.analysis || null;
 
-            // Cache the analysis in the frame reference
-            setFrames((prev) =>
-              prev.map((frame, index) => (index === currentIndex ? { ...frame, analysis } : frame)),
-            );
-
-            setSelectedFrameAnalysis(analysis);
-          } else {
-            // Cache the failed load as null to avoid repeated attempts
-            setFrames((prev) =>
-              prev.map((frame, index) =>
-                index === currentIndex ? { ...frame, analysis: null } : frame,
-              ),
-            );
-            setSelectedFrameAnalysis(null);
+            // Try to load audio data
+            if (analysis) {
+              try {
+                const audioUrl = selectedFrame.jsonUrl
+                  .replace('_thumbnail.json', '.json')
+                  .replace('capture_', 'audio_');
+                const audioResponse = await fetch(audioUrl);
+                if (audioResponse.ok) {
+                  const audioData = await audioResponse.json();
+                  if (audioData.audio_analysis) {
+                    analysis.audio = {
+                      has_audio: audioData.audio_analysis.has_audio,
+                      volume_percentage: audioData.audio_analysis.volume_percentage,
+                    };
+                  }
+                }
+              } catch {
+                // Audio loading failed, continue without audio data
+              }
+            }
           }
+
+          // Cache the analysis in the frame reference
+          setFrames((prev) =>
+            prev.map((frame, index) => (index === currentIndex ? { ...frame, analysis } : frame)),
+          );
+
+          setSelectedFrameAnalysis(analysis);
         } catch {
           // Cache the failed load as null to avoid repeated attempts
           setFrames((prev) =>

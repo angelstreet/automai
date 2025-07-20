@@ -14,6 +14,10 @@ interface MonitoringAnalysis {
   errors: boolean;
   text: string;
   language?: string;
+  audio?: {
+    has_audio: boolean;
+    volume_percentage: number;
+  };
 }
 
 interface ErrorTrendData {
@@ -95,6 +99,27 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
             {analysis?.freeze && errorTrendData && (
               <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
                 ({errorTrendData.freezeConsecutive})
+              </Typography>
+            )}
+          </Typography>
+        </Box>
+
+        {/* Audio */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+          <Typography variant="body2" sx={{ color: '#ffffff', mr: 1 }}>
+            Audio:
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              color: analysis?.audio?.has_audio ? '#00ff00' : '#ffffff',
+              fontWeight: analysis?.audio?.has_audio ? 'bold' : 'normal',
+            }}
+          >
+            {analysis?.audio?.has_audio ? 'Yes' : 'No'}
+            {analysis?.audio?.has_audio && (
+              <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
+                ({analysis.audio.volume_percentage}%)
               </Typography>
             )}
           </Typography>

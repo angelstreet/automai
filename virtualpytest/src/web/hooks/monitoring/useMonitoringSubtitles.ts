@@ -14,6 +14,10 @@ interface MonitoringAnalysis {
   text: string;
   language?: string;
   confidence: number;
+  audio?: {
+    has_audio: boolean;
+    volume_percentage: number;
+  };
 }
 
 interface FrameRef {
@@ -120,6 +124,7 @@ export const useMonitoringSubtitles = ({
             text: extractedText,
             language: detectedLanguage !== 'unknown' ? detectedLanguage : undefined,
             confidence: subtitleData.confidence || (hasSubtitles ? 0.9 : 0.1),
+            audio: selectedFrameAnalysis?.audio, // Preserve existing audio data
           };
 
           setSelectedFrameAnalysis(updatedAnalysis);
@@ -222,6 +227,7 @@ export const useMonitoringSubtitles = ({
             text: extractedText,
             language: detectedLanguage !== 'unknown' ? detectedLanguage : undefined,
             confidence: subtitleData.confidence || (hasSubtitles ? 0.9 : 0.1),
+            audio: selectedFrameAnalysis?.audio, // Preserve existing audio data
           };
 
           setSelectedFrameAnalysis(updatedAnalysis);
