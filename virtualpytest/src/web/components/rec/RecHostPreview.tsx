@@ -121,7 +121,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
           }
           setThumbnailUrl(newThumbnailUrl);
           setImageLoadError(false); // Reset error state when setting new URL
-        }, 1500); // 1 second delay to ensure server has generated the thumbnail
+        }, 1000); // 1 second delay to ensure server has generated the thumbnail
       } else {
         setError('Base URL not initialized');
 
