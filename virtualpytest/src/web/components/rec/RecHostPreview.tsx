@@ -119,7 +119,7 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
             setIsTransitioning(true);
           }
           setThumbnailUrl(newThumbnailUrl);
-        }, 1000); // 1 second delay to ensure server has generated the thumbnail
+        }, 1500); // 1 second delay to ensure server has generated the thumbnail
       } else {
         setError('Base URL not initialized');
 
