@@ -416,7 +416,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                         objectFit: 'cover',
                         objectPosition: 'top center',
                         opacity: activeImage === 1 ? 1 : 0,
-                        transition: 'opacity 300ms ease-in-out',
                         cursor: 'pointer',
                       }}
                       draggable={false}
@@ -445,7 +444,6 @@ export const RecHostPreview: React.FC<RecHostPreviewProps> = ({
                         objectFit: 'cover',
                         objectPosition: 'top center',
                         opacity: activeImage === 2 ? 1 : 0,
-                        transition: 'opacity 300ms ease-in-out',
                         cursor: 'pointer',
                       }}
                       draggable={false}
