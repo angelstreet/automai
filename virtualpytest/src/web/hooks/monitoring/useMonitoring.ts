@@ -162,8 +162,8 @@ export const useMonitoring = ({
         if (timestampMatch) {
           const timestamp = timestampMatch[1];
 
-          // Generate JSON URL - frame analysis creates regular .json files (not _thumbnail.json)
-          const jsonUrl = newImageUrl.replace('_thumbnail.jpg', '.json');
+          // Generate JSON URL - monitoring needs original filename + _thumbnail.json
+          const jsonUrl = newImageUrl.replace('.jpg', '_thumbnail.json');
 
           // Add 300ms delay to allow image to be captured and available
           setTimeout(() => {
@@ -252,79 +252,56 @@ export const useMonitoring = ({
       setTimeout(async () => {
         // Load analysis for this frame
         try {
-          console.log('[useMonitoring] Loading frame analysis:', selectedFrame.jsonUrl);
           const response = await fetch(selectedFrame.jsonUrl);
           let analysis = null;
 
           if (response.ok) {
             const data = await response.json();
             analysis = data.analysis || null;
-            console.log('[useMonitoring] Frame analysis loaded:', analysis);
-          } else {
-            console.log(
-              '[useMonitoring] Frame analysis failed:',
-              response.status,
-              response.statusText,
-            );
-          }
 
-          // Always try to load audio data independently of frame analysis
-          try {
-            // Use exact same format: capture_YYYYMMDDHHMMSS_audio.json (in captures folder)
-            const audioUrl = selectedFrame.jsonUrl.replace('.json', '_audio.json');
-            console.log('[useMonitoring] Loading audio analysis:', audioUrl);
-            const audioResponse = await fetch(audioUrl);
-            if (audioResponse.ok) {
-              const audioData = await audioResponse.json();
-              if (audioData.audio_analysis) {
-                // Initialize analysis object if it doesn't exist
-                if (!analysis) {
-                  analysis = {};
+            // Try to load audio data - preserve existing audio data if file not found
+            try {
+              // Use exact same format: capture_YYYYMMDDHHMMSS_audio.json (in captures folder)
+              const audioUrl = selectedFrame.jsonUrl.replace('_thumbnail.json', '_audio.json');
+              const audioResponse = await fetch(audioUrl);
+              if (audioResponse.ok) {
+                const audioData = await audioResponse.json();
+                if (audioData.audio_analysis) {
+                  // Initialize analysis object if it doesn't exist
+                  if (!analysis) {
+                    analysis = {};
+                  }
+                  analysis.audio = {
+                    has_audio: audioData.audio_analysis.has_audio,
+                    volume_percentage: audioData.audio_analysis.volume_percentage,
+                  };
                 }
-                analysis.audio = {
-                  has_audio: audioData.audio_analysis.has_audio,
-                  volume_percentage: audioData.audio_analysis.volume_percentage,
-                };
-                console.log('[useMonitoring] Audio analysis loaded:', analysis.audio);
+              } else {
+                // Audio file not found - preserve previous audio data if available
+                const currentFrameWithAudio = frames.find(
+                  (frame, index) => index < currentIndex && frame.analysis?.audio,
+                );
+                if (currentFrameWithAudio?.analysis?.audio) {
+                  // Initialize analysis object if it doesn't exist
+                  if (!analysis) {
+                    analysis = {};
+                  }
+                  analysis.audio = currentFrameWithAudio.analysis.audio;
+                }
               }
-            } else {
-              console.log(
-                '[useMonitoring] Audio analysis failed:',
-                audioResponse.status,
-                audioResponse.statusText,
+            } catch {
+              // Audio loading failed - preserve previous audio data if available
+              const currentFrameWithAudio = frames.find(
+                (frame, index) => index < currentIndex && frame.analysis?.audio,
               );
-              // Audio file not found - find previous audio data if available
-              const previousFrameWithAudio = frames
-                .slice(0, currentIndex)
-                .reverse()
-                .find((frame) => frame.analysis?.audio);
-
-              if (previousFrameWithAudio?.analysis?.audio) {
+              if (currentFrameWithAudio?.analysis?.audio) {
                 // Initialize analysis object if it doesn't exist
                 if (!analysis) {
                   analysis = {};
                 }
-                analysis.audio = previousFrameWithAudio.analysis.audio;
-                console.log('[useMonitoring] Using previous audio data:', analysis.audio);
+                analysis.audio = currentFrameWithAudio.analysis.audio;
               }
-              // If no previous audio data, don't set analysis.audio (will show nothing)
             }
-          } catch (audioError) {
-            console.log('[useMonitoring] Audio loading error:', audioError);
-            // Audio loading failed - find previous audio data if available
-            const previousFrameWithAudio = frames
-              .slice(0, currentIndex)
-              .reverse()
-              .find((frame) => frame.analysis?.audio);
-
-            if (previousFrameWithAudio?.analysis?.audio) {
-              // Initialize analysis object if it doesn't exist
-              if (!analysis) {
-                analysis = {};
-              }
-              analysis.audio = previousFrameWithAudio.analysis.audio;
-            }
-            // If no previous audio data, don't set analysis.audio (will show nothing)
           }
 
           // Cache the analysis in the frame reference
