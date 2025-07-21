@@ -108,11 +108,11 @@ export const useMonitoring = ({
   const [isHistoricalFrameLoaded, setIsHistoricalFrameLoaded] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Initial 3-second loading buffer
+  // Initial loading buffer - increased to account for processing time
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialLoading(false);
-    }, 2000); // Reduced to 2 seconds - backend processes more frequently now
+    }, 5000); // Increased to 5 seconds - backend needs ~4-5 seconds total processing time
     return () => clearTimeout(timer);
   }, []);
 
@@ -146,9 +146,9 @@ export const useMonitoring = ({
       return '';
     }
 
-    // Generate timestamp for 3 seconds ago to ensure analysis exists
+    // Generate timestamp for 5 seconds ago to ensure analysis exists
     const now = new Date();
-    const delayedTime = new Date(now.getTime() - 3000); // 3 second delay
+    const delayedTime = new Date(now.getTime() - 5000); // Increased to 5 second delay
 
     const timestamp =
       delayedTime.getFullYear().toString() +
