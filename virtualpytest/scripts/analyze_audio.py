@@ -125,22 +125,29 @@ def main():
     
     print(f"Audio analysis: {volume_percentage}% volume, audio={'Yes' if has_audio else 'No'}")
     
-    # Call alert manager if host_name is provided
+    # Queue alert processing if host_name is provided (non-blocking)
     if host_name:
         try:
             sys.path.append(os.path.dirname(__file__))
-            from alert_manager import check_and_update_alerts
+            from queue_utils import write_to_alert_queue
             
-            check_and_update_alerts(
+            # Write to queue for background processing - this is very fast
+            queued = write_to_alert_queue(
                 analysis_result=audio_result,
                 host_name=host_name,
-                analysis_path=capture_dir
+                analysis_path=capture_dir,
+                analysis_type="audio"
             )
-            print(f"Alert processing completed for host: {host_name}")
+            
+            if queued:
+                print(f"Alert queued for background processing (host: {host_name})")
+            else:
+                print(f"Warning: Failed to queue alert for processing")
+                
         except ImportError as e:
-            print(f"Warning: Could not import alert_manager: {e}")
+            print(f"Warning: Could not import queue_utils: {e}")
         except Exception as e:
-            print(f"Warning: Alert processing failed: {e}")
+            print(f"Warning: Alert queueing failed: {e}")
     else:
         print("Note: Host name not provided, skipping alert processing")
 

@@ -6,6 +6,22 @@ export TZ="Europe/Zurich"
 # Host configuration for alerting system
 HOST_NAME="${HOST_NAME:-$(hostname)}"
 
+# Start alert processor in background if not already running
+start_alert_processor() {
+  if ! pgrep -f "alert_processor.py" >/dev/null 2>&1; then
+    echo "Starting alert processor service..." >> "$RENAME_LOG"
+    (
+      source /home/sunri-pi1/myvenv/bin/activate && \
+      python /home/sunri-pi1/automai/virtualpytest/scripts/alert_processor.py
+    ) >> "/tmp/alert_processor.log" 2>&1 &
+    
+    ALERT_PROCESSOR_PID=$!
+    echo "Alert processor started with PID: $ALERT_PROCESSOR_PID" >> "$RENAME_LOG"
+  else
+    echo "Alert processor already running" >> "$RENAME_LOG"
+  fi
+}
+
 # Simple log reset function - truncates log if over 30MB
 reset_log_if_large() {
   local logfile="$1"
@@ -126,19 +142,29 @@ run_audio_analysis() {
   done
 }
 
+# Start alert processor service
+start_alert_processor
+
 # Start audio analysis in background
 run_audio_analysis &
 AUDIO_PID=$!
 echo "Started audio analysis with PID: $AUDIO_PID" >> "$RENAME_LOG"
 
-# Cleanup function for audio process
-cleanup_audio() {
+# Cleanup function for background processes
+cleanup_processes() {
   if [ -n "$AUDIO_PID" ]; then
     kill "$AUDIO_PID" 2>/dev/null
     echo "Killed audio analysis (PID: $AUDIO_PID)" >> "$RENAME_LOG"
   fi
+  
+  # Kill alert processor if we started it
+  ALERT_PID=$(pgrep -f "alert_processor.py" 2>/dev/null)
+  if [ -n "$ALERT_PID" ]; then
+    kill "$ALERT_PID" 2>/dev/null
+    echo "Killed alert processor (PID: $ALERT_PID)" >> "$RENAME_LOG"
+  fi
 }
-trap cleanup_audio EXIT SIGINT SIGTERM
+trap cleanup_processes EXIT SIGINT SIGTERM
 
 # Watch all existing directories with a single inotifywait
 inotifywait -m "${EXISTING_DIRS[@]}" -e create -e moved_to --format '%w%f' |
