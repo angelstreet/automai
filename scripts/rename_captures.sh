@@ -24,13 +24,10 @@ reset_log_if_large() {
 
 # Log files
 RENAME_LOG="/tmp/rename.log"
-MONITORING_LOG="/tmp/monitoring.log"
-AUDIO_LOG="/tmp/audio.log"
+
 
 # Check logs on startup
 reset_log_if_large "$RENAME_LOG"
-reset_log_if_large "$MONITORING_LOG"
-reset_log_if_large "$AUDIO_LOG"
 
 # Array of possible capture directories
 CAPTURE_DIRS=(
