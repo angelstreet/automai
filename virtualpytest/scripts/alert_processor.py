@@ -31,19 +31,6 @@ def load_env():
         print(f"[@alert_processor] Loaded environment variables from {host_env_path}")
     else:
         print(f"[@alert_processor] Warning: Host .env file not found at {host_env_path}")
-        
-    # Also load local .env as fallback
-    local_env_path = os.path.join(script_dir, '.env')
-    if os.path.exists(local_env_path):
-        with open(local_env_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#') and '=' in line:
-                    key, value = line.split('=', 1)
-                    # Don't override host env variables
-                    if key.strip() not in os.environ:
-                        os.environ[key.strip()] = value.strip()
-        print(f"[@alert_processor] Loaded additional variables from {local_env_path}")
 
 # Load .env before importing other modules
 load_env()
