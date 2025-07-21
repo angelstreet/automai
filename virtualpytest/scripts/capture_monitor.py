@@ -11,9 +11,9 @@ import time
 import signal
 import subprocess
 import threading
+import glob
 from datetime import datetime
 from pathlib import Path
-import glob
 
 # Configuration
 CAPTURE_DIRS = [
@@ -28,13 +28,11 @@ SCRIPTS_DIR = "/home/sunri-pi1/automai/virtualpytest/scripts"
 VENV_PATH = "/home/sunri-pi1/myvenv/bin/activate"
 
 AUDIO_ANALYSIS_INTERVAL = 10  # seconds
-FRAME_PROCESSING_DELAY = 2    # seconds after file creation
+FRAME_ANALYSIS_INTERVAL = 10  # seconds - ALIGNED WITH AUDIO!
 
 class CaptureMonitor:
     def __init__(self):
         self.running = True
-        self.processed_files = set()
-        self.audio_threads = {}
         self.setup_signal_handlers()
         
     def setup_signal_handlers(self):
@@ -57,24 +55,52 @@ class CaptureMonitor:
             else:
                 print(f"[@capture_monitor] Skipping non-existent: {capture_dir}")
         return existing
-        
-    def process_frame(self, image_path):
-        """Process a single frame file"""
+
+    def find_latest_frame(self, capture_dir):
+        """Find the most recent frame file (like audio's find_latest_segment)"""
         try:
-            print(f"[@capture_monitor] Processing frame: {os.path.basename(image_path)}")
+            pattern = os.path.join(capture_dir, "capture_*.jpg")
+            frames = glob.glob(pattern)
+            if not frames:
+                return None
+            
+            # Sort by modification time, get newest (like audio does)
+            latest = max(frames, key=os.path.getmtime)
+            return latest
+        except Exception as e:
+            print(f"[@capture_monitor] Error finding latest frame in {capture_dir}: {e}")
+            return None
+
+    def process_latest_frame(self, capture_dir):
+        """Process the latest frame in a capture directory (like audio processing)"""
+        try:
+            # Find latest frame (like audio finds latest segment)
+            latest_frame = self.find_latest_frame(capture_dir)
+            
+            if not latest_frame:
+                print(f"[@capture_monitor] No frames found in {capture_dir}")
+                return
+                
+            # Check if this frame already has a JSON file
+            json_path = latest_frame.replace('.jpg', '.json')
+            if os.path.exists(json_path):
+                print(f"[@capture_monitor] Frame already analyzed: {os.path.basename(latest_frame)}")
+                return
+                
+            print(f"[@capture_monitor] Processing latest frame: {os.path.basename(latest_frame)}")
             
             # Wait a bit to ensure file is fully written
-            time.sleep(FRAME_PROCESSING_DELAY)
+            time.sleep(2)
             
             # Check if file still exists and is readable
-            if not os.path.exists(image_path):
-                print(f"[@capture_monitor] File disappeared: {image_path}")
+            if not os.path.exists(latest_frame):
+                print(f"[@capture_monitor] Frame disappeared: {latest_frame}")
                 return
                 
             # Run frame analysis
             cmd = [
                 "bash", "-c",
-                f"source {VENV_PATH} && python {SCRIPTS_DIR}/analyze_frame.py '{image_path}' '{HOST_NAME}'"
+                f"source {VENV_PATH} && python {SCRIPTS_DIR}/analyze_frame.py '{latest_frame}' '{HOST_NAME}'"
             ]
             
             result = subprocess.run(
@@ -82,16 +108,16 @@ class CaptureMonitor:
                 capture_output=True,
                 text=True,
                 timeout=30,
-                cwd=os.path.dirname(image_path)
+                cwd=os.path.dirname(latest_frame)
             )
             
             if result.returncode == 0:
-                print(f"[@capture_monitor] Frame analysis completed: {os.path.basename(image_path)}")
+                print(f"[@capture_monitor] Frame analysis completed: {os.path.basename(latest_frame)}")
             else:
                 print(f"[@capture_monitor] Frame analysis failed: {result.stderr}")
                 
         except subprocess.TimeoutExpired:
-            print(f"[@capture_monitor] Frame analysis timeout: {image_path}")
+            print(f"[@capture_monitor] Frame analysis timeout: {latest_frame}")
         except Exception as e:
             print(f"[@capture_monitor] Frame analysis error: {e}")
             
@@ -128,6 +154,26 @@ class CaptureMonitor:
             print(f"[@capture_monitor] Audio analysis timeout: {capture_dir}")
         except Exception as e:
             print(f"[@capture_monitor] Audio analysis error: {e}")
+
+    def frame_worker(self, capture_dir):
+        """Background frame analysis worker - ALIGNED WITH AUDIO WORKER"""
+        print(f"[@capture_monitor] Started frame worker for: {capture_dir}")
+        
+        while self.running:
+            try:
+                self.process_latest_frame(capture_dir)
+                
+                # Sleep in small intervals to allow quick shutdown (same as audio)
+                for _ in range(FRAME_ANALYSIS_INTERVAL):
+                    if not self.running:
+                        break
+                    time.sleep(1)
+                    
+            except Exception as e:
+                print(f"[@capture_monitor] Frame worker error: {e}")
+                time.sleep(5)
+                
+        print(f"[@capture_monitor] Frame worker stopped for: {capture_dir}")
             
     def audio_worker(self, capture_dir):
         """Background audio analysis worker for a specific capture directory"""
@@ -148,6 +194,17 @@ class CaptureMonitor:
                 time.sleep(5)
                 
         print(f"[@capture_monitor] Audio worker stopped for: {capture_dir}")
+
+    def start_frame_workers(self, capture_dirs):
+        """Start frame analysis workers for all capture directories - ALIGNED WITH AUDIO"""
+        for capture_dir in capture_dirs:
+            thread = threading.Thread(
+                target=self.frame_worker,
+                args=(capture_dir,),
+                daemon=True
+            )
+            thread.start()
+            print(f"[@capture_monitor] Started frame thread for: {capture_dir}")
         
     def start_audio_workers(self, capture_dirs):
         """Start audio analysis workers for all capture directories"""
@@ -158,79 +215,15 @@ class CaptureMonitor:
                 daemon=True
             )
             thread.start()
-            self.audio_threads[capture_dir] = thread
             print(f"[@capture_monitor] Started audio thread for: {capture_dir}")
             
-    def should_process_file(self, file_path):
-        """Check if file should be processed"""
-        # Only process jpg files
-        if not file_path.endswith('.jpg'):
-            return False
-            
-        # Skip thumbnails (they will be processed when the original is processed)
-        if '_thumbnail' in file_path:
-            return False
-            
-        # Skip if already processed
-        if file_path in self.processed_files:
-            return False
-            
-        # Skip temporary files
-        if file_path.endswith('.tmp'):
-            return False
-            
-        return True
-        
-    def scan_and_process_files(self, capture_dirs):
-        """Scan directories for new files and process them"""
-        for capture_dir in capture_dirs:
-            if not self.running:
-                break
-                
-            try:
-                # Look for capture files
-                pattern = os.path.join(capture_dir, "capture_*.jpg")
-                files = glob.glob(pattern)
-                
-                # Sort by modification time (oldest first)
-                files.sort(key=os.path.getmtime)
-                
-                for file_path in files:
-                    if not self.running:
-                        break
-                        
-                    if self.should_process_file(file_path):
-                        # Mark as processed immediately to avoid duplicates
-                        self.processed_files.add(file_path)
-                        
-                        # Process in background thread to avoid blocking
-                        thread = threading.Thread(
-                            target=self.process_frame,
-                            args=(file_path,),
-                            daemon=True
-                        )
-                        thread.start()
-                        
-                        # Limit concurrent processing
-                        if threading.active_count() > 10:
-                            thread.join()
-                            
-            except Exception as e:
-                print(f"[@capture_monitor] Error scanning {capture_dir}: {e}")
-                
-    def cleanup_processed_files(self):
-        """Clean up old entries from processed files set"""
-        if len(self.processed_files) > 1000:
-            # Keep only files that still exist
-            existing_files = {f for f in self.processed_files if os.path.exists(f)}
-            self.processed_files = existing_files
-            print(f"[@capture_monitor] Cleaned up processed files cache: {len(existing_files)} remaining")
-            
     def run(self):
-        """Main monitoring loop"""
-        print(f"[@capture_monitor] Starting Capture Monitor Service")
+        """Main monitoring loop - SIMPLIFIED"""
+        print(f"[@capture_monitor] Starting Capture Monitor Service v2.0 - ALIGNED ARCHITECTURE")
         print(f"[@capture_monitor] Host: {HOST_NAME}")
         print(f"[@capture_monitor] Scripts: {SCRIPTS_DIR}")
+        print(f"[@capture_monitor] Frame analysis interval: {FRAME_ANALYSIS_INTERVAL}s (aligned with audio)")
+        print(f"[@capture_monitor] Audio analysis interval: {AUDIO_ANALYSIS_INTERVAL}s")
         print(f"[@capture_monitor] PID: {os.getpid()}")
         
         # Get existing directories
@@ -239,28 +232,21 @@ class CaptureMonitor:
             print(f"[@capture_monitor] No capture directories found, exiting")
             return
             
-        # Start audio analysis workers
+        # Start audio analysis workers (unchanged)
         self.start_audio_workers(capture_dirs)
+        
+        # Start frame analysis workers (NEW - aligned with audio)
+        self.start_frame_workers(capture_dirs)
         
         # Start alert processor service
         self.start_alert_processor()
         
-        print(f"[@capture_monitor] Monitoring started, checking every 3 seconds")
+        print(f"[@capture_monitor] All workers started - timer-based processing (no file scanning)")
         
-        last_cleanup = time.time()
-        
+        # Simple main loop - just keep alive
         while self.running:
             try:
-                # Scan for new files
-                self.scan_and_process_files(capture_dirs)
-                
-                # Periodic cleanup
-                if time.time() - last_cleanup > 300:  # Every 5 minutes
-                    self.cleanup_processed_files()
-                    last_cleanup = time.time()
-                
-                # Wait before next scan
-                time.sleep(3)
+                time.sleep(10)  # Just keep alive, workers do the real work
                 
             except KeyboardInterrupt:
                 break
@@ -304,7 +290,7 @@ class CaptureMonitor:
 
 def main():
     """Main entry point"""
-    print(f"[@capture_monitor] Capture Monitor Service v1.0")
+    print(f"[@capture_monitor] Capture Monitor Service v2.0 - Aligned Architecture")
     
     monitor = CaptureMonitor()
     
