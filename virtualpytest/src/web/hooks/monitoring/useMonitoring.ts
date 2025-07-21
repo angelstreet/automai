@@ -136,15 +136,20 @@ export const useMonitoring = ({
       return '';
     }
 
-    // Generate current timestamp in YYYYMMDDHHMMSS format (same as useRec)
+    // Generate current timestamp in YYYYMMDDHHMMSS format using Europe/Zurich timezone (same as server)
     const now = new Date();
-    const timestamp =
-      now.getFullYear().toString() +
-      (now.getMonth() + 1).toString().padStart(2, '0') +
-      now.getDate().toString().padStart(2, '0') +
-      now.getHours().toString().padStart(2, '0') +
-      now.getMinutes().toString().padStart(2, '0') +
-      now.getSeconds().toString().padStart(2, '0');
+    const timestamp = now
+      .toLocaleString('en-CA', {
+        timeZone: 'Europe/Zurich',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      })
+      .replace(/[-:\s]/g, '');
 
     // Replace {timestamp} placeholder in pattern (not existing timestamp digits)
     return baseUrlPattern.replace('{timestamp}', timestamp);
