@@ -27,8 +27,8 @@ HOST_NAME = os.environ.get('HOST_NAME', os.uname().nodename)
 SCRIPTS_DIR = "/home/sunri-pi1/automai/virtualpytest/scripts"
 VENV_PATH = "/home/sunri-pi1/myvenv/bin/activate"
 
-AUDIO_ANALYSIS_INTERVAL = 10  # seconds
-FRAME_ANALYSIS_INTERVAL = 10  # seconds - ALIGNED WITH AUDIO!
+AUDIO_ANALYSIS_INTERVAL = 5   # seconds - REDUCED from 10s
+FRAME_ANALYSIS_INTERVAL = 3   # seconds - REDUCED from 10s for more frequent video monitoring
 
 class CaptureMonitor:
     def __init__(self):
