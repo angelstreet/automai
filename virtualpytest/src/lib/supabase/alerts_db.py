@@ -18,8 +18,7 @@ def get_supabase():
 
 def create_alert(
     host_name: str,
-    device_name: str,
-    device_model: str,
+    device_id: str,
     incident_type: str,
     consecutive_count: int = 3,
     metadata: Optional[Dict] = None
@@ -31,8 +30,7 @@ def create_alert(
         alert_data = {
             'id': alert_id,
             'host_name': host_name,
-            'device_name': device_name,
-            'device_model': device_model,
+            'device_id': device_id,
             'incident_type': incident_type,
             'status': 'active',
             'consecutive_count': consecutive_count,
@@ -43,7 +41,7 @@ def create_alert(
         print(f"[@db:alerts:create_alert] Creating alert:")
         print(f"  - alert_id: {alert_id}")
         print(f"  - host_name: {host_name}")
-        print(f"  - device_name: {device_name}")
+        print(f"  - device_id: {device_id}")
         print(f"  - incident_type: {incident_type}")
         print(f"  - consecutive_count: {consecutive_count}")
         

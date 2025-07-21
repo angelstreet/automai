@@ -73,8 +73,8 @@ def save_alert_state(state_file_path: str, state: Dict) -> None:
     except IOError as e:
         print(f"[@alert_manager:save_alert_state] Error saving state: {e}")
 
-def extract_device_info_from_path(analysis_path: str) -> tuple[str, str]:
-    """Extract device_name and device_model from capture folder path."""
+def extract_device_id_from_path(analysis_path: str) -> str:
+    """Extract device_id from capture folder path."""
     try:
         # Extract capture folder from path (e.g., capture1, capture2, etc.)
         if 'capture' in analysis_path:
@@ -82,15 +82,15 @@ def extract_device_info_from_path(analysis_path: str) -> tuple[str, str]:
             path_parts = analysis_path.split('/')
             for part in path_parts:
                 if part.startswith('capture') and part[7:].isdigit():
-                    device_name = f"hdmi-{part}"  # e.g., "hdmi-capture1"
-                    device_model = "hdmi-usb-capture"  # Generic model
-                    return device_name, device_model
+                    device_number = part[7:]  # Extract number after 'capture'
+                    device_id = f"device{device_number}"  # e.g., "device1", "device2"
+                    return device_id
         
         # Fallback if no capture folder found
-        return "hdmi-capture-unknown", "hdmi-usb-capture"
+        return "device-unknown"
     except Exception as e:
-        print(f"[@alert_manager:extract_device_info] Error extracting device info: {e}")
-        return "hdmi-capture-unknown", "hdmi-usb-capture"
+        print(f"[@alert_manager:extract_device_id] Error extracting device ID: {e}")
+        return "device-unknown"
 
 def trigger_alert(
     incident_type: str,
@@ -105,16 +105,15 @@ def trigger_alert(
         print(f"[@alert_manager:trigger_alert] Database module not available, skipping alert creation")
         return None
     
-    # Extract device info from path
-    device_name, device_model = extract_device_info_from_path(analysis_path)
+    # Extract device ID from path
+    device_id = extract_device_id_from_path(analysis_path)
     
     print(f"[@alert_manager:trigger_alert] Triggering {incident_type} alert after {consecutive_count} consecutive detections")
-    print(f"  - Extracted device_name: {device_name}, device_model: {device_model}")
+    print(f"  - Extracted device_id: {device_id}")
     
     alert_id = create_alert(
         host_name=host_name,
-        device_name=device_name,
-        device_model=device_model,
+        device_id=device_id,
         incident_type=incident_type,
         consecutive_count=consecutive_count,
         metadata=metadata
@@ -146,7 +145,7 @@ def check_and_update_alerts(
         analysis_path: Path to the analyzed file/directory
     """
     try:
-        device_name, device_model = extract_device_info_from_path(analysis_path)
+        device_id = extract_device_id_from_path(analysis_path)
         
         # Get state file path
         state_file_path = get_state_file_path(analysis_path)
@@ -167,10 +166,10 @@ def check_and_update_alerts(
             has_current_issues = not audio_data.get('has_audio', True)
         
         if not active_incidents and not has_current_issues:
-            print(f"[@alert_manager:check_and_update_alerts] No active incidents or current issues for {device_name}, skipping")
+            print(f"[@alert_manager:check_and_update_alerts] No active incidents or current issues for {device_id}, skipping")
             return
             
-        print(f"[@alert_manager:check_and_update_alerts] Processing alerts for {device_name}")
+        print(f"[@alert_manager:check_and_update_alerts] Processing alerts for {device_id}")
         
         # Extract detection results
         detections = {}
