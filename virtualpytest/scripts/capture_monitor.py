@@ -224,11 +224,11 @@ class CaptureMonitor:
             
     def run(self):
         """Main monitoring loop - SIMPLIFIED"""
-        print(f"[@capture_monitor] Starting Capture Monitor Service v2.0 - ALIGNED ARCHITECTURE")
+        print(f"[@capture_monitor] Starting Capture Monitor Service v2.1 - OPTIMIZED INTERVALS")
         print(f"[@capture_monitor] Host: {HOST_NAME}")
         print(f"[@capture_monitor] Scripts: {SCRIPTS_DIR}")
-        print(f"[@capture_monitor] Frame analysis interval: {FRAME_ANALYSIS_INTERVAL}s (aligned with audio)")
-        print(f"[@capture_monitor] Audio analysis interval: {AUDIO_ANALYSIS_INTERVAL}s")
+        print(f"[@capture_monitor] Frame analysis interval: {FRAME_ANALYSIS_INTERVAL}s (optimized for video)")
+        print(f"[@capture_monitor] Audio analysis interval: {AUDIO_ANALYSIS_INTERVAL}s (optimized for audio)")
         print(f"[@capture_monitor] PID: {os.getpid()}")
         
         # Get existing directories
