@@ -112,7 +112,7 @@ export const useMonitoring = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsInitialLoading(false);
-    }, 3000); // 3 second initial delay
+    }, 2000); // Reduced to 2 seconds - backend processes more frequently now
     return () => clearTimeout(timer);
   }, []);
 

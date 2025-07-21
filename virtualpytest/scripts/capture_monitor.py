@@ -27,8 +27,8 @@ HOST_NAME = os.environ.get('HOST_NAME', os.uname().nodename)
 SCRIPTS_DIR = "/home/sunri-pi1/automai/virtualpytest/scripts"
 VENV_PATH = "/home/sunri-pi1/myvenv/bin/activate"
 
-AUDIO_ANALYSIS_INTERVAL = 5   # seconds - REDUCED from 10s
-FRAME_ANALYSIS_INTERVAL = 3   # seconds - REDUCED from 10s for more frequent video monitoring
+AUDIO_ANALYSIS_INTERVAL = 5   # seconds
+FRAME_ANALYSIS_INTERVAL = 1   # Process every second for better coverage
 
 class CaptureMonitor:
     def __init__(self):
@@ -56,76 +56,94 @@ class CaptureMonitor:
                 print(f"[@capture_monitor] Skipping non-existent: {capture_dir}")
         return existing
 
-    def find_latest_frame(self, capture_dir):
-        """Find the most recent frame file (like audio's find_latest_segment)"""
+    def find_recent_unanalyzed_frames(self, capture_dir, max_frames=5):
+        """Find recent frames that don't have JSON analysis files yet"""
         try:
             pattern = os.path.join(capture_dir, "capture_*.jpg")
             frames = glob.glob(pattern)
             if not frames:
-                return None
-            
+                return []
+
             # Filter out thumbnail files - only process original images
             original_frames = [f for f in frames if '_thumbnail' not in f]
             if not original_frames:
-                return None
-            
-            # Sort by modification time, get newest (like audio does)
-            latest = max(original_frames, key=os.path.getmtime)
-            return latest
-        except Exception as e:
-            print(f"[@capture_monitor] Error finding latest frame in {capture_dir}: {e}")
-            return None
+                return []
 
-    def process_latest_frame(self, capture_dir):
-        """Process the latest frame in a capture directory (like audio processing)"""
+            # Sort by modification time, get most recent frames
+            original_frames.sort(key=os.path.getmtime, reverse=True)
+            
+            # Find frames without JSON files (limit to recent ones)
+            unanalyzed = []
+            for frame_path in original_frames[:max_frames * 2]:  # Check more frames
+                json_path = frame_path.replace('.jpg', '.json')
+                if not os.path.exists(json_path):
+                    unanalyzed.append(frame_path)
+                    if len(unanalyzed) >= max_frames:
+                        break
+            
+            return unanalyzed
+            
+        except Exception as e:
+            print(f"[@capture_monitor] Error finding recent frames in {capture_dir}: {e}")
+            return []
+
+    def process_recent_frames(self, capture_dir):
+        """Process recent unanalyzed frames in a capture directory"""
         try:
-            # Find latest frame (like audio finds latest segment)
-            latest_frame = self.find_latest_frame(capture_dir)
+            # Find recent frames that need analysis
+            unanalyzed_frames = self.find_recent_unanalyzed_frames(capture_dir, max_frames=3)
             
-            if not latest_frame:
-                print(f"[@capture_monitor] No frames found in {capture_dir}")
+            if not unanalyzed_frames:
                 return
                 
-            # Check if this frame already has a JSON file
-            json_path = latest_frame.replace('.jpg', '.json')
-            if os.path.exists(json_path):
-                print(f"[@capture_monitor] Frame already analyzed: {os.path.basename(latest_frame)}")
-                return
+            print(f"[@capture_monitor] Found {len(unanalyzed_frames)} unanalyzed frames in {os.path.basename(capture_dir)}")
+            
+            # Process each frame (most recent first)
+            for frame_path in unanalyzed_frames:
+                if not self.running:
+                    break
                 
-            print(f"[@capture_monitor] Processing latest frame: {os.path.basename(latest_frame)}")
-            
-            # Wait a bit to ensure file is fully written
-            time.sleep(2)
-            
-            # Check if file still exists and is readable
-            if not os.path.exists(latest_frame):
-                print(f"[@capture_monitor] Frame disappeared: {latest_frame}")
-                return
+                # Check if thumbnail exists (required for thumbnail-only processing)
+                thumbnail_path = frame_path.replace('.jpg', '_thumbnail.jpg')
+                if not os.path.exists(thumbnail_path):
+                    print(f"[@capture_monitor] Skipping {os.path.basename(frame_path)} - thumbnail not found")
+                    continue
+                    
+                # Wait a bit to ensure files are fully written
+                time.sleep(0.5)
                 
-            # Run frame analysis
-            cmd = [
-                "bash", "-c",
-                f"source {VENV_PATH} && python {SCRIPTS_DIR}/analyze_frame.py '{latest_frame}' '{HOST_NAME}'"
-            ]
-            
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=30,
-                cwd=os.path.dirname(latest_frame)
-            )
-            
-            if result.returncode == 0:
-                print(f"[@capture_monitor] Frame analysis completed: {os.path.basename(latest_frame)}")
-            else:
-                print(f"[@capture_monitor] Frame analysis failed: {result.stderr}")
+                # Check if files still exist and are readable
+                if not os.path.exists(frame_path) or not os.path.exists(thumbnail_path):
+                    print(f"[@capture_monitor] Frame or thumbnail disappeared: {os.path.basename(frame_path)}")
+                    continue
+                    
+                print(f"[@capture_monitor] Processing frame (thumbnail-only): {os.path.basename(frame_path)}")
                 
+                # Run frame analysis with ORIGINAL path (analyze_frame.py will find the thumbnail)
+                # This ensures the JSON file is named correctly (capture_*.json, not capture_*_thumbnail.json)
+                cmd = [
+                    "bash", "-c",
+                    f"source {VENV_PATH} && python {SCRIPTS_DIR}/analyze_frame.py '{frame_path}' '{HOST_NAME}'"
+                ]
+                
+                result = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=15,  # Reduced timeout for faster processing
+                    cwd=os.path.dirname(frame_path)
+                )
+                
+                if result.returncode == 0:
+                    print(f"[@capture_monitor] Frame analysis completed: {os.path.basename(frame_path)}")
+                else:
+                    print(f"[@capture_monitor] Frame analysis failed: {result.stderr}")
+                    
         except subprocess.TimeoutExpired:
-            print(f"[@capture_monitor] Frame analysis timeout: {latest_frame}")
+            print(f"[@capture_monitor] Frame analysis timeout: {frame_path}")
         except Exception as e:
             print(f"[@capture_monitor] Frame analysis error: {e}")
-            
+
     def process_audio(self, capture_dir):
         """Process audio for a capture directory"""
         try:
@@ -166,7 +184,7 @@ class CaptureMonitor:
         
         while self.running:
             try:
-                self.process_latest_frame(capture_dir)
+                self.process_recent_frames(capture_dir)
                 
                 # Sleep in small intervals to allow quick shutdown (same as audio)
                 for _ in range(FRAME_ANALYSIS_INTERVAL):
@@ -224,11 +242,11 @@ class CaptureMonitor:
             
     def run(self):
         """Main monitoring loop - SIMPLIFIED"""
-        print(f"[@capture_monitor] Starting Capture Monitor Service v2.1 - OPTIMIZED INTERVALS")
+        print(f"[@capture_monitor] Starting Capture Monitor Service v2.2 - MULTI-FRAME PROCESSING")
         print(f"[@capture_monitor] Host: {HOST_NAME}")
         print(f"[@capture_monitor] Scripts: {SCRIPTS_DIR}")
-        print(f"[@capture_monitor] Frame analysis interval: {FRAME_ANALYSIS_INTERVAL}s (optimized for video)")
-        print(f"[@capture_monitor] Audio analysis interval: {AUDIO_ANALYSIS_INTERVAL}s (optimized for audio)")
+        print(f"[@capture_monitor] Frame analysis interval: {FRAME_ANALYSIS_INTERVAL}s (processes up to 3 recent unanalyzed frames)")
+        print(f"[@capture_monitor] Audio analysis interval: {AUDIO_ANALYSIS_INTERVAL}s")
         print(f"[@capture_monitor] PID: {os.getpid()}")
         
         # Get existing directories
@@ -246,7 +264,7 @@ class CaptureMonitor:
         # Start alert processor service
         self.start_alert_processor()
         
-        print(f"[@capture_monitor] All workers started - timer-based processing (no file scanning)")
+        print(f"[@capture_monitor] All workers started - multi-frame processing (up to 3 frames per cycle)")
         
         # Simple main loop - just keep alive
         while self.running:
@@ -295,7 +313,7 @@ class CaptureMonitor:
 
 def main():
     """Main entry point"""
-    print(f"[@capture_monitor] Capture Monitor Service v2.1 - Optimized Intervals")
+    print(f"[@capture_monitor] Capture Monitor Service v2.2 - Multi-Frame Processing")
     
     monitor = CaptureMonitor()
     
