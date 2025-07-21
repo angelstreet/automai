@@ -14,13 +14,25 @@ from pathlib import Path
 # Add the parent directory to sys.path to import from src
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-try:
-    from src.lib.supabase.alerts_db import create_alert, resolve_alert, get_active_alerts
-except ImportError:
-    print("Warning: Could not import alerts_db module. Database operations will be skipped.")
-    create_alert = None
-    resolve_alert = None
-    get_active_alerts = None
+# Lazy import to reduce startup time
+create_alert = None
+resolve_alert = None
+get_active_alerts = None
+
+def _lazy_import_db():
+    """Lazy import database functions only when needed."""
+    global create_alert, resolve_alert, get_active_alerts
+    if create_alert is None:
+        try:
+            from src.lib.supabase.alerts_db import create_alert as _create_alert, resolve_alert as _resolve_alert, get_active_alerts as _get_active_alerts
+            create_alert = _create_alert
+            resolve_alert = _resolve_alert
+            get_active_alerts = _get_active_alerts
+        except ImportError:
+            print("Warning: Could not import alerts_db module. Database operations will be skipped.")
+            create_alert = False  # Mark as attempted
+            resolve_alert = False
+            get_active_alerts = False
 
 # Alert configuration
 ALERT_THRESHOLD = 3  # Number of consecutive detections needed to trigger alert
@@ -88,7 +100,8 @@ def trigger_alert(
     metadata: Optional[Dict] = None
 ) -> Optional[str]:
     """Trigger a new alert in the database."""
-    if not create_alert:
+    _lazy_import_db()
+    if not create_alert or create_alert is False:
         print(f"[@alert_manager:trigger_alert] Database module not available, skipping alert creation")
         return None
     
@@ -111,7 +124,8 @@ def trigger_alert(
 
 def resolve_alert_by_id(alert_id: str) -> bool:
     """Resolve an alert by ID."""
-    if not resolve_alert:
+    _lazy_import_db()
+    if not resolve_alert or resolve_alert is False:
         print(f"[@alert_manager:resolve_alert_by_id] Database module not available, skipping alert resolution")
         return False
     
@@ -133,7 +147,6 @@ def check_and_update_alerts(
     """
     try:
         device_name, device_model = extract_device_info_from_path(analysis_path)
-        print(f"[@alert_manager:check_and_update_alerts] Processing alerts for {device_name}")
         
         # Get state file path
         state_file_path = get_state_file_path(analysis_path)
@@ -141,6 +154,23 @@ def check_and_update_alerts(
         # Load current state
         state = load_alert_state(state_file_path)
         active_incidents = state.get("active_incidents", {})
+        
+        # Quick check: if no active incidents and no current issues, skip processing
+        has_current_issues = False
+        if 'analysis' in analysis_result:
+            analysis_data = analysis_result['analysis']
+            has_current_issues = (analysis_data.get('blackscreen', False) or 
+                                analysis_data.get('freeze', False) or 
+                                analysis_data.get('errors', False))
+        elif 'audio_analysis' in analysis_result:
+            audio_data = analysis_result['audio_analysis']
+            has_current_issues = not audio_data.get('has_audio', True)
+        
+        if not active_incidents and not has_current_issues:
+            print(f"[@alert_manager:check_and_update_alerts] No active incidents or current issues for {device_name}, skipping")
+            return
+            
+        print(f"[@alert_manager:check_and_update_alerts] Processing alerts for {device_name}")
         
         # Extract detection results
         detections = {}
@@ -162,6 +192,7 @@ def check_and_update_alerts(
         
         current_time = datetime.now().isoformat()
         state_changed = False
+        db_operation_performed = False
         
         # Process each incident type
         for incident_type in INCIDENT_TYPES:
@@ -176,7 +207,36 @@ def check_and_update_alerts(
                 if incident_type in active_incidents:
                     # Increment consecutive count
                     active_incidents[incident_type]['consecutive_count'] += 1
-                    print(f"[@alert_manager] {incident_type}: count={active_incidents[incident_type]['consecutive_count']}")
+                    consecutive_count = active_incidents[incident_type]['consecutive_count']
+                    print(f"[@alert_manager] {incident_type}: count={consecutive_count}")
+                    
+                    # Check if we should trigger an alert (ONLY DB OPERATION for new alerts)
+                    if consecutive_count == ALERT_THRESHOLD and not active_incidents[incident_type]['alert_id']:
+                        # Trigger alert - THIS IS THE ONLY DB INSERT
+                        metadata = {
+                            'analysis_path': analysis_path,
+                            'first_detection': active_incidents[incident_type]['start_time'],
+                            'analysis_result': analysis_result
+                        }
+                        
+                        alert_id = trigger_alert(
+                            incident_type=incident_type,
+                            host_name=host_name,
+                            analysis_path=analysis_path,
+                            consecutive_count=consecutive_count,
+                            metadata=metadata
+                        )
+                        
+                        if alert_id:
+                            active_incidents[incident_type]['alert_id'] = alert_id
+                            print(f"[@alert_manager] {incident_type}: ALERT TRIGGERED (id={alert_id}) - DB INSERT")
+                            db_operation_performed = True
+                        
+                        state_changed = True
+                    elif consecutive_count < ALERT_THRESHOLD:
+                        # Just counting up - no DB operation needed
+                        state_changed = True
+                    # If consecutive_count > ALERT_THRESHOLD, alert already exists, no DB operation
                 else:
                     # Start new incident tracking
                     active_incidents[incident_type] = {
@@ -185,30 +245,7 @@ def check_and_update_alerts(
                         'alert_id': None
                     }
                     print(f"[@alert_manager] {incident_type}: started tracking (count=1)")
-                
-                # Check if we should trigger an alert
-                consecutive_count = active_incidents[incident_type]['consecutive_count']
-                if consecutive_count == ALERT_THRESHOLD and not active_incidents[incident_type]['alert_id']:
-                    # Trigger alert
-                    metadata = {
-                        'analysis_path': analysis_path,
-                        'first_detection': active_incidents[incident_type]['start_time'],
-                        'analysis_result': analysis_result
-                    }
-                    
-                    alert_id = trigger_alert(
-                        incident_type=incident_type,
-                        host_name=host_name,
-                        analysis_path=analysis_path,
-                        consecutive_count=consecutive_count,
-                        metadata=metadata
-                    )
-                    
-                    if alert_id:
-                        active_incidents[incident_type]['alert_id'] = alert_id
-                        print(f"[@alert_manager] {incident_type}: ALERT TRIGGERED (id={alert_id})")
-                
-                state_changed = True
+                    state_changed = True
                 
             else:
                 # Incident not detected
@@ -216,9 +253,10 @@ def check_and_update_alerts(
                     # Resolve incident
                     alert_id = active_incidents[incident_type].get('alert_id')
                     if alert_id:
-                        # Resolve alert in database
+                        # Resolve alert in database - THIS IS THE ONLY DB UPDATE
                         if resolve_alert_by_id(alert_id):
-                            print(f"[@alert_manager] {incident_type}: ALERT RESOLVED (id={alert_id})")
+                            print(f"[@alert_manager] {incident_type}: ALERT RESOLVED (id={alert_id}) - DB UPDATE")
+                            db_operation_performed = True
                         else:
                             print(f"[@alert_manager] {incident_type}: Failed to resolve alert (id={alert_id})")
                     else:
@@ -228,11 +266,19 @@ def check_and_update_alerts(
                     del active_incidents[incident_type]
                     state_changed = True
         
-        # Save updated state if changed
+        # Log database operation summary
+        if db_operation_performed:
+            print(f"[@alert_manager] Database operation performed")
+        else:
+            print(f"[@alert_manager] No database operations needed")
+        
+        # Save updated state only if changed
         if state_changed:
             state['active_incidents'] = active_incidents
             save_alert_state(state_file_path, state)
             print(f"[@alert_manager] State updated and saved to {state_file_path}")
+        else:
+            print(f"[@alert_manager] No state changes, skipping file update")
         
     except Exception as e:
         print(f"[@alert_manager:check_and_update_alerts] Error: {str(e)}")

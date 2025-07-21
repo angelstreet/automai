@@ -66,7 +66,7 @@ process_file() {
         # Run AI monitoring analysis on thumbnail (now that it's guaranteed to exist)
         (
           source /home/sunri-pi1/myvenv/bin/activate && \
-          python automai/virtualpytest/scripts/analyze_frame.py "$thumbnail" "$HOST_NAME"
+          python /home/sunri-pi1/automai/virtualpytest/scripts/analyze_frame.py "$thumbnail" "$HOST_NAME"
         ) 2>>"$MONITORING_LOG"
         echo "Started AI monitoring analysis for $(basename "$thumbnail") with host: $HOST_NAME" >> "$RENAME_LOG"
        
@@ -108,17 +108,17 @@ if [ ${#EXISTING_DIRS[@]} -eq 0 ]; then
   exit 1
 fi
 
-# Function to run audio analysis every 5 seconds
+# Function to run audio analysis every 10 seconds (reduced frequency for performance)
 run_audio_analysis() {
   while true; do
-    sleep 5
+    sleep 10
     for CAPTURE_DIR in "${EXISTING_DIRS[@]}"; do
       # Get parent directory (remove /captures suffix for main capture dir)
       MAIN_CAPTURE_DIR=$(dirname "$CAPTURE_DIR")
       if [ -d "$MAIN_CAPTURE_DIR" ]; then
         (
           source /home/sunri-pi1/myvenv/bin/activate && \
-          python automai/virtualpytest/scripts/analyze_audio.py "$MAIN_CAPTURE_DIR" "$HOST_NAME"
+          python /home/sunri-pi1/automai/virtualpytest/scripts/analyze_audio.py "$MAIN_CAPTURE_DIR" "$HOST_NAME"
         ) >> "$AUDIO_LOG" 2>&1
       fi
     done

@@ -522,7 +522,7 @@ def main():
         print(f"Analysis complete: {json_filename}")
         print(f"Results: blackscreen={blackscreen}, freeze={frozen}, errors={errors}")
         
-        # Call alert manager if host_name is provided
+        # Call alert manager only if host_name is provided
         if host_name:
             try:
                 sys.path.append(os.path.dirname(__file__))
@@ -533,7 +533,7 @@ def main():
                     host_name=host_name,
                     analysis_path=image_path
                 )
-                print(f"Alert processing completed for host: {host_name}")
+                print(f"Alert check completed for host: {host_name}")
             except ImportError as e:
                 print(f"Warning: Could not import alert_manager: {e}")
             except Exception as e:
