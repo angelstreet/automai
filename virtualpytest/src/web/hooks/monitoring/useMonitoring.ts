@@ -46,6 +46,7 @@ interface UseMonitoringReturn {
   currentFrameUrl: string;
   selectedFrameAnalysis: MonitoringAnalysis | null;
   isHistoricalFrameLoaded: boolean;
+  isInitialLoading: boolean;
 
   // Playback controls
   isPlaying: boolean;
@@ -105,6 +106,15 @@ export const useMonitoring = ({
     null,
   );
   const [isHistoricalFrameLoaded, setIsHistoricalFrameLoaded] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Initial 3-second loading buffer
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 3000); // 3 second initial delay
+    return () => clearTimeout(timer);
+  }, []);
 
   // Use dedicated hooks for subtitle detection
   const subtitleHook = useMonitoringSubtitles({
@@ -129,29 +139,33 @@ export const useMonitoring = ({
     device,
   });
 
-  // Generate monitoring URL (same as useRec pattern)
+  // Generate monitoring URL with 3-second delay and mechanical fallback
   const generateMonitoringUrl = useCallback((): string => {
     if (!baseUrlPattern) {
       console.warn('[useMonitoring] No baseUrlPattern provided, monitoring disabled');
       return '';
     }
 
-    // Generate current timestamp in YYYYMMDDHHMMSS format (same as useRec)
+    // Generate timestamp for 3 seconds ago to ensure analysis exists
     const now = new Date();
-    const timestamp =
-      now.getFullYear().toString() +
-      (now.getMonth() + 1).toString().padStart(2, '0') +
-      now.getDate().toString().padStart(2, '0') +
-      now.getHours().toString().padStart(2, '0') +
-      now.getMinutes().toString().padStart(2, '0') +
-      now.getSeconds().toString().padStart(2, '0');
+    const delayedTime = new Date(now.getTime() - 3000); // 3 second delay
 
-    // Replace {timestamp} placeholder in pattern (not existing timestamp digits)
+    const timestamp =
+      delayedTime.getFullYear().toString() +
+      (delayedTime.getMonth() + 1).toString().padStart(2, '0') +
+      delayedTime.getDate().toString().padStart(2, '0') +
+      delayedTime.getHours().toString().padStart(2, '0') +
+      delayedTime.getMinutes().toString().padStart(2, '0') +
+      delayedTime.getSeconds().toString().padStart(2, '0');
+
+    // Replace {timestamp} placeholder in pattern
     return baseUrlPattern.replace('{timestamp}', timestamp);
   }, [baseUrlPattern]);
 
-  // Generate monitoring frames
+  // Generate monitoring frames (only after initial loading)
   useEffect(() => {
+    if (isInitialLoading) return; // Skip during initial loading
+
     const generateFrame = () => {
       const newImageUrl = generateMonitoringUrl();
 
@@ -210,6 +224,7 @@ export const useMonitoring = ({
     userSelectedFrame,
     baseUrlPattern,
     currentIndex,
+    isInitialLoading,
   ]);
 
   // Auto-play functionality
@@ -538,6 +553,7 @@ export const useMonitoring = ({
     currentFrameUrl,
     selectedFrameAnalysis,
     isHistoricalFrameLoaded,
+    isInitialLoading,
 
     // Playback controls
     isPlaying,

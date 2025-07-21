@@ -54,6 +54,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     currentFrameUrl,
     selectedFrameAnalysis,
     isPlaying,
+    isInitialLoading,
     handlePlayPause,
     handleSliderChange,
     errorTrendData,
@@ -69,7 +70,6 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     isProcessingAIQuery,
     toggleAIPanel,
     submitAIQuery,
-    clearAIQuery,
     handleAIQueryChange,
   } = useMonitoring({
     host: host,
@@ -211,8 +211,26 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         },
       }}
     >
-      {/* Historical frame display - only when we have frames */}
-      {frames.length > 0 && currentImageUrl && (
+      {/* Initial loading state */}
+      {isInitialLoading && (
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100%',
+            color: 'white',
+            gap: 2,
+          }}
+        >
+          <CircularProgress sx={{ color: 'white' }} />
+          <Typography>Preparing monitoring analysis...</Typography>
+        </Box>
+      )}
+
+      {/* Historical frame display - only when we have frames and not loading */}
+      {!isInitialLoading && frames.length > 0 && currentImageUrl && (
         <Box
           sx={{
             position: 'absolute',
@@ -276,7 +294,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
       )}
 
       {/* No frames state */}
-      {frames.length === 0 && (
+      {!isInitialLoading && frames.length === 0 && (
         <Box
           sx={{
             display: 'flex',
@@ -311,8 +329,8 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         />
       </Box>
 
-      {/* Timeline controls - only when we have frames */}
-      {frames.length > 0 && (
+      {/* Timeline controls - only when we have frames and not loading */}
+      {!isInitialLoading && frames.length > 0 && (
         <Box
           sx={{
             position: 'absolute',
