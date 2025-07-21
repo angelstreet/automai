@@ -34,6 +34,7 @@ interface MonitoringAnalysis {
 interface ErrorTrendData {
   blackscreenConsecutive: number;
   freezeConsecutive: number;
+  audioLossConsecutive: number;
   hasWarning: boolean;
   hasError: boolean;
 }
@@ -369,6 +370,7 @@ export const useMonitoring = ({
 
     let blackscreenConsecutive = 0;
     let freezeConsecutive = 0;
+    let audioLossConsecutive = 0;
 
     // Count consecutive errors from the end (most recent frames)
     for (let i = recentFrames.length - 1; i >= 0; i--) {
@@ -391,20 +393,37 @@ export const useMonitoring = ({
         break;
       }
 
-      // If neither error is present, stop the consecutive count
-      if (!analysis.blackscreen && !analysis.freeze) {
+      // Count consecutive audio loss errors (no audio detected)
+      if (analysis.audio && !analysis.audio.has_audio) {
+        audioLossConsecutive++;
+      } else if (audioLossConsecutive > 0) {
+        // Stop counting if we hit a non-error frame
+        break;
+      }
+
+      // If no errors are present, stop the consecutive count
+      if (
+        !analysis.blackscreen &&
+        !analysis.freeze &&
+        !(analysis.audio && !analysis.audio.has_audio)
+      ) {
         break;
       }
     }
 
     // Determine warning/error states
-    const maxConsecutive = Math.max(blackscreenConsecutive, freezeConsecutive);
+    const maxConsecutive = Math.max(
+      blackscreenConsecutive,
+      freezeConsecutive,
+      audioLossConsecutive,
+    );
     const hasWarning = maxConsecutive >= 1 && maxConsecutive < 3;
     const hasError = maxConsecutive >= 3;
 
     console.log('[useMonitoring] Error trend analysis:', {
       blackscreenConsecutive,
       freezeConsecutive,
+      audioLossConsecutive,
       maxConsecutive,
       hasWarning,
       hasError,
@@ -414,6 +433,7 @@ export const useMonitoring = ({
     return {
       blackscreenConsecutive,
       freezeConsecutive,
+      audioLossConsecutive,
       hasWarning,
       hasError,
     };

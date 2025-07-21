@@ -23,6 +23,7 @@ interface MonitoringAnalysis {
 interface ErrorTrendData {
   blackscreenConsecutive: number;
   freezeConsecutive: number;
+  audioLossConsecutive: number;
   hasWarning: boolean;
   hasError: boolean;
 }
@@ -112,7 +113,7 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
           <Typography
             variant="body2"
             sx={{
-              color: analysis?.audio?.has_audio ? '#00ff00' : '#ffffff',
+              color: analysis?.audio?.has_audio ? '#00ff00' : '#ff4444',
               fontWeight: analysis?.audio?.has_audio ? 'bold' : 'normal',
             }}
           >
@@ -120,6 +121,11 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
             {analysis?.audio?.has_audio && (
               <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
                 ({analysis.audio.volume_percentage}%)
+              </Typography>
+            )}
+            {!analysis?.audio?.has_audio && errorTrendData && (
+              <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
+                ({errorTrendData.audioLossConsecutive})
               </Typography>
             )}
           </Typography>
