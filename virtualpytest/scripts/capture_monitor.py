@@ -64,8 +64,13 @@ class CaptureMonitor:
             if not frames:
                 return None
             
+            # Filter out thumbnail files - only process original images
+            original_frames = [f for f in frames if '_thumbnail' not in f]
+            if not original_frames:
+                return None
+            
             # Sort by modification time, get newest (like audio does)
-            latest = max(frames, key=os.path.getmtime)
+            latest = max(original_frames, key=os.path.getmtime)
             return latest
         except Exception as e:
             print(f"[@capture_monitor] Error finding latest frame in {capture_dir}: {e}")
