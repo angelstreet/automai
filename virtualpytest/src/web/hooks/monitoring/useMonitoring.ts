@@ -284,6 +284,25 @@ export const useMonitoring = ({
               response.status,
               response.statusText,
             );
+            // Video file not found - preserve previous video data if available (like audio does)
+            const currentFrameWithVideo = frames.find(
+              (frame, index) =>
+                index < currentIndex &&
+                frame.analysis &&
+                (frame.analysis.blackscreen !== undefined ||
+                  frame.analysis.freeze !== undefined ||
+                  frame.analysis.errors !== undefined),
+            );
+            if (currentFrameWithVideo?.analysis) {
+              analysis = {
+                blackscreen: currentFrameWithVideo.analysis.blackscreen,
+                freeze: currentFrameWithVideo.analysis.freeze,
+                errors: currentFrameWithVideo.analysis.errors,
+              };
+              console.log('[useMonitoring] Using previous video data:', analysis);
+            } else {
+              console.log('[useMonitoring] No previous video data found');
+            }
           }
 
           // Try to load audio data - preserve existing audio data if file not found
