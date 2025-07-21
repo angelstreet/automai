@@ -295,7 +295,7 @@ class CaptureMonitor:
 
 def main():
     """Main entry point"""
-    print(f"[@capture_monitor] Capture Monitor Service v2.0 - Aligned Architecture")
+    print(f"[@capture_monitor] Capture Monitor Service v2.1 - Optimized Intervals")
     
     monitor = CaptureMonitor()
     
