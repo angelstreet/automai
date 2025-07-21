@@ -164,7 +164,7 @@ export const useMonitoring = ({
 
           // Generate JSON URL - frame analysis creates regular .json files
           console.log('[useMonitoring] Generated image URL:', newImageUrl);
-          const jsonUrl = newImageUrl.replace('_thumbnail.jpg', '.json');
+          const jsonUrl = newImageUrl.replace('.jpg', '.json');
           console.log('[useMonitoring] Generated JSON URL:', jsonUrl);
 
           // Add 300ms delay to allow image to be captured and available
