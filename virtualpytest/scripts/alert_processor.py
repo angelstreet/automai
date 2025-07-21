@@ -13,6 +13,24 @@ import signal
 from datetime import datetime
 from typing import Dict, List
 
+# Load environment variables from .env file
+def load_env():
+    """Load environment variables from .env file in the same directory"""
+    env_path = os.path.join(os.path.dirname(__file__), '.env')
+    if os.path.exists(env_path):
+        with open(env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key.strip()] = value.strip()
+        print(f"[@alert_processor] Loaded environment variables from {env_path}")
+    else:
+        print(f"[@alert_processor] Warning: .env file not found at {env_path}")
+
+# Load .env before importing other modules
+load_env()
+
 # Add the parent directory to sys.path to import alert_manager
 sys.path.append(os.path.dirname(__file__))
 
