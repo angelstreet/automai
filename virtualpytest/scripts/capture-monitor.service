@@ -1,0 +1,31 @@
+[Unit]
+Description=Capture Monitor Service - HDMI Capture Analysis and Alerting
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=sunri-pi1
+Group=sunri-pi1
+WorkingDirectory=/home/sunri-pi1/automai/virtualpytest/scripts
+ExecStart=/home/sunri-pi1/myvenv/bin/python /home/sunri-pi1/automai/virtualpytest/scripts/capture_monitor.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Environment
+Environment=HOST_NAME=sunri-pi1
+Environment=PYTHONPATH=/home/sunri-pi1/automai/virtualpytest/scripts
+
+# Resource limits
+LimitNOFILE=65536
+MemoryMax=512M
+CPUQuota=50%
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target 
