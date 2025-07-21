@@ -3,6 +3,9 @@
 # Set timezone to Zurich
 export TZ="Europe/Zurich"
 
+# Host configuration for alerting system
+HOST_NAME="${HOST_NAME:-$(hostname)}"
+
 # Simple log reset function - truncates log if over 30MB
 reset_log_if_large() {
   local logfile="$1"
@@ -62,9 +65,10 @@ process_file() {
         
         # Run AI monitoring analysis on thumbnail (now that it's guaranteed to exist)
         (
-          source /home/sunri-pi1/myvenv/bin/activate && python /usr/local/bin/analyze_frame.py "$thumbnail"
+          source /home/sunri-pi1/myvenv/bin/activate && \
+          python /usr/local/bin/analyze_frame.py "$thumbnail" "$HOST_NAME"
         ) 2>>"$MONITORING_LOG"
-        echo "Started AI monitoring analysis for $(basename "$thumbnail")" >> "$RENAME_LOG"
+        echo "Started AI monitoring analysis for $(basename "$thumbnail") with host: $HOST_NAME" >> "$RENAME_LOG"
        
       else
         echo "Failed to rename $filepath to $newname" >> "$RENAME_LOG"
@@ -113,7 +117,8 @@ run_audio_analysis() {
       MAIN_CAPTURE_DIR=$(dirname "$CAPTURE_DIR")
       if [ -d "$MAIN_CAPTURE_DIR" ]; then
         (
-          source /home/sunri-pi1/myvenv/bin/activate && python /usr/local/bin/analyze_audio.py "$MAIN_CAPTURE_DIR"
+          source /home/sunri-pi1/myvenv/bin/activate && \
+          python /usr/local/bin/analyze_audio.py "$MAIN_CAPTURE_DIR" "$HOST_NAME"
         ) >> "$AUDIO_LOG" 2>&1
       fi
     done

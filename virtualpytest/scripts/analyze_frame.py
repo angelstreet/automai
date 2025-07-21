@@ -426,11 +426,12 @@ def extract_text(has_subtitles, image_path=None):
         return ''
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: analyze_frame.py /path/to/capture_file.jpg", file=sys.stderr)
+    if len(sys.argv) < 2:
+        print("Usage: analyze_frame.py /path/to/capture_file.jpg [host_name]", file=sys.stderr)
         sys.exit(1)
     
     image_path = sys.argv[1]
+    host_name = sys.argv[2] if len(sys.argv) > 2 else None
     
     if not os.path.exists(image_path):
         print(f"Error: Image file not found: {image_path}", file=sys.stderr)
@@ -520,6 +521,25 @@ def main():
         
         print(f"Analysis complete: {json_filename}")
         print(f"Results: blackscreen={blackscreen}, freeze={frozen}, errors={errors}")
+        
+        # Call alert manager if host_name is provided
+        if host_name:
+            try:
+                sys.path.append(os.path.dirname(__file__))
+                from alert_manager import check_and_update_alerts
+                
+                check_and_update_alerts(
+                    analysis_result=analysis_result,
+                    host_name=host_name,
+                    analysis_path=image_path
+                )
+                print(f"Alert processing completed for host: {host_name}")
+            except ImportError as e:
+                print(f"Warning: Could not import alert_manager: {e}")
+            except Exception as e:
+                print(f"Warning: Alert processing failed: {e}")
+        else:
+            print("Note: Host name not provided, skipping alert processing")
         
     except Exception as e:
         print(f"Analysis failed: {e}", file=sys.stderr)

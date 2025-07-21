@@ -60,11 +60,12 @@ def analyze_audio_volume(segment_path):
         return False, 0, -100.0
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: analyze_audio.py /path/to/capture_dir", file=sys.stderr)
+    if len(sys.argv) < 2:
+        print("Usage: analyze_audio.py /path/to/capture_dir [host_name]", file=sys.stderr)
         sys.exit(1)
     
     capture_dir = sys.argv[1]
+    host_name = sys.argv[2] if len(sys.argv) > 2 else None
     
     if not os.path.exists(capture_dir):
         print(f"Error: Directory not found: {capture_dir}", file=sys.stderr)
@@ -123,6 +124,25 @@ def main():
             print(f"Fallback also failed: {e2}")
     
     print(f"Audio analysis: {volume_percentage}% volume, audio={'Yes' if has_audio else 'No'}")
+    
+    # Call alert manager if host_name is provided
+    if host_name:
+        try:
+            sys.path.append(os.path.dirname(__file__))
+            from alert_manager import check_and_update_alerts
+            
+            check_and_update_alerts(
+                analysis_result=audio_result,
+                host_name=host_name,
+                analysis_path=capture_dir
+            )
+            print(f"Alert processing completed for host: {host_name}")
+        except ImportError as e:
+            print(f"Warning: Could not import alert_manager: {e}")
+        except Exception as e:
+            print(f"Warning: Alert processing failed: {e}")
+    else:
+        print("Note: Host name not provided, skipping alert processing")
 
 if __name__ == '__main__':
     main() 
