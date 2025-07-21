@@ -51,7 +51,7 @@ start_grabber() {
   kill_existing_processes "$capture_dir" "$video_device"
 
   # FFMPEG command (simplified for better compatibility)
-  FFMPEG_CMD="/usr/bin/ffmpeg -y -f v4l2 -framerate \"$fps\" -video_size 1920x1080 -i $video_device \
+  FFMPEG_CMD="/usr/bin/ffmpeg -y -f v4l2 -framerate \"$fps\" -video_size 1080x720 -i $video_device \
     -f alsa -thread_queue_size 1024 -i \"$audio_device\" \
     -filter_complex \"[0:v]split=2[stream][capture];[stream]scale=640:360[streamout];[capture]fps=1[captureout]\" \
     -map \"[streamout]\" -map 1:a \

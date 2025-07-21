@@ -441,62 +441,44 @@ def main():
         print(f"Error: Only .jpg files supported: {image_path}", file=sys.stderr)
         sys.exit(1)
     
-    print(f"Analyzing frame: {os.path.basename(image_path)}")
+    print(f"Processing: {os.path.basename(image_path)} (thumbnail-only mode)")
     
     try:
-        # Use existing thumbnail created by rename_captures.sh
-        if '_thumbnail' in image_path:
-            # We're already analyzing a thumbnail, use it directly
-            analysis_image = image_path
-            thumbnail_path = image_path  # Set thumbnail path to current file
-            print(f"Already analyzing thumbnail: {os.path.basename(image_path)}")
-        else:
-            # We're analyzing original image, look for thumbnail
-            thumbnail_path = image_path.replace('.jpg', '_thumbnail.jpg')
-            
-            # Wait for thumbnail to be created (up to 1 seconds)
-            wait_count = 0
-            while not os.path.exists(thumbnail_path) and wait_count < 10:
-                time.sleep(0.1)  # Wait 100ms
-                wait_count += 1
-            
-            # Use thumbnail if available, otherwise use original image
-            analysis_image = thumbnail_path if os.path.exists(thumbnail_path) else image_path
-            
-            if analysis_image == thumbnail_path:
-                print(f"Using existing thumbnail: {os.path.basename(thumbnail_path)}")
-            else:
-                print(f"Thumbnail not found, using original image: {os.path.basename(image_path)}")
+        # THUMBNAIL-ONLY PROCESSING - Clean and fast
+        thumbnail_path = image_path.replace('.jpg', '_thumbnail.jpg')
         
-        # Load original image for size info
-        img = cv2.imread(image_path)
-        if img is None:
-            raise Exception("Could not load original image")
+        if not os.path.exists(thumbnail_path):
+            print(f"Thumbnail not found: {os.path.basename(thumbnail_path)}")
+            print("Skipping analysis - thumbnail required for processing")
+            return
+            
+        print(f"Analyzing thumbnail: {os.path.basename(thumbnail_path)}")
         
-        # LIGHTENED ANALYSIS - Only run essential detection
-        print("=== LIGHTENED ANALYSIS MODE ===")
-        print("Running: blackscreen, freeze, errors")
-        print("Note: Subtitles and text extraction available via backend API")
+        # Use thumbnail for all analysis (fast and efficient)
+        analysis_image = thumbnail_path
         
-        # Run core analysis on thumbnail (or original if thumbnail not available)
+        # OPTIMIZED ANALYSIS - Thumbnail only
+        print("=== THUMBNAIL-ONLY ANALYSIS ===")
+        print("Running: blackscreen, freeze, errors (on thumbnail)")
+        
+        # Run core analysis on thumbnail
         blackscreen = analyze_blackscreen(analysis_image)
         frozen = analyze_freeze(analysis_image)
         potential_errors = analyze_errors_only(analysis_image)
         
-        # Only flag errors if there's also a freeze - this makes error detection much more restrictive
-        # Real errors (404, no internet, etc.) usually cause the screen to freeze on an error page
+        # Only flag errors if there's also a freeze
         errors = potential_errors and frozen
         
         if potential_errors and not frozen:
-            print(f"Error detection: Red content detected but no freeze - ignoring (likely normal UI elements)")
+            print(f"Error detection: Red content detected but no freeze - ignoring")
         elif errors:
             print(f"Error detection: Red content detected WITH freeze - flagging as error")
         
-        # Create analysis result - simplified without subtitle/text data
+        # Create analysis result - thumbnail-based processing
         analysis_result = {
             'timestamp': datetime.now().isoformat(),
             'filename': os.path.basename(image_path),
-            'thumbnail': os.path.basename(thumbnail_path) if os.path.exists(thumbnail_path) else None,
+            'thumbnail': os.path.basename(thumbnail_path),
             'analysis': {
                 'blackscreen': bool(blackscreen),
                 'freeze': bool(frozen),
@@ -504,9 +486,8 @@ def main():
             },
             'processing_info': {
                 'analyzed_at': datetime.now().isoformat(),
-                'image_size': f"{img.shape[1]}x{img.shape[0]}",
                 'analyzed_image': os.path.basename(analysis_image),
-                'analysis_mode': 'lightened'  # Indicate this is lightened analysis
+                'analysis_mode': 'thumbnail_only'
             }
         }
         
