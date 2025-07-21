@@ -15,18 +15,35 @@ from typing import Dict, List
 
 # Load environment variables from .env file
 def load_env():
-    """Load environment variables from .env file in the same directory"""
-    env_path = os.path.join(os.path.dirname(__file__), '.env')
-    if os.path.exists(env_path):
-        with open(env_path, 'r') as f:
+    """Load environment variables from host .env file"""
+    # Load from host .env file (contains Supabase credentials)
+    script_dir = os.path.dirname(__file__)
+    host_env_path = os.path.join(script_dir, '..', 'src', 'web', '.env.host')
+    host_env_path = os.path.abspath(host_env_path)
+    
+    if os.path.exists(host_env_path):
+        with open(host_env_path, 'r') as f:
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#') and '=' in line:
                     key, value = line.split('=', 1)
                     os.environ[key.strip()] = value.strip()
-        print(f"[@alert_processor] Loaded environment variables from {env_path}")
+        print(f"[@alert_processor] Loaded environment variables from {host_env_path}")
     else:
-        print(f"[@alert_processor] Warning: .env file not found at {env_path}")
+        print(f"[@alert_processor] Warning: Host .env file not found at {host_env_path}")
+        
+    # Also load local .env as fallback
+    local_env_path = os.path.join(script_dir, '.env')
+    if os.path.exists(local_env_path):
+        with open(local_env_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    # Don't override host env variables
+                    if key.strip() not in os.environ:
+                        os.environ[key.strip()] = value.strip()
+        print(f"[@alert_processor] Loaded additional variables from {local_env_path}")
 
 # Load .env before importing other modules
 load_env()
