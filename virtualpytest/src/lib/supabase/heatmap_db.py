@@ -203,8 +203,11 @@ def get_heatmap_data(
                                         if response.status_code == 200:
                                             frame_data = response.json()
                                             analysis_json['has_video'] = True
-                                            analysis_json['blackscreen'] = frame_data.get('blackscreen_detected', False)
-                                            analysis_json['freeze'] = frame_data.get('freeze_detected', False)
+                                            
+                                            # Use correct field structure from actual JSON
+                                            analysis = frame_data.get('analysis', {})
+                                            analysis_json['blackscreen'] = analysis.get('blackscreen', False)
+                                            analysis_json['freeze'] = analysis.get('freeze', False)
                                     except Exception as e:
                                         print(f"[@db:heatmap:get_heatmap_data] Failed to parse frame JSON: {e}")
                                 
