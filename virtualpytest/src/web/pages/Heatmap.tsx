@@ -323,12 +323,18 @@ const Heatmap: React.FC = () => {
       const analysisJson = image.analysis_json || {};
 
       // Fix logical inconsistencies in the data
-      // If there's no video, then it should be considered a blackscreen
+      // Distinguish between "no video signal" vs "blackscreen detected in video"
       const hasVideo = analysisJson.has_video || false;
       const hasAudio = analysisJson.has_audio || false;
-      const blackscreen = !hasVideo || analysisJson.blackscreen || false;
+
+      // Blackscreen should only be true if we have video but it's detected as black
+      // If has_video is false, that means no video signal, not blackscreen
+      const blackscreen = hasVideo && (analysisJson.blackscreen || false);
       const freeze = hasVideo && (analysisJson.freeze || false);
-      const audioLoss = !hasAudio || analysisJson.audio_loss || false;
+
+      // Audio loss should only be true if we expect audio but it's lost
+      // If has_audio is false, that means no audio signal, not audio loss
+      const audioLoss = hasAudio && (analysisJson.audio_loss || false);
 
       const analysisIncidents = [
         blackscreen ? 'blackscreen' : null,
@@ -412,9 +418,11 @@ const Heatmap: React.FC = () => {
     const analysisJson = tooltipImage.analysis_json || {};
     const hasVideo = analysisJson.has_video || false;
     const hasAudio = analysisJson.has_audio || false;
-    const blackscreen = !hasVideo || analysisJson.blackscreen || false;
+
+    // Use same corrected logic as main analysis
+    const blackscreen = hasVideo && (analysisJson.blackscreen || false);
     const freeze = hasVideo && (analysisJson.freeze || false);
-    const audioLoss = !hasAudio || analysisJson.audio_loss || false;
+    const audioLoss = hasAudio && (analysisJson.audio_loss || false);
 
     // Convert to MonitoringAnalysis format
     const analysis = {

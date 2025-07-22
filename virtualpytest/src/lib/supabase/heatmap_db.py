@@ -48,7 +48,9 @@ def get_heatmap_data(
                         hosts_devices.append({
                             'host_name': host_name,
                             'device_id': device.get('device_id', 'device1'),
-                            'host_data': host_data
+                            # Remove host_data to reduce response size - only keep essential info
+                            'host_url': host_data.get('host_url', ''),
+                            'description': host_data.get('description', '')
                         })
             else:
                 # Fallback for hosts without device config - check if host has av capability
@@ -61,7 +63,8 @@ def get_heatmap_data(
                     hosts_devices.append({
                         'host_name': host_name,
                         'device_id': 'device1',
-                        'host_data': host_data
+                        'host_url': host_data.get('host_url', ''),
+                        'description': host_data.get('description', '')
                     })
         
         print(f"[@db:heatmap:get_heatmap_data] Found {len(hosts_devices)} host/device combinations")
