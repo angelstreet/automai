@@ -27,10 +27,14 @@ import {
   TableHead,
   TableRow,
   Paper,
+  Tooltip,
+  Popper,
+  Fade,
 } from '@mui/material';
 import React, { useState, useEffect, useRef } from 'react';
 
 import { useHeatmap, HeatmapData, HeatmapImage } from '../hooks/pages/useHeatmap';
+import { MonitoringOverlay } from '../components/monitoring/MonitoringOverlay';
 
 const Heatmap: React.FC = () => {
   const {
@@ -54,6 +58,42 @@ const Heatmap: React.FC = () => {
 
   // AI Analysis state
   const [analysisExpanded, setAnalysisExpanded] = useState(true); // Expanded by default
+
+  // Tooltip state
+  const [tooltipOpen, setTooltipOpen] = useState(false);
+  const [tooltipAnchor, setTooltipAnchor] = useState<HTMLElement | null>(null);
+  const [tooltipDelay, setTooltipDelay] = useState<NodeJS.Timeout | null>(null);
+  const [tooltipImage, setTooltipImage] = useState<HeatmapImage | null>(null);
+
+  // Tooltip handlers
+  const handleMouseEnter = (event: React.MouseEvent<HTMLElement>, image: HeatmapImage) => {
+    // Clear any existing delay
+    if (tooltipDelay) {
+      clearTimeout(tooltipDelay);
+    }
+
+    // Set a delay before showing tooltip
+    const delay = setTimeout(() => {
+      setTooltipAnchor(event.currentTarget);
+      setTooltipImage(image);
+      setTooltipOpen(true);
+    }, 500); // 500ms delay
+
+    setTooltipDelay(delay);
+  };
+
+  const handleMouseLeave = () => {
+    // Clear delay if mouse leaves before tooltip shows
+    if (tooltipDelay) {
+      clearTimeout(tooltipDelay);
+      setTooltipDelay(null);
+    }
+
+    // Hide tooltip
+    setTooltipOpen(false);
+    setTooltipAnchor(null);
+    setTooltipImage(null);
+  };
 
   // Refs
   const mosaicImageRef = useRef<HTMLImageElement>(null);
@@ -585,14 +625,14 @@ const Heatmap: React.FC = () => {
                     max={Math.max(0, totalFrames - 1)}
                     onChange={handleSliderChange}
                     sx={{
-                      color: '#00AA00', // Default green color
+                      color: frameHasIncidents(currentFrame) ? '#FF0000' : '#00AA00', // Red if any incident
                       '& .MuiSlider-thumb': {
                         width: 16,
                         height: 16,
                         backgroundColor: frameHasIncidents(currentFrame) ? '#FF0000' : '#00AA00',
                       },
                       '& .MuiSlider-track': {
-                        backgroundColor: '#00AA00', // Always green for the track
+                        backgroundColor: frameHasIncidents(currentFrame) ? '#FF0000' : '#00AA00', // Red track if incident
                       },
                       '& .MuiSlider-rail': {
                         backgroundColor: '#CCCCCC', // Light gray for the rail

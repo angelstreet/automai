@@ -506,8 +506,7 @@ def check_and_update_alerts(
         if 'analysis' in analysis_result:
             analysis_data = analysis_result['analysis']
             has_current_issues = (analysis_data.get('blackscreen', False) or 
-                                analysis_data.get('freeze', False) or 
-                                analysis_data.get('errors', False))
+                                analysis_data.get('freeze', False))
         elif 'audio_analysis' in analysis_result:
             audio_data = analysis_result['audio_analysis']
             has_current_issues = not audio_data.get('has_audio', True)
@@ -525,8 +524,7 @@ def check_and_update_alerts(
             analysis_data = analysis_result['analysis']
             detections = {
                 'blackscreen': analysis_data.get('blackscreen', False),
-                'freeze': analysis_data.get('freeze', False),
-                'errors': analysis_data.get('errors', False)
+                'freeze': analysis_data.get('freeze', False)
             }
         elif 'audio_analysis' in analysis_result:
             # Audio analysis format
