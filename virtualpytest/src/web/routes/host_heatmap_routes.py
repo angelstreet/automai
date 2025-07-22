@@ -58,14 +58,24 @@ def list_recent_analysis():
         print(f"[@route:host_heatmap:list_recent_analysis] Scanning folder: {capture_folder}")
         print(f"[@route:host_heatmap:list_recent_analysis] Looking for files newer than: {time.ctime(cutoff_time)}")
         
+        # Build URLs using existing host URL building pattern
+        try:
+            host = get_host()
+            host_dict = host.to_dict()
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'error': f'Failed to get host info: {str(e)}'
+            }), 500
+
         # Find recent images with analysis data
         analysis_data = []
-        
+
         # Get all capture files (not test_capture files or thumbnails)
         for filename in os.listdir(capture_folder):
             if (filename.startswith('capture_') and 
                 filename.endswith('.jpg') and 
-                '_thumbnail' not in filename):
+                not filename.endswith('_thumbnail.jpg')):
                 
                 filepath = os.path.join(capture_folder, filename)
                 
@@ -86,6 +96,27 @@ def list_recent_analysis():
                     has_frame_analysis = os.path.exists(frame_json_path)
                     has_audio_analysis = os.path.exists(audio_json_path)
                     
+                    # Debug logging for JSON file detection
+                    print(f"[@route:host_heatmap:list_recent_analysis] File: {filename}")
+                    print(f"[@route:host_heatmap:list_recent_analysis] Expected frame JSON path: {frame_json_path}")
+                    print(f"[@route:host_heatmap:list_recent_analysis] Frame JSON exists (os.path): {has_frame_analysis}")
+                    
+                    # If local file check fails, try HTTP check as fallback
+                    if not has_frame_analysis:
+                        try:
+                            # Build the HTTP URL that we know works
+                            image_url_temp = buildCaptureUrlFromPath(host_dict, filepath, device_id)
+                            json_url_temp = image_url_temp.replace('.jpg', '.json')
+                            json_url_temp = buildClientImageUrl(json_url_temp)
+                            
+                            # Quick HTTP check
+                            import requests
+                            response = requests.head(json_url_temp, timeout=1)
+                            has_frame_analysis = response.status_code == 200
+                            print(f"[@route:host_heatmap:list_recent_analysis] Frame JSON exists (HTTP): {has_frame_analysis}")
+                        except Exception as e:
+                            print(f"[@route:host_heatmap:list_recent_analysis] HTTP check failed: {e}")
+                    
                     # Include image if it has at least one analysis OR if we're building comprehensive heatmap
                     # (We'll use previous JSON data strategy for missing analysis)
                     analysis_data.append({
@@ -101,16 +132,6 @@ def list_recent_analysis():
         
         # Sort by timestamp (newest first)
         analysis_data.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        # Build URLs using existing host URL building pattern
-        try:
-            host = get_host()
-            host_dict = host.to_dict()
-        except Exception as e:
-            return jsonify({
-                'success': False,
-                'error': f'Failed to get host info: {str(e)}'
-            }), 500
         
         # Build response with URLs for each item
         response_data = []
