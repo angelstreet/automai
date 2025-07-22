@@ -77,7 +77,7 @@ const Heatmap: React.FC = () => {
       setTooltipAnchor(event.currentTarget);
       setTooltipImage(image);
       setTooltipOpen(true);
-    }, 500); // 500ms delay
+    }, 300); // 300ms delay (under 1s as requested)
 
     setTooltipDelay(delay);
   };
@@ -262,10 +262,18 @@ const Heatmap: React.FC = () => {
 
     const images = heatmapData.images_by_timestamp[timestamp] || [];
 
-    // Check if any device in this timestamp has incidents
+    // Check if any device in this timestamp has incidents or missing video/audio
     return images.some((image) => {
       const analysisJson = image.analysis_json || {};
-      return analysisJson.blackscreen || analysisJson.freeze || analysisJson.audio_loss;
+      const hasVideo = analysisJson.has_video || false;
+      const hasAudio = analysisJson.has_audio || false;
+      return (
+        !hasVideo ||
+        !hasAudio ||
+        analysisJson.blackscreen ||
+        analysisJson.freeze ||
+        analysisJson.audio_loss
+      );
     });
   };
 
@@ -421,20 +429,11 @@ const Heatmap: React.FC = () => {
       },
     };
 
-    // Create error trend data
-    const errorTrendData = {
-      blackscreenConsecutive: blackscreen ? 1 : 0,
-      freezeConsecutive: freeze ? 1 : 0,
-      audioLossConsecutive: audioLoss ? 1 : 0,
-      hasWarning: blackscreen || freeze || audioLoss,
-      hasError: false,
-    };
-
     return (
       <Popper
         open={tooltipOpen}
         anchorEl={tooltipAnchor}
-        placement="top"
+        placement="top-end"
         transition
         style={{ zIndex: 1500 }}
       >
@@ -449,12 +448,8 @@ const Heatmap: React.FC = () => {
                   maxWidth: 300,
                 }}
               >
-                <Typography variant="subtitle2" sx={{ color: '#ffffff', mb: 1 }}>
-                  {tooltipImage.host_name}-{tooltipImage.device_id}
-                </Typography>
                 <MonitoringOverlay
                   overrideAnalysis={analysis}
-                  errorTrendData={errorTrendData}
                   sx={{ position: 'relative', top: 'auto', left: 'auto', p: 0 }}
                 />
               </Box>
