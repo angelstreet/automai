@@ -464,15 +464,9 @@ def main():
         # Run core analysis on thumbnail
         blackscreen = analyze_blackscreen(analysis_image)
         frozen = analyze_freeze(analysis_image)
-        potential_errors = analyze_errors_only(analysis_image)
-        
-        # Only flag errors if there's also a freeze
-        errors = potential_errors and frozen
-        
-        if potential_errors and not frozen:
-            print(f"Error detection: Red content detected but no freeze - ignoring")
-        elif errors:
-            print(f"Error detection: Red content detected WITH freeze - flagging as error")
+        # Disable error detection completely
+        # potential_errors = analyze_errors_only(analysis_image)
+        # errors = potential_errors and frozen
         
         # Create analysis result - thumbnail-based processing
         analysis_result = {
@@ -481,8 +475,9 @@ def main():
             'thumbnail': os.path.basename(thumbnail_path),
             'analysis': {
                 'blackscreen': bool(blackscreen),
-                'freeze': bool(frozen),
-                'errors': bool(errors)
+                'freeze': bool(frozen)
+                # Removed errors field
+                # 'errors': bool(errors)
             },
             'processing_info': {
                 'analyzed_at': datetime.now().isoformat(),
@@ -501,7 +496,7 @@ def main():
             json.dump(analysis_result, f, indent=2)
         
         print(f"Analysis complete: {json_filename}")
-        print(f"Results: blackscreen={blackscreen}, freeze={frozen}, errors={errors}")
+        print(f"Results: blackscreen={blackscreen}, freeze={frozen}")
         
         # Queue alert processing if host_name is provided (non-blocking)
         if host_name:
