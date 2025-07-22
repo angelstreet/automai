@@ -38,7 +38,9 @@ for CAPTURE_DIR in "${CAPTURE_DIRS[@]}"; do
   
   # Clean parent directory (only files, not folders)
   if [ -d "$PARENT_DIR" ]; then
-    find "$PARENT_DIR" -maxdepth 1 -type f -mmin +10 -delete -printf "Deleted parent file %p\n" >> "$CLEAN_LOG" 2>&1
+    # Specifically target segment files and other files in parent directory
+    find "$PARENT_DIR" -maxdepth 1 -type f -name "segment_*.ts" -mmin +10 -delete -printf "Deleted segment file %p\n" >> "$CLEAN_LOG" 2>&1
+    find "$PARENT_DIR" -maxdepth 1 -type f -not -name "segment_*.ts" -not -name "*.m3u8" -mmin +10 -delete -printf "Deleted other parent file %p\n" >> "$CLEAN_LOG" 2>&1
     reset_log_if_large "$CLEAN_LOG"
   fi
   
