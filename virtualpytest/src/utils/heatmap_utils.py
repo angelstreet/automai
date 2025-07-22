@@ -193,7 +193,7 @@ def get_cached_analysis_for_host(host_name: str, device_id: str) -> Optional[boo
 def determine_border_color_from_analysis(image_data: Dict) -> str:
     """
     Determine border color based on analysis data.
-    Green if audio/video OK, Red if incidents detected.
+    Green if audio/video OK, Red if incidents detected OR no audio/video.
     """
     try:
         analysis_json = image_data.get('analysis_json', {})
@@ -214,9 +214,9 @@ def determine_border_color_from_analysis(image_data: Dict) -> str:
         if has_incidents:
             return '#FF0000'  # Red for incidents
         elif has_analysis:
-            return '#00FF00'  # Green for OK
+            return '#00FF00'  # Green for OK with analysis
         else:
-            return '#FFFF00'  # Yellow for no analysis
+            return '#FF0000'  # Red for no analysis (no audio/video)
             
     except Exception as e:
         print(f"[@heatmap_utils:determine_border_color_from_analysis] Error: {e}")
@@ -287,24 +287,24 @@ def create_mosaic_image(images_data: List[Dict], target_size: Tuple[int, int] = 
                     device_image = None
             
             if device_image:
-                # Resize image to fill entire cell (border-to-border)
+                # Resize image to fill entire cell (border-to-border) - stretch to fit exactly
                 available_width = cell_width - (border_width * 2)
                 available_height = cell_height - (border_width * 2)
                 
-                # Resize to fill available space while maintaining aspect ratio
-                device_image.thumbnail((available_width, available_height), Image.Resampling.LANCZOS)
+                # Force resize to fill entire available space (may change aspect ratio)
+                device_image = device_image.resize((available_width, available_height), Image.Resampling.LANCZOS)
                 
                 # Determine border color based on analysis
                 border_color = determine_border_color_from_analysis(image_data)
                 bordered_image = add_border_to_image(device_image, border_color, border_width)
                 
-                # Center image in cell
-                paste_x = x + (cell_width - bordered_image.width) // 2
-                paste_y = y + (cell_height - bordered_image.height) // 2
+                # Paste image to fill entire cell (bordered_image is already cell_width x cell_height)
+                paste_x = x
+                paste_y = y
                 
                 mosaic.paste(bordered_image, (paste_x, paste_y))
                 
-                # Add overlay label (top-left corner)
+                # Add overlay label (top-left corner INSIDE the image)
                 draw = ImageDraw.Draw(mosaic)
                 try:
                     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 10)
@@ -312,18 +312,19 @@ def create_mosaic_image(images_data: List[Dict], target_size: Tuple[int, int] = 
                     font = ImageFont.load_default()
                 
                 host_name = image_data.get('host_name', 'Unknown')
-                # Add semi-transparent background for label readability
-                label_bg_rect = [x + 5, y + 5, x + len(host_name) * 7 + 10, y + 20]
+                # Position label inside the bordered image area
+                label_x = x + border_width + 5
+                label_y = y + border_width + 5
+                label_bg_rect = [label_x, label_y, label_x + len(host_name) * 7 + 10, label_y + 15]
                 draw.rectangle(label_bg_rect, fill=(0, 0, 0))  # Solid black background
-                draw.text((x + 8, y + 8), host_name, fill='white', font=font)
+                draw.text((label_x + 3, label_y + 2), host_name, fill='white', font=font)
                 
             else:
                 # Always show placeholder instead of empty - never leave empty
                 draw = ImageDraw.Draw(mosaic)
                 
-                # Create placeholder with red border (indicates missing image)
-                placeholder_rect = [x + border_width, y + border_width, 
-                                  x + cell_width - border_width, y + cell_height - border_width]
+                # Create placeholder to fill entire cell with red border
+                placeholder_rect = [x, y, x + cell_width, y + cell_height]
                 draw.rectangle(placeholder_rect, fill='#333333', outline='#FF0000', width=border_width)
                 
                 # Add "No Image" text
@@ -340,25 +341,38 @@ def create_mosaic_image(images_data: List[Dict], target_size: Tuple[int, int] = 
                 text_y = y + (cell_height - text_height) // 2
                 draw.text((text_x, text_y), error_text, fill='white', font=font)
                 
-                # Add overlay label for placeholder too
+                # Add overlay label for placeholder inside the cell
                 host_name = image_data.get('host_name', 'Unknown')
-                label_bg_rect = [x + 5, y + 5, x + len(host_name) * 7 + 10, y + 20]
-                draw.rectangle(label_bg_rect, fill=(0, 0, 0))  # Solid black background
-                draw.text((x + 8, y + 8), host_name, fill='white', font=font)
+                try:
+                    label_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 10)
+                except:
+                    label_font = ImageFont.load_default()
+                
+                label_x = x + border_width + 5
+                label_y = y + border_width + 5
+                label_bg_rect = [label_x, label_y, label_x + len(host_name) * 7 + 10, label_y + 15]
+                draw.rectangle(label_bg_rect, fill=(0, 0, 0))
+                draw.text((label_x + 3, label_y + 2), host_name, fill='white', font=label_font)
                 
         except Exception as e:
             print(f"[@heatmap_utils:create_mosaic_image] Error processing image for {image_data.get('host_name')}: {e}")
-            # Draw error placeholder with red border
+            # Draw error placeholder to fill entire cell with red border
             draw = ImageDraw.Draw(mosaic)
-            error_rect = [x + border_width, y + border_width, 
-                         x + cell_width - border_width, y + cell_height - border_width]
+            error_rect = [x, y, x + cell_width, y + cell_height]
             draw.rectangle(error_rect, fill='#660000', outline='#FF0000', width=border_width)
             
-            # Add error overlay label
+            # Add error overlay label inside the cell
             host_name = image_data.get('host_name', 'Unknown')
-            label_bg_rect = [x + 5, y + 5, x + len(host_name) * 7 + 10, y + 20]
+            try:
+                label_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 10)
+            except:
+                label_font = ImageFont.load_default()
+            
+            label_x = x + border_width + 5
+            label_y = y + border_width + 5
+            label_bg_rect = [label_x, label_y, label_x + (len(host_name) + 6) * 7 + 10, label_y + 15]
             draw.rectangle(label_bg_rect, fill=(0, 0, 0))
-            draw.text((x + 8, y + 8), f"{host_name}-ERROR", fill='white', font=font)
+            draw.text((label_x + 3, label_y + 2), f"{host_name}-ERROR", fill='white', font=label_font)
     
     return mosaic
 

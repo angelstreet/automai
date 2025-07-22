@@ -53,7 +53,7 @@ const Heatmap: React.FC = () => {
   const [totalFrames, setTotalFrames] = useState(0);
 
   // AI Analysis state
-  const [analysisExpanded, setAnalysisExpanded] = useState(false);
+  const [analysisExpanded, setAnalysisExpanded] = useState(true); // Expanded by default
 
   // Refs
   const mosaicImageRef = useRef<HTMLImageElement>(null);
@@ -459,16 +459,18 @@ const Heatmap: React.FC = () => {
                       max={Math.max(0, totalFrames - 1)}
                       onChange={handleSliderChange}
                       sx={{
-                        color: frameHasIncidents(currentFrame) ? '#FF4444' : '#00FF00',
+                        color: frameHasIncidents(currentFrame) ? '#FF0000' : '#00FF00',
                         '& .MuiSlider-thumb': {
                           width: 16,
                           height: 16,
-                          backgroundColor: frameHasIncidents(currentFrame) ? '#FF4444' : '#00FF00',
+                          backgroundColor: frameHasIncidents(currentFrame) ? '#FF0000' : '#00FF00',
                         },
                         '& .MuiSlider-track': {
-                          backgroundColor: frameHasIncidents(currentFrame) ? '#FF4444' : '#00FF00',
+                          backgroundColor: frameHasIncidents(currentFrame) ? '#FF0000' : '#00FF00',
                         },
-                        '& .MuiSlider-rail': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                        '& .MuiSlider-rail': {
+                          backgroundColor: '#FF0000', // Red for inactive/future frames
+                        },
                         // Add tick marks for each timestamp
                         '& .MuiSlider-mark': {
                           backgroundColor: 'currentColor',
