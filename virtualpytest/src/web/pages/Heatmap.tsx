@@ -213,57 +213,97 @@ const Heatmap: React.FC = () => {
     const images = getCurrentImages();
     const timestamp = getCurrentTimestamp();
 
-    if (!heatmapData) {
+    if (!images.length || !timestamp || !heatmapData) {
       return { summary: 'No data available', details: [] };
     }
 
-    // Always use hosts_devices to ensure we have data to display
-    const deviceAnalysis = heatmapData.hosts_devices.map((hostDevice) => {
-      // Get image data for this device if available
-      const deviceImage = images.find(
-        (img) => img.host_name === hostDevice.host_name && img.device_id === hostDevice.device_id,
+    // Get incidents for current timestamp
+    const currentIncidents = heatmapData.incidents.filter((incident) => {
+      const incidentTime = new Date(incident.start_time).getTime();
+      const frameTime = new Date(timestamp).getTime();
+      const timeDiff = Math.abs(frameTime - incidentTime);
+      return timeDiff < 30000; // Within 30 seconds
+    });
+
+    // Analyze each device
+    const deviceAnalysis = images.map((image) => {
+      const hasIncident = currentIncidents.some(
+        (incident) =>
+          incident.host_name === image.host_name && incident.device_id === image.device_id,
       );
 
-      // Default values for analysis
-      let hasIncident = false;
-      let audio = false;
-      let video = false;
-      let blackscreen = false;
-      let freeze = false;
-      let audioLoss = false;
+      // Safely access analysis_json with fallback to empty object
+      const analysisJson = image.analysis_json || {};
 
-      // Use image data if available
-      if (deviceImage && deviceImage.analysis_json) {
-        const analysis = deviceImage.analysis_json;
-        audio = analysis.has_audio || false;
-        video = analysis.has_video || false;
-        blackscreen = analysis.blackscreen || false;
-        freeze = analysis.freeze || false;
-        audioLoss = analysis.audio_loss || false;
-        hasIncident = blackscreen || freeze || audioLoss;
-      }
+      const analysisIncidents = [
+        analysisJson.blackscreen ? 'blackscreen' : null,
+        analysisJson.freeze ? 'freeze' : null,
+        analysisJson.audio_loss ? 'audio_loss' : null,
+      ].filter((incident): incident is string => incident !== null);
+
+      const dbIncidents = currentIncidents
+        .filter(
+          (incident) =>
+            incident.host_name === image.host_name && incident.device_id === image.device_id,
+        )
+        .map((incident) => incident.incident_type);
 
       // Calculate incident duration if applicable
       let incidentDuration = '';
+      if (hasIncident) {
+        // Find the earliest incident for this device
+        const deviceIncidents = heatmapData.incidents.filter(
+          (incident) =>
+            incident.host_name === image.host_name &&
+            incident.device_id === image.device_id &&
+            incident.status === 'active',
+        );
+
+        if (deviceIncidents.length > 0) {
+          // Find earliest start time
+          let earliestStartTime = Number.MAX_VALUE;
+          deviceIncidents.forEach((incident) => {
+            const startTime = new Date(incident.start_time).getTime();
+            if (startTime < earliestStartTime) {
+              earliestStartTime = startTime;
+            }
+          });
+
+          // Calculate duration
+          const currentTime = new Date(timestamp).getTime();
+          const durationMs = currentTime - earliestStartTime;
+          const durationSec = Math.floor(durationMs / 1000);
+          const minutes = Math.floor(durationSec / 60);
+          const seconds = durationSec % 60;
+          incidentDuration = `${minutes}m ${seconds}s`;
+        }
+      }
+
+      const mismatch =
+        analysisIncidents.length !== dbIncidents.length ||
+        !analysisIncidents.every((type) => dbIncidents.includes(type));
 
       return {
-        device: `${hostDevice.host_name}-${hostDevice.device_id}`,
+        device: `${image.host_name}-${image.device_id}`,
         hasIncident,
+        analysisIncidents,
+        dbIncidents,
         incidentDuration,
-        audio,
-        video,
-        blackscreen,
-        freeze,
-        audioLoss,
-        mismatch: false,
+        mismatch,
+        audio: analysisJson.has_audio,
+        video: analysisJson.has_video,
+        blackscreen: analysisJson.blackscreen,
+        freeze: analysisJson.freeze,
+        audioLoss: analysisJson.audio_loss,
       };
     });
 
     const totalDevices = deviceAnalysis.length;
     const devicesWithIncidents = deviceAnalysis.filter((d) => d.hasIncident).length;
+    const mismatches = deviceAnalysis.filter((d) => d.mismatch).length;
 
     return {
-      summary: `${totalDevices} devices | ${devicesWithIncidents} with incidents`,
+      summary: `${totalDevices} devices | ${devicesWithIncidents} with incidents | ${mismatches} mismatches`,
       details: deviceAnalysis,
     };
   };
@@ -306,6 +346,9 @@ const Heatmap: React.FC = () => {
                   <Typography variant="body2" fontWeight="bold">
                     {heatmapData?.timeline_timestamps.length || 0}
                   </Typography>
+                  {heatmapData?.timeline_timestamps.length === 0 && (
+                    <Chip size="small" label="No Data" color="warning" />
+                  )}
                 </Box>
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Status</Typography>
@@ -617,9 +660,6 @@ const Heatmap: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell>
-                            {/* Assuming incident duration is available in the incident object */}
-                            {/* For now, we'll just show a placeholder or remove if not directly available */}
-                            {/* If incident duration is not directly available, this will be empty */}
                             {device.incidentDuration ? (
                               <Chip label={device.incidentDuration} color="error" size="small" />
                             ) : (
