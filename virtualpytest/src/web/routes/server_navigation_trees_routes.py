@@ -469,4 +469,204 @@ def health_check():
         'success': True,
         'service': 'navigation_trees',
         'status': 'healthy'
-    }) 
+    })
+
+# =====================================================
+# NESTED NAVIGATION TREE ENDPOINTS
+# =====================================================
+
+@server_navigation_trees_bp.route('/navigationTrees/getSubTrees/<parent_tree_id>', methods=['GET'])
+def get_sub_trees_endpoint(parent_tree_id):
+    """Get all sub-trees for a parent tree"""
+    try:
+        team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
+        parent_node_id = request.args.get('parent_node_id')
+        
+        print(f'[@route:navigation_trees:get_sub_trees] Fetching sub-trees for parent: {parent_tree_id}')
+        
+        from src.lib.supabase.navigation_trees_db import get_sub_trees
+        
+        success, message, sub_trees = get_sub_trees(parent_tree_id, parent_node_id, team_id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'sub_trees': sub_trees,
+                'count': len(sub_trees)
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': message,
+                'sub_trees': []
+            }), 500
+    
+    except Exception as e:
+        print(f'[@route:navigation_trees:get_sub_trees] ERROR: {e}')
+        return jsonify({
+            'success': False,
+            'message': f'Server error: {str(e)}',
+            'sub_trees': []
+        }), 500
+
+@server_navigation_trees_bp.route('/navigationTrees/createSubTree', methods=['POST'])
+def create_sub_tree_endpoint():
+    """Create a new sub-tree for a specific node"""
+    try:
+        data = request.get_json()
+        
+        parent_tree_id = data.get('parent_tree_id')
+        parent_node_id = data.get('parent_node_id')
+        sub_tree_name = data.get('sub_tree_name')
+        tree_data = data.get('tree_data', {})
+        
+        if not parent_tree_id or not parent_node_id or not sub_tree_name:
+            return jsonify({
+                'success': False,
+                'message': 'Missing required fields: parent_tree_id, parent_node_id, sub_tree_name'
+            }), 400
+        
+        team_id = data.get('team_id', DEFAULT_TEAM_ID)
+        creator_id = DEFAULT_USER_ID
+        description = data.get('description')
+        
+        print(f'[@route:navigation_trees:create_sub_tree] Creating sub-tree: {sub_tree_name} for node: {parent_node_id}')
+        
+        from src.lib.supabase.navigation_trees_db import create_sub_tree, update_node_sub_tree_reference
+        
+        success, message, created_tree = create_sub_tree(
+            parent_tree_id, parent_node_id, sub_tree_name, 
+            tree_data, team_id, creator_id, description
+        )
+        
+        if success:
+            # Update parent node to indicate it has sub-trees
+            update_node_sub_tree_reference(parent_tree_id, parent_node_id, True, team_id, creator_id)
+            
+            return jsonify({
+                'success': True,
+                'message': message,
+                'sub_tree': created_tree
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': message
+            }), 500
+    
+    except Exception as e:
+        print(f'[@route:navigation_trees:create_sub_tree] ERROR: {e}')
+        return jsonify({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }), 500
+
+@server_navigation_trees_bp.route('/navigationTrees/getBreadcrumb/<tree_id>', methods=['GET'])
+def get_breadcrumb_endpoint(tree_id):
+    """Get breadcrumb path for a tree"""
+    try:
+        team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
+        
+        print(f'[@route:navigation_trees:get_breadcrumb] Getting breadcrumb for tree: {tree_id}')
+        
+        from src.lib.supabase.navigation_trees_db import get_tree_breadcrumb
+        
+        success, message, breadcrumb = get_tree_breadcrumb(tree_id, team_id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'breadcrumb': breadcrumb,
+                'count': len(breadcrumb)
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': message,
+                'breadcrumb': []
+            }), 404 if 'not found' in message.lower() else 500
+    
+    except Exception as e:
+        print(f'[@route:navigation_trees:get_breadcrumb] ERROR: {e}')
+        return jsonify({
+            'success': False,
+            'message': f'Server error: {str(e)}',
+            'breadcrumb': []
+        }), 500
+
+@server_navigation_trees_bp.route('/navigationTrees/getNodeSubTrees/<tree_id>/<node_id>', methods=['GET'])
+def get_node_sub_trees_endpoint(tree_id, node_id):
+    """Get all sub-trees for a specific node"""
+    try:
+        team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
+        
+        print(f'[@route:navigation_trees:get_node_sub_trees] Getting sub-trees for node: {node_id}')
+        
+        from src.lib.supabase.navigation_trees_db import get_node_sub_trees
+        
+        success, message, sub_trees = get_node_sub_trees(tree_id, node_id, team_id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'node_id': node_id,
+                'sub_trees': sub_trees,
+                'count': len(sub_trees)
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': message,
+                'sub_trees': []
+            }), 500
+    
+    except Exception as e:
+        print(f'[@route:navigation_trees:get_node_sub_trees] ERROR: {e}')
+        return jsonify({
+            'success': False,
+            'message': f'Server error: {str(e)}',
+            'sub_trees': []
+        }), 500
+
+@server_navigation_trees_bp.route('/navigationTrees/updateNodeSubTreeReference', methods=['POST'])
+def update_node_sub_tree_reference_endpoint():
+    """Update a node's sub-tree reference"""
+    try:
+        data = request.get_json()
+        
+        tree_id = data.get('tree_id')
+        node_id = data.get('node_id')
+        has_sub_tree = data.get('has_sub_tree', False)
+        
+        if not tree_id or not node_id:
+            return jsonify({
+                'success': False,
+                'message': 'Missing required fields: tree_id, node_id'
+            }), 400
+        
+        team_id = data.get('team_id', DEFAULT_TEAM_ID)
+        creator_id = DEFAULT_USER_ID
+        
+        print(f'[@route:navigation_trees:update_node_sub_tree_reference] Updating node {node_id} reference: {has_sub_tree}')
+        
+        from src.lib.supabase.navigation_trees_db import update_node_sub_tree_reference
+        
+        success, message = update_node_sub_tree_reference(tree_id, node_id, has_sub_tree, team_id, creator_id)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': message
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': message
+            }), 404 if 'not found' in message.lower() else 500
+    
+    except Exception as e:
+        print(f'[@route:navigation_trees:update_node_sub_tree_reference] ERROR: {e}')
+        return jsonify({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }), 500 

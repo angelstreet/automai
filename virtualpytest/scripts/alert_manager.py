@@ -254,11 +254,96 @@ def resolve_alert_by_id(alert_id: str) -> bool:
         print(f"[@alert_manager:resolve_alert_by_id] Failed to resolve alert: {result.get('error')}")
         return False
 
+def cleanup_local_state_files() -> None:
+    """Clean up all local alert state files when database has no active alerts."""
+    try:
+        print("[@alert_manager:cleanup_local_state_files] Cleaning up all local alert state files...")
+        
+        # Common capture directories to clean
+        capture_base_dirs = [
+            "/var/www/html/stream/capture1",
+            "/var/www/html/stream/capture2", 
+            "/var/www/html/stream/capture3",
+            "/var/www/html/stream/capture4"
+        ]
+        
+        cleaned_count = 0
+        
+        for base_dir in capture_base_dirs:
+            if os.path.exists(base_dir):
+                # Check both main directory and captures subdirectory
+                potential_state_files = [
+                    os.path.join(base_dir, 'alert_state.json'),
+                    os.path.join(base_dir, 'captures', 'alert_state.json')
+                ]
+                
+                for state_file in potential_state_files:
+                    if os.path.exists(state_file):
+                        try:
+                            os.remove(state_file)
+                            print(f"[@alert_manager:cleanup_local_state_files] Removed: {state_file}")
+                            cleaned_count += 1
+                        except OSError as e:
+                            print(f"[@alert_manager:cleanup_local_state_files] Failed to remove {state_file}: {e}")
+        
+        # Also clean any state files in /tmp/alert_queue
+        queue_dir = "/tmp/alert_queue"
+        if os.path.exists(queue_dir):
+            try:
+                import glob
+                state_files = glob.glob(os.path.join(queue_dir, "**/alert_state.json"), recursive=True)
+                for state_file in state_files:
+                    try:
+                        os.remove(state_file)
+                        print(f"[@alert_manager:cleanup_local_state_files] Removed queue state: {state_file}")
+                        cleaned_count += 1
+                    except OSError as e:
+                        print(f"[@alert_manager:cleanup_local_state_files] Failed to remove {state_file}: {e}")
+            except Exception as e:
+                print(f"[@alert_manager:cleanup_local_state_files] Error cleaning queue directory: {e}")
+        
+        print(f"[@alert_manager:cleanup_local_state_files] Cleaned {cleaned_count} state files")
+        
+    except Exception as e:
+        print(f"[@alert_manager:cleanup_local_state_files] Error during cleanup: {e}")
+
+def check_database_has_active_alerts() -> bool:
+    """Check if database has any active alerts across all hosts/devices."""
+    try:
+        _lazy_import_db()
+        if not get_active_alerts or get_active_alerts is False:
+            print("[@alert_manager:check_database_has_active_alerts] Database module not available")
+            return False
+        
+        # Get all active alerts without any filters
+        result = get_active_alerts(limit=1)  # Just need to know if any exist
+        
+        if result['success']:
+            has_active = len(result['alerts']) > 0
+            print(f"[@alert_manager:check_database_has_active_alerts] Database has {len(result['alerts'])} active alerts")
+            return has_active
+        else:
+            print(f"[@alert_manager:check_database_has_active_alerts] Failed to check database: {result.get('error')}")
+            return False
+            
+    except Exception as e:
+        print(f"[@alert_manager:check_database_has_active_alerts] Error checking database: {e}")
+        return False
+
 def validate_and_cleanup_state(state: Dict, host_name: str, analysis_path: str) -> Dict:
     """Validate alert state and cleanup any inconsistencies with database."""
     try:
         device_id = extract_device_id_from_path(analysis_path)
         active_incidents = state.get("active_incidents", {})
+        
+        # If no local active incidents, check if database is completely clean
+        if not active_incidents:
+            if not check_database_has_active_alerts():
+                print("[@alert_manager:validate_state] No local incidents and database is clean - state is valid")
+                return state
+            else:
+                print("[@alert_manager:validate_state] No local incidents but database has active alerts - will sync on next detection")
+                return state
         
         # Check each active incident against database
         incidents_to_remove = []
@@ -291,6 +376,11 @@ def validate_and_cleanup_state(state: Dict, host_name: str, analysis_path: str) 
         # Remove stale incidents
         for incident_type in incidents_to_remove:
             del active_incidents[incident_type]
+        
+        # If all incidents were removed and database has no active alerts, clean up all state files
+        if not active_incidents and not check_database_has_active_alerts():
+            print("[@alert_manager:validate_state] All incidents cleared and database is clean - performing global cleanup")
+            cleanup_local_state_files()
         
         state['active_incidents'] = active_incidents
         return state
@@ -456,6 +546,26 @@ def check_and_update_alerts(
 
 def main():
     """Test function for alert manager."""
+    if len(sys.argv) < 2:
+        print("Usage:")
+        print("  alert_manager.py <analysis_result_json> <host_name> <analysis_path>")
+        print("  alert_manager.py --cleanup    # Clean local state if database is empty")
+        print("  alert_manager.py --force-cleanup    # Force clean all local state files")
+        sys.exit(1)
+    
+    # Handle cleanup commands
+    if sys.argv[1] == "--cleanup":
+        print("[@alert_manager] Manual cleanup requested")
+        startup_cleanup_if_database_empty()
+        return
+    elif sys.argv[1] == "--force-cleanup":
+        print("[@alert_manager] Force cleanup requested - removing all local state files")
+        cleanup_local_state_files()
+        cleanup_alert_queue()
+        print("[@alert_manager] Force cleanup completed")
+        return
+    
+    # Normal processing
     if len(sys.argv) < 4:
         print("Usage: alert_manager.py <analysis_result_json> <host_name> <analysis_path>")
         sys.exit(1)
@@ -477,3 +587,60 @@ def main():
 
 if __name__ == '__main__':
     main() 
+
+def startup_cleanup_if_database_empty() -> None:
+    """Perform startup cleanup if database has no active alerts."""
+    try:
+        print("[@alert_manager:startup_cleanup] Checking if startup cleanup is needed...")
+        
+        if not check_database_has_active_alerts():
+            print("[@alert_manager:startup_cleanup] Database has no active alerts - performing startup cleanup")
+            cleanup_local_state_files()
+            
+            # Also clean any pending alert queue files
+            cleanup_alert_queue()
+            
+            print("[@alert_manager:startup_cleanup] Startup cleanup completed - fresh start")
+        else:
+            print("[@alert_manager:startup_cleanup] Database has active alerts - keeping local state files")
+            
+    except Exception as e:
+        print(f"[@alert_manager:startup_cleanup] Error during startup cleanup: {e}")
+
+def cleanup_alert_queue() -> None:
+    """Clean up pending alert queue files."""
+    try:
+        queue_dir = "/tmp/alert_queue"
+        if not os.path.exists(queue_dir):
+            return
+        
+        import glob
+        
+        # Clean pending alert files
+        pending_files = glob.glob(os.path.join(queue_dir, "alert_*.json"))
+        for file_path in pending_files:
+            try:
+                os.remove(file_path)
+                print(f"[@alert_manager:cleanup_alert_queue] Removed pending alert: {os.path.basename(file_path)}")
+            except OSError as e:
+                print(f"[@alert_manager:cleanup_alert_queue] Failed to remove {file_path}: {e}")
+        
+        # Clean processed files older than 1 hour
+        processed_dir = os.path.join(queue_dir, "processed")
+        if os.path.exists(processed_dir):
+            import time
+            cutoff_time = time.time() - 3600  # 1 hour ago
+            
+            processed_files = glob.glob(os.path.join(processed_dir, "*"))
+            for file_path in processed_files:
+                try:
+                    if os.path.getmtime(file_path) < cutoff_time:
+                        os.remove(file_path)
+                        print(f"[@alert_manager:cleanup_alert_queue] Removed old processed: {os.path.basename(file_path)}")
+                except OSError:
+                    pass
+        
+        print("[@alert_manager:cleanup_alert_queue] Alert queue cleanup completed")
+        
+    except Exception as e:
+        print(f"[@alert_manager:cleanup_alert_queue] Error cleaning alert queue: {e}") 

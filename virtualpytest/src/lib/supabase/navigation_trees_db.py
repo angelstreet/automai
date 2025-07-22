@@ -762,3 +762,282 @@ def _populate_navigation_cache(tree: Dict, team_id: str):
         print(f'[@db:navigation_trees:_populate_navigation_cache] Error populating cache: {e}')
         import traceback
         traceback.print_exc() 
+
+def get_sub_trees(parent_tree_id: str, parent_node_id: str = None, team_id: str = None) -> Tuple[bool, str, List[Dict]]:
+    """Get all sub-trees for a parent tree and optionally a specific parent node"""
+    try:
+        if not team_id:
+            team_id = DEFAULT_TEAM_ID
+            
+        supabase = get_supabase()
+        
+        print(f'[@db:navigation_trees:get_sub_trees] Fetching sub-trees for parent_tree_id: {parent_tree_id}, parent_node_id: {parent_node_id}')
+        
+        query = supabase.table('navigation_trees')\
+            .select('*')\
+            .eq('parent_tree_id', parent_tree_id)\
+            .eq('team_id', team_id)\
+            .order('tree_level', desc=False)\
+            .order('created_at', desc=False)
+        
+        # Filter by parent node if specified
+        if parent_node_id:
+            query = query.eq('parent_node_id', parent_node_id)
+        
+        result = query.execute()
+        
+        sub_trees = result.data or []
+        print(f'[@db:navigation_trees:get_sub_trees] Successfully fetched {len(sub_trees)} sub-trees')
+        
+        return True, "Success", sub_trees
+        
+    except Exception as e:
+        error_msg = f"Failed to get sub-trees: {str(e)}"
+        print(f'[@db:navigation_trees:get_sub_trees] ERROR: {error_msg}')
+        return False, error_msg, []
+
+def create_sub_tree(parent_tree_id: str, parent_node_id: str, sub_tree_name: str, 
+                   tree_data: Dict, team_id: str = None, creator_id: str = None,
+                   description: str = None) -> Tuple[bool, str, Optional[Dict]]:
+    """Create a new sub-tree for a specific node in a parent tree"""
+    try:
+        if not team_id:
+            team_id = DEFAULT_TEAM_ID
+            
+        supabase = get_supabase()
+        
+        print(f'[@db:navigation_trees:create_sub_tree] Creating sub-tree: {sub_tree_name} for parent_tree_id: {parent_tree_id}, parent_node_id: {parent_node_id}')
+        
+        # Get parent tree info for hierarchy setup
+        parent_result = supabase.table('navigation_trees')\
+            .select('tree_level, root_tree_id, userinterface_id, tree_path')\
+            .eq('id', parent_tree_id)\
+            .eq('team_id', team_id)\
+            .single()\
+            .execute()
+        
+        if not parent_result.data:
+            return False, "Parent tree not found", None
+        
+        parent_tree = parent_result.data
+        parent_level = parent_tree.get('tree_level', 0)
+        root_tree_id = parent_tree.get('root_tree_id') or parent_tree_id
+        userinterface_id = parent_tree['userinterface_id']
+        parent_path = parent_tree.get('tree_path', [])
+        
+        # Build tree path for breadcrumb navigation
+        new_tree_path = parent_path + [parent_tree_id]
+        
+        # Prepare sub-tree data
+        sub_tree_data = {
+            'name': sub_tree_name,
+            'userinterface_id': userinterface_id,
+            'team_id': team_id,
+            'description': description or f"Sub-tree for node {parent_node_id}",
+            'parent_tree_id': parent_tree_id,
+            'parent_node_id': parent_node_id,
+            'tree_level': parent_level + 1,
+            'is_root': False,
+            'root_tree_id': root_tree_id,
+            'tree_path': new_tree_path,
+            'metadata': tree_data,
+            'creator_id': creator_id,
+            'created_at': 'now()',
+            'updated_at': 'now()'
+        }
+        
+        # Insert the sub-tree
+        result = supabase.table('navigation_trees')\
+            .insert(sub_tree_data)\
+            .execute()
+        
+        if not result.data:
+            return False, "Failed to create sub-tree", None
+        
+        created_tree = result.data[0]
+        
+        # Create history record for the new sub-tree
+        history_data = {
+            'tree_id': created_tree['id'],
+            'team_id': team_id,
+            'version_number': 1,
+            'modification_type': 'create',
+            'modified_by': creator_id,
+            'tree_data': created_tree,
+            'changes_summary': f'Created sub-tree for node {parent_node_id}'
+        }
+        
+        supabase.table('navigation_trees_history')\
+            .insert(history_data)\
+            .execute()
+        
+        print(f'[@db:navigation_trees:create_sub_tree] Successfully created sub-tree: {created_tree["id"]}')
+        
+        return True, "Sub-tree created successfully", created_tree
+        
+    except Exception as e:
+        error_msg = f"Failed to create sub-tree: {str(e)}"
+        print(f'[@db:navigation_trees:create_sub_tree] ERROR: {error_msg}')
+        return False, error_msg, None
+
+def get_tree_breadcrumb(tree_id: str, team_id: str = None) -> Tuple[bool, str, List[Dict]]:
+    """Get breadcrumb path for a tree (from root to current tree)"""
+    try:
+        if not team_id:
+            team_id = DEFAULT_TEAM_ID
+            
+        supabase = get_supabase()
+        
+        print(f'[@db:navigation_trees:get_tree_breadcrumb] Getting breadcrumb for tree: {tree_id}')
+        
+        # Get the current tree
+        result = supabase.table('navigation_trees')\
+            .select('id, name, tree_path, root_tree_id, parent_tree_id, parent_node_id')\
+            .eq('id', tree_id)\
+            .eq('team_id', team_id)\
+            .single()\
+            .execute()
+        
+        if not result.data:
+            return False, "Tree not found", []
+        
+        tree = result.data
+        tree_path = tree.get('tree_path', [])
+        
+        # Build breadcrumb by fetching all trees in the path
+        breadcrumb = []
+        
+        # Add all parent trees in the path
+        if tree_path:
+            parent_trees_result = supabase.table('navigation_trees')\
+                .select('id, name, parent_node_id')\
+                .in_('id', tree_path)\
+                .eq('team_id', team_id)\
+                .execute()
+            
+            if parent_trees_result.data:
+                # Sort by position in tree_path
+                parent_trees = {t['id']: t for t in parent_trees_result.data}
+                for tree_id_in_path in tree_path:
+                    if tree_id_in_path in parent_trees:
+                        parent_tree = parent_trees[tree_id_in_path]
+                        breadcrumb.append({
+                            'tree_id': parent_tree['id'],
+                            'tree_name': parent_tree['name'],
+                            'parent_node_id': parent_tree.get('parent_node_id')
+                        })
+        
+        # Add current tree
+        breadcrumb.append({
+            'tree_id': tree['id'],
+            'tree_name': tree['name'],
+            'parent_node_id': tree.get('parent_node_id'),
+            'is_current': True
+        })
+        
+        print(f'[@db:navigation_trees:get_tree_breadcrumb] Successfully built breadcrumb with {len(breadcrumb)} items')
+        
+        return True, "Success", breadcrumb
+        
+    except Exception as e:
+        error_msg = f"Failed to get tree breadcrumb: {str(e)}"
+        print(f'[@db:navigation_trees:get_tree_breadcrumb] ERROR: {error_msg}')
+        return False, error_msg, []
+
+def get_node_sub_trees(tree_id: str, node_id: str, team_id: str = None) -> Tuple[bool, str, List[Dict]]:
+    """Get all sub-trees that belong to a specific node"""
+    try:
+        if not team_id:
+            team_id = DEFAULT_TEAM_ID
+            
+        supabase = get_supabase()
+        
+        print(f'[@db:navigation_trees:get_node_sub_trees] Getting sub-trees for node: {node_id} in tree: {tree_id}')
+        
+        result = supabase.table('navigation_trees')\
+            .select('id, name, description, tree_level, created_at, updated_at')\
+            .eq('parent_tree_id', tree_id)\
+            .eq('parent_node_id', node_id)\
+            .eq('team_id', team_id)\
+            .order('created_at', desc=False)\
+            .execute()
+        
+        sub_trees = result.data or []
+        print(f'[@db:navigation_trees:get_node_sub_trees] Found {len(sub_trees)} sub-trees for node {node_id}')
+        
+        return True, "Success", sub_trees
+        
+    except Exception as e:
+        error_msg = f"Failed to get node sub-trees: {str(e)}"
+        print(f'[@db:navigation_trees:get_node_sub_trees] ERROR: {error_msg}')
+        return False, error_msg, []
+
+def update_node_sub_tree_reference(tree_id: str, node_id: str, has_sub_tree: bool, 
+                                  team_id: str = None, creator_id: str = None) -> Tuple[bool, str]:
+    """Update a node's metadata to indicate it has sub-trees"""
+    try:
+        if not team_id:
+            team_id = DEFAULT_TEAM_ID
+            
+        supabase = get_supabase()
+        
+        print(f'[@db:navigation_trees:update_node_sub_tree_reference] Updating node {node_id} sub-tree reference: {has_sub_tree}')
+        
+        # Get current tree
+        result = supabase.table('navigation_trees')\
+            .select('metadata')\
+            .eq('id', tree_id)\
+            .eq('team_id', team_id)\
+            .single()\
+            .execute()
+        
+        if not result.data:
+            return False, "Tree not found"
+        
+        metadata = result.data.get('metadata', {})
+        nodes = metadata.get('nodes', [])
+        
+        # Find and update the specific node
+        updated = False
+        for node in nodes:
+            if node.get('id') == node_id:
+                node_data = node.get('data', {})
+                node_data['has_sub_tree'] = has_sub_tree
+                node['data'] = node_data
+                updated = True
+                break
+        
+        if not updated:
+            return False, f"Node {node_id} not found in tree"
+        
+        # Update the tree metadata
+        update_data = {
+            'metadata': metadata,
+            'updated_at': 'now()'
+        }
+        
+        supabase.table('navigation_trees')\
+            .update(update_data)\
+            .eq('id', tree_id)\
+            .eq('team_id', team_id)\
+            .execute()
+        
+        # Save to history
+        success, message, _ = save_navigation_tree(
+            userinterface_id=None,  # Will be retrieved from existing tree
+            team_id=team_id,
+            tree_data=metadata,
+            description=None,
+            creator_id=creator_id,
+            modification_type='update',
+            changes_summary=f'Updated node {node_id} sub-tree reference'
+        )
+        
+        print(f'[@db:navigation_trees:update_node_sub_tree_reference] Successfully updated node sub-tree reference')
+        
+        return True, "Node sub-tree reference updated successfully"
+        
+    except Exception as e:
+        error_msg = f"Failed to update node sub-tree reference: {str(e)}"
+        print(f'[@db:navigation_trees:update_node_sub_tree_reference] ERROR: {error_msg}')
+        return False, error_msg 

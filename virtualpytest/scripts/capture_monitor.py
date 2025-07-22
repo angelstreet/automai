@@ -249,6 +249,15 @@ class CaptureMonitor:
         print(f"[@capture_monitor] Audio analysis interval: {AUDIO_ANALYSIS_INTERVAL}s")
         print(f"[@capture_monitor] PID: {os.getpid()}")
         
+        # Perform startup cleanup check
+        try:
+            print(f"[@capture_monitor] Performing startup cleanup check...")
+            sys.path.append(SCRIPTS_DIR)
+            from alert_manager import startup_cleanup_if_database_empty
+            startup_cleanup_if_database_empty()
+        except Exception as e:
+            print(f"[@capture_monitor] Startup cleanup failed (continuing anyway): {e}")
+        
         # Get existing directories
         capture_dirs = self.get_existing_directories()
         if not capture_dirs:

@@ -39,7 +39,7 @@ load_env()
 sys.path.append(os.path.dirname(__file__))
 
 try:
-    from alert_manager import check_and_update_alerts
+    from alert_manager import check_and_update_alerts, startup_cleanup_if_database_empty
 except ImportError as e:
     print(f"Error: Could not import alert_manager: {e}")
     sys.exit(1)
@@ -160,6 +160,13 @@ class AlertProcessor:
         print(f"[@alert_processor] Starting alert processor service...")
         print(f"[@alert_processor] Monitoring queue: {QUEUE_DIR}")
         print(f"[@alert_processor] Check interval: {CHECK_INTERVAL}s")
+        
+        # Perform startup cleanup if database is empty
+        try:
+            print(f"[@alert_processor] Performing startup cleanup check...")
+            startup_cleanup_if_database_empty()
+        except Exception as e:
+            print(f"[@alert_processor] Startup cleanup failed: {e}")
         
         last_cleanup = time.time()
         
