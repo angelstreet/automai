@@ -494,7 +494,7 @@ const Heatmap: React.FC = () => {
       )}
 
       {/* AI Analysis Box */}
-      <Card>
+      <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
         <CardContent>
           <Box
             display="flex"
@@ -515,10 +515,34 @@ const Heatmap: React.FC = () => {
           <Collapse in={analysisExpanded}>
             <Box mt={2}>
               {analysis.details.length > 0 ? (
-                <TableContainer component={Paper} variant="outlined">
-                  <Table size="small">
+                <TableContainer
+                  component={Paper}
+                  variant="outlined"
+                  sx={{
+                    backgroundColor: 'transparent',
+                    '& .MuiPaper-root': {
+                      backgroundColor: 'transparent !important',
+                      boxShadow: 'none',
+                    },
+                  }}
+                >
+                  <Table
+                    size="small"
+                    sx={{
+                      backgroundColor: 'transparent',
+                      '& .MuiTableRow-root': {
+                        backgroundColor: 'transparent !important',
+                      },
+                      '& .MuiTableRow-root:hover': {
+                        backgroundColor: 'transparent !important',
+                      },
+                      '& .MuiTableCell-root': {
+                        backgroundColor: 'transparent !important',
+                      },
+                    }}
+                  >
                     <TableHead>
-                      <TableRow>
+                      <TableRow sx={{ backgroundColor: 'transparent !important' }}>
                         <TableCell>
                           <strong>Device</strong>
                         </TableCell>
@@ -547,7 +571,15 @@ const Heatmap: React.FC = () => {
                     </TableHead>
                     <TableBody>
                       {analysis.details.map((device, index) => (
-                        <TableRow key={index}>
+                        <TableRow
+                          key={index}
+                          sx={{
+                            backgroundColor: 'transparent !important',
+                            '&:hover': {
+                              backgroundColor: 'transparent !important',
+                            },
+                          }}
+                        >
                           <TableCell>{device.device}</TableCell>
                           <TableCell>
                             <Chip
