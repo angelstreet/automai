@@ -17,7 +17,6 @@ def get_supabase():
     return get_supabase_client()
 
 def get_active_alerts(
-    team_id: str,
     host_name: Optional[str] = None,
     device_id: Optional[str] = None,
     incident_type: Optional[str] = None,
@@ -26,14 +25,13 @@ def get_active_alerts(
     """Get active alerts with filtering."""
     try:
         print(f"[@db:alerts:get_active_alerts] Getting active alerts:")
-        print(f"  - team_id: {team_id}")
         print(f"  - host_name: {host_name}")
         print(f"  - device_id: {device_id}")
         print(f"  - incident_type: {incident_type}")
         print(f"  - limit: {limit}")
         
         supabase = get_supabase()
-        query = supabase.table('alerts').select('*').eq('team_id', team_id).eq('status', 'active')
+        query = supabase.table('alerts').select('*').eq('status', 'active')
         
         # Add filters
         if host_name:
@@ -63,7 +61,6 @@ def get_active_alerts(
         }
 
 def get_closed_alerts(
-    team_id: str,
     host_name: Optional[str] = None,
     device_id: Optional[str] = None,
     incident_type: Optional[str] = None,
@@ -72,14 +69,13 @@ def get_closed_alerts(
     """Get closed/resolved alerts with filtering."""
     try:
         print(f"[@db:alerts:get_closed_alerts] Getting closed alerts:")
-        print(f"  - team_id: {team_id}")
         print(f"  - host_name: {host_name}")
         print(f"  - device_id: {device_id}")
         print(f"  - incident_type: {incident_type}")
         print(f"  - limit: {limit}")
         
         supabase = get_supabase()
-        query = supabase.table('alerts').select('*').eq('team_id', team_id).eq('status', 'resolved')
+        query = supabase.table('alerts').select('*').eq('status', 'resolved')
         
         # Add filters
         if host_name:
@@ -109,7 +105,6 @@ def get_closed_alerts(
         }
 
 def create_alert(
-    team_id: str,
     host_name: str,
     device_id: str,
     incident_type: str,
@@ -122,7 +117,6 @@ def create_alert(
         
         alert_data = {
             'id': alert_id,
-            'team_id': team_id,
             'host_name': host_name,
             'device_id': device_id,
             'incident_type': incident_type,
@@ -134,7 +128,6 @@ def create_alert(
         
         print(f"[@db:alerts:create_alert] Creating alert:")
         print(f"  - alert_id: {alert_id}")
-        print(f"  - team_id: {team_id}")
         print(f"  - host_name: {host_name}")
         print(f"  - device_id: {device_id}")
         print(f"  - incident_type: {incident_type}")

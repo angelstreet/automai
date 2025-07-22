@@ -31,9 +31,10 @@ def get_heatmap_data(
         host_manager = get_host_manager()
         
         hosts_devices = []
-        all_hosts = host_manager.get_all_hosts()
+        all_hosts = host_manager.get_all_hosts()  # Returns List[Dict]
         
-        for host_name, host_data in all_hosts.items():
+        for host_data in all_hosts:  # Iterate over list of host dictionaries
+            host_name = host_data.get('host_name', host_data.get('name', 'unknown'))
             devices = host_data.get('devices', [])
             if isinstance(devices, list) and devices:
                 for device in devices:
@@ -187,7 +188,8 @@ def get_heatmap_data(
             end_time = datetime.now()
             start_time = end_time - timedelta(minutes=timeframe_minutes)
             
-            incidents_result = supabase.table('alerts').select('*').eq('team_id', team_id).gte('start_time', start_time.isoformat()).execute()
+            # Query alerts without team_id since alerts table doesn't have that column
+            incidents_result = supabase.table('alerts').select('*').gte('start_time', start_time.isoformat()).execute()
             
             for incident in incidents_result.data:
                 incidents.append({
