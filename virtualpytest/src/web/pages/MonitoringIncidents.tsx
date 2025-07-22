@@ -2,8 +2,8 @@ import {
   CheckCircle as ResolvedIcon,
   Error as ActiveIcon,
   Visibility as MonitorIcon,
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
+  KeyboardArrowDown as ExpandMoreIcon,
+  KeyboardArrowRight as ExpandLessIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -90,35 +90,98 @@ const MonitoringIncidents: React.FC = () => {
   const mostCommonIncidentType =
     Object.entries(incidentTypeCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || 'N/A';
 
-  // Format duration helper
-  function formatDuration(startTime: string, endTime?: string): string {
-    const start = new Date(startTime);
-    const end = endTime ? new Date(endTime) : new Date();
+  // Format duration between two dates
+  const formatDuration = (startTime: string, endTime?: string): string => {
+    try {
+      // Parse dates with better error handling
+      const start = new Date(startTime);
+      const end = endTime ? new Date(endTime) : new Date();
 
-    // Debug logging for negative durations
-    const durationMs = end.getTime() - start.getTime();
+      // Validate dates
+      if (isNaN(start.getTime())) {
+        console.warn(`[@component:MonitoringIncidents] Invalid start time: ${startTime}`);
+        return 'Invalid Date';
+      }
 
-    if (durationMs < 0) {
-      console.warn(`[@component:MonitoringIncidents] Negative duration detected:`);
-      console.warn(`  - startTime: ${startTime} -> ${start.toISOString()} (${start.getTime()})`);
-      console.warn(`  - endTime: ${endTime || 'now'} -> ${end.toISOString()} (${end.getTime()})`);
-      console.warn(`  - duration: ${durationMs}ms`);
-      console.warn(`  - Current local time: ${new Date().toLocaleString()}`);
-      console.warn(`  - Current UTC time: ${new Date().toISOString()}`);
-      return '0s';
+      if (endTime && isNaN(end.getTime())) {
+        console.warn(`[@component:MonitoringIncidents] Invalid end time: ${endTime}`);
+        return 'Invalid Date';
+      }
+
+      // Check for unreasonable future dates (likely parsing error)
+      const currentYear = new Date().getFullYear();
+      if (start.getFullYear() > currentYear + 1) {
+        console.warn(
+          `[@component:MonitoringIncidents] Start time appears to be in the future (${start.getFullYear()}): ${startTime}`,
+        );
+        return 'Future Date';
+      }
+
+      const durationMs = end.getTime() - start.getTime();
+
+      if (durationMs < 0) {
+        console.warn(`[@component:MonitoringIncidents] Negative duration detected:`);
+        console.warn(`  - startTime: ${startTime} -> ${start.toISOString()} (${start.getTime()})`);
+        console.warn(`  - endTime: ${endTime || 'now'} -> ${end.toISOString()} (${end.getTime()})`);
+        console.warn(`  - duration: ${durationMs}ms`);
+        console.warn(`  - Current local time: ${new Date().toLocaleString()}`);
+        console.warn(`  - Current UTC time: ${new Date().toISOString()}`);
+
+        // For negative durations, try to show absolute value with warning
+        const absDuration = Math.abs(durationMs);
+        const seconds = Math.floor(absDuration / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+
+        if (hours > 0) {
+          return `~${hours}h ${minutes % 60}m (time sync issue)`;
+        } else if (minutes > 0) {
+          return `~${minutes}m ${seconds % 60}s (time sync issue)`;
+        } else {
+          return `~${seconds}s (time sync issue)`;
+        }
+      }
+
+      const seconds = Math.floor(durationMs / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+
+      if (days > 0) {
+        return `${days}d ${hours % 24}h`;
+      } else if (hours > 0) {
+        return `${hours}h ${minutes % 60}m`;
+      } else if (minutes > 0) {
+        return `${minutes}m ${seconds % 60}s`;
+      } else {
+        return `${seconds}s`;
+      }
+    } catch (error) {
+      console.error(`[@component:MonitoringIncidents] Error formatting duration:`, error);
+      return 'Error';
     }
+  };
 
-    if (durationMs < 60000) return `${Math.floor(durationMs / 1000)}s`;
-    if (durationMs < 3600000) return `${Math.floor(durationMs / 60000)}m`;
-    const hours = Math.floor(durationMs / 3600000);
-    const minutes = Math.floor((durationMs % 3600000) / 60000);
-    return `${hours}h ${minutes}m`;
-  }
+  // Format date helper with better error handling
+  const formatDate = (dateString: string): string => {
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        return 'Invalid Date';
+      }
 
-  // Format date helper
-  function formatDate(dateString: string): string {
-    return new Date(dateString).toLocaleString();
-  }
+      // Check for unreasonable future dates
+      const currentYear = new Date().getFullYear();
+      if (date.getFullYear() > currentYear + 1) {
+        return `${date.toLocaleDateString()} (Future?)`;
+      }
+
+      return date.toLocaleDateString() + ', ' + date.toLocaleTimeString();
+    } catch (error) {
+      console.error(`[@component:MonitoringIncidents] Error formatting date: ${dateString}`, error);
+      return 'Error';
+    }
+  };
 
   // Get incident type chip color
   function getIncidentTypeColor(incidentType: string): 'error' | 'warning' | 'info' {
@@ -323,7 +386,7 @@ const MonitoringIncidents: React.FC = () => {
               </Typography>
 
               <TableContainer component={Paper} variant="outlined">
-                <Table size="small" sx={{ '& .MuiTableRow-root': { height: '40px' } }}>
+                <Table size="small">
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ py: 1, width: 50 }}>
@@ -363,6 +426,7 @@ const MonitoringIncidents: React.FC = () => {
                               '&:hover': {
                                 backgroundColor: 'rgba(0, 0, 0, 0.04) !important',
                               },
+                              height: '48px', // Fixed height for main rows
                             }}
                           >
                             <TableCell sx={{ py: 0.5 }}>
@@ -372,9 +436,9 @@ const MonitoringIncidents: React.FC = () => {
                                 sx={{ p: 0.5 }}
                               >
                                 {expandedRows.has(alert.id) ? (
-                                  <ExpandLessIcon />
-                                ) : (
                                   <ExpandMoreIcon />
+                                ) : (
+                                  <ExpandLessIcon />
                                 )}
                               </IconButton>
                             </TableCell>
@@ -393,17 +457,21 @@ const MonitoringIncidents: React.FC = () => {
                               {formatDuration(alert.start_time)}
                             </TableCell>
                           </TableRow>
-                          <TableRow>
-                            <TableCell colSpan={6} sx={{ p: 0, borderBottom: 0 }}>
-                              <Collapse
-                                in={expandedRows.has(alert.id)}
-                                timeout="auto"
-                                unmountOnExit
-                              >
-                                {renderExpandedContent(alert)}
-                              </Collapse>
-                            </TableCell>
-                          </TableRow>
+                          {expandedRows.has(alert.id) && (
+                            <TableRow>
+                              <TableCell colSpan={6} sx={{ p: 0, borderBottom: 0 }}>
+                                <Collapse
+                                  in={expandedRows.has(alert.id)}
+                                  timeout="auto"
+                                  unmountOnExit
+                                >
+                                  <Box sx={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
+                                    {renderExpandedContent(alert)}
+                                  </Box>
+                                </Collapse>
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </React.Fragment>
                       ))
                     )}
@@ -423,7 +491,7 @@ const MonitoringIncidents: React.FC = () => {
               </Typography>
 
               <TableContainer component={Paper} variant="outlined">
-                <Table size="small" sx={{ '& .MuiTableRow-root': { height: '40px' } }}>
+                <Table size="small">
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ py: 1, width: 50 }}>
@@ -466,6 +534,7 @@ const MonitoringIncidents: React.FC = () => {
                               '&:hover': {
                                 backgroundColor: 'rgba(0, 0, 0, 0.04) !important',
                               },
+                              height: '48px', // Fixed height for main rows
                             }}
                           >
                             <TableCell sx={{ py: 0.5 }}>
@@ -475,9 +544,9 @@ const MonitoringIncidents: React.FC = () => {
                                 sx={{ p: 0.5 }}
                               >
                                 {expandedRows.has(alert.id) ? (
-                                  <ExpandLessIcon />
-                                ) : (
                                   <ExpandMoreIcon />
+                                ) : (
+                                  <ExpandLessIcon />
                                 )}
                               </IconButton>
                             </TableCell>
@@ -502,17 +571,21 @@ const MonitoringIncidents: React.FC = () => {
                                 : 'N/A'}
                             </TableCell>
                           </TableRow>
-                          <TableRow>
-                            <TableCell colSpan={7} sx={{ p: 0, borderBottom: 0 }}>
-                              <Collapse
-                                in={expandedRows.has(alert.id)}
-                                timeout="auto"
-                                unmountOnExit
-                              >
-                                {renderExpandedContent(alert)}
-                              </Collapse>
-                            </TableCell>
-                          </TableRow>
+                          {expandedRows.has(alert.id) && (
+                            <TableRow>
+                              <TableCell colSpan={7} sx={{ p: 0, borderBottom: 0 }}>
+                                <Collapse
+                                  in={expandedRows.has(alert.id)}
+                                  timeout="auto"
+                                  unmountOnExit
+                                >
+                                  <Box sx={{ backgroundColor: 'rgba(0, 0, 0, 0.02)' }}>
+                                    {renderExpandedContent(alert)}
+                                  </Box>
+                                </Collapse>
+                              </TableCell>
+                            </TableRow>
+                          )}
                         </React.Fragment>
                       ))
                     )}
