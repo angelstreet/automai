@@ -253,85 +253,6 @@ def extract_device_id_from_path(analysis_path: str) -> str:
         print(f"[@alert_manager:extract_device_id] Error extracting device ID: {e}")
         return "device-unknown"
 
-def validate_device_monitoring_capability(device_id: str, incident_type: str, analysis_path: str) -> bool:
-    """Validate that we can actually monitor this device for the given incident type."""
-    try:
-        print(f"[@alert_manager:validate_device_monitoring_capability] Validating {device_id} for {incident_type}")
-        
-        if incident_type == 'audio_loss':
-            # For audio incidents, check if we have recent HLS segments
-            # Extract capture directory from analysis_path
-            if os.path.isfile(analysis_path):
-                capture_dir = os.path.dirname(analysis_path)
-            else:
-                capture_dir = analysis_path
-            
-            # Check for recent HLS segments (within 5 minutes)
-            import glob
-            import time
-            
-            segment_pattern = os.path.join(capture_dir, "segment_*.ts")
-            segments = glob.glob(segment_pattern)
-            
-            if not segments:
-                print(f"[@alert_manager:validate_device_monitoring_capability] No HLS segments found for {device_id}")
-                return False
-            
-            # Get newest segment and check age
-            latest = max(segments, key=os.path.getmtime)
-            latest_mtime = os.path.getmtime(latest)
-            current_time = time.time()
-            age_seconds = current_time - latest_mtime
-            
-            if age_seconds > 300:  # 5 minutes
-                print(f"[@alert_manager:validate_device_monitoring_capability] Latest segment too old for {device_id} (age: {age_seconds:.1f}s)")
-                return False
-            
-            print(f"[@alert_manager:validate_device_monitoring_capability] Recent audio activity found for {device_id} (age: {age_seconds:.1f}s)")
-            return True
-            
-        else:
-            # For visual incidents (blackscreen, freeze, errors), check for recent images
-            if os.path.isfile(analysis_path):
-                captures_dir = os.path.dirname(analysis_path)
-            else:
-                captures_dir = os.path.join(analysis_path, 'captures')
-            
-            if not os.path.exists(captures_dir):
-                print(f"[@alert_manager:validate_device_monitoring_capability] Captures directory not found for {device_id}: {captures_dir}")
-                return False
-            
-            # Check for recent capture images (within 5 minutes)
-            import glob
-            import time
-            
-            image_pattern = os.path.join(captures_dir, "capture_*.jpg")
-            images = glob.glob(image_pattern)
-            
-            # Filter out thumbnails
-            original_images = [img for img in images if '_thumbnail' not in img]
-            
-            if not original_images:
-                print(f"[@alert_manager:validate_device_monitoring_capability] No capture images found for {device_id}")
-                return False
-            
-            # Check if any image is recent
-            latest = max(original_images, key=os.path.getmtime)
-            latest_mtime = os.path.getmtime(latest)
-            current_time = time.time()
-            age_seconds = current_time - latest_mtime
-            
-            if age_seconds > 300:  # 5 minutes
-                print(f"[@alert_manager:validate_device_monitoring_capability] Latest capture too old for {device_id} (age: {age_seconds:.1f}s)")
-                return False
-            
-            print(f"[@alert_manager:validate_device_monitoring_capability] Recent capture activity found for {device_id} (age: {age_seconds:.1f}s)")
-            return True
-            
-    except Exception as e:
-        print(f"[@alert_manager:validate_device_monitoring_capability] Error validating {device_id}: {e}")
-        return False
-
 def trigger_alert(
     incident_type: str,
     host_name: str,
@@ -347,11 +268,6 @@ def trigger_alert(
     
     # Extract device ID from path
     device_id = extract_device_id_from_path(analysis_path)
-    
-    # Validate that we can actually monitor this device before creating alert
-    if not validate_device_monitoring_capability(device_id, incident_type, analysis_path):
-        print(f"[@alert_manager:trigger_alert] Cannot monitor {device_id} for {incident_type} - skipping alert creation")
-        return None
     
     print(f"[@alert_manager:trigger_alert] Triggering {incident_type} alert after {consecutive_count} consecutive detections")
     print(f"  - Extracted device_id: {device_id}")
@@ -888,10 +804,10 @@ def can_monitor_alert(alert: Dict) -> bool:
             print(f"[@alert_manager:can_monitor_alert] Invalid start_time format: {start_time}")
             return False
         
-        # Check if alert is too old (more than 6 hours old alerts are likely stale)
+        # Check if alert is too old (more than 1 hour old alerts are likely stale)
         current_time = datetime.now(start_dt.tzinfo) if start_dt.tzinfo else datetime.now()
         age = current_time - start_dt
-        max_age = timedelta(hours=6)
+        max_age = timedelta(hours=1)
         
         if age > max_age:
             print(f"[@alert_manager:can_monitor_alert] Alert is too old ({age.total_seconds():.0f}s > {max_age.total_seconds():.0f}s)")
@@ -926,7 +842,7 @@ def can_monitor_audio_for_device(device_id: str) -> bool:
             print(f"[@alert_manager:can_monitor_audio] Capture directory not found: {capture_dir}")
             return False
         
-        # Check if recent HLS segments exist (within last 5 minutes)
+        # Check if recent HLS segments exist (within last 10 seconds)
         import glob
         from datetime import datetime, timedelta
         
@@ -939,7 +855,7 @@ def can_monitor_audio_for_device(device_id: str) -> bool:
         
         # Check if any segment is recent
         current_time = datetime.now()
-        recent_threshold = timedelta(seconds=300)  # Allow 5 minutes for segment creation
+        recent_threshold = timedelta(seconds=30)  # Allow 30 seconds for segment creation
         
         for segment in segments:
             try:
@@ -974,7 +890,7 @@ def can_monitor_frames_for_device(device_id: str) -> bool:
             print(f"[@alert_manager:can_monitor_frames] Captures directory not found: {captures_dir}")
             return False
         
-        # Check if recent capture images exist (within last 5 minutes)
+        # Check if recent capture images exist (within last 10 seconds)
         import glob
         from datetime import datetime, timedelta
         
@@ -990,7 +906,7 @@ def can_monitor_frames_for_device(device_id: str) -> bool:
         
         # Check if any image is recent
         current_time = datetime.now()
-        recent_threshold = timedelta(seconds=300)  # 5 minutes
+        recent_threshold = timedelta(seconds=10)  # Images should be created every second
         
         for image in original_images:
             try:
