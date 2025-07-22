@@ -396,6 +396,75 @@ const Heatmap: React.FC = () => {
 
   const analysis = analyzeCurrentFrame();
 
+  // Tooltip component
+  const renderTooltip = () => {
+    if (!tooltipOpen || !tooltipImage) return null;
+
+    // Get the corrected analysis values
+    const analysisJson = tooltipImage.analysis_json || {};
+    const hasVideo = analysisJson.has_video || false;
+    const hasAudio = analysisJson.has_audio || false;
+    const blackscreen = !hasVideo || analysisJson.blackscreen || false;
+    const freeze = hasVideo && (analysisJson.freeze || false);
+    const audioLoss = !hasAudio || analysisJson.audio_loss || false;
+
+    // Convert to MonitoringAnalysis format
+    const analysis = {
+      blackscreen,
+      freeze,
+      subtitles: false,
+      errors: blackscreen || freeze || audioLoss,
+      text: '',
+      audio: {
+        has_audio: hasAudio,
+        volume_percentage: 0, // Not available in our data
+      },
+    };
+
+    // Create error trend data
+    const errorTrendData = {
+      blackscreenConsecutive: blackscreen ? 1 : 0,
+      freezeConsecutive: freeze ? 1 : 0,
+      audioLossConsecutive: audioLoss ? 1 : 0,
+      hasWarning: blackscreen || freeze || audioLoss,
+      hasError: false,
+    };
+
+    return (
+      <Popper
+        open={tooltipOpen}
+        anchorEl={tooltipAnchor}
+        placement="top"
+        transition
+        style={{ zIndex: 1500 }}
+      >
+        {({ TransitionProps }) => (
+          <Fade {...TransitionProps} timeout={300}>
+            <Box>
+              <Box
+                sx={{
+                  p: 1,
+                  bgcolor: 'rgba(0, 0, 0, 0.8)',
+                  borderRadius: 1,
+                  maxWidth: 300,
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ color: '#ffffff', mb: 1 }}>
+                  {tooltipImage.host_name}-{tooltipImage.device_id}
+                </Typography>
+                <MonitoringOverlay
+                  overrideAnalysis={analysis}
+                  errorTrendData={errorTrendData}
+                  sx={{ position: 'relative', top: 'auto', left: 'auto', p: 0 }}
+                />
+              </Box>
+            </Box>
+          </Fade>
+        )}
+      </Popper>
+    );
+  };
+
   return (
     <Box>
       <Box sx={{ mb: 1 }}>
@@ -550,26 +619,52 @@ const Heatmap: React.FC = () => {
                       const position = calculateLabelPosition(index, array.length);
                       const fontSize = calculateFontSize();
 
+                      // Calculate cell dimensions
+                      const cellWidth = 100 / Math.ceil(Math.sqrt(array.length));
+                      const cellHeight =
+                        100 / Math.ceil(array.length / Math.ceil(Math.sqrt(array.length)));
+
                       return (
-                        <Typography
-                          key={`${image.host_name}-${image.device_id}-${index}`}
-                          sx={{
-                            position: 'absolute',
-                            top: position.top,
-                            left: position.left,
-                            transform: 'translate(10px, 10px)', // Offset from corner
-                            color: 'white',
-                            backgroundColor: 'rgba(0,0,0,0.5)',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            fontWeight: 'bold',
-                            fontSize: `${fontSize}px`,
-                            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                            zIndex: 10,
-                          }}
-                        >
-                          {image.host_name}-{image.device_id}
-                        </Typography>
+                        <React.Fragment key={`${image.host_name}-${image.device_id}-${index}`}>
+                          {/* Cell hover area */}
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: position.top,
+                              left: position.left,
+                              width: `${cellWidth}%`,
+                              height: `${cellHeight}%`,
+                              pointerEvents: 'auto', // Enable mouse events
+                              cursor: 'pointer',
+                              '&:hover': {
+                                outline: '2px solid rgba(255, 255, 255, 0.5)',
+                              },
+                            }}
+                            onMouseEnter={(e) => handleMouseEnter(e, image)}
+                            onMouseLeave={handleMouseLeave}
+                          />
+
+                          {/* Host name label */}
+                          <Typography
+                            sx={{
+                              position: 'absolute',
+                              top: position.top,
+                              left: position.left,
+                              transform: 'translate(10px, 10px)', // Offset from corner
+                              color: 'white',
+                              backgroundColor: 'rgba(0,0,0,0.5)',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontWeight: 'bold',
+                              fontSize: `${fontSize}px`,
+                              textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                              zIndex: 10,
+                              pointerEvents: 'none', // Disable mouse events
+                            }}
+                          >
+                            {image.host_name}-{image.device_id}
+                          </Typography>
+                        </React.Fragment>
                       );
                     })}
                   </Box>
@@ -829,6 +924,7 @@ const Heatmap: React.FC = () => {
           </Collapse>
         </CardContent>
       </Card>
+      {renderTooltip()}
     </Box>
   );
 };
