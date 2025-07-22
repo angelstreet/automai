@@ -31,11 +31,20 @@ CAPTURE_DIRS=(
   "/var/www/html/stream/capture4/captures"
 )
 
-# Process each existing directory
+# Process each directory - clean both parent and captures directory in one loop
 for CAPTURE_DIR in "${CAPTURE_DIRS[@]}"; do
+  # Get parent directory
+  PARENT_DIR=$(dirname "$CAPTURE_DIR")
+  
+  # Clean parent directory (only files, not folders)
+  if [ -d "$PARENT_DIR" ]; then
+    find "$PARENT_DIR" -maxdepth 1 -type f -mmin +10 -delete -printf "Deleted parent file %p\n" >> "$CLEAN_LOG" 2>&1
+    reset_log_if_large "$CLEAN_LOG"
+  fi
+  
+  # Clean captures directory
   if [ -d "$CAPTURE_DIR" ]; then
-    # Delete any files older than 10 minutes (600 seconds) - includes .jpg, .json, thumbnails, etc.
-    find "$CAPTURE_DIR" -type f -mmin +10 -delete -printf "Deleted %p\n" >> "$CLEAN_LOG" 2>&1
+    find "$CAPTURE_DIR" -type f -mmin +10 -delete -printf "Deleted capture file %p\n" >> "$CLEAN_LOG" 2>&1
     reset_log_if_large "$CLEAN_LOG"
   fi
 done

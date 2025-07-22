@@ -266,7 +266,7 @@ def validate_device_monitoring_capability(device_id: str, incident_type: str, an
             else:
                 capture_dir = analysis_path
             
-            # Check for recent HLS segments (within 30 seconds)
+            # Check for recent HLS segments (within 5 minutes)
             import glob
             import time
             
@@ -283,7 +283,7 @@ def validate_device_monitoring_capability(device_id: str, incident_type: str, an
             current_time = time.time()
             age_seconds = current_time - latest_mtime
             
-            if age_seconds > 30:  # Same threshold as analyze_audio.py
+            if age_seconds > 300:  # 5 minutes
                 print(f"[@alert_manager:validate_device_monitoring_capability] Latest segment too old for {device_id} (age: {age_seconds:.1f}s)")
                 return False
             
@@ -301,7 +301,7 @@ def validate_device_monitoring_capability(device_id: str, incident_type: str, an
                 print(f"[@alert_manager:validate_device_monitoring_capability] Captures directory not found for {device_id}: {captures_dir}")
                 return False
             
-            # Check for recent capture images (within 10 seconds)
+            # Check for recent capture images (within 5 minutes)
             import glob
             import time
             
@@ -321,7 +321,7 @@ def validate_device_monitoring_capability(device_id: str, incident_type: str, an
             current_time = time.time()
             age_seconds = current_time - latest_mtime
             
-            if age_seconds > 10:  # Images should be created every second
+            if age_seconds > 300:  # 5 minutes
                 print(f"[@alert_manager:validate_device_monitoring_capability] Latest capture too old for {device_id} (age: {age_seconds:.1f}s)")
                 return False
             
@@ -401,7 +401,7 @@ def trigger_alert(
         if r2_upload_result.get('success'):
             print(f"  - Original image URL: {enhanced_metadata['r2_images']['original_url']}")
             print(f"  - Thumbnail image URL: {enhanced_metadata['r2_images']['thumbnail_url']}")
-    return alert_id
+        return alert_id
     else:
         print(f"[@alert_manager:trigger_alert] Failed to create alert: {result.get('error')}")
         return None
@@ -888,10 +888,10 @@ def can_monitor_alert(alert: Dict) -> bool:
             print(f"[@alert_manager:can_monitor_alert] Invalid start_time format: {start_time}")
             return False
         
-        # Check if alert is too old (more than 1 hour old alerts are likely stale)
+        # Check if alert is too old (more than 6 hours old alerts are likely stale)
         current_time = datetime.now(start_dt.tzinfo) if start_dt.tzinfo else datetime.now()
         age = current_time - start_dt
-        max_age = timedelta(hours=1)
+        max_age = timedelta(hours=6)
         
         if age > max_age:
             print(f"[@alert_manager:can_monitor_alert] Alert is too old ({age.total_seconds():.0f}s > {max_age.total_seconds():.0f}s)")
@@ -926,7 +926,7 @@ def can_monitor_audio_for_device(device_id: str) -> bool:
             print(f"[@alert_manager:can_monitor_audio] Capture directory not found: {capture_dir}")
             return False
         
-        # Check if recent HLS segments exist (within last 10 seconds)
+        # Check if recent HLS segments exist (within last 5 minutes)
         import glob
         from datetime import datetime, timedelta
         
@@ -939,7 +939,7 @@ def can_monitor_audio_for_device(device_id: str) -> bool:
         
         # Check if any segment is recent
         current_time = datetime.now()
-        recent_threshold = timedelta(seconds=30)  # Allow 30 seconds for segment creation
+        recent_threshold = timedelta(seconds=300)  # Allow 5 minutes for segment creation
         
         for segment in segments:
             try:
@@ -974,7 +974,7 @@ def can_monitor_frames_for_device(device_id: str) -> bool:
             print(f"[@alert_manager:can_monitor_frames] Captures directory not found: {captures_dir}")
             return False
         
-        # Check if recent capture images exist (within last 10 seconds)
+        # Check if recent capture images exist (within last 5 minutes)
         import glob
         from datetime import datetime, timedelta
         
@@ -990,7 +990,7 @@ def can_monitor_frames_for_device(device_id: str) -> bool:
         
         # Check if any image is recent
         current_time = datetime.now()
-        recent_threshold = timedelta(seconds=10)  # Images should be created every second
+        recent_threshold = timedelta(seconds=300)  # 5 minutes
         
         for image in original_images:
             try:

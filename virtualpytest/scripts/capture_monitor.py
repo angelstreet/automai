@@ -145,7 +145,7 @@ class CaptureMonitor:
             print(f"[@capture_monitor] Frame analysis error: {e}")
 
     def has_recent_audio_activity(self, main_capture_dir):
-        """Check if capture directory has recent HLS segments (within 30 seconds)"""
+        """Check if capture directory has recent HLS segments (within 5 minutes)"""
         try:
             import glob
             import time
@@ -162,8 +162,8 @@ class CaptureMonitor:
             current_time = time.time()
             age_seconds = current_time - latest_mtime
             
-            # Consider active if newest segment is less than 30 seconds old
-            return age_seconds <= 30
+            # Consider active if newest segment is less than 5 minutes old
+            return age_seconds <= 300  # 5 minutes
             
         except Exception as e:
             print(f"[@capture_monitor] Error checking audio activity for {main_capture_dir}: {e}")

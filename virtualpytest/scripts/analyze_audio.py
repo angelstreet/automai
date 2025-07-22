@@ -25,7 +25,7 @@ def find_latest_segment(capture_dir):
         # Sort by modification time, get newest
         latest = max(segments, key=os.path.getmtime)
         
-        # Check if the latest segment is recent (within last 30 seconds)
+        # Check if the latest segment is recent (within last 5 minutes)
         import time
         from datetime import datetime, timedelta
         
@@ -33,8 +33,8 @@ def find_latest_segment(capture_dir):
         current_time = time.time()
         age_seconds = current_time - latest_mtime
         
-        # Only process segments that are less than 30 seconds old
-        max_age_seconds = 30
+        # Only process segments that are less than 5 minutes old
+        max_age_seconds = 300  # 5 minutes
         
         if age_seconds > max_age_seconds:
             segment_time = datetime.fromtimestamp(latest_mtime)

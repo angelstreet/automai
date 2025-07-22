@@ -183,6 +183,36 @@ const Heatmap: React.FC = () => {
     return heatmapData.images_by_timestamp[timestamp] || [];
   };
 
+  // Calculate dynamic font size based on number of devices
+  const calculateFontSize = (): number => {
+    const images = getCurrentImages();
+    const count = images.length || 1;
+
+    // Base size calculation - inversely proportional to square root of count
+    // This gives a more gradual decrease as count increases
+    const baseSize = Math.max(12, Math.min(24, 24 / Math.sqrt(count / 4)));
+
+    return baseSize;
+  };
+
+  // Calculate position for host name labels based on index
+  const calculateLabelPosition = (
+    index: number,
+    totalCount: number,
+  ): { top: string; left: string } => {
+    // This is a simplified approach - in reality, we'd need to know the actual grid layout
+    // For a simple grid layout, we can estimate positions
+    const imagesPerRow = Math.ceil(Math.sqrt(totalCount));
+    const row = Math.floor(index / imagesPerRow);
+    const col = index % imagesPerRow;
+
+    // Calculate percentage positions
+    const top = `${(row * 100) / Math.ceil(totalCount / imagesPerRow)}%`;
+    const left = `${(col * 100) / imagesPerRow}%`;
+
+    return { top, left };
+  };
+
   // Check if a specific frame/timestamp has any incidents
   const frameHasIncidents = (frameIndex: number): boolean => {
     if (!heatmapData || !heatmapData.timeline_timestamps) return false;
@@ -203,10 +233,16 @@ const Heatmap: React.FC = () => {
   const getTimelineTicks = () => {
     if (!heatmapData || !heatmapData.timeline_timestamps) return [];
 
-    return heatmapData.timeline_timestamps.map((_, index) => ({
-      value: index,
-      hasIncident: frameHasIncidents(index),
-    }));
+    // Create marks for each timestamp, with special highlighting for those with incidents
+    return heatmapData.timeline_timestamps.map((_, index) => {
+      const hasIncident = frameHasIncidents(index);
+      return {
+        value: index,
+        hasIncident,
+        // Only create visible marks for frames with incidents
+        visible: hasIncident,
+      };
+    });
   };
 
   const analyzeCurrentFrame = () => {
@@ -423,18 +459,19 @@ const Heatmap: React.FC = () => {
                 overflow: 'hidden',
               }}
             >
-              {/* Mosaic Image */}
-              <Box
-                sx={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: '50vh',
-                }}
-              >
-                {getCurrentMosaicUrl() ? (
+              {/* Mosaic Image with Host Name Overlay */}
+              {getCurrentMosaicUrl() ? (
+                <Box
+                  sx={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '50vh',
+                    position: 'relative',
+                  }}
+                >
                   <img
                     ref={mosaicImageRef}
                     src={getCurrentMosaicUrl()!}
@@ -447,91 +484,144 @@ const Heatmap: React.FC = () => {
                       objectFit: 'contain',
                     }}
                   />
-                ) : (
-                  <Typography color="white">No mosaic available</Typography>
-                )}
-              </Box>
 
-              {/* Timeline Controls (following VideoCapture.tsx) */}
-              {totalFrames > 0 && (
+                  {/* Host Name Overlay */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    {getCurrentImages().map((image, index, array) => {
+                      const position = calculateLabelPosition(index, array.length);
+                      const fontSize = calculateFontSize();
+
+                      return (
+                        <Typography
+                          key={`${image.host_name}-${image.device_id}-${index}`}
+                          sx={{
+                            position: 'absolute',
+                            top: position.top,
+                            left: position.left,
+                            transform: 'translate(10px, 10px)', // Offset from corner
+                            color: 'white',
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            fontWeight: 'bold',
+                            fontSize: `${fontSize}px`,
+                            textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
+                            zIndex: 10,
+                          }}
+                        >
+                          {image.host_name}-{image.device_id}
+                        </Typography>
+                      );
+                    })}
+                  </Box>
+                </Box>
+              ) : (
                 <Box
                   sx={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
-                    p: 1,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '50vh',
                   }}
                 >
-                  {/* Play/Pause button */}
-                  <Box sx={{ position: 'absolute', bottom: 8, left: 8 }}>
-                    <IconButton
-                      size="medium"
-                      onClick={handlePlayPause}
-                      sx={{
-                        color: '#ffffff',
-                        backgroundColor: 'rgba(255,255,255,0.1)',
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.2)' },
-                      }}
-                    >
-                      {isPlaying ? <Pause /> : <PlayArrow />}
-                    </IconButton>
-                  </Box>
-
-                  {/* Frame counter */}
-                  <Box sx={{ position: 'absolute', bottom: 16, right: 16 }}>
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: '#ffffff',
-                        fontSize: '0.8rem',
-                        textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                      }}
-                    >
-                      {currentFrame + 1} / {totalFrames}
-                    </Typography>
-                  </Box>
-
-                  {/* Timeline scrubber */}
-                  <Box sx={{ position: 'absolute', bottom: 12, left: '80px', right: '80px' }}>
-                    <Slider
-                      value={currentFrame}
-                      min={0}
-                      max={Math.max(0, totalFrames - 1)}
-                      onChange={handleSliderChange}
-                      sx={{
-                        color: frameHasIncidents(currentFrame) ? '#FF0000' : '#00FF00',
-                        '& .MuiSlider-thumb': {
-                          width: 16,
-                          height: 16,
-                          backgroundColor: frameHasIncidents(currentFrame) ? '#FF0000' : '#00FF00',
-                        },
-                        '& .MuiSlider-track': {
-                          backgroundColor: frameHasIncidents(currentFrame) ? '#FF0000' : '#00FF00',
-                        },
-                        '& .MuiSlider-rail': {
-                          backgroundColor: '#FF0000', // Red for inactive/future frames
-                        },
-                        // Add tick marks for each timestamp
-                        '& .MuiSlider-mark': {
-                          backgroundColor: 'currentColor',
-                          height: 8,
-                          width: 2,
-                        },
-                        '& .MuiSlider-markActive': {
-                          backgroundColor: 'currentColor',
-                        },
-                      }}
-                      marks={getTimelineTicks().map((tick) => ({
-                        value: tick.value,
-                        label: '', // No labels, just colored marks
-                      }))}
-                    />
-                  </Box>
+                  <Typography color="white">No mosaic available</Typography>
                 </Box>
               )}
             </Box>
+
+            {/* Timeline Controls - Moved outside the mosaic box */}
+            {totalFrames > 0 && (
+              <Box
+                sx={{
+                  mt: 2,
+                  px: 2,
+                  py: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  backgroundColor: 'rgba(0,0,0,0.05)',
+                  borderRadius: 1,
+                }}
+              >
+                {/* Play/Pause button */}
+                <IconButton
+                  size="small"
+                  onClick={handlePlayPause}
+                  sx={{
+                    mr: 2,
+                    color: '#000000',
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.4)' },
+                  }}
+                >
+                  {isPlaying ? <Pause /> : <PlayArrow />}
+                </IconButton>
+
+                {/* Timeline scrubber */}
+                <Box sx={{ flexGrow: 1, mx: 2 }}>
+                  <Slider
+                    value={currentFrame}
+                    min={0}
+                    max={Math.max(0, totalFrames - 1)}
+                    onChange={handleSliderChange}
+                    sx={{
+                      color: '#00AA00', // Default green color
+                      '& .MuiSlider-thumb': {
+                        width: 16,
+                        height: 16,
+                        backgroundColor: frameHasIncidents(currentFrame) ? '#FF0000' : '#00AA00',
+                      },
+                      '& .MuiSlider-track': {
+                        backgroundColor: '#00AA00', // Always green for the track
+                      },
+                      '& .MuiSlider-rail': {
+                        backgroundColor: '#CCCCCC', // Light gray for the rail
+                      },
+                      // Add tick marks for each timestamp with incidents
+                      '& .MuiSlider-mark': {
+                        backgroundColor: '#FF0000', // Red for incidents
+                        height: 8,
+                        width: 2,
+                        marginTop: -3,
+                      },
+                      '& .MuiSlider-markActive': {
+                        backgroundColor: '#FF0000', // Red for active incidents
+                      },
+                    }}
+                    marks={getTimelineTicks()
+                      .filter((tick) => tick.visible)
+                      .map((tick) => ({
+                        value: tick.value,
+                        label: '',
+                      }))}
+                  />
+                </Box>
+
+                {/* Frame counter */}
+                <Typography
+                  variant="caption"
+                  sx={{
+                    ml: 2,
+                    minWidth: '60px',
+                    textAlign: 'right',
+                    color: frameHasIncidents(currentFrame) ? '#FF0000' : 'inherit',
+                    fontWeight: frameHasIncidents(currentFrame) ? 'bold' : 'normal',
+                  }}
+                >
+                  {currentFrame + 1} / {totalFrames}
+                </Typography>
+              </Box>
+            )}
           </CardContent>
         </Card>
       )}
