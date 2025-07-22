@@ -274,10 +274,18 @@ const Heatmap: React.FC = () => {
       // Safely access analysis_json with fallback to empty object
       const analysisJson = image.analysis_json || {};
 
+      // Fix logical inconsistencies in the data
+      // If there's no video, then it should be considered a blackscreen
+      const hasVideo = analysisJson.has_video || false;
+      const hasAudio = analysisJson.has_audio || false;
+      const blackscreen = !hasVideo || analysisJson.blackscreen || false;
+      const freeze = hasVideo && (analysisJson.freeze || false);
+      const audioLoss = !hasAudio || analysisJson.audio_loss || false;
+
       const analysisIncidents = [
-        analysisJson.blackscreen ? 'blackscreen' : null,
-        analysisJson.freeze ? 'freeze' : null,
-        analysisJson.audio_loss ? 'audio_loss' : null,
+        blackscreen ? 'blackscreen' : null,
+        freeze ? 'freeze' : null,
+        audioLoss ? 'audio_loss' : null,
       ].filter((incident): incident is string => incident !== null);
 
       const dbIncidents = currentIncidents
@@ -328,11 +336,11 @@ const Heatmap: React.FC = () => {
         dbIncidents,
         incidentDuration,
         mismatch,
-        audio: analysisJson.has_audio,
-        video: analysisJson.has_video,
-        blackscreen: analysisJson.blackscreen,
-        freeze: analysisJson.freeze,
-        audioLoss: analysisJson.audio_loss,
+        audio: hasAudio,
+        video: hasVideo,
+        blackscreen,
+        freeze,
+        audioLoss,
       };
     });
 

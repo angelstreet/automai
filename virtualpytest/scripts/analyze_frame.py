@@ -459,14 +459,11 @@ def main():
         
         # OPTIMIZED ANALYSIS - Thumbnail only
         print("=== THUMBNAIL-ONLY ANALYSIS ===")
-        print("Running: blackscreen, freeze, errors (on thumbnail)")
+        print("Running: blackscreen, freeze (on thumbnail)")
         
         # Run core analysis on thumbnail
         blackscreen = analyze_blackscreen(analysis_image)
         frozen = analyze_freeze(analysis_image)
-        # Disable error detection completely
-        # potential_errors = analyze_errors_only(analysis_image)
-        # errors = potential_errors and frozen
         
         # Create analysis result - thumbnail-based processing
         analysis_result = {
@@ -476,8 +473,6 @@ def main():
             'analysis': {
                 'blackscreen': bool(blackscreen),
                 'freeze': bool(frozen)
-                # Removed errors field
-                # 'errors': bool(errors)
             },
             'processing_info': {
                 'analyzed_at': datetime.now().isoformat(),
