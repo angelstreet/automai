@@ -253,6 +253,85 @@ def extract_device_id_from_path(analysis_path: str) -> str:
         print(f"[@alert_manager:extract_device_id] Error extracting device ID: {e}")
         return "device-unknown"
 
+def validate_device_monitoring_capability(device_id: str, incident_type: str, analysis_path: str) -> bool:
+    """Validate that we can actually monitor this device for the given incident type."""
+    try:
+        print(f"[@alert_manager:validate_device_monitoring_capability] Validating {device_id} for {incident_type}")
+        
+        if incident_type == 'audio_loss':
+            # For audio incidents, check if we have recent HLS segments
+            # Extract capture directory from analysis_path
+            if os.path.isfile(analysis_path):
+                capture_dir = os.path.dirname(analysis_path)
+            else:
+                capture_dir = analysis_path
+            
+            # Check for recent HLS segments (within 30 seconds)
+            import glob
+            import time
+            
+            segment_pattern = os.path.join(capture_dir, "segment_*.ts")
+            segments = glob.glob(segment_pattern)
+            
+            if not segments:
+                print(f"[@alert_manager:validate_device_monitoring_capability] No HLS segments found for {device_id}")
+                return False
+            
+            # Get newest segment and check age
+            latest = max(segments, key=os.path.getmtime)
+            latest_mtime = os.path.getmtime(latest)
+            current_time = time.time()
+            age_seconds = current_time - latest_mtime
+            
+            if age_seconds > 30:  # Same threshold as analyze_audio.py
+                print(f"[@alert_manager:validate_device_monitoring_capability] Latest segment too old for {device_id} (age: {age_seconds:.1f}s)")
+                return False
+            
+            print(f"[@alert_manager:validate_device_monitoring_capability] Recent audio activity found for {device_id} (age: {age_seconds:.1f}s)")
+            return True
+            
+        else:
+            # For visual incidents (blackscreen, freeze, errors), check for recent images
+            if os.path.isfile(analysis_path):
+                captures_dir = os.path.dirname(analysis_path)
+            else:
+                captures_dir = os.path.join(analysis_path, 'captures')
+            
+            if not os.path.exists(captures_dir):
+                print(f"[@alert_manager:validate_device_monitoring_capability] Captures directory not found for {device_id}: {captures_dir}")
+                return False
+            
+            # Check for recent capture images (within 10 seconds)
+            import glob
+            import time
+            
+            image_pattern = os.path.join(captures_dir, "capture_*.jpg")
+            images = glob.glob(image_pattern)
+            
+            # Filter out thumbnails
+            original_images = [img for img in images if '_thumbnail' not in img]
+            
+            if not original_images:
+                print(f"[@alert_manager:validate_device_monitoring_capability] No capture images found for {device_id}")
+                return False
+            
+            # Check if any image is recent
+            latest = max(original_images, key=os.path.getmtime)
+            latest_mtime = os.path.getmtime(latest)
+            current_time = time.time()
+            age_seconds = current_time - latest_mtime
+            
+            if age_seconds > 10:  # Images should be created every second
+                print(f"[@alert_manager:validate_device_monitoring_capability] Latest capture too old for {device_id} (age: {age_seconds:.1f}s)")
+                return False
+            
+            print(f"[@alert_manager:validate_device_monitoring_capability] Recent capture activity found for {device_id} (age: {age_seconds:.1f}s)")
+            return True
+            
+    except Exception as e:
+        print(f"[@alert_manager:validate_device_monitoring_capability] Error validating {device_id}: {e}")
+        return False
+
 def trigger_alert(
     incident_type: str,
     host_name: str,
@@ -268,6 +347,11 @@ def trigger_alert(
     
     # Extract device ID from path
     device_id = extract_device_id_from_path(analysis_path)
+    
+    # Validate that we can actually monitor this device before creating alert
+    if not validate_device_monitoring_capability(device_id, incident_type, analysis_path):
+        print(f"[@alert_manager:trigger_alert] Cannot monitor {device_id} for {incident_type} - skipping alert creation")
+        return None
     
     print(f"[@alert_manager:trigger_alert] Triggering {incident_type} alert after {consecutive_count} consecutive detections")
     print(f"  - Extracted device_id: {device_id}")

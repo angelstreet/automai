@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 
 import { useUserSession } from '../hooks/useUserSession';
 import { Host, Device } from '../types/common/Host_Types';
@@ -48,6 +49,10 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
 
   // Use shared user session for consistent identification
   const { userId, sessionId: browserSessionId, isOurLock } = useUserSession();
+
+  // Get current location to determine if we should skip device locking
+  const location = useLocation();
+  const isHeatmapPage = location.pathname.includes('/monitoring/heatmap');
 
   // Memoize userInterface to prevent unnecessary re-renders
   const stableUserInterface = useMemo(() => userInterface, [userInterface]);
@@ -537,13 +542,13 @@ export const HostManagerProvider: React.FC<HostManagerProviderProps> = ({
   // EFFECTS
   // ========================================
 
-  // Initialize lock reclaim on mount
+  // Initialize lock reclaim on mount (skip for Heatmap page)
   useEffect(() => {
-    if (!initializedRef.current) {
+    if (!initializedRef.current && !isHeatmapPage) {
       initializedRef.current = true;
       reclaimUserLocks();
     }
-  }, [reclaimUserLocks]);
+  }, [reclaimUserLocks, isHeatmapPage]);
 
   // Clean up locks on unmount
   useEffect(() => {

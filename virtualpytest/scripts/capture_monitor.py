@@ -144,6 +144,31 @@ class CaptureMonitor:
         except Exception as e:
             print(f"[@capture_monitor] Frame analysis error: {e}")
 
+    def has_recent_audio_activity(self, main_capture_dir):
+        """Check if capture directory has recent HLS segments (within 30 seconds)"""
+        try:
+            import glob
+            import time
+            
+            pattern = os.path.join(main_capture_dir, "segment_*.ts")
+            segments = glob.glob(pattern)
+            
+            if not segments:
+                return False
+                
+            # Get the newest segment
+            latest = max(segments, key=os.path.getmtime)
+            latest_mtime = os.path.getmtime(latest)
+            current_time = time.time()
+            age_seconds = current_time - latest_mtime
+            
+            # Consider active if newest segment is less than 30 seconds old
+            return age_seconds <= 30
+            
+        except Exception as e:
+            print(f"[@capture_monitor] Error checking audio activity for {main_capture_dir}: {e}")
+            return False
+
     def process_audio(self, capture_dir):
         """Process audio for a capture directory"""
         try:
@@ -151,6 +176,20 @@ class CaptureMonitor:
             main_capture_dir = os.path.dirname(capture_dir)
             
             if not os.path.exists(main_capture_dir):
+                return
+            
+            # Skip if no recent audio activity (prevents phantom alerts from stale segments)
+            if not self.has_recent_audio_activity(main_capture_dir):
+                # Only log occasionally to avoid spam
+                device_name = os.path.basename(main_capture_dir)
+                if hasattr(self, '_last_audio_skip_log'):
+                    if time.time() - self._last_audio_skip_log.get(device_name, 0) < 60:  # Log once per minute
+                        return
+                else:
+                    self._last_audio_skip_log = {}
+                
+                self._last_audio_skip_log[device_name] = time.time()
+                print(f"[@capture_monitor] Skipping audio analysis for {device_name} - no recent segments")
                 return
                 
             print(f"[@capture_monitor] Processing audio: {main_capture_dir}")
@@ -171,7 +210,9 @@ class CaptureMonitor:
             if result.returncode == 0:
                 print(f"[@capture_monitor] Audio analysis completed: {os.path.basename(main_capture_dir)}")
             else:
-                print(f"[@capture_monitor] Audio analysis failed: {result.stderr}")
+                # Don't log stderr if it's just about stale segments (expected behavior now)
+                if "too old" not in result.stderr and "no recent segments" not in result.stderr:
+                    print(f"[@capture_monitor] Audio analysis failed: {result.stderr}")
                 
         except subprocess.TimeoutExpired:
             print(f"[@capture_monitor] Audio analysis timeout: {capture_dir}")
