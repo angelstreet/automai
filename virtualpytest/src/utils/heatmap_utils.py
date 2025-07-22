@@ -226,10 +226,18 @@ def calculate_grid_layout(num_devices: int) -> Tuple[int, int]:
     """Calculate optimal grid layout for mosaic"""
     if num_devices <= 1:
         return (1, 1)
-    elif num_devices <= 4:
-        return (2, 2)
+    elif num_devices == 2:
+        return (2, 1)  # 2 devices side by side, no wasted vertical space
+    elif num_devices == 3:
+        return (2, 2)  # 3 devices in 2x2 grid (one cell empty, but better aspect ratio)
+    elif num_devices == 4:
+        return (2, 2)  # Perfect 2x2 grid
+    elif num_devices <= 6:
+        return (3, 2)  # 3x2 grid for 5-6 devices
     elif num_devices <= 9:
         return (3, 3)
+    elif num_devices <= 12:
+        return (4, 3)  # 4x3 grid for 10-12 devices
     elif num_devices <= 16:
         return (4, 4)
     elif num_devices <= 25:
@@ -256,13 +264,19 @@ def create_mosaic_image(images_data: List[Dict], target_size: Tuple[int, int] = 
     # Calculate cell size - no space reserved for labels (they'll be overlays)
     cell_width = target_size[0] // cols
     cell_height = target_size[1] // rows
+    
+    # Calculate actual mosaic size based on grid (eliminate unused space)
+    actual_width = cell_width * cols
+    actual_height = cell_height * rows
+    
     border_width = 4  # Thinner border for more image space
     
     print(f"[@heatmap_utils:create_mosaic_image] Creating {cols}x{rows} grid for {num_devices} images")
-    print(f"[@heatmap_utils:create_mosaic_image] Cell size: {cell_width}x{cell_height} (border-to-border)")
+    print(f"[@heatmap_utils:create_mosaic_image] Cell size: {cell_width}x{cell_height}")
+    print(f"[@heatmap_utils:create_mosaic_image] Actual mosaic size: {actual_width}x{actual_height} (no wasted space)")
     
-    # Create mosaic canvas
-    mosaic = Image.new('RGB', target_size, (0, 0, 0))
+    # Create mosaic canvas with actual needed size
+    mosaic = Image.new('RGB', (actual_width, actual_height), (0, 0, 0))
     
     for i, image_data in enumerate(images_data):
         if i >= cols * rows:

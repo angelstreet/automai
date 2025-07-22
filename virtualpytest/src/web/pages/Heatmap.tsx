@@ -67,6 +67,8 @@ const Heatmap: React.FC = () => {
 
   // Tooltip handlers
   const handleMouseEnter = (event: React.MouseEvent<HTMLElement>, image: HeatmapImage) => {
+    console.log('[@Heatmap] Mouse enter triggered for:', image.host_name);
+
     // Clear any existing delay
     if (tooltipDelay) {
       clearTimeout(tooltipDelay);
@@ -75,11 +77,13 @@ const Heatmap: React.FC = () => {
     // Set a delay before showing tooltip
     const delay = setTimeout(() => {
       const target = event.currentTarget;
-      if (target && target instanceof HTMLElement) {
-        setTooltipAnchor(target);
-        setTooltipImage(image);
-        setTooltipOpen(true);
-      }
+      console.log('[@Heatmap] Setting tooltip anchor:', target);
+
+      setTooltipAnchor(target);
+      setTooltipImage(image);
+      setTooltipOpen(true);
+
+      console.log('[@Heatmap] Tooltip should now be open');
     }, 300); // 300ms delay (under 1s as requested)
 
     setTooltipDelay(delay);
@@ -243,15 +247,38 @@ const Heatmap: React.FC = () => {
     index: number,
     totalCount: number,
   ): { top: string; left: string } => {
-    // This is a simplified approach - in reality, we'd need to know the actual grid layout
-    // For a simple grid layout, we can estimate positions
-    const imagesPerRow = Math.ceil(Math.sqrt(totalCount));
-    const row = Math.floor(index / imagesPerRow);
-    const col = index % imagesPerRow;
+    // Use same grid calculation logic as backend
+    let cols, rows;
+
+    if (totalCount <= 1) {
+      cols = 1;
+      rows = 1;
+    } else if (totalCount === 2) {
+      cols = 2;
+      rows = 1; // 2 devices side by side
+    } else if (totalCount === 3) {
+      cols = 2;
+      rows = 2; // 3 devices in 2x2 grid
+    } else if (totalCount === 4) {
+      cols = 2;
+      rows = 2; // Perfect 2x2 grid
+    } else if (totalCount <= 6) {
+      cols = 3;
+      rows = 2; // 3x2 grid
+    } else if (totalCount <= 9) {
+      cols = 3;
+      rows = 3;
+    } else {
+      cols = Math.ceil(Math.sqrt(totalCount));
+      rows = Math.ceil(totalCount / cols);
+    }
+
+    const row = Math.floor(index / cols);
+    const col = index % cols;
 
     // Calculate percentage positions
-    const top = `${(row * 100) / Math.ceil(totalCount / imagesPerRow)}%`;
-    const left = `${(col * 100) / imagesPerRow}%`;
+    const top = `${(row * 100) / rows}%`;
+    const left = `${(col * 100) / cols}%`;
 
     return { top, left };
   };
@@ -415,7 +442,14 @@ const Heatmap: React.FC = () => {
 
   // Tooltip component
   const renderTooltip = () => {
-    if (!tooltipOpen || !tooltipImage || !tooltipAnchor) return null;
+    if (!tooltipOpen || !tooltipImage) return null;
+
+    console.log(
+      '[@Heatmap] Rendering tooltip for:',
+      tooltipImage.host_name,
+      'anchor:',
+      tooltipAnchor,
+    );
 
     // Get the corrected analysis values
     const analysisJson = tooltipImage.analysis_json || {};
@@ -646,10 +680,36 @@ const Heatmap: React.FC = () => {
                       const position = calculateLabelPosition(index, array.length);
                       const fontSize = calculateFontSize();
 
-                      // Calculate cell dimensions
-                      const cellWidth = 100 / Math.ceil(Math.sqrt(array.length));
-                      const cellHeight =
-                        100 / Math.ceil(array.length / Math.ceil(Math.sqrt(array.length)));
+                      // Calculate cell dimensions using same logic as backend
+                      const numDevices = array.length;
+                      let cols, rows;
+
+                      // Match the backend grid calculation logic
+                      if (numDevices <= 1) {
+                        cols = 1;
+                        rows = 1;
+                      } else if (numDevices === 2) {
+                        cols = 2;
+                        rows = 1; // 2 devices side by side
+                      } else if (numDevices === 3) {
+                        cols = 2;
+                        rows = 2; // 3 devices in 2x2 grid
+                      } else if (numDevices === 4) {
+                        cols = 2;
+                        rows = 2; // Perfect 2x2 grid
+                      } else if (numDevices <= 6) {
+                        cols = 3;
+                        rows = 2; // 3x2 grid
+                      } else if (numDevices <= 9) {
+                        cols = 3;
+                        rows = 3;
+                      } else {
+                        cols = Math.ceil(Math.sqrt(numDevices));
+                        rows = Math.ceil(numDevices / cols);
+                      }
+
+                      const cellWidth = 100 / cols;
+                      const cellHeight = 100 / rows;
 
                       return (
                         <React.Fragment key={`${image.host_name}-${image.device_id}-${index}`}>

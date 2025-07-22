@@ -408,7 +408,6 @@ def _get_device_capture_path(host_info: dict, device_id: str) -> str:
                 if not url_path.endswith('/captures'):
                     url_path = f'{url_path}/captures'
                 
-                print(f"[@build_url_utils:_get_device_capture_path] Using VNC device {device_id} capture path: {url_path}")
                 return url_path
             else:
                 # Regular devices derive capture path from video_stream_path
@@ -420,7 +419,6 @@ def _get_device_capture_path(host_info: dict, device_id: str) -> str:
                 clean_path = stream_path.replace('/host', '').lstrip('/')
                 url_path = f'/{clean_path}/captures'
                 
-                print(f"[@build_url_utils:_get_device_capture_path] Using device {device_id} capture path: {url_path}")
                 return url_path
     
     raise ValueError(f"Device {device_id} not found in host configuration. Available devices: {[d.get('device_id') for d in devices]}")
