@@ -16,6 +16,58 @@ def get_supabase():
     """Get the Supabase client instance."""
     return get_supabase_client()
 
+def get_all_alerts(
+    host_name: Optional[str] = None,
+    device_id: Optional[str] = None,
+    incident_type: Optional[str] = None,
+    limit: int = 200
+) -> Dict:
+    """Get all alerts (both active and resolved) with optional filtering."""
+    try:
+        print(f"[@db:alerts:get_all_alerts] Getting all alerts:")
+        print(f"  - host_name: {host_name}")
+        print(f"  - device_id: {device_id}")
+        print(f"  - incident_type: {incident_type}")
+        print(f"  - limit: {limit}")
+        
+        supabase = get_supabase()
+        query = supabase.table('alerts').select('*')
+        
+        # Only add filters if they are provided
+        if host_name:
+            query = query.eq('host_name', host_name)
+            print(f"  - Applied host_name filter: {host_name}")
+        if device_id:
+            query = query.eq('device_id', device_id)
+            print(f"  - Applied device_id filter: {device_id}")
+        if incident_type:
+            query = query.eq('incident_type', incident_type)
+            print(f"  - Applied incident_type filter: {incident_type}")
+        
+        # Execute query with ordering and limit
+        # Order by start_time desc to get most recent first
+        result = query.order('start_time', desc=True).limit(limit).execute()
+        
+        if host_name or device_id or incident_type:
+            print(f"[@db:alerts:get_all_alerts] Found {len(result.data)} filtered alerts")
+        else:
+            print(f"[@db:alerts:get_all_alerts] Found {len(result.data)} total alerts (no filters)")
+            
+        return {
+            'success': True,
+            'alerts': result.data,
+            'count': len(result.data)
+        }
+        
+    except Exception as e:
+        print(f"[@db:alerts:get_all_alerts] Error: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e),
+            'alerts': [],
+            'count': 0
+        }
+
 def get_active_alerts(
     host_name: Optional[str] = None,
     device_id: Optional[str] = None,

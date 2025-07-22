@@ -40,7 +40,11 @@ def get_heatmap_data(
                 for device in devices:
                     # Check if device has 'av' capability (capabilities is a dict, not list)
                     capabilities = device.get('capabilities', {})
-                    if isinstance(capabilities, dict) and 'av' in capabilities and capabilities['av']:
+                    av_capability = capabilities.get('av')
+                    
+                    # Exclude host devices (VNC-based) - only include physical devices
+                    if (isinstance(capabilities, dict) and 'av' in capabilities and av_capability and 
+                        av_capability != 'vnc_stream'):
                         hosts_devices.append({
                             'host_name': host_name,
                             'device_id': device.get('device_id', 'device1'),
@@ -49,7 +53,11 @@ def get_heatmap_data(
             else:
                 # Fallback for hosts without device config - check if host has av capability
                 host_capabilities = host_data.get('capabilities', {})
-                if isinstance(host_capabilities, dict) and 'av' in host_capabilities and host_capabilities['av']:
+                av_capability = host_capabilities.get('av')
+                
+                # Exclude host devices (VNC-based) - only include physical devices  
+                if (isinstance(host_capabilities, dict) and 'av' in host_capabilities and av_capability and
+                    av_capability != 'vnc_stream'):
                     hosts_devices.append({
                         'host_name': host_name,
                         'device_id': 'device1',

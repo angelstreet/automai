@@ -25,24 +25,32 @@ import React, { useState, useEffect } from 'react';
 import { useAlerts, Alert } from '../hooks/pages/useAlerts';
 
 const MonitoringIncidents: React.FC = () => {
-  const { getActiveAlerts, getClosedAlerts } = useAlerts();
+  const { getAllAlerts } = useAlerts();
   const [activeAlerts, setActiveAlerts] = useState<Alert[]>([]);
   const [closedAlerts, setClosedAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load alerts data on component mount
+  // Load alerts data on component mount - optimized single query
   useEffect(() => {
     const loadAlerts = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Load both active and closed alerts in parallel
-        const [activeData, closedData] = await Promise.all([getActiveAlerts(), getClosedAlerts()]);
+        // Single API call to get all alerts
+        const allAlerts = await getAllAlerts();
 
-        setActiveAlerts(activeData);
-        setClosedAlerts(closedData);
+        // Client-side filtering
+        const active = allAlerts.filter((alert) => alert.status === 'active');
+        const closed = allAlerts.filter((alert) => alert.status === 'resolved');
+
+        setActiveAlerts(active);
+        setClosedAlerts(closed);
+
+        console.log(
+          `[@component:MonitoringIncidents] Loaded ${allAlerts.length} total alerts: ${active.length} active, ${closed.length} closed`,
+        );
       } catch (err) {
         console.error('[@component:MonitoringIncidents] Error loading alerts:', err);
         setError(err instanceof Error ? err.message : 'Failed to load alerts');
@@ -52,7 +60,7 @@ const MonitoringIncidents: React.FC = () => {
     };
 
     loadAlerts();
-  }, [getActiveAlerts, getClosedAlerts]);
+  }, [getAllAlerts]);
 
   // Calculate stats
   const totalActiveAlerts = activeAlerts.length;
