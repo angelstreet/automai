@@ -464,7 +464,13 @@ const MonitoringIncidents: React.FC = () => {
                             </TableCell>
                           </TableRow>
                           {expandedRows.has(alert.id) && (
-                            <TableRow>
+                            <TableRow
+                              sx={{
+                                '&:hover': {
+                                  backgroundColor: 'transparent !important',
+                                },
+                              }}
+                            >
                               <TableCell colSpan={6} sx={{ p: 0, borderBottom: 0 }}>
                                 <Collapse
                                   in={expandedRows.has(alert.id)}
@@ -578,7 +584,13 @@ const MonitoringIncidents: React.FC = () => {
                             </TableCell>
                           </TableRow>
                           {expandedRows.has(alert.id) && (
-                            <TableRow>
+                            <TableRow
+                              sx={{
+                                '&:hover': {
+                                  backgroundColor: 'transparent !important',
+                                },
+                              }}
+                            >
                               <TableCell colSpan={7} sx={{ p: 0, borderBottom: 0 }}>
                                 <Collapse
                                   in={expandedRows.has(alert.id)}

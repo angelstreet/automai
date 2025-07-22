@@ -613,6 +613,8 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
             job = active_jobs[job_id]
             job.status = 'completed'
             job.progress = 100
+            # Set mosaic_urls for frontend consumption
+            job.mosaic_urls = [img['mosaic_url'] for img in generated_images]
             job.result = {
                 'generated_images': generated_images,
                 'total_timestamps': total_timestamps,
