@@ -15,22 +15,25 @@ from pathlib import Path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 # Lazy import to reduce startup time
+create_alert_safe = None
 create_alert = None
 resolve_alert = None
 get_active_alerts = None
 
 def _lazy_import_db():
     """Lazy import database functions only when needed."""
-    global create_alert, resolve_alert, get_active_alerts
-    if create_alert is None:
+    global create_alert_safe, create_alert, resolve_alert, get_active_alerts
+    if create_alert_safe is None:
         try:
-            from src.lib.supabase.alerts_db import create_alert as _create_alert, resolve_alert as _resolve_alert, get_active_alerts as _get_active_alerts
+            from src.lib.supabase.alerts_db import create_alert_safe as _create_alert_safe, create_alert as _create_alert, resolve_alert as _resolve_alert, get_active_alerts as _get_active_alerts
+            create_alert_safe = _create_alert_safe
             create_alert = _create_alert
             resolve_alert = _resolve_alert
             get_active_alerts = _get_active_alerts
         except ImportError:
             print("Warning: Could not import alerts_db module. Database operations will be skipped.")
-            create_alert = False  # Mark as attempted
+            create_alert_safe = False  # Mark as attempted
+            create_alert = False
             resolve_alert = False
             get_active_alerts = False
 
@@ -99,9 +102,9 @@ def trigger_alert(
     consecutive_count: int,
     metadata: Optional[Dict] = None
 ) -> Optional[str]:
-    """Trigger a new alert in the database."""
+    """Trigger a new alert in the database using safe creation."""
     _lazy_import_db()
-    if not create_alert or create_alert is False:
+    if not create_alert_safe or create_alert_safe is False:
         print(f"[@alert_manager:trigger_alert] Database module not available, skipping alert creation")
         return None
     
@@ -111,7 +114,7 @@ def trigger_alert(
     print(f"[@alert_manager:trigger_alert] Triggering {incident_type} alert after {consecutive_count} consecutive detections")
     print(f"  - Extracted device_id: {device_id}")
     
-    alert_id = create_alert(
+    result = create_alert_safe(
         host_name=host_name,
         device_id=device_id,
         incident_type=incident_type,
@@ -119,7 +122,13 @@ def trigger_alert(
         metadata=metadata
     )
     
-    return alert_id
+    if result['success']:
+        alert_id = result.get('alert_id')
+        print(f"[@alert_manager:trigger_alert] Successfully created alert: {alert_id}")
+        return alert_id
+    else:
+        print(f"[@alert_manager:trigger_alert] Failed to create alert: {result.get('error')}")
+        return None
 
 def resolve_alert_by_id(alert_id: str) -> bool:
     """Resolve an alert by ID."""
@@ -129,7 +138,59 @@ def resolve_alert_by_id(alert_id: str) -> bool:
         return False
     
     print(f"[@alert_manager:resolve_alert_by_id] Resolving alert: {alert_id}")
-    return resolve_alert(alert_id)
+    result = resolve_alert(alert_id)
+    
+    if result['success']:
+        print(f"[@alert_manager:resolve_alert_by_id] Successfully resolved alert: {alert_id}")
+        return True
+    else:
+        print(f"[@alert_manager:resolve_alert_by_id] Failed to resolve alert: {result.get('error')}")
+        return False
+
+def validate_and_cleanup_state(state: Dict, host_name: str, analysis_path: str) -> Dict:
+    """Validate alert state and cleanup any inconsistencies with database."""
+    try:
+        device_id = extract_device_id_from_path(analysis_path)
+        active_incidents = state.get("active_incidents", {})
+        
+        # Check each active incident against database
+        incidents_to_remove = []
+        
+        for incident_type, incident_data in active_incidents.items():
+            alert_id = incident_data.get('alert_id')
+            
+            if alert_id:
+                # Verify this alert still exists and is active in database
+                _lazy_import_db()
+                if get_active_alerts and get_active_alerts is not False:
+                    try:
+                        from src.lib.supabase.alerts_db import get_active_alert_for_incident
+                        db_result = get_active_alert_for_incident(host_name, device_id, incident_type)
+                        
+                        if db_result['success'] and not db_result['alert']:
+                            # Alert doesn't exist in DB anymore, remove from state
+                            print(f"[@alert_manager:validate_state] Removing stale incident {incident_type} (alert {alert_id} not found in DB)")
+                            incidents_to_remove.append(incident_type)
+                        elif db_result['success'] and db_result['alert']:
+                            db_alert = db_result['alert']
+                            if db_alert['id'] != alert_id:
+                                # Different alert ID in DB, update our state
+                                print(f"[@alert_manager:validate_state] Updating incident {incident_type} alert ID from {alert_id} to {db_alert['id']}")
+                                incident_data['alert_id'] = db_alert['id']
+                                
+                    except ImportError:
+                        pass  # Skip validation if DB functions not available
+        
+        # Remove stale incidents
+        for incident_type in incidents_to_remove:
+            del active_incidents[incident_type]
+        
+        state['active_incidents'] = active_incidents
+        return state
+        
+    except Exception as e:
+        print(f"[@alert_manager:validate_state] Error validating state: {e}")
+        return state
 
 def check_and_update_alerts(
     analysis_result: Dict,
@@ -152,6 +213,10 @@ def check_and_update_alerts(
         
         # Load current state
         state = load_alert_state(state_file_path)
+        
+        # Validate and cleanup state against database
+        state = validate_and_cleanup_state(state, host_name, analysis_path)
+        
         active_incidents = state.get("active_incidents", {})
         
         # Quick check: if no active incidents and no current issues, skip processing
