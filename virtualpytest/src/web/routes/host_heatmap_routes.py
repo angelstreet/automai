@@ -163,9 +163,7 @@ def list_recent_analysis():
                 print(f"[@route:host_heatmap:list_recent_analysis] Failed to build URL for {item['filename']}: {url_error}")
                 # Skip items that can't have URLs built
                 continue
-        
-        print(f"[@route:host_heatmap:list_recent_analysis] Found {len(response_data)} images with URLs")
-        
+         
         return jsonify({
             'success': True,
             'analysis_data': response_data,

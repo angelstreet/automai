@@ -411,6 +411,7 @@ def upload_to_r2(image: Image.Image, filename: str) -> Optional[str]:
 
 def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[Dict]], incidents: List[Dict]):
     """Process heatmap generation with image downloading and JSON analysis"""
+    import os
     set_low_priority()
     
     with job_lock:
