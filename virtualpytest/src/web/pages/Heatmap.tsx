@@ -441,9 +441,24 @@ const Heatmap: React.FC = () => {
       <Popper
         open={tooltipOpen}
         anchorEl={tooltipAnchor}
-        placement="top-end"
+        placement="top-start"
         transition
         style={{ zIndex: 1500 }}
+        modifiers={[
+          {
+            name: 'offset',
+            options: {
+              offset: [0, 8], // 8px offset from the cell
+            },
+          },
+          {
+            name: 'preventOverflow',
+            options: {
+              boundary: 'viewport',
+              padding: 8,
+            },
+          },
+        ]}
       >
         {({ TransitionProps }) => (
           <Fade {...TransitionProps} timeout={300}>
@@ -598,12 +613,19 @@ const Heatmap: React.FC = () => {
                     ref={mosaicImageRef}
                     src={getCurrentMosaicUrl()!}
                     alt={`Heatmap Mosaic ${currentFrame + 1}`}
+                    crossOrigin="anonymous"
                     style={{
                       maxWidth: '100%',
                       maxHeight: '100%',
                       width: 'auto',
                       height: 'auto',
                       objectFit: 'contain',
+                    }}
+                    onLoad={() => {
+                      // Ensure browser caches the image by setting cache headers via JavaScript
+                      if (mosaicImageRef.current) {
+                        mosaicImageRef.current.style.imageRendering = 'auto';
+                      }
                     }}
                   />
 
