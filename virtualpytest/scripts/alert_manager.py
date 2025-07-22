@@ -37,10 +37,89 @@ def _lazy_import_db():
             resolve_alert = False
             get_active_alerts = False
 
+def find_closest_image_for_audio(audio_analysis_path: str) -> Optional[str]:
+    """Find the closest available image for an audio incident within a 10-second window."""
+    try:
+        import glob
+        import re
+        from datetime import datetime, timedelta
+        
+        # Audio analysis path is a directory like: /var/www/html/stream/capture2
+        # Images are in: /var/www/html/stream/capture2/captures/
+        captures_dir = os.path.join(audio_analysis_path, 'captures')
+        
+        if not os.path.exists(captures_dir):
+            print(f"[@alert_manager:find_closest_image_for_audio] Captures directory not found: {captures_dir}")
+            return None
+        
+        # Get current time for the search window (within last 10 seconds)
+        current_time = datetime.now()
+        search_window = timedelta(seconds=10)
+        
+        # Find all capture images
+        image_pattern = os.path.join(captures_dir, 'capture_*.jpg')
+        image_files = glob.glob(image_pattern)
+        
+        # Filter out thumbnails - only look at original images
+        original_images = [f for f in image_files if '_thumbnail' not in f]
+        
+        if not original_images:
+            print(f"[@alert_manager:find_closest_image_for_audio] No original images found in {captures_dir}")
+            return None
+        
+        # Find the most recent image within the time window
+        valid_images = []
+        for image_path in original_images:
+            # Extract timestamp from filename (e.g., capture_20250722105341.jpg)
+            filename = os.path.basename(image_path)
+            timestamp_match = re.search(r'capture_(\d{14})\.jpg', filename)
+            
+            if timestamp_match:
+                timestamp_str = timestamp_match.group(1)
+                try:
+                    # Parse timestamp: YYYYMMDDHHMMSS
+                    image_time = datetime.strptime(timestamp_str, '%Y%m%d%H%M%S')
+                    
+                    # Check if image is within the search window
+                    time_diff = current_time - image_time
+                    if time_diff <= search_window and time_diff >= timedelta(0):
+                        valid_images.append((image_path, image_time))
+                        
+                except ValueError:
+                    continue
+        
+        if not valid_images:
+            # If no images within 10 seconds, get the most recent available image
+            print(f"[@alert_manager:find_closest_image_for_audio] No images within 10s window, using most recent")
+            most_recent = max(original_images, key=os.path.getmtime)
+            return most_recent
+        
+        # Sort by time and get the most recent within the window
+        valid_images.sort(key=lambda x: x[1], reverse=True)
+        closest_image_path = valid_images[0][0]
+        
+        print(f"[@alert_manager:find_closest_image_for_audio] Found {len(valid_images)} valid images, using: {os.path.basename(closest_image_path)}")
+        return closest_image_path
+        
+    except Exception as e:
+        print(f"[@alert_manager:find_closest_image_for_audio] Error finding closest image: {e}")
+        return None
+
 def upload_incident_images_to_r2(analysis_path: str, host_name: str, device_id: str, incident_type: str) -> Dict:
     """Upload incident images to R2 and return public URLs."""
     try:
         print(f"[@alert_manager:upload_incident_images_to_r2] Uploading incident images for {incident_type}")
+        
+        # For audio incidents, find the closest available image
+        if incident_type == 'audio_loss':
+            print(f"[@alert_manager:upload_incident_images_to_r2] Audio incident - finding closest image")
+            closest_image_path = find_closest_image_for_audio(analysis_path)
+            if closest_image_path:
+                print(f"[@alert_manager:upload_incident_images_to_r2] Found closest image: {os.path.basename(closest_image_path)}")
+                analysis_path = closest_image_path  # Use the found image path
+            else:
+                print(f"[@alert_manager:upload_incident_images_to_r2] No images found for audio incident")
+                return {'success': False, 'error': 'No images found for audio incident', 'skip_upload': True}
         
         # Import R2 utilities
         from src.utils.cloudflare_utils import get_cloudflare_utils
@@ -212,11 +291,17 @@ def trigger_alert(
             }
         })
     else:
-        print(f"[@alert_manager:trigger_alert] Failed to upload images to R2: {r2_upload_result.get('error')}")
-        # Continue with alert creation even if R2 upload fails
-        enhanced_metadata.update({
-            'r2_upload_error': r2_upload_result.get('error')
-        })
+        # Only log error if it's not an expected skip for audio incidents
+        if not r2_upload_result.get('skip_upload'):
+            print(f"[@alert_manager:trigger_alert] Failed to upload images to R2: {r2_upload_result.get('error')}")
+            enhanced_metadata.update({
+                'r2_upload_error': r2_upload_result.get('error')
+            })
+        else:
+            if r2_upload_result.get('skip_upload'):
+                print(f"[@alert_manager:trigger_alert] Skipped R2 upload for audio incident (no images found)")
+            else:
+                print(f"[@alert_manager:trigger_alert] R2 upload failed: {r2_upload_result.get('error')}")
     
     result = create_alert_safe(
         host_name=host_name,

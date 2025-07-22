@@ -226,7 +226,7 @@ const MonitoringIncidents: React.FC = () => {
     };
   };
 
-  // Render expandable row content
+  // Render expandable row content - minimalist design
   const renderExpandedContent = (alert: Alert) => {
     const imageUrls = getAlertImageUrls(alert);
 
@@ -240,64 +240,70 @@ const MonitoringIncidents: React.FC = () => {
 
     return (
       <Box sx={{ p: 2 }}>
-        <Typography variant="subtitle2" sx={{ mb: 2 }}>
-          Incident Images
-        </Typography>
-        <Grid container spacing={2}>
-          {imageUrls.thumbnailUrl && (
-            <Grid item xs={6}>
-              <Box>
-                <Typography variant="caption" display="block" sx={{ mb: 1 }}>
-                  Thumbnail
+        <Grid container spacing={3} alignItems="center">
+          {/* Start Time Image */}
+          <Grid item>
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="caption" display="block" sx={{ mb: 1, color: 'text.secondary' }}>
+                Start Time
+              </Typography>
+              <Box
+                component="img"
+                src={imageUrls.thumbnailUrl}
+                alt="Alert start"
+                sx={{
+                  width: 120,
+                  height: 'auto',
+                  borderRadius: 1,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    opacity: 0.8,
+                  },
+                }}
+                onClick={() => {
+                  // TODO: Open modal with full size image
+                  window.open(imageUrls.originalUrl || imageUrls.thumbnailUrl, '_blank');
+                }}
+              />
+            </Box>
+          </Grid>
+
+          {/* End Time Image (if resolved) */}
+          {alert.status === 'resolved' && (
+            <Grid item>
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography
+                  variant="caption"
+                  display="block"
+                  sx={{ mb: 1, color: 'text.secondary' }}
+                >
+                  End Time
                 </Typography>
                 <Box
                   component="img"
                   src={imageUrls.thumbnailUrl}
-                  alt="Alert thumbnail"
+                  alt="Alert end"
                   sx={{
-                    width: '100%',
-                    maxWidth: 300,
+                    width: 120,
                     height: 'auto',
                     borderRadius: 1,
                     border: '1px solid',
                     borderColor: 'divider',
                     cursor: 'pointer',
+                    '&:hover': {
+                      opacity: 0.8,
+                    },
                   }}
-                  onClick={() =>
-                    window.open(imageUrls.originalUrl || imageUrls.thumbnailUrl, '_blank')
-                  }
+                  onClick={() => {
+                    // TODO: Open modal with full size image
+                    window.open(imageUrls.originalUrl || imageUrls.thumbnailUrl, '_blank');
+                  }}
                 />
               </Box>
             </Grid>
           )}
-          <Grid item xs={6}>
-            <Box>
-              <Typography variant="caption" display="block" sx={{ mb: 1 }}>
-                Details
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                <strong>Start Time:</strong> {formatDate(alert.start_time)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                <strong>Duration:</strong> {formatDuration(alert.start_time, alert.end_time)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                <strong>Status:</strong> {alert.status}
-              </Typography>
-              {imageUrls.originalUrl && (
-                <Typography variant="body2" sx={{ mt: 1 }}>
-                  <a
-                    href={imageUrls.originalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: 'inherit', textDecoration: 'underline' }}
-                  >
-                    View Full Size Image
-                  </a>
-                </Typography>
-              )}
-            </Box>
-          </Grid>
         </Grid>
       </Box>
     );
@@ -424,7 +430,7 @@ const MonitoringIncidents: React.FC = () => {
                           <TableRow
                             sx={{
                               '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.04) !important',
+                                backgroundColor: 'transparent !important',
                               },
                               height: '48px', // Fixed height for main rows
                             }}
@@ -532,7 +538,7 @@ const MonitoringIncidents: React.FC = () => {
                           <TableRow
                             sx={{
                               '&:hover': {
-                                backgroundColor: 'rgba(0, 0, 0, 0.04) !important',
+                                backgroundColor: 'transparent !important',
                               },
                               height: '48px', // Fixed height for main rows
                             }}

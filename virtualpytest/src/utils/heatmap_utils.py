@@ -458,12 +458,22 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
             # Create mosaic for this timestamp
             mosaic_image = create_mosaic_image(processed_images)
             
-            # Create metadata
+            # Create metadata (exclude binary data to avoid JSON serialization errors)
+            serializable_analysis = []
+            for img in processed_images:
+                serializable_analysis.append({
+                    'host_name': img.get('host_name'),
+                    'device_id': img.get('device_id'),
+                    'has_image': img.get('image_data') is not None,
+                    'analysis_json': img.get('analysis_json', {}),
+                    'error': img.get('error')
+                })
+            
             metadata = {
                 'timestamp': timestamp,
                 'hosts_included': len([img for img in processed_images if img.get('image_data')]),
                 'hosts_total': len(processed_images),
-                'analysis_data': processed_images,
+                'analysis_data': serializable_analysis,  # Only serializable data
                 'incidents': [inc for inc in incidents if timestamp in inc.get('start_time', '')],
                 'generated_at': datetime.now().isoformat()
             }
@@ -503,6 +513,8 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                     print(f"[@heatmap_utils] Successfully uploaded heatmap for timestamp {timestamp}")
                 else:
                     print(f"[@heatmap_utils] Failed to upload heatmap for timestamp {timestamp}")
+                    print(f"[@heatmap_utils] Mosaic upload: {mosaic_upload}")
+                    print(f"[@heatmap_utils] Metadata upload: {metadata_upload}")
                 
                 # Cleanup temp files
                 for temp_file in [temp_path, temp_json_path]:
@@ -511,6 +523,8 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                 
             except Exception as upload_error:
                 print(f"[@heatmap_utils] Upload error for timestamp {timestamp}: {upload_error}")
+                import traceback
+                print(f"[@heatmap_utils] Upload traceback: {traceback.format_exc()}")
             
             # Update progress
             progress = int((i + 1) / total_timestamps * 100)

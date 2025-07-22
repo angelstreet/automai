@@ -469,7 +469,7 @@ def buildCaptureUrlFromPath(host_info: dict, capture_path: str, device_id: str) 
     import re
     
     # Extract timestamp from capture path
-    timestamp_match = re.search(r'capture_(\d{14})\.jpg', capture_path)
+    timestamp_match = re.search(r'capture_(\d{14})(?:_audio)?\.(?:jpg|json)', capture_path)
     if not timestamp_match:
         raise ValueError(f'Failed to extract timestamp from capture path: {capture_path}')
     
