@@ -176,7 +176,32 @@ const Heatmap: React.FC = () => {
     return heatmapData.images_by_timestamp[timestamp] || [];
   };
 
-  // Analyze current frame for AI summary
+  // Check if a specific frame/timestamp has any incidents
+  const frameHasIncidents = (frameIndex: number): boolean => {
+    if (!heatmapData || !heatmapData.timeline_timestamps) return false;
+
+    const timestamp = heatmapData.timeline_timestamps[frameIndex];
+    if (!timestamp) return false;
+
+    const images = heatmapData.images_by_timestamp[timestamp] || [];
+
+    // Check if any device in this timestamp has incidents
+    return images.some((image) => {
+      const analysisJson = image.analysis_json || {};
+      return analysisJson.blackscreen || analysisJson.freeze || analysisJson.audio_loss;
+    });
+  };
+
+  // Get timeline tick colors
+  const getTimelineTicks = () => {
+    if (!heatmapData || !heatmapData.timeline_timestamps) return [];
+
+    return heatmapData.timeline_timestamps.map((_, index) => ({
+      value: index,
+      hasIncident: frameHasIncidents(index),
+    }));
+  };
+
   const analyzeCurrentFrame = () => {
     const images = getCurrentImages();
     const timestamp = getCurrentTimestamp();
@@ -434,15 +459,30 @@ const Heatmap: React.FC = () => {
                       max={Math.max(0, totalFrames - 1)}
                       onChange={handleSliderChange}
                       sx={{
-                        color: '#ffffff',
+                        color: frameHasIncidents(currentFrame) ? '#FF4444' : '#00FF00',
                         '& .MuiSlider-thumb': {
                           width: 16,
                           height: 16,
-                          backgroundColor: '#fff',
+                          backgroundColor: frameHasIncidents(currentFrame) ? '#FF4444' : '#00FF00',
                         },
-                        '& .MuiSlider-track': { backgroundColor: '#fff' },
+                        '& .MuiSlider-track': {
+                          backgroundColor: frameHasIncidents(currentFrame) ? '#FF4444' : '#00FF00',
+                        },
                         '& .MuiSlider-rail': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                        // Add tick marks for each timestamp
+                        '& .MuiSlider-mark': {
+                          backgroundColor: 'currentColor',
+                          height: 8,
+                          width: 2,
+                        },
+                        '& .MuiSlider-markActive': {
+                          backgroundColor: 'currentColor',
+                        },
                       }}
+                      marks={getTimelineTicks().map((tick) => ({
+                        value: tick.value,
+                        label: '', // No labels, just colored marks
+                      }))}
                     />
                   </Box>
                 </Box>
