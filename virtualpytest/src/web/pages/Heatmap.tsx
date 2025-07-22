@@ -69,6 +69,10 @@ const Heatmap: React.FC = () => {
   const handleMouseEnter = (event: React.MouseEvent<HTMLElement>, image: HeatmapImage) => {
     console.log('[@Heatmap] Mouse enter triggered for:', image.host_name);
 
+    // Capture the target immediately before setTimeout
+    const target = event.currentTarget;
+    console.log('[@Heatmap] Captured target immediately:', target);
+
     // Clear any existing delay
     if (tooltipDelay) {
       clearTimeout(tooltipDelay);
@@ -76,7 +80,6 @@ const Heatmap: React.FC = () => {
 
     // Set a delay before showing tooltip
     const delay = setTimeout(() => {
-      const target = event.currentTarget;
       console.log('[@Heatmap] Setting tooltip anchor:', target);
 
       setTooltipAnchor(target);
