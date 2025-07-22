@@ -10,12 +10,12 @@ import json
 import time
 import uuid
 import threading
+import io
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, ImageDraw, ImageFont
 import requests
-import io
 
 # Global state for job management
 active_jobs = {}
@@ -243,12 +243,16 @@ def create_mosaic_image(images_data: List[Dict], target_size: Tuple[int, int] = 
         y = row * cell_height
         
         try:
-            # Fetch and process image
-            image_url = image_data.get('image_url')
+            # Use already downloaded image data instead of fetching from URL
             device_image = None
             
-            if image_url:
-                device_image = fetch_image_from_url(image_url, timeout=5)  # Fast timeout
+            if image_data.get('image_data'):
+                # Convert bytes to PIL Image
+                try:
+                    device_image = Image.open(io.BytesIO(image_data['image_data']))
+                except Exception as e:
+                    print(f"[@heatmap_utils:create_mosaic_image] Failed to open image data: {e}")
+                    device_image = None
             
             if device_image:
                 # Resize image to fit cell with border and label space
