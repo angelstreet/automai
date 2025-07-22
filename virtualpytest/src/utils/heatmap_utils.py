@@ -467,8 +467,13 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                             except Exception as e:
                                 print(f"[@heatmap_utils] Failed to download audio JSON for {image_info['host_name']}: {e}")
                         
-                        # Combine frame and audio analysis into analysis_json format expected by border color logic
-                        analysis_json = {}
+                        # Extract only incident data - simple logic
+                        analysis_json = {
+                            'blackscreen': False,
+                            'freeze': False,
+                            'audio_loss': False
+                        }
+                        
                         if frame_analysis and isinstance(frame_analysis, dict):
                             # Extract from analysis sub-object if present
                             frame_data = frame_analysis.get('analysis', frame_analysis)
