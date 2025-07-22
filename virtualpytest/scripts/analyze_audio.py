@@ -23,8 +23,27 @@ def find_latest_segment(capture_dir):
         
         # Sort by modification time, get newest
         latest = max(segments, key=os.path.getmtime)
+        
+        # Check if the latest segment is recent (within last 5 minutes)
+        import time
+        from datetime import datetime
+        
+        latest_mtime = os.path.getmtime(latest)
+        current_time = time.time()
+        age_seconds = current_time - latest_mtime
+        
+        # Only process segments that are less than 5 minutes old
+        max_age_seconds = 300  # 5 minutes
+        
+        if age_seconds > max_age_seconds:
+            segment_time = datetime.fromtimestamp(latest_mtime)
+            print(f"Latest segment is too old: {os.path.basename(latest)} (age: {age_seconds:.1f}s, modified: {segment_time})", file=sys.stderr)
+            print(f"Skipping audio analysis - no recent segments (threshold: {max_age_seconds}s)", file=sys.stderr)
+            return None
+            
         return latest
-    except Exception:
+    except Exception as e:
+        print(f"Error finding latest segment: {e}", file=sys.stderr)
         return None
 
 def analyze_audio_volume(segment_path):
