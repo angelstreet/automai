@@ -472,13 +472,23 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                         
                     else:
                         print(f"[@heatmap_utils] Failed to download image for {image_info['host_name']}: HTTP {image_response.status_code}")
-                        # Skip failed images entirely - don't add to processed_images
-                        continue
+                        # Add placeholder for missing image to keep grid layout
+                        processed_images.append({
+                            'host_name': image_info['host_name'],
+                            'device_id': image_info['device_id'],
+                            'image_data': None,
+                            'error': f'HTTP {image_response.status_code}'
+                        })
                         
                 except Exception as e:
                     print(f"[@heatmap_utils] Error downloading data for {image_info['host_name']}: {e}")
-                    # Skip errored images entirely - don't add to processed_images  
-                    continue
+                    # Add placeholder for error to keep grid layout
+                    processed_images.append({
+                        'host_name': image_info['host_name'],
+                        'device_id': image_info['device_id'],
+                        'image_data': None,
+                        'error': str(e)
+                    })
             
             if not processed_images:
                 print(f"[@heatmap_utils] No images processed for timestamp {timestamp}, skipping")
