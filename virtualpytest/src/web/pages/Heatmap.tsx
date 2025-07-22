@@ -74,9 +74,12 @@ const Heatmap: React.FC = () => {
 
     // Set a delay before showing tooltip
     const delay = setTimeout(() => {
-      setTooltipAnchor(event.currentTarget);
-      setTooltipImage(image);
-      setTooltipOpen(true);
+      const target = event.currentTarget;
+      if (target && target instanceof HTMLElement) {
+        setTooltipAnchor(target);
+        setTooltipImage(image);
+        setTooltipOpen(true);
+      }
     }, 300); // 300ms delay (under 1s as requested)
 
     setTooltipDelay(delay);
@@ -89,7 +92,7 @@ const Heatmap: React.FC = () => {
       setTooltipDelay(null);
     }
 
-    // Hide tooltip
+    // Hide tooltip and clear anchor
     setTooltipOpen(false);
     setTooltipAnchor(null);
     setTooltipImage(null);
@@ -412,7 +415,7 @@ const Heatmap: React.FC = () => {
 
   // Tooltip component
   const renderTooltip = () => {
-    if (!tooltipOpen || !tooltipImage) return null;
+    if (!tooltipOpen || !tooltipImage || !tooltipAnchor) return null;
 
     // Get the corrected analysis values
     const analysisJson = tooltipImage.analysis_json || {};
@@ -613,7 +616,6 @@ const Heatmap: React.FC = () => {
                     ref={mosaicImageRef}
                     src={getCurrentMosaicUrl()!}
                     alt={`Heatmap Mosaic ${currentFrame + 1}`}
-                    crossOrigin="anonymous"
                     style={{
                       maxWidth: '100%',
                       maxHeight: '100%',
