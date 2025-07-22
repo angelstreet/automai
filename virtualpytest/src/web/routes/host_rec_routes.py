@@ -17,14 +17,18 @@ host_rec_bp = Blueprint('host_rec', __name__, url_prefix='/host/rec')
 
 @host_rec_bp.route('/listRestartImages', methods=['POST'])
 def list_restart_images():
-    """List recent images for restart player from last N minutes - simplified and fast"""
+    """List recent images for restart player from last N minutes - progressive loading"""
     try:
         data = request.get_json() or {}
         device_id = data.get('device_id', 'device1')
         timeframe_minutes = data.get('timeframe_minutes', 5)
-        limit = data.get('limit', 20)  # Lazy load first 20 frames
         
-        print(f"[@route:host_rec:list_restart_images] Device: {device_id}, Timeframe: {timeframe_minutes}min, Limit: {limit}")
+        # Progressive loading parameters
+        start_index = data.get('start_index', 0)  # Starting index for batch
+        batch_size = data.get('batch_size', 20)   # How many to load
+        metadata_only = data.get('metadata_only', False)  # Just get frame list without URLs
+        
+        print(f"[@route:host_rec:list_restart_images] Device: {device_id}, Timeframe: {timeframe_minutes}min, Start: {start_index}, Batch: {batch_size}, MetadataOnly: {metadata_only}")
         
         # Get image controller for the specified device
         image_controller = get_controller(device_id, 'verification_image')
@@ -55,10 +59,10 @@ def list_restart_images():
         # Calculate time cutoff
         cutoff_time = time.time() - (timeframe_minutes * 60)
 
-        # Simple approach: just collect filenames and timestamps
-        restart_frames = []
+        # ALWAYS collect ALL frame metadata first (this is fast)
+        all_frames_metadata = []
 
-        # Get all capture files (no JSON checks, no URL building yet)
+        # Get all capture files (just metadata - no URL building)
         for filename in os.listdir(capture_folder):
             if (filename.startswith('capture_') and 
                 filename.endswith('.jpg') and 
@@ -71,20 +75,33 @@ def list_restart_images():
                     # Extract timestamp from filename (capture_YYYYMMDDHHMMSS.jpg)
                     timestamp_str = filename.replace('capture_', '').replace('.jpg', '')
                     
-                    # Just collect basic info - no analysis, no URL building
-                    restart_frames.append({
+                    # Just collect basic metadata
+                    all_frames_metadata.append({
                         'filename': filename,
                         'timestamp': timestamp_str,  # YYYYMMDDHHMMSS format
                         'file_mtime': int(os.path.getmtime(filepath) * 1000)
                     })
         
         # Sort by timestamp (newest first)
-        restart_frames.sort(key=lambda x: x['timestamp'], reverse=True)
+        all_frames_metadata.sort(key=lambda x: x['timestamp'], reverse=True)
         
-        # Limit to first N frames for lazy loading
-        limited_frames = restart_frames[:limit]
+        # If metadata_only, return just the frame list
+        if metadata_only:
+            return jsonify({
+                'success': True,
+                'frames': all_frames_metadata,  # All metadata, no URLs
+                'total_available': len(all_frames_metadata),
+                'device_id': device_id,
+                'host_name': 'unknown',  # Skip host lookup for metadata-only
+                'timeframe_minutes': timeframe_minutes,
+                'metadata_only': True
+            })
         
-        # Build URLs only for the limited frames we're returning
+        # For full requests, build URLs for requested batch
+        end_index = min(start_index + batch_size, len(all_frames_metadata))
+        batch_frames = all_frames_metadata[start_index:end_index]
+        
+        # Build URLs only for the batch frames
         try:
             host = get_host()
             host_dict = host.to_dict()
@@ -95,7 +112,7 @@ def list_restart_images():
             }), 500
 
         response_frames = []
-        for frame in limited_frames:
+        for frame in batch_frames:
             try:
                 # Build full filepath for URL generation
                 filepath = os.path.join(capture_folder, frame['filename'])
@@ -120,11 +137,13 @@ def list_restart_images():
             'success': True,
             'frames': response_frames,
             'total_returned': len(response_frames),
-            'total_available': len(restart_frames),
+            'total_available': len(all_frames_metadata),
+            'start_index': start_index,
+            'end_index': end_index,
             'device_id': device_id,
             'host_name': host_dict.get('host_name', 'unknown'),
             'timeframe_minutes': timeframe_minutes,
-            'has_more': len(restart_frames) > limit
+            'has_more': end_index < len(all_frames_metadata)
         })
         
     except Exception as e:
