@@ -39,7 +39,6 @@ export const RestartPlayer: React.FC<RestartPlayerProps> = ({ host, device }) =>
     frames,
     currentIndex,
     currentFrameUrl,
-    selectedFrameAnalysis,
     isPlaying,
     isInitialLoading,
     handlePlayPause,
@@ -289,9 +288,10 @@ export const RestartPlayer: React.FC<RestartPlayerProps> = ({ host, device }) =>
         }}
       >
         <RestartOverlay
-          analysis={frames.length > 0 ? selectedFrameAnalysis || undefined : undefined}
           timestamp={
-            frames.length > 0 && selectedFrameAnalysis ? selectedFrameAnalysis.timestamp : undefined
+            frames.length > 0 && currentIndex < frames.length
+              ? frames[currentIndex].timestamp
+              : undefined
           }
         />
       </Box>
