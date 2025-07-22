@@ -116,15 +116,15 @@ const LoadingSpinner: React.FC = () => (
 
 const App: React.FC = () => {
   return (
-    <ToastProvider>
-      <HostManagerProvider>
-        <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <Router
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
+    <Router
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
+      <ToastProvider>
+        <HostManagerProvider>
+          <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <AppBar position="static" elevation={1}>
               <Toolbar>
                 <Science sx={{ mr: 2 }} />
@@ -210,10 +210,10 @@ const App: React.FC = () => {
             <MCPTaskInput />
 
             <Footer />
-          </Router>
-        </Box>
-      </HostManagerProvider>
-    </ToastProvider>
+          </Box>
+        </HostManagerProvider>
+      </ToastProvider>
+    </Router>
   );
 };
 

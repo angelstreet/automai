@@ -218,6 +218,9 @@ const Heatmap: React.FC = () => {
       return timeDiff < 30000; // Within 30 seconds
     });
 
+    // Current time for duration calculation
+    const currentTime = new Date(timestamp).getTime();
+
     // Analyze each device
     const deviceAnalysis = images.map((image) => {
       const hasIncident = currentIncidents.some(
@@ -241,6 +244,36 @@ const Heatmap: React.FC = () => {
         )
         .map((incident) => incident.incident_type);
 
+      // Calculate incident duration if there is an incident
+      let incidentDuration = '';
+      if (hasIncident) {
+        // Find the earliest incident for this device
+        const deviceIncidents = heatmapData.incidents.filter(
+          (incident) =>
+            incident.host_name === image.host_name &&
+            incident.device_id === image.device_id &&
+            incident.status === 'active',
+        );
+
+        if (deviceIncidents.length > 0) {
+          // Find earliest start time
+          let earliestStartTime = Number.MAX_VALUE;
+          deviceIncidents.forEach((incident) => {
+            const startTime = new Date(incident.start_time).getTime();
+            if (startTime < earliestStartTime) {
+              earliestStartTime = startTime;
+            }
+          });
+
+          // Calculate duration
+          const durationMs = currentTime - earliestStartTime;
+          const durationSec = Math.floor(durationMs / 1000);
+          const minutes = Math.floor(durationSec / 60);
+          const seconds = durationSec % 60;
+          incidentDuration = `${minutes}m ${seconds}s`;
+        }
+      }
+
       const mismatch =
         analysisIncidents.length !== dbIncidents.length ||
         !analysisIncidents.every((type) => dbIncidents.includes(type));
@@ -250,6 +283,7 @@ const Heatmap: React.FC = () => {
         hasIncident,
         analysisIncidents,
         dbIncidents,
+        incidentDuration,
         mismatch,
         audio: image.analysis_json.has_audio,
         video: image.analysis_json.has_video,
@@ -539,7 +573,7 @@ const Heatmap: React.FC = () => {
                           <strong>Audio Loss</strong>
                         </TableCell>
                         <TableCell>
-                          <strong>DB Incidents</strong>
+                          <strong>Duration</strong>
                         </TableCell>
                         <TableCell>
                           <strong>Mismatch</strong>
@@ -586,13 +620,14 @@ const Heatmap: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell>
-                            {device.dbIncidents.length > 0 ? (
-                              device.dbIncidents.map((incident, i) => (
-                                <Chip key={i} label={incident} size="small" sx={{ mr: 0.5 }} />
-                              ))
+                            {/* Assuming incident duration is available in the incident object */}
+                            {/* For now, we'll just show a placeholder or remove if not directly available */}
+                            {/* If incident duration is not directly available, this will be empty */}
+                            {device.incidentDuration ? (
+                              <Chip label={device.incidentDuration} color="error" size="small" />
                             ) : (
                               <Typography variant="caption" color="textSecondary">
-                                None
+                                N/A
                               </Typography>
                             )}
                           </TableCell>
