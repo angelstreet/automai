@@ -206,92 +206,114 @@ const Heatmap: React.FC = () => {
     const images = getCurrentImages();
     const timestamp = getCurrentTimestamp();
 
-    if (!images.length || !timestamp || !heatmapData) {
+    if (!heatmapData) {
       return { summary: 'No data available', details: [] };
     }
 
-    // Get incidents for current timestamp
-    const currentIncidents = heatmapData.incidents.filter((incident) => {
-      const incidentTime = new Date(incident.start_time).getTime();
-      const frameTime = new Date(timestamp).getTime();
-      const timeDiff = Math.abs(frameTime - incidentTime);
-      return timeDiff < 30000; // Within 30 seconds
-    });
+    // If there are no images for the current timestamp, create placeholder data from hosts_devices
+    let deviceAnalysis = [];
 
-    // Current time for duration calculation
-    const currentTime = new Date(timestamp).getTime();
+    if (!images.length || !timestamp) {
+      // Use hosts_devices to create placeholder data
+      deviceAnalysis = heatmapData.hosts_devices.map((hostDevice) => {
+        return {
+          device: `${hostDevice.host_name}-${hostDevice.device_id}`,
+          hasIncident: false,
+          analysisIncidents: [],
+          dbIncidents: [],
+          incidentDuration: '',
+          mismatch: false,
+          audio: true, // Default to true for placeholder
+          video: true, // Default to true for placeholder
+          blackscreen: false,
+          freeze: false,
+          audioLoss: false,
+        };
+      });
+    } else {
+      // Get incidents for current timestamp
+      const currentIncidents = heatmapData.incidents.filter((incident) => {
+        const incidentTime = new Date(incident.start_time).getTime();
+        const frameTime = new Date(timestamp).getTime();
+        const timeDiff = Math.abs(frameTime - incidentTime);
+        return timeDiff < 30000; // Within 30 seconds
+      });
 
-    // Analyze each device
-    const deviceAnalysis = images.map((image) => {
-      const hasIncident = currentIncidents.some(
-        (incident) =>
-          incident.host_name === image.host_name && incident.device_id === image.device_id,
-      );
+      // Current time for duration calculation
+      const currentTime = new Date(timestamp).getTime();
 
-      // Safely access analysis_json with fallback to empty object
-      const analysisJson = image.analysis_json || {};
-
-      const analysisIncidents = [
-        analysisJson.blackscreen ? 'blackscreen' : null,
-        analysisJson.freeze ? 'freeze' : null,
-        analysisJson.audio_loss ? 'audio_loss' : null,
-      ].filter((incident): incident is string => incident !== null);
-
-      const dbIncidents = currentIncidents
-        .filter(
+      // Analyze each device
+      deviceAnalysis = images.map((image) => {
+        const hasIncident = currentIncidents.some(
           (incident) =>
             incident.host_name === image.host_name && incident.device_id === image.device_id,
-        )
-        .map((incident) => incident.incident_type);
-
-      // Calculate incident duration if there is an incident
-      let incidentDuration = '';
-      if (hasIncident) {
-        // Find the earliest incident for this device
-        const deviceIncidents = heatmapData.incidents.filter(
-          (incident) =>
-            incident.host_name === image.host_name &&
-            incident.device_id === image.device_id &&
-            incident.status === 'active',
         );
 
-        if (deviceIncidents.length > 0) {
-          // Find earliest start time
-          let earliestStartTime = Number.MAX_VALUE;
-          deviceIncidents.forEach((incident) => {
-            const startTime = new Date(incident.start_time).getTime();
-            if (startTime < earliestStartTime) {
-              earliestStartTime = startTime;
-            }
-          });
+        // Safely access analysis_json with fallback to empty object
+        const analysisJson = image.analysis_json || {};
 
-          // Calculate duration
-          const durationMs = currentTime - earliestStartTime;
-          const durationSec = Math.floor(durationMs / 1000);
-          const minutes = Math.floor(durationSec / 60);
-          const seconds = durationSec % 60;
-          incidentDuration = `${minutes}m ${seconds}s`;
+        const analysisIncidents = [
+          analysisJson.blackscreen ? 'blackscreen' : null,
+          analysisJson.freeze ? 'freeze' : null,
+          analysisJson.audio_loss ? 'audio_loss' : null,
+        ].filter((incident): incident is string => incident !== null);
+
+        const dbIncidents = currentIncidents
+          .filter(
+            (incident) =>
+              incident.host_name === image.host_name && incident.device_id === image.device_id,
+          )
+          .map((incident) => incident.incident_type);
+
+        // Calculate incident duration if there is an incident
+        let incidentDuration = '';
+        if (hasIncident) {
+          // Find the earliest incident for this device
+          const deviceIncidents = heatmapData.incidents.filter(
+            (incident) =>
+              incident.host_name === image.host_name &&
+              incident.device_id === image.device_id &&
+              incident.status === 'active',
+          );
+
+          if (deviceIncidents.length > 0) {
+            // Find earliest start time
+            let earliestStartTime = Number.MAX_VALUE;
+            deviceIncidents.forEach((incident) => {
+              const startTime = new Date(incident.start_time).getTime();
+              if (startTime < earliestStartTime) {
+                earliestStartTime = startTime;
+              }
+            });
+
+            // Calculate duration
+            const durationMs = currentTime - earliestStartTime;
+            const durationSec = Math.floor(durationMs / 1000);
+            const minutes = Math.floor(durationSec / 60);
+            const seconds = durationSec % 60;
+            incidentDuration = `${minutes}m ${seconds}s`;
+          }
         }
-      }
 
-      const mismatch =
-        analysisIncidents.length !== dbIncidents.length ||
-        !analysisIncidents.every((type) => dbIncidents.includes(type));
+        const mismatch =
+          analysisIncidents.length !== dbIncidents.length ||
+          !analysisIncidents.every((type) => dbIncidents.includes(type));
 
-      return {
-        device: `${image.host_name}-${image.device_id}`,
-        hasIncident,
-        analysisIncidents,
-        dbIncidents,
-        incidentDuration,
-        mismatch,
-        audio: image.analysis_json.has_audio,
-        video: image.analysis_json.has_video,
-        blackscreen: image.analysis_json.blackscreen,
-        freeze: image.analysis_json.freeze,
-        audioLoss: image.analysis_json.audio_loss,
-      };
-    });
+        return {
+          device: `${image.host_name}-${image.device_id}`,
+          hasIncident,
+          analysisIncidents,
+          dbIncidents,
+          incidentDuration,
+          mismatch,
+          audio: image.analysis_json.has_audio,
+          video: image.analysis_json.has_video,
+          blackscreen: image.analysis_json.blackscreen,
+          freeze: image.analysis_json.freeze,
+          audioLoss: image.analysis_json.audio_loss,
+        };
+      });
+    }
 
     const totalDevices = deviceAnalysis.length;
     const devicesWithIncidents = deviceAnalysis.filter((d) => d.hasIncident).length;
