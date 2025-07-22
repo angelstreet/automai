@@ -32,7 +32,11 @@ export interface HeatmapIncident {
 }
 
 export interface HeatmapData {
-  hosts_devices: Array<{ host_name: string; device_id: string }>;
+  hosts_devices: Array<{
+    host_name: string;
+    device_id: string;
+    host_data?: any; // Add host_data property
+  }>;
   images_by_timestamp: Record<string, HeatmapImage[]>; // timestamp -> array of images for that time
   incidents: HeatmapIncident[];
   timeline_timestamps: string[]; // chronologically ordered timestamps

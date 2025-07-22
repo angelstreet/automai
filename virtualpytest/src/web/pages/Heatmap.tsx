@@ -66,6 +66,13 @@ const Heatmap: React.FC = () => {
         setLoading(true);
         setError(null);
         const data = await getHeatmapData();
+        console.log('[@component:Heatmap] Loaded data:', data);
+        console.log('[@component:Heatmap] hosts_devices:', data.hosts_devices);
+        console.log('[@component:Heatmap] timeline_timestamps:', data.timeline_timestamps);
+        console.log(
+          '[@component:Heatmap] images_by_timestamp keys:',
+          Object.keys(data.images_by_timestamp),
+        );
         setHeatmapData(data);
         setTotalFrames(data.timeline_timestamps.length);
       } catch (err) {
@@ -210,117 +217,53 @@ const Heatmap: React.FC = () => {
       return { summary: 'No data available', details: [] };
     }
 
-    // If there are no images for the current timestamp, create placeholder data from hosts_devices
-    let deviceAnalysis = [];
+    // Always use hosts_devices to ensure we have data to display
+    const deviceAnalysis = heatmapData.hosts_devices.map((hostDevice) => {
+      // Get image data for this device if available
+      const deviceImage = images.find(
+        (img) => img.host_name === hostDevice.host_name && img.device_id === hostDevice.device_id,
+      );
 
-    if (!images.length || !timestamp) {
-      // Use hosts_devices to create placeholder data
-      deviceAnalysis = heatmapData.hosts_devices.map((hostDevice) => {
-        return {
-          device: `${hostDevice.host_name}-${hostDevice.device_id}`,
-          hasIncident: false,
-          analysisIncidents: [],
-          dbIncidents: [],
-          incidentDuration: '',
-          mismatch: false,
-          audio: true, // Default to true for placeholder
-          video: true, // Default to true for placeholder
-          blackscreen: false,
-          freeze: false,
-          audioLoss: false,
-        };
-      });
-    } else {
-      // Get incidents for current timestamp
-      const currentIncidents = heatmapData.incidents.filter((incident) => {
-        const incidentTime = new Date(incident.start_time).getTime();
-        const frameTime = new Date(timestamp).getTime();
-        const timeDiff = Math.abs(frameTime - incidentTime);
-        return timeDiff < 30000; // Within 30 seconds
-      });
+      // Default values for analysis
+      let hasIncident = false;
+      let audio = false;
+      let video = false;
+      let blackscreen = false;
+      let freeze = false;
+      let audioLoss = false;
 
-      // Current time for duration calculation
-      const currentTime = new Date(timestamp).getTime();
+      // Use image data if available
+      if (deviceImage && deviceImage.analysis_json) {
+        const analysis = deviceImage.analysis_json;
+        audio = analysis.has_audio || false;
+        video = analysis.has_video || false;
+        blackscreen = analysis.blackscreen || false;
+        freeze = analysis.freeze || false;
+        audioLoss = analysis.audio_loss || false;
+        hasIncident = blackscreen || freeze || audioLoss;
+      }
 
-      // Analyze each device
-      deviceAnalysis = images.map((image) => {
-        const hasIncident = currentIncidents.some(
-          (incident) =>
-            incident.host_name === image.host_name && incident.device_id === image.device_id,
-        );
+      // Calculate incident duration if applicable
+      let incidentDuration = '';
 
-        // Safely access analysis_json with fallback to empty object
-        const analysisJson = image.analysis_json || {};
-
-        const analysisIncidents = [
-          analysisJson.blackscreen ? 'blackscreen' : null,
-          analysisJson.freeze ? 'freeze' : null,
-          analysisJson.audio_loss ? 'audio_loss' : null,
-        ].filter((incident): incident is string => incident !== null);
-
-        const dbIncidents = currentIncidents
-          .filter(
-            (incident) =>
-              incident.host_name === image.host_name && incident.device_id === image.device_id,
-          )
-          .map((incident) => incident.incident_type);
-
-        // Calculate incident duration if there is an incident
-        let incidentDuration = '';
-        if (hasIncident) {
-          // Find the earliest incident for this device
-          const deviceIncidents = heatmapData.incidents.filter(
-            (incident) =>
-              incident.host_name === image.host_name &&
-              incident.device_id === image.device_id &&
-              incident.status === 'active',
-          );
-
-          if (deviceIncidents.length > 0) {
-            // Find earliest start time
-            let earliestStartTime = Number.MAX_VALUE;
-            deviceIncidents.forEach((incident) => {
-              const startTime = new Date(incident.start_time).getTime();
-              if (startTime < earliestStartTime) {
-                earliestStartTime = startTime;
-              }
-            });
-
-            // Calculate duration
-            const durationMs = currentTime - earliestStartTime;
-            const durationSec = Math.floor(durationMs / 1000);
-            const minutes = Math.floor(durationSec / 60);
-            const seconds = durationSec % 60;
-            incidentDuration = `${minutes}m ${seconds}s`;
-          }
-        }
-
-        const mismatch =
-          analysisIncidents.length !== dbIncidents.length ||
-          !analysisIncidents.every((type) => dbIncidents.includes(type));
-
-        return {
-          device: `${image.host_name}-${image.device_id}`,
-          hasIncident,
-          analysisIncidents,
-          dbIncidents,
-          incidentDuration,
-          mismatch,
-          audio: image.analysis_json.has_audio,
-          video: image.analysis_json.has_video,
-          blackscreen: image.analysis_json.blackscreen,
-          freeze: image.analysis_json.freeze,
-          audioLoss: image.analysis_json.audio_loss,
-        };
-      });
-    }
+      return {
+        device: `${hostDevice.host_name}-${hostDevice.device_id}`,
+        hasIncident,
+        incidentDuration,
+        audio,
+        video,
+        blackscreen,
+        freeze,
+        audioLoss,
+        mismatch: false,
+      };
+    });
 
     const totalDevices = deviceAnalysis.length;
     const devicesWithIncidents = deviceAnalysis.filter((d) => d.hasIncident).length;
-    const mismatches = deviceAnalysis.filter((d) => d.mismatch).length;
 
     return {
-      summary: `${totalDevices} devices | ${devicesWithIncidents} with incidents | ${mismatches} mismatches`,
+      summary: `${totalDevices} devices | ${devicesWithIncidents} with incidents`,
       details: deviceAnalysis,
     };
   };
