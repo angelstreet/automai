@@ -38,23 +38,35 @@ def get_heatmap_data(
             devices = host_data.get('devices', [])
             if isinstance(devices, list) and devices:
                 for device in devices:
-                    # Only include devices with 'av' capability for heatmap
-                    capabilities = device.get('capabilities', [])
-                    if 'av' in capabilities:
+                    # Check if device has 'av' capability (capabilities is a dict, not list)
+                    capabilities = device.get('capabilities', {})
+                    if isinstance(capabilities, dict) and 'av' in capabilities and capabilities['av']:
                         hosts_devices.append({
                             'host_name': host_name,
                             'device_id': device.get('device_id', 'device1'),
                             'host_data': host_data
                         })
             else:
-                # Fallback for hosts without device config
-                hosts_devices.append({
-                    'host_name': host_name,
-                    'device_id': 'device1',
-                    'host_data': host_data
-                })
+                # Fallback for hosts without device config - check if host has av capability
+                host_capabilities = host_data.get('capabilities', {})
+                if isinstance(host_capabilities, dict) and 'av' in host_capabilities and host_capabilities['av']:
+                    hosts_devices.append({
+                        'host_name': host_name,
+                        'device_id': 'device1',
+                        'host_data': host_data
+                    })
         
         print(f"[@db:heatmap:get_heatmap_data] Found {len(hosts_devices)} host/device combinations")
+        
+        # Debug: Print all host data to understand the structure
+        for i, host_data in enumerate(all_hosts):
+            print(f"[@db:heatmap:get_heatmap_data] Host {i}: {host_data.get('host_name', host_data.get('name', 'unknown'))}")
+            print(f"  Devices: {host_data.get('devices', [])}")
+            devices = host_data.get('devices', [])
+            for j, device in enumerate(devices):
+                capabilities = device.get('capabilities', {})
+                print(f"  Device {j}: {device.get('device_id', 'unknown')} - capabilities: {capabilities}")
+                print(f"  Has 'av' capability: {'av' in capabilities and bool(capabilities.get('av'))}")
         
         # Query all hosts for recent analysis data
         images_by_timestamp = {}
@@ -64,7 +76,7 @@ def get_heatmap_data(
             import requests
             import asyncio
             import aiohttp
-            from datetime import datetime, timedelta
+            # Remove duplicate datetime import to avoid variable shadowing
             
             async def query_host_analysis(session, host_device):
                 """Query single host for recent analysis data"""

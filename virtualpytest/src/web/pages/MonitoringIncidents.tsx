@@ -1,5 +1,4 @@
 import {
-  Warning as AlertIcon,
   CheckCircle as ResolvedIcon,
   Error as ActiveIcon,
   Visibility as MonitorIcon,
