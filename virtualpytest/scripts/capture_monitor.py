@@ -249,14 +249,14 @@ class CaptureMonitor:
         print(f"[@capture_monitor] Audio analysis interval: {AUDIO_ANALYSIS_INTERVAL}s")
         print(f"[@capture_monitor] PID: {os.getpid()}")
         
-        # Perform startup cleanup check
+        # Perform aggressive startup cleanup to prevent phantom alerts
         try:
-            print(f"[@capture_monitor] Performing startup cleanup check...")
+            print(f"[@capture_monitor] Performing aggressive startup cleanup...")
             sys.path.append(SCRIPTS_DIR)
-            from alert_manager import startup_cleanup_if_database_empty
-            startup_cleanup_if_database_empty()
+            from alert_manager import startup_cleanup_on_restart
+            startup_cleanup_on_restart()
         except Exception as e:
-            print(f"[@capture_monitor] Startup cleanup failed (continuing anyway): {e}")
+            print(f"[@capture_monitor] Aggressive startup cleanup failed (continuing anyway): {e}")
         
         # Get existing directories
         capture_dirs = self.get_existing_directories()

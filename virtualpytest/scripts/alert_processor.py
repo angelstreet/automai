@@ -161,12 +161,13 @@ class AlertProcessor:
         print(f"[@alert_processor] Monitoring queue: {QUEUE_DIR}")
         print(f"[@alert_processor] Check interval: {CHECK_INTERVAL}s")
         
-        # Perform startup cleanup if database is empty
+        # Perform aggressive startup cleanup to prevent phantom alerts
         try:
-            print(f"[@alert_processor] Performing startup cleanup check...")
-            startup_cleanup_if_database_empty()
+            print(f"[@alert_processor] Performing aggressive startup cleanup...")
+            from alert_manager import startup_cleanup_on_restart
+            startup_cleanup_on_restart()
         except Exception as e:
-            print(f"[@alert_processor] Startup cleanup failed: {e}")
+            print(f"[@alert_processor] Aggressive startup cleanup failed: {e}")
         
         last_cleanup = time.time()
         

@@ -709,6 +709,221 @@ def startup_cleanup_if_database_empty() -> None:
     except Exception as e:
         print(f"[@alert_manager:startup_cleanup] Error during startup cleanup: {e}")
 
+def startup_cleanup_on_restart() -> None:
+    """Perform aggressive cleanup on service restart to prevent phantom alerts."""
+    try:
+        print("[@alert_manager:startup_cleanup_on_restart] Service restart detected - performing full cleanup")
+        
+        # Always clean local state files (regardless of database state)
+        print("[@alert_manager:startup_cleanup_on_restart] Cleaning all local state files...")
+        cleanup_local_state_files()
+        
+        # Always clean alert queue (remove stale/pending items)
+        print("[@alert_manager:startup_cleanup_on_restart] Cleaning alert queue...")
+        cleanup_alert_queue()
+        
+        # Validate monitoring capabilities against database alerts
+        validate_monitoring_capabilities()
+        
+        print("[@alert_manager:startup_cleanup_on_restart] Aggressive cleanup completed - preventing phantom alerts")
+        
+    except Exception as e:
+        print(f"[@alert_manager:startup_cleanup_on_restart] Error during aggressive cleanup: {e}")
+
+def validate_monitoring_capabilities() -> None:
+    """Validate that we can actually monitor the alerts in the database."""
+    try:
+        print("[@alert_manager:validate_monitoring] Validating monitoring capabilities...")
+        
+        _lazy_import_db()
+        if not get_active_alerts or get_active_alerts is False:
+            print("[@alert_manager:validate_monitoring] Database not available, skipping validation")
+            return
+        
+        # Get all active alerts from database
+        result = get_active_alerts(limit=100)
+        if not result['success']:
+            print(f"[@alert_manager:validate_monitoring] Failed to get active alerts: {result.get('error')}")
+            return
+        
+        active_alerts = result['alerts']
+        if not active_alerts:
+            print("[@alert_manager:validate_monitoring] No active alerts to validate")
+            return
+        
+        print(f"[@alert_manager:validate_monitoring] Found {len(active_alerts)} active alerts to validate")
+        
+        # Check each alert for monitoring capability
+        stale_alerts = []
+        for alert in active_alerts:
+            alert_id = alert['id']
+            incident_type = alert['incident_type']
+            device_id = alert['device_id']
+            start_time = alert['start_time']
+            
+            # Check if we can actually monitor this alert
+            if not can_monitor_alert(alert):
+                print(f"[@alert_manager:validate_monitoring] Alert {alert_id} cannot be monitored - marking as stale")
+                stale_alerts.append(alert_id)
+            else:
+                print(f"[@alert_manager:validate_monitoring] Alert {alert_id} ({incident_type} on {device_id}) can be monitored")
+        
+        # Resolve stale alerts that cannot be monitored
+        if stale_alerts:
+            print(f"[@alert_manager:validate_monitoring] Resolving {len(stale_alerts)} stale alerts...")
+            for alert_id in stale_alerts:
+                try:
+                    resolve_result = resolve_alert(alert_id)
+                    if resolve_result['success']:
+                        print(f"[@alert_manager:validate_monitoring] Resolved stale alert: {alert_id}")
+                    else:
+                        print(f"[@alert_manager:validate_monitoring] Failed to resolve stale alert {alert_id}: {resolve_result.get('error')}")
+                except Exception as e:
+                    print(f"[@alert_manager:validate_monitoring] Error resolving alert {alert_id}: {e}")
+        else:
+            print("[@alert_manager:validate_monitoring] All active alerts can be monitored")
+            
+    except Exception as e:
+        print(f"[@alert_manager:validate_monitoring] Error during validation: {e}")
+
+def can_monitor_alert(alert: Dict) -> bool:
+    """Check if we can actually monitor this alert based on current system state."""
+    try:
+        incident_type = alert['incident_type']
+        device_id = alert['device_id']
+        start_time = alert['start_time']
+        
+        # Parse start time
+        from datetime import datetime, timedelta
+        try:
+            if start_time.endswith('Z'):
+                start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+            else:
+                start_dt = datetime.fromisoformat(start_time)
+        except ValueError:
+            print(f"[@alert_manager:can_monitor_alert] Invalid start_time format: {start_time}")
+            return False
+        
+        # Check if alert is too old (more than 1 hour old alerts are likely stale)
+        current_time = datetime.now(start_dt.tzinfo) if start_dt.tzinfo else datetime.now()
+        age = current_time - start_dt
+        max_age = timedelta(hours=1)
+        
+        if age > max_age:
+            print(f"[@alert_manager:can_monitor_alert] Alert is too old ({age.total_seconds():.0f}s > {max_age.total_seconds():.0f}s)")
+            return False
+        
+        # Check if monitoring infrastructure exists for this device
+        if incident_type == 'audio_loss':
+            # For audio incidents, check if audio monitoring is working
+            return can_monitor_audio_for_device(device_id)
+        else:
+            # For visual incidents, check if frame monitoring is working  
+            return can_monitor_frames_for_device(device_id)
+        
+    except Exception as e:
+        print(f"[@alert_manager:can_monitor_alert] Error checking monitoring capability: {e}")
+        return False
+
+def can_monitor_audio_for_device(device_id: str) -> bool:
+    """Check if audio monitoring is working for a specific device."""
+    try:
+        # Extract device number from device_id (e.g., "device2" -> "2")
+        if not device_id.startswith('device'):
+            return False
+        
+        device_number = device_id.replace('device', '')
+        if not device_number.isdigit():
+            return False
+        
+        # Check if capture directory exists
+        capture_dir = f"/var/www/html/stream/capture{device_number}"
+        if not os.path.exists(capture_dir):
+            print(f"[@alert_manager:can_monitor_audio] Capture directory not found: {capture_dir}")
+            return False
+        
+        # Check if recent HLS segments exist (within last 10 seconds)
+        import glob
+        from datetime import datetime, timedelta
+        
+        segment_pattern = os.path.join(capture_dir, "segment_*.ts")
+        segments = glob.glob(segment_pattern)
+        
+        if not segments:
+            print(f"[@alert_manager:can_monitor_audio] No HLS segments found in {capture_dir}")
+            return False
+        
+        # Check if any segment is recent
+        current_time = datetime.now()
+        recent_threshold = timedelta(seconds=30)  # Allow 30 seconds for segment creation
+        
+        for segment in segments:
+            try:
+                segment_time = datetime.fromtimestamp(os.path.getmtime(segment))
+                if current_time - segment_time < recent_threshold:
+                    print(f"[@alert_manager:can_monitor_audio] Found recent HLS segment for {device_id}")
+                    return True
+            except OSError:
+                continue
+        
+        print(f"[@alert_manager:can_monitor_audio] No recent HLS segments for {device_id}")
+        return False
+        
+    except Exception as e:
+        print(f"[@alert_manager:can_monitor_audio] Error checking audio monitoring for {device_id}: {e}")
+        return False
+
+def can_monitor_frames_for_device(device_id: str) -> bool:
+    """Check if frame monitoring is working for a specific device."""
+    try:
+        # Extract device number from device_id (e.g., "device1" -> "1")
+        if not device_id.startswith('device'):
+            return False
+        
+        device_number = device_id.replace('device', '')
+        if not device_number.isdigit():
+            return False
+        
+        # Check if captures directory exists
+        captures_dir = f"/var/www/html/stream/capture{device_number}/captures"
+        if not os.path.exists(captures_dir):
+            print(f"[@alert_manager:can_monitor_frames] Captures directory not found: {captures_dir}")
+            return False
+        
+        # Check if recent capture images exist (within last 10 seconds)
+        import glob
+        from datetime import datetime, timedelta
+        
+        image_pattern = os.path.join(captures_dir, "capture_*.jpg")
+        images = glob.glob(image_pattern)
+        
+        # Filter out thumbnails
+        original_images = [img for img in images if '_thumbnail' not in img]
+        
+        if not original_images:
+            print(f"[@alert_manager:can_monitor_frames] No capture images found in {captures_dir}")
+            return False
+        
+        # Check if any image is recent
+        current_time = datetime.now()
+        recent_threshold = timedelta(seconds=10)  # Images should be created every second
+        
+        for image in original_images:
+            try:
+                image_time = datetime.fromtimestamp(os.path.getmtime(image))
+                if current_time - image_time < recent_threshold:
+                    print(f"[@alert_manager:can_monitor_frames] Found recent capture image for {device_id}")
+                    return True
+            except OSError:
+                continue
+        
+        print(f"[@alert_manager:can_monitor_frames] No recent capture images for {device_id}")
+        return False
+        
+    except Exception as e:
+        print(f"[@alert_manager:can_monitor_frames] Error checking frame monitoring for {device_id}: {e}")
+        return False
+
 def cleanup_alert_queue() -> None:
     """Clean up pending alert queue files."""
     try:
