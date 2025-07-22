@@ -146,11 +146,15 @@ def list_recent_analysis():
                 audio_json_url = None
                 
                 if item['frame_json_path']:
-                    frame_json_url = buildCaptureUrlFromPath(host_dict, item['frame_json_path'], device_id)
+                    # Build image URL first, then convert to JSON URL
+                    image_url_for_json = buildCaptureUrlFromPath(host_dict, item['filepath'], device_id)
+                    frame_json_url = image_url_for_json.replace('.jpg', '.json')
                     frame_json_url = buildClientImageUrl(frame_json_url)
                 
                 if item['audio_json_path']:
-                    audio_json_url = buildCaptureUrlFromPath(host_dict, item['audio_json_path'], device_id)
+                    # Build image URL first, then convert to audio JSON URL  
+                    image_url_for_audio = buildCaptureUrlFromPath(host_dict, item['filepath'], device_id)
+                    audio_json_url = image_url_for_audio.replace('.jpg', '_audio.json')
                     audio_json_url = buildClientImageUrl(audio_json_url)
                 
                 response_data.append({
