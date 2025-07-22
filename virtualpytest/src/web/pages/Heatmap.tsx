@@ -355,19 +355,17 @@ const Heatmap: React.FC = () => {
       // Safely access analysis_json with fallback to empty object
       const analysisJson = image.analysis_json || {};
 
-      // Fix logical inconsistencies in the data
-      // Distinguish between "no video signal" vs "blackscreen detected in video"
-      const hasVideo = analysisJson.has_video || false;
-      const hasAudio = analysisJson.has_audio || false;
+      // Derive Video/Audio status from actual issues in the JSON
+      // JSON only contains: blackscreen, freeze, audio_loss
+      const blackscreen = analysisJson.blackscreen || false;
+      const freeze = analysisJson.freeze || false;
+      const audioLoss = analysisJson.audio_loss || false;
 
-      // Blackscreen should only be true if we have video but it's detected as black
-      // If has_video is false, that means no video signal, not blackscreen
-      const blackscreen = hasVideo && (analysisJson.blackscreen || false);
-      const freeze = hasVideo && (analysisJson.freeze || false);
+      // Video status: No if there are video issues, Yes if no issues
+      const hasVideo = !blackscreen && !freeze; // Video works if no blackscreen and no freeze
 
-      // Audio loss should only be true if we expect audio but it's lost
-      // If has_audio is false, that means no audio signal, not audio loss
-      const audioLoss = hasAudio && (analysisJson.audio_loss || false);
+      // Audio status: No if there's audio loss, Yes if no audio loss
+      const hasAudio = !audioLoss; // Audio works if no audio loss
 
       const analysisIncidents = [
         blackscreen ? 'blackscreen' : null,
@@ -456,13 +454,17 @@ const Heatmap: React.FC = () => {
 
     // Get the corrected analysis values
     const analysisJson = tooltipImage.analysis_json || {};
-    const hasVideo = analysisJson.has_video || false;
-    const hasAudio = analysisJson.has_audio || false;
 
-    // Use same corrected logic as main analysis
-    const blackscreen = hasVideo && (analysisJson.blackscreen || false);
-    const freeze = hasVideo && (analysisJson.freeze || false);
-    const audioLoss = hasAudio && (analysisJson.audio_loss || false);
+    // Use same logic as main analysis - derive from actual issues
+    const blackscreen = analysisJson.blackscreen || false;
+    const freeze = analysisJson.freeze || false;
+    const audioLoss = analysisJson.audio_loss || false;
+
+    // Video status: No if there are video issues, Yes if no issues
+    const hasVideo = !blackscreen && !freeze;
+
+    // Audio status: No if there's audio loss, Yes if no audio loss
+    const hasAudio = !audioLoss;
 
     // Convert to MonitoringAnalysis format
     const analysis = {
