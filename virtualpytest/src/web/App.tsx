@@ -26,6 +26,8 @@ const RunTests = React.lazy(() => import('./pages/RunTests'));
 const TestReports = React.lazy(() => import('./pages/TestReports'));
 const ModelReports = React.lazy(() => import('./pages/ModelReports'));
 const DependencyReport = React.lazy(() => import('./pages/DependencyReport'));
+const MonitoringIncidents = React.lazy(() => import('./pages/MonitoringIncidents'));
+const Heatmap = React.lazy(() => import('./pages/Heatmap'));
 const UserInterface = React.lazy(() => import('./pages/UserInterface'));
 const TestCaseEditor = React.lazy(() => import('./pages/TestCaseEditor'));
 const NavigationEditor = React.lazy(() => import('./pages/NavigationEditor'));
@@ -162,6 +164,11 @@ const App: React.FC = () => {
                   {/* Test Execution Routes */}
                   <Route path="/test-execution/run-tests" element={<RunTests />} />
                   <Route path="/test-execution/monitoring" element={<Monitoring />} />
+                  <Route
+                    path="/test-execution/monitoring/incidents"
+                    element={<MonitoringIncidents />}
+                  />
+                  <Route path="/test-execution/monitoring/heatmap" element={<Heatmap />} />
 
                   {/* Test Results Routes */}
                   <Route path="/test-results/reports" element={<TestReports />} />

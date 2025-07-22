@@ -13,6 +13,8 @@ import {
   Memory as ModelIcon,
   BugReport as TestingIcon,
   Link as LinkIcon,
+  Warning as IncidentIcon,
+  GridView as HeatmapIcon,
 } from '@mui/icons-material';
 import { Box, Button } from '@mui/material';
 import React from 'react';
@@ -40,6 +42,16 @@ const NavigationBar: React.FC = () => {
       label: 'Monitoring',
       path: '/test-execution/monitoring',
       icon: <MonitorIcon fontSize="small" />,
+    },
+    {
+      label: 'Incidents',
+      path: '/test-execution/monitoring/incidents',
+      icon: <IncidentIcon fontSize="small" />,
+    },
+    {
+      label: 'Heatmap',
+      path: '/test-execution/monitoring/heatmap',
+      icon: <HeatmapIcon fontSize="small" />,
     },
   ];
 
