@@ -66,16 +66,6 @@ def get_heatmap_data(
         
         print(f"[@db:heatmap:get_heatmap_data] Found {len(hosts_devices)} host/device combinations")
         
-        # Debug: Print all host data to understand the structure
-        for i, host_data in enumerate(all_hosts):
-            print(f"[@db:heatmap:get_heatmap_data] Host {i}: {host_data.get('host_name', host_data.get('name', 'unknown'))}")
-            print(f"  Devices: {host_data.get('devices', [])}")
-            devices = host_data.get('devices', [])
-            for j, device in enumerate(devices):
-                capabilities = device.get('device_capabilities', {})
-                print(f"  Device {j}: {device.get('device_id', 'unknown')} - capabilities: {capabilities}")
-                print(f"  Has 'av' capability: {'av' in capabilities and bool(capabilities.get('av'))}")
-        
         # Query all hosts for recent analysis data
         images_by_timestamp = {}
         
@@ -185,16 +175,50 @@ def get_heatmap_data(
                             if bucket_key not in images_by_timestamp:
                                 images_by_timestamp[bucket_key] = []
                             
+                            # Download and parse JSON analysis data
+                            analysis_json = {
+                                'has_audio': False,
+                                'has_video': False,
+                                'blackscreen': False,
+                                'freeze': False,
+                                'audio_loss': False
+                            }
+                            
+                            # Parse frame analysis if available
+                            frame_json_url = item.get('frame_json_url')
+                            if frame_json_url:
+                                try:
+                                    import requests
+                                    response = requests.get(frame_json_url, timeout=3)
+                                    if response.status_code == 200:
+                                        frame_data = response.json()
+                                        analysis_json['has_video'] = True
+                                        analysis_json['blackscreen'] = frame_data.get('blackscreen_detected', False)
+                                        analysis_json['freeze'] = frame_data.get('freeze_detected', False)
+                                except Exception as e:
+                                    print(f"[@db:heatmap:get_heatmap_data] Failed to parse frame JSON: {e}")
+                            
+                            # Parse audio analysis if available  
+                            audio_json_url = item.get('audio_json_url')
+                            if audio_json_url:
+                                try:
+                                    import requests
+                                    response = requests.get(audio_json_url, timeout=3)
+                                    if response.status_code == 200:
+                                        audio_data = response.json()
+                                        analysis_json['has_audio'] = True
+                                        analysis_json['audio_loss'] = audio_data.get('audio_loss_detected', False)
+                                except Exception as e:
+                                    print(f"[@db:heatmap:get_heatmap_data] Failed to parse audio JSON: {e}")
+                            
                             # Add host/device data to this timestamp bucket
                             images_by_timestamp[bucket_key].append({
                                 'host_name': result['host_name'],
                                 'device_id': result['device_id'],
                                 'filename': item.get('filename'),
                                 'image_url': item.get('image_url'),
-                                'frame_json_url': item.get('frame_json_url'),
-                                'audio_json_url': item.get('audio_json_url'),
-                                'has_frame_analysis': item.get('has_frame_analysis', False),
-                                'has_audio_analysis': item.get('has_audio_analysis', False),
+                                'timestamp': bucket_key,  # Use bucket timestamp for consistency
+                                'analysis_json': analysis_json,  # Parsed analysis data
                                 'original_timestamp': timestamp
                             })
                         except ValueError as e:

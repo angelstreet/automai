@@ -30,7 +30,7 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect, useRef } from 'react';
 
-import { useHeatmap, HeatmapData, HeatmapImage, HeatmapIncident } from '../hooks/pages/useHeatmap';
+import { useHeatmap, HeatmapData, HeatmapImage } from '../hooks/pages/useHeatmap';
 
 const Heatmap: React.FC = () => {
   const {
@@ -200,11 +200,14 @@ const Heatmap: React.FC = () => {
           incident.host_name === image.host_name && incident.device_id === image.device_id,
       );
 
+      // Safely access analysis_json with fallback to empty object
+      const analysisJson = image.analysis_json || {};
+
       const analysisIncidents = [
-        image.analysis_json.blackscreen && 'blackscreen',
-        image.analysis_json.freeze && 'freeze',
-        image.analysis_json.audio_loss && 'audio_loss',
-      ].filter(Boolean);
+        analysisJson.blackscreen ? 'blackscreen' : null,
+        analysisJson.freeze ? 'freeze' : null,
+        analysisJson.audio_loss ? 'audio_loss' : null,
+      ].filter((incident): incident is string => incident !== null);
 
       const dbIncidents = currentIncidents
         .filter(
