@@ -94,8 +94,8 @@ const MonitoringIncidents: React.FC = () => {
   const formatDuration = (startTime: string, endTime?: string): string => {
     try {
       // Parse dates with better error handling
-      const start = new Date(startTime);
-      const end = endTime ? new Date(endTime) : new Date();
+    const start = new Date(startTime);
+    const end = endTime ? new Date(endTime) : new Date();
 
       // Validate dates
       if (isNaN(start.getTime())) {
@@ -117,7 +117,7 @@ const MonitoringIncidents: React.FC = () => {
         return 'Future Date';
       }
 
-      const durationMs = end.getTime() - start.getTime();
+    const durationMs = end.getTime() - start.getTime();
 
       if (durationMs < 0) {
         console.warn(`[@component:MonitoringIncidents] Negative duration detected:`);
@@ -427,11 +427,11 @@ const MonitoringIncidents: React.FC = () => {
                     ) : (
                       activeAlerts.map((alert) => (
                         <React.Fragment key={alert.id}>
-                          <TableRow
-                            sx={{
-                              '&:hover': {
+                        <TableRow
+                          sx={{
+                            '&:hover': {
                                 backgroundColor: 'transparent !important',
-                              },
+                            },
                               height: '48px', // Fixed height for main rows
                             }}
                           >
@@ -440,7 +440,7 @@ const MonitoringIncidents: React.FC = () => {
                                 size="small"
                                 onClick={() => toggleRowExpansion(alert.id)}
                                 sx={{ p: 0.5 }}
-                              >
+                        >
                                 {expandedRows.has(alert.id) ? (
                                   <ExpandMoreIcon />
                                 ) : (
@@ -448,18 +448,18 @@ const MonitoringIncidents: React.FC = () => {
                                 )}
                               </IconButton>
                             </TableCell>
-                            <TableCell sx={{ py: 0.5 }}>
-                              <Chip
-                                icon={<ActiveIcon />}
-                                label={alert.incident_type}
-                                color={getIncidentTypeColor(alert.incident_type)}
-                                size="small"
-                              />
-                            </TableCell>
-                            <TableCell sx={{ py: 0.5 }}>{alert.host_name}</TableCell>
-                            <TableCell sx={{ py: 0.5 }}>{alert.device_id}</TableCell>
-                            <TableCell sx={{ py: 0.5 }}>{formatDate(alert.start_time)}</TableCell>
-                            <TableCell sx={{ py: 0.5 }}>
+                          <TableCell sx={{ py: 0.5 }}>
+                            <Chip
+                              icon={<ActiveIcon />}
+                              label={alert.incident_type}
+                              color={getIncidentTypeColor(alert.incident_type)}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 0.5 }}>{alert.host_name}</TableCell>
+                          <TableCell sx={{ py: 0.5 }}>{alert.device_id}</TableCell>
+                          <TableCell sx={{ py: 0.5 }}>{formatDate(alert.start_time)}</TableCell>
+                          <TableCell sx={{ py: 0.5 }}>
                               {formatDuration(alert.start_time)}
                             </TableCell>
                           </TableRow>
@@ -481,8 +481,8 @@ const MonitoringIncidents: React.FC = () => {
                                     {renderExpandedContent(alert)}
                                   </Box>
                                 </Collapse>
-                              </TableCell>
-                            </TableRow>
+                          </TableCell>
+                        </TableRow>
                           )}
                         </React.Fragment>
                       ))
@@ -541,11 +541,11 @@ const MonitoringIncidents: React.FC = () => {
                     ) : (
                       closedAlerts.map((alert) => (
                         <React.Fragment key={alert.id}>
-                          <TableRow
-                            sx={{
-                              '&:hover': {
+                        <TableRow
+                          sx={{
+                            '&:hover': {
                                 backgroundColor: 'transparent !important',
-                              },
+                            },
                               height: '48px', // Fixed height for main rows
                             }}
                           >
@@ -554,7 +554,7 @@ const MonitoringIncidents: React.FC = () => {
                                 size="small"
                                 onClick={() => toggleRowExpansion(alert.id)}
                                 sx={{ p: 0.5 }}
-                              >
+                        >
                                 {expandedRows.has(alert.id) ? (
                                   <ExpandMoreIcon />
                                 ) : (
@@ -562,27 +562,27 @@ const MonitoringIncidents: React.FC = () => {
                                 )}
                               </IconButton>
                             </TableCell>
-                            <TableCell sx={{ py: 0.5 }}>
-                              <Chip
-                                icon={<ResolvedIcon />}
-                                label={alert.incident_type}
-                                color="success"
-                                size="small"
-                                variant="outlined"
-                              />
-                            </TableCell>
-                            <TableCell sx={{ py: 0.5 }}>{alert.host_name}</TableCell>
-                            <TableCell sx={{ py: 0.5 }}>{alert.device_id}</TableCell>
-                            <TableCell sx={{ py: 0.5 }}>{formatDate(alert.start_time)}</TableCell>
-                            <TableCell sx={{ py: 0.5 }}>
-                              {alert.end_time ? formatDate(alert.end_time) : 'N/A'}
-                            </TableCell>
-                            <TableCell sx={{ py: 0.5 }}>
-                              {alert.end_time
-                                ? formatDuration(alert.start_time, alert.end_time)
-                                : 'N/A'}
-                            </TableCell>
-                          </TableRow>
+                          <TableCell sx={{ py: 0.5 }}>
+                            <Chip
+                              icon={<ResolvedIcon />}
+                              label={alert.incident_type}
+                              color="success"
+                              size="small"
+                              variant="outlined"
+                            />
+                          </TableCell>
+                          <TableCell sx={{ py: 0.5 }}>{alert.host_name}</TableCell>
+                          <TableCell sx={{ py: 0.5 }}>{alert.device_id}</TableCell>
+                          <TableCell sx={{ py: 0.5 }}>{formatDate(alert.start_time)}</TableCell>
+                          <TableCell sx={{ py: 0.5 }}>
+                            {alert.end_time ? formatDate(alert.end_time) : 'N/A'}
+                          </TableCell>
+                          <TableCell sx={{ py: 0.5 }}>
+                            {alert.end_time
+                              ? formatDuration(alert.start_time, alert.end_time)
+                              : 'N/A'}
+                          </TableCell>
+                        </TableRow>
                           {expandedRows.has(alert.id) && (
                             <TableRow
                               sx={{

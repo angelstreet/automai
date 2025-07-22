@@ -212,7 +212,7 @@ class CaptureMonitor:
             else:
                 # Don't log stderr if it's just about stale segments (expected behavior now)
                 if "too old" not in result.stderr and "no recent segments" not in result.stderr:
-                    print(f"[@capture_monitor] Audio analysis failed: {result.stderr}")
+                print(f"[@capture_monitor] Audio analysis failed: {result.stderr}")
                 
         except subprocess.TimeoutExpired:
             print(f"[@capture_monitor] Audio analysis timeout: {capture_dir}")

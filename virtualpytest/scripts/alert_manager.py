@@ -401,7 +401,7 @@ def trigger_alert(
         if r2_upload_result.get('success'):
             print(f"  - Original image URL: {enhanced_metadata['r2_images']['original_url']}")
             print(f"  - Thumbnail image URL: {enhanced_metadata['r2_images']['thumbnail_url']}")
-        return alert_id
+    return alert_id
     else:
         print(f"[@alert_manager:trigger_alert] Failed to create alert: {result.get('error')}")
         return None
