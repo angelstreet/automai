@@ -391,7 +391,15 @@ const MonitoringIncidents: React.FC = () => {
                 Alerts In Progress
               </Typography>
 
-              <TableContainer component={Paper} variant="outlined">
+              <TableContainer 
+                component={Paper} 
+                variant="outlined" 
+                sx={{ 
+                  "& .MuiTableRow-root:hover": {
+                    backgroundColor: "transparent !important"
+                  }
+                }}
+              >
                 <Table size="small">
                   <TableHead>
                     <TableRow>
@@ -502,7 +510,15 @@ const MonitoringIncidents: React.FC = () => {
                 Alerts Closed
               </Typography>
 
-              <TableContainer component={Paper} variant="outlined">
+              <TableContainer 
+                component={Paper} 
+                variant="outlined" 
+                sx={{ 
+                  "& .MuiTableRow-root:hover": {
+                    backgroundColor: "transparent !important"
+                  }
+                }}
+              >
                 <Table size="small">
                   <TableHead>
                     <TableRow>
