@@ -80,6 +80,8 @@ def _register_server_routes(app):
         ('server_script_routes', 'server_script_bp'),  # ✅ Script execution proxy
         ('server_script_results_routes', 'server_script_results_bp'),  # ✅ Script results management
         ('server_execution_results_routes', 'server_execution_results_bp'),  # ✅ Execution results management
+        ('server_alerts_routes', 'server_alerts_bp'),  # ✅ Alerts management
+        ('server_heatmap_routes', 'server_heatmap_bp'),  # ✅ Heatmap generation and data
         ('server_aiagent_routes', 'server_aiagent_bp'),  # ✅ AI agent proxy routes
         ('server_frontend_routes', 'server_frontend_bp'),  # ✅ Frontend navigation control for MCP
         ('server_mcp_routes', 'server_mcp_bp'),  # ✅ MCP task execution bridge
@@ -125,6 +127,7 @@ def _register_host_routes(app):
         ('host_script_routes', 'host_script_bp'),  # ✅ Script execution
         ('host_av_routes', 'host_av_bp'),  # ✅ Audio/Video operations
         ('host_control_routes', 'host_control_bp'),  # ✅ Control operations
+        ('host_heatmap_routes', 'host_heatmap_bp'),  # ✅ Heatmap data collection
     ]
     
     for module_name, blueprint_name in host_route_modules:
