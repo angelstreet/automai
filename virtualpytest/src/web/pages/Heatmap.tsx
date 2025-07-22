@@ -27,14 +27,13 @@ import {
   TableHead,
   TableRow,
   Paper,
-  Tooltip,
   Popper,
   Fade,
 } from '@mui/material';
 import React, { useState, useEffect, useRef } from 'react';
 
-import { useHeatmap, HeatmapData, HeatmapImage } from '../hooks/pages/useHeatmap';
 import { MonitoringOverlay } from '../components/monitoring/MonitoringOverlay';
+import { useHeatmap, HeatmapData, HeatmapImage } from '../hooks/pages/useHeatmap';
 
 const Heatmap: React.FC = () => {
   const {
@@ -62,47 +61,38 @@ const Heatmap: React.FC = () => {
   // Tooltip state
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const [tooltipAnchor, setTooltipAnchor] = useState<HTMLElement | null>(null);
-  const [tooltipDelay, setTooltipDelay] = useState<NodeJS.Timeout | null>(null);
-  const [tooltipImage, setTooltipImage] = useState<HeatmapImage | null>(null);
+  const [tooltipIndex, setTooltipIndex] = useState<number | null>(null);
 
   // Tooltip handlers
-  const handleMouseEnter = (event: React.MouseEvent<HTMLElement>, image: HeatmapImage) => {
-    console.log('[@Heatmap] Mouse enter triggered for:', image.host_name);
+  const handleMouseEnter = (event: React.MouseEvent<HTMLDivElement>, index: number) => {
+    const target = event.currentTarget; // Capture immediately
 
-    // Capture the target immediately before setTimeout
-    const target = event.currentTarget;
-    console.log('[@Heatmap] Captured target immediately:', target);
+    setTimeout(() => {
+      if (target) {
+        // Position tooltip at the TOP-RIGHT corner of the cell
+        const rect = target.getBoundingClientRect();
+        const tooltipAnchor = document.createElement('div');
+        tooltipAnchor.style.position = 'absolute';
+        tooltipAnchor.style.left = `${rect.right - 10}px`; // 10px from right edge
+        tooltipAnchor.style.top = `${rect.top + 10}px`; // 10px from top edge
+        tooltipAnchor.style.width = '1px';
+        tooltipAnchor.style.height = '1px';
+        tooltipAnchor.style.zIndex = '1000';
+        document.body.appendChild(tooltipAnchor);
 
-    // Clear any existing delay
-    if (tooltipDelay) {
-      clearTimeout(tooltipDelay);
-    }
-
-    // Set a delay before showing tooltip
-    const delay = setTimeout(() => {
-      console.log('[@Heatmap] Setting tooltip anchor:', target);
-
-      setTooltipAnchor(target);
-      setTooltipImage(image);
-      setTooltipOpen(true);
-
-      console.log('[@Heatmap] Tooltip should now be open');
-    }, 300); // 300ms delay (under 1s as requested)
-
-    setTooltipDelay(delay);
+        setTooltipAnchor(tooltipAnchor);
+        setTooltipIndex(index);
+        setTooltipOpen(true);
+      }
+    }, 500);
   };
 
   const handleMouseLeave = () => {
-    // Clear delay if mouse leaves before tooltip shows
-    if (tooltipDelay) {
-      clearTimeout(tooltipDelay);
-      setTooltipDelay(null);
-    }
-
-    // Hide tooltip and clear anchor
     setTooltipOpen(false);
+    if (tooltipAnchor && document.body.contains(tooltipAnchor)) {
+      document.body.removeChild(tooltipAnchor);
+    }
     setTooltipAnchor(null);
-    setTooltipImage(null);
   };
 
   // Refs
@@ -298,11 +288,7 @@ const Heatmap: React.FC = () => {
     // Check if any device in this timestamp has incidents (based on JSON analysis only)
     return images.some((image) => {
       const analysisJson = image.analysis_json || {};
-      return (
-        analysisJson.blackscreen ||
-        analysisJson.freeze ||
-        analysisJson.audio_loss
-      );
+      return analysisJson.blackscreen || analysisJson.freeze || analysisJson.audio_loss;
     });
   };
 
@@ -310,14 +296,14 @@ const Heatmap: React.FC = () => {
   const getTimelineTicks = () => {
     if (!heatmapData || !heatmapData.timeline_timestamps) return [];
 
-    // Create marks for each timestamp, with special highlighting for those with incidents
+    // Create marks for ALL timestamps, colored based on incident status
     return heatmapData.timeline_timestamps.map((_, index) => {
       const hasIncident = frameHasIncidents(index);
       return {
         value: index,
         hasIncident,
-        // Only create visible marks for frames with incidents
-        visible: hasIncident,
+        // Show ALL ticks, not just those with incidents
+        visible: true,
       };
     });
   };
@@ -442,14 +428,11 @@ const Heatmap: React.FC = () => {
 
   // Tooltip component
   const renderTooltip = () => {
-    if (!tooltipOpen || !tooltipImage) return null;
+    if (!tooltipOpen || tooltipIndex === null) return null;
 
-    console.log(
-      '[@Heatmap] Rendering tooltip for:',
-      tooltipImage.host_name,
-      'anchor:',
-      tooltipAnchor,
-    );
+    const images = getCurrentImages();
+    const tooltipImage = images[tooltipIndex];
+    if (!tooltipImage) return null;
 
     // Get the corrected analysis values
     const analysisJson = tooltipImage.analysis_json || {};
@@ -458,9 +441,6 @@ const Heatmap: React.FC = () => {
     const blackscreen = analysisJson.blackscreen || false;
     const freeze = analysisJson.freeze || false;
     const audioLoss = analysisJson.audio_loss || false;
-
-    // Video status: No if there are video issues, Yes if no issues
-    const hasVideo = !blackscreen && !freeze;
 
     // Audio status: No if there's audio loss, Yes if no audio loss
     const hasAudio = !audioLoss;
@@ -485,21 +465,6 @@ const Heatmap: React.FC = () => {
         placement="bottom-start"
         transition
         style={{ zIndex: 1500 }}
-        modifiers={[
-          {
-            name: 'offset',
-            options: {
-              offset: [-20, -20], // Move left 20px and up 20px to position inside top-right of cell
-            },
-          },
-          {
-            name: 'preventOverflow',
-            options: {
-              boundary: 'viewport',
-              padding: 8,
-            },
-          },
-        ]}
       >
         {({ TransitionProps }) => (
           <Fade {...TransitionProps} timeout={300}>
@@ -526,12 +491,6 @@ const Heatmap: React.FC = () => {
 
   return (
     <Box>
-      <Box sx={{ mb: 1 }}>
-        <Typography variant="h4" gutterBottom>
-          Heatmap
-        </Typography>
-      </Box>
-
       {error && (
         <MuiAlert severity="error" sx={{ mb: 1 }} onClose={() => setError(null)}>
           {error}
@@ -731,7 +690,7 @@ const Heatmap: React.FC = () => {
                                 outline: '2px solid rgba(255, 255, 255, 0.5)',
                               },
                             }}
-                            onMouseEnter={(e) => handleMouseEnter(e, image)}
+                            onMouseEnter={(e) => handleMouseEnter(e, index)}
                             onMouseLeave={handleMouseLeave}
                           />
 
@@ -804,7 +763,7 @@ const Heatmap: React.FC = () => {
                 </IconButton>
 
                 {/* Timeline scrubber */}
-                <Box sx={{ flexGrow: 1, mx: 2 }}>
+                <Box sx={{ flexGrow: 1, mx: 2, position: 'relative' }}>
                   <Slider
                     value={currentFrame}
                     min={0}
@@ -823,24 +782,28 @@ const Heatmap: React.FC = () => {
                       '& .MuiSlider-rail': {
                         backgroundColor: '#CCCCCC', // Light gray for the rail
                       },
-                      // Add tick marks for each timestamp with incidents
                       '& .MuiSlider-mark': {
-                        backgroundColor: '#FF0000', // Red for incidents
-                        height: 8,
-                        width: 2,
-                        marginTop: -3,
-                      },
-                      '& .MuiSlider-markActive': {
-                        backgroundColor: '#FF0000', // Red for active incidents
+                        display: 'none', // Hide default marks, we'll draw custom ones
                       },
                     }}
-                    marks={getTimelineTicks()
-                      .filter((tick) => tick.visible)
-                      .map((tick) => ({
-                        value: tick.value,
-                        label: '',
-                      }))}
                   />
+                  {/* Custom colored timeline ticks */}
+                  {getTimelineTicks().map((tick) => (
+                    <Box
+                      key={tick.value}
+                      sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: `${(tick.value / Math.max(1, totalFrames - 1)) * 100}%`,
+                        transform: 'translate(-50%, -50%)',
+                        width: 3,
+                        height: 12,
+                        backgroundColor: tick.hasIncident ? '#FF0000' : '#00FF00',
+                        borderRadius: 1,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  ))}
                 </Box>
 
                 {/* Frame counter */}
