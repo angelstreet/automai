@@ -6,7 +6,7 @@ Alerts track monitoring incidents with start/end times and device information.
 """
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from uuid import uuid4
 
@@ -231,7 +231,7 @@ def create_alert(
             'incident_type': incident_type,
             'status': 'active',
             'consecutive_count': consecutive_count,
-            'start_time': datetime.now().isoformat(),
+            'start_time': datetime.now(timezone.utc).isoformat(),
             'metadata': metadata or {}
         }
         
@@ -274,7 +274,7 @@ def resolve_alert(alert_id: str) -> Dict:
         supabase = get_supabase()
         result = supabase.table('alerts').update({
             'status': 'resolved',
-            'end_time': datetime.now().isoformat()
+            'end_time': datetime.now(timezone.utc).isoformat()
         }).eq('id', alert_id).execute()
         
         if result.data:

@@ -7,7 +7,7 @@ Manages alert state and triggers database alerts based on consecutive detections
 import os
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 from pathlib import Path
 
@@ -36,6 +36,85 @@ def _lazy_import_db():
             create_alert = False
             resolve_alert = False
             get_active_alerts = False
+
+def upload_incident_images_to_r2(analysis_path: str, host_name: str, device_id: str, incident_type: str) -> Dict:
+    """Upload incident images to R2 and return public URLs."""
+    try:
+        print(f"[@alert_manager:upload_incident_images_to_r2] Uploading incident images for {incident_type}")
+        
+        # Import R2 utilities
+        from src.utils.cloudflare_utils import get_cloudflare_utils
+        
+        # Get the image directory and filename
+        if os.path.isfile(analysis_path):
+            image_dir = os.path.dirname(analysis_path)
+            image_filename = os.path.basename(analysis_path)
+        else:
+            print(f"[@alert_manager:upload_incident_images_to_r2] Analysis path is not a file: {analysis_path}")
+            return {'success': False, 'error': 'Invalid analysis path'}
+        
+        # Extract timestamp from filename (e.g., capture_20250722105341.jpg)
+        timestamp_match = image_filename.replace('capture_', '').replace('.jpg', '')
+        if not timestamp_match.isdigit() or len(timestamp_match) != 14:
+            print(f"[@alert_manager:upload_incident_images_to_r2] Could not extract timestamp from: {image_filename}")
+            return {'success': False, 'error': 'Invalid filename format'}
+        
+        # Build thumbnail filename
+        thumbnail_filename = image_filename.replace('.jpg', '_thumbnail.jpg')
+        thumbnail_path = os.path.join(image_dir, thumbnail_filename)
+        
+        # Check if files exist
+        if not os.path.exists(analysis_path):
+            print(f"[@alert_manager:upload_incident_images_to_r2] Original image not found: {analysis_path}")
+            return {'success': False, 'error': 'Original image not found'}
+        
+        if not os.path.exists(thumbnail_path):
+            print(f"[@alert_manager:upload_incident_images_to_r2] Thumbnail not found: {thumbnail_path}")
+            return {'success': False, 'error': 'Thumbnail not found'}
+        
+        # Get R2 uploader
+        uploader = get_cloudflare_utils()
+        
+        # Create R2 paths for alert images
+        # Format: alerts/{host_name}/{device_id}/{incident_type}/{timestamp}/
+        alert_folder = f"alerts/{host_name}/{device_id}/{incident_type}/{timestamp_match}"
+        
+        original_r2_path = f"{alert_folder}/original.jpg"
+        thumbnail_r2_path = f"{alert_folder}/thumbnail.jpg"
+        
+        # Upload original image
+        print(f"[@alert_manager:upload_incident_images_to_r2] Uploading original: {original_r2_path}")
+        original_upload = uploader.upload_file(analysis_path, original_r2_path)
+        
+        if not original_upload.get('success'):
+            print(f"[@alert_manager:upload_incident_images_to_r2] Failed to upload original: {original_upload.get('error')}")
+            return {'success': False, 'error': f"Failed to upload original image: {original_upload.get('error')}"}
+        
+        # Upload thumbnail
+        print(f"[@alert_manager:upload_incident_images_to_r2] Uploading thumbnail: {thumbnail_r2_path}")
+        thumbnail_upload = uploader.upload_file(thumbnail_path, thumbnail_r2_path)
+        
+        if not thumbnail_upload.get('success'):
+            print(f"[@alert_manager:upload_incident_images_to_r2] Failed to upload thumbnail: {thumbnail_upload.get('error')}")
+            return {'success': False, 'error': f"Failed to upload thumbnail: {thumbnail_upload.get('error')}"}
+        
+        print(f"[@alert_manager:upload_incident_images_to_r2] Successfully uploaded both images to R2")
+        
+        return {
+            'success': True,
+            'original_url': original_upload.get('url'),
+            'thumbnail_url': thumbnail_upload.get('url'),
+            'original_r2_path': original_r2_path,
+            'thumbnail_r2_path': thumbnail_r2_path,
+            'timestamp': timestamp_match
+        }
+        
+    except ImportError as e:
+        print(f"[@alert_manager:upload_incident_images_to_r2] CloudflareUtils not available: {e}")
+        return {'success': False, 'error': 'R2 upload not available'}
+    except Exception as e:
+        print(f"[@alert_manager:upload_incident_images_to_r2] Error uploading to R2: {e}")
+        return {'success': False, 'error': str(e)}
 
 # Alert configuration
 ALERT_THRESHOLD = 3  # Number of consecutive detections needed to trigger alert
@@ -114,17 +193,45 @@ def trigger_alert(
     print(f"[@alert_manager:trigger_alert] Triggering {incident_type} alert after {consecutive_count} consecutive detections")
     print(f"  - Extracted device_id: {device_id}")
     
+    # Upload incident images to R2
+    print(f"[@alert_manager:trigger_alert] Uploading incident images to R2...")
+    r2_upload_result = upload_incident_images_to_r2(analysis_path, host_name, device_id, incident_type)
+    
+    # Enhance metadata with R2 URLs (if upload successful)
+    enhanced_metadata = metadata.copy() if metadata else {}
+    
+    if r2_upload_result.get('success'):
+        print(f"[@alert_manager:trigger_alert] Successfully uploaded images to R2")
+        enhanced_metadata.update({
+            'r2_images': {
+                'original_url': r2_upload_result.get('original_url'),
+                'thumbnail_url': r2_upload_result.get('thumbnail_url'),
+                'original_r2_path': r2_upload_result.get('original_r2_path'),
+                'thumbnail_r2_path': r2_upload_result.get('thumbnail_r2_path'),
+                'timestamp': r2_upload_result.get('timestamp')
+            }
+        })
+    else:
+        print(f"[@alert_manager:trigger_alert] Failed to upload images to R2: {r2_upload_result.get('error')}")
+        # Continue with alert creation even if R2 upload fails
+        enhanced_metadata.update({
+            'r2_upload_error': r2_upload_result.get('error')
+        })
+    
     result = create_alert_safe(
         host_name=host_name,
         device_id=device_id,
         incident_type=incident_type,
         consecutive_count=consecutive_count,
-        metadata=metadata
+        metadata=enhanced_metadata
     )
     
     if result['success']:
         alert_id = result.get('alert_id')
         print(f"[@alert_manager:trigger_alert] Successfully created alert: {alert_id}")
+        if r2_upload_result.get('success'):
+            print(f"  - Original image URL: {enhanced_metadata['r2_images']['original_url']}")
+            print(f"  - Thumbnail image URL: {enhanced_metadata['r2_images']['thumbnail_url']}")
         return alert_id
     else:
         print(f"[@alert_manager:trigger_alert] Failed to create alert: {result.get('error')}")
@@ -254,7 +361,7 @@ def check_and_update_alerts(
                 'audio_loss': not audio_data.get('has_audio', True)
             }
         
-        current_time = datetime.now().isoformat()
+        current_time = datetime.now(timezone.utc).isoformat()
         state_changed = False
         db_operation_performed = False
         
