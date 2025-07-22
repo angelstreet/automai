@@ -425,7 +425,6 @@ const Heatmap: React.FC = () => {
         video: hasVideo,
         blackscreen,
         freeze,
-        audioLoss,
       };
     });
 
@@ -929,9 +928,6 @@ const Heatmap: React.FC = () => {
                           <strong>Freeze</strong>
                         </TableCell>
                         <TableCell>
-                          <strong>Audio Loss</strong>
-                        </TableCell>
-                        <TableCell>
                           <strong>Duration</strong>
                         </TableCell>
                         <TableCell>
@@ -966,25 +962,20 @@ const Heatmap: React.FC = () => {
                             />
                           </TableCell>
                           <TableCell>
-                            <Chip
-                              label={device.blackscreen ? 'Yes' : 'No'}
+                            <Typography
+                              variant="caption"
                               color={device.blackscreen ? 'error' : 'success'}
-                              size="small"
-                            />
+                            >
+                              {device.blackscreen ? 'Yes' : 'No'}
+                            </Typography>
                           </TableCell>
                           <TableCell>
-                            <Chip
-                              label={device.freeze ? 'Yes' : 'No'}
+                            <Typography
+                              variant="caption"
                               color={device.freeze ? 'error' : 'success'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={device.audioLoss ? 'Yes' : 'No'}
-                              color={device.audioLoss ? 'warning' : 'success'}
-                              size="small"
-                            />
+                            >
+                              {device.freeze ? 'Yes' : 'No'}
+                            </Typography>
                           </TableCell>
                           <TableCell>
                             {device.incidentDuration ? (
