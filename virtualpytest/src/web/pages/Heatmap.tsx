@@ -482,14 +482,14 @@ const Heatmap: React.FC = () => {
       <Popper
         open={tooltipOpen}
         anchorEl={tooltipAnchor}
-        placement="bottom-end"
+        placement="bottom-start"
         transition
         style={{ zIndex: 1500 }}
         modifiers={[
           {
             name: 'offset',
             options: {
-              offset: [-8, -8], // Move inside the cell: left 8px, up 8px
+              offset: [-20, -20], // Move left 20px and up 20px to position inside top-right of cell
             },
           },
           {
