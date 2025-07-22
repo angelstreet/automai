@@ -35,8 +35,7 @@ export interface HeatmapData {
   hosts_devices: Array<{
     host_name: string;
     device_id: string;
-    host_url?: string; // Simplified - removed massive host_data
-    description?: string;
+    host_data?: any; // Put back host_data for now
   }>;
   images_by_timestamp: Record<string, HeatmapImage[]>; // timestamp -> array of images for that time
   incidents: HeatmapIncident[];
