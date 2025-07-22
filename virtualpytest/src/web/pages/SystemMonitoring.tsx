@@ -15,12 +15,12 @@ import {
 } from '@mui/material';
 import React from 'react';
 
-const Monitoring: React.FC = () => {
+const SystemMonitoring: React.FC = () => {
   return (
     <Box>
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" gutterBottom>
-          Test Monitoring
+          System Monitoring
         </Typography>
         <Typography variant="body1" color="textSecondary">
           Real-time monitoring of test execution and system performance.
@@ -150,4 +150,4 @@ const Monitoring: React.FC = () => {
   );
 };
 
-export default Monitoring;
+export default SystemMonitoring;

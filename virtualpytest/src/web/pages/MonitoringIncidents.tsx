@@ -131,7 +131,7 @@ const MonitoringIncidents: React.FC = () => {
     <Box>
       <Box sx={{ mb: 1 }}>
         <Typography variant="h4" gutterBottom>
-          Monitoring Incidents
+          Alerts
         </Typography>
       </Box>
 

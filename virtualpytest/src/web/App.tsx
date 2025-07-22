@@ -21,7 +21,7 @@ const DeviceManagement = React.lazy(() => import('./pages/DeviceManagement'));
 const Environment = React.lazy(() => import('./pages/Environment'));
 const Library = React.lazy(() => import('./pages/Library'));
 const Models = React.lazy(() => import('./pages/Models'));
-const Monitoring = React.lazy(() => import('./pages/Monitoring'));
+const SystemMonitoring = React.lazy(() => import('./pages/SystemMonitoring'));
 const RunTests = React.lazy(() => import('./pages/RunTests'));
 const TestReports = React.lazy(() => import('./pages/TestReports'));
 const ModelReports = React.lazy(() => import('./pages/ModelReports'));
@@ -163,12 +163,11 @@ const App: React.FC = () => {
 
                   {/* Test Execution Routes */}
                   <Route path="/test-execution/run-tests" element={<RunTests />} />
-                  <Route path="/test-execution/monitoring" element={<Monitoring />} />
-                  <Route
-                    path="/test-execution/monitoring/incidents"
-                    element={<MonitoringIncidents />}
-                  />
-                  <Route path="/test-execution/monitoring/heatmap" element={<Heatmap />} />
+
+                  {/* Monitoring Routes */}
+                  <Route path="/monitoring/system" element={<SystemMonitoring />} />
+                  <Route path="/monitoring/incidents" element={<MonitoringIncidents />} />
+                  <Route path="/monitoring/heatmap" element={<Heatmap />} />
 
                   {/* Test Results Routes */}
                   <Route path="/test-results/reports" element={<TestReports />} />

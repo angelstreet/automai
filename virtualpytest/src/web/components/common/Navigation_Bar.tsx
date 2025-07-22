@@ -38,19 +38,22 @@ const NavigationBar: React.FC = () => {
 
   const testExecutionItems = [
     { label: 'Run Tests', path: '/test-execution/run-tests', icon: <RunIcon fontSize="small" /> },
+  ];
+
+  const monitoringItems = [
     {
-      label: 'Monitoring',
-      path: '/test-execution/monitoring',
+      label: 'System Monitoring',
+      path: '/monitoring/system',
       icon: <MonitorIcon fontSize="small" />,
     },
     {
       label: 'Incidents',
-      path: '/test-execution/monitoring/incidents',
+      path: '/monitoring/incidents',
       icon: <IncidentIcon fontSize="small" />,
     },
     {
       label: 'Heatmap',
-      path: '/test-execution/monitoring/heatmap',
+      path: '/monitoring/heatmap',
       icon: <HeatmapIcon fontSize="small" />,
     },
   ];
@@ -151,6 +154,9 @@ const NavigationBar: React.FC = () => {
 
       {/* Test Execution Dropdown */}
       <NavigationDropdown label="Test Execution" items={testExecutionItems} />
+
+      {/* Monitoring Dropdown */}
+      <NavigationDropdown label="Monitoring" items={monitoringItems} />
 
       {/* Test Results Dropdown */}
       <NavigationDropdown label="Test Results" items={testResultsItems} />
