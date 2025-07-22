@@ -473,6 +473,23 @@ def check_and_update_alerts(
                     
                     # Check if we should trigger an alert (ONLY DB OPERATION for new alerts)
                     if consecutive_count == ALERT_THRESHOLD and not active_incidents[incident_type]['alert_id']:
+                        # Double-check database before creating alert to prevent race conditions
+                        _lazy_import_db()
+                        if get_active_alerts and get_active_alerts is not False:
+                            try:
+                                from src.lib.supabase.alerts_db import get_active_alert_for_incident
+                                db_check_result = get_active_alert_for_incident(host_name, device_id, incident_type)
+                                
+                                if db_check_result['success'] and db_check_result['alert']:
+                                    # Alert already exists in database, update our local state
+                                    existing_alert_id = db_check_result['alert']['id']
+                                    active_incidents[incident_type]['alert_id'] = existing_alert_id
+                                    print(f"[@alert_manager] {incident_type}: Found existing alert {existing_alert_id} in database - updating local state")
+                                    state_changed = True
+                                    continue
+                            except ImportError:
+                                pass  # Skip database check if not available
+                        
                         # Trigger alert - THIS IS THE ONLY DB INSERT
                         metadata = {
                             'analysis_path': analysis_path,

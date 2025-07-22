@@ -6,7 +6,7 @@ Alerts track monitoring incidents with start/end times and device information.
 """
 
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional
 from uuid import uuid4
 
@@ -272,9 +272,29 @@ def resolve_alert(alert_id: str) -> Dict:
         print(f"[@db:alerts:resolve_alert] Resolving alert: {alert_id}")
         
         supabase = get_supabase()
+        
+        # First get the alert to check start_time
+        alert_result = supabase.table('alerts').select('start_time').eq('id', alert_id).execute()
+        if not alert_result.data:
+            return {
+                'success': False,
+                'error': 'Alert not found'
+            }
+        
+        start_time = alert_result.data[0]['start_time']
+        end_time = datetime.now(timezone.utc).isoformat()
+        
+        # Ensure end_time is not before start_time
+        start_dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+        end_dt = datetime.now(timezone.utc)
+        
+        if end_dt < start_dt:
+            print(f"[@db:alerts:resolve_alert] Warning: end_time would be before start_time, using start_time + 1 second")
+            end_time = (start_dt + timedelta(seconds=1)).isoformat()
+        
         result = supabase.table('alerts').update({
             'status': 'resolved',
-            'end_time': datetime.now(timezone.utc).isoformat()
+            'end_time': end_time
         }).eq('id', alert_id).execute()
         
         if result.data:
