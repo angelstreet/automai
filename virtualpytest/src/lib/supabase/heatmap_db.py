@@ -38,8 +38,8 @@ def get_heatmap_data(
             devices = host_data.get('devices', [])
             if isinstance(devices, list) and devices:
                 for device in devices:
-                    # Check if device has 'av' capability (capabilities is a dict, not list)
-                    capabilities = device.get('capabilities', {})
+                    # Check if device has 'av' capability (capabilities is stored in device_capabilities)
+                    capabilities = device.get('device_capabilities', {})
                     av_capability = capabilities.get('av')
                     
                     # Exclude host devices (VNC-based) - only include physical devices
@@ -72,7 +72,7 @@ def get_heatmap_data(
             print(f"  Devices: {host_data.get('devices', [])}")
             devices = host_data.get('devices', [])
             for j, device in enumerate(devices):
-                capabilities = device.get('capabilities', {})
+                capabilities = device.get('device_capabilities', {})
                 print(f"  Device {j}: {device.get('device_id', 'unknown')} - capabilities: {capabilities}")
                 print(f"  Has 'av' capability: {'av' in capabilities and bool(capabilities.get('av'))}")
         
