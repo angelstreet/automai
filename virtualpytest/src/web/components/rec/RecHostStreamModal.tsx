@@ -6,6 +6,7 @@ import {
   Language as WebIcon,
   VolumeOff as VolumeOffIcon,
   VolumeUp as VolumeUpIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { Box, IconButton, Typography, Button, CircularProgress, TextField } from '@mui/material';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
@@ -23,6 +24,7 @@ import { DesktopPanel } from '../controller/desktop/DesktopPanel';
 import { RemotePanel } from '../controller/remote/RemotePanel';
 import { WebPanel } from '../controller/web/WebPanel';
 import { MonitoringPlayer } from '../monitoring/MonitoringPlayer';
+import { RestartPlayer } from './RestartPlayer';
 
 interface RecHostStreamModalProps {
   host: Host;
@@ -67,6 +69,7 @@ const RecHostStreamModalContent: React.FC<{
   const [showWeb, setShowWeb] = useState<boolean>(false);
   const [monitoringMode, setMonitoringMode] = useState<boolean>(false);
   const [aiAgentMode, setAiAgentMode] = useState<boolean>(false);
+  const [restartMode, setRestartMode] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(true); // Start muted by default
 
   // Set global modal state when component mounts/unmounts
@@ -189,9 +192,10 @@ const RecHostStreamModalContent: React.FC<{
       const newMode = !prev;
       console.log(`[@component:RecHostStreamModal] Monitoring mode toggled: ${newMode}`);
 
-      // Disable AI agent mode when enabling monitoring
+      // Disable AI agent mode and restart mode when enabling monitoring
       if (newMode) {
         setAiAgentMode(false);
+        setRestartMode(false);
         // Auto-show remote when enabling monitoring for full control
         if (!showRemote) {
           setShowRemote(true);
@@ -213,9 +217,10 @@ const RecHostStreamModalContent: React.FC<{
       const newMode = !prev;
       console.log(`[@component:RecHostStreamModal] AI agent mode toggled: ${newMode}`);
 
-      // Disable monitoring mode when enabling AI agent
+      // Disable monitoring mode and restart mode when enabling AI agent
       if (newMode) {
         setMonitoringMode(false);
+        setRestartMode(false);
         // Clear any previous AI results when toggling
         clearAILog();
       }
@@ -223,6 +228,27 @@ const RecHostStreamModalContent: React.FC<{
       return newMode;
     });
   }, [isControlActive, clearAILog, showWarning]);
+
+  // Handle restart mode toggle
+  const handleToggleRestart = useCallback(() => {
+    if (!isControlActive) {
+      showWarning('Please take control of the device first to enable restart mode');
+      return;
+    }
+
+    setRestartMode((prev) => {
+      const newMode = !prev;
+      console.log(`[@component:RecHostStreamModal] Restart mode toggled: ${newMode}`);
+
+      // Disable monitoring mode and AI agent mode when enabling restart
+      if (newMode) {
+        setMonitoringMode(false);
+        setAiAgentMode(false);
+      }
+
+      return newMode;
+    });
+  }, [isControlActive, showWarning]);
 
   // Stable device resolution to prevent re-renders
   const stableDeviceResolution = useMemo(() => ({ width: 1920, height: 1080 }), []);
@@ -251,6 +277,7 @@ const RecHostStreamModalContent: React.FC<{
     setShowWeb(false);
     setMonitoringMode(false);
     setAiAgentMode(false);
+    setRestartMode(false);
     onClose();
   }, [onClose]);
 
@@ -331,12 +358,12 @@ const RecHostStreamModalContent: React.FC<{
         >
           <Typography variant="h6" component="h2">
             {device?.device_name || host.host_name} -{' '}
-            {monitoringMode ? 'Monitoring' : 'Live Stream'}
+            {monitoringMode ? 'Monitoring' : restartMode ? 'Restart Player' : 'Live Stream'}
           </Typography>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {/* Volume Toggle Button - Only show when NOT in monitoring mode */}
-            {!monitoringMode && (
+            {!monitoringMode && !restartMode && (
               <IconButton
                 onClick={() => setIsMuted((prev) => !prev)}
                 sx={{ color: 'grey.300', '&:hover': { color: 'white' } }}
@@ -397,6 +424,30 @@ const RecHostStreamModalContent: React.FC<{
               }
             >
               {monitoringMode ? 'Stop Monitoring' : 'Monitoring'}
+            </Button>
+
+            {/* Restart Toggle Button */}
+            <Button
+              variant={restartMode ? 'contained' : 'outlined'}
+              size="small"
+              onClick={handleToggleRestart}
+              disabled={!isControlActive}
+              startIcon={<RefreshIcon />}
+              color={restartMode ? 'secondary' : 'primary'}
+              sx={{
+                fontSize: '0.75rem',
+                minWidth: 120,
+                color: restartMode ? 'white' : 'inherit',
+              }}
+              title={
+                !isControlActive
+                  ? 'Take control first to enable restart mode'
+                  : restartMode
+                    ? 'Disable Restart Player'
+                    : 'Enable Restart Player'
+              }
+            >
+              {restartMode ? 'Stop Restart' : 'Restart'}
             </Button>
 
             {/* AI Agent Toggle Button */}
@@ -518,6 +569,8 @@ const RecHostStreamModalContent: React.FC<{
                 device={device!}
                 baseUrlPattern={baseUrlPatterns.get(`${host.host_name}-${device?.device_id}`)}
               />
+            ) : restartMode && isControlActive ? (
+              <RestartPlayer host={host} device={device!} />
             ) : streamUrl ? (
               // Check if this is a VNC device - use iframe instead of HLS player
               device?.device_model === 'host_vnc' ? (

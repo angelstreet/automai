@@ -37,7 +37,7 @@ import { useHeatmap, HeatmapData, HeatmapImage } from '../hooks/pages/useHeatmap
 
 const Heatmap: React.FC = () => {
   const {
-    getHeatmapData,
+    getCachedHeatmapData,
     generateHeatmap,
     checkGenerationStatus,
     cancelGeneration,
@@ -47,7 +47,7 @@ const Heatmap: React.FC = () => {
 
   // Data state
   const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading] = useState(false); // No loading on mount, only when user generates
   const [error, setError] = useState<string | null>(null);
 
   // Timeline player state (following VideoCapture.tsx pattern)
@@ -99,32 +99,18 @@ const Heatmap: React.FC = () => {
   const mosaicImageRef = useRef<HTMLImageElement>(null);
   const statusCheckInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Load initial data
+  // Load data ONLY when generation provides it (no fallback to getData)
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getHeatmapData();
-        console.log('[@component:Heatmap] Loaded data:', data);
-        console.log('[@component:Heatmap] hosts_devices:', data.hosts_devices);
-        console.log('[@component:Heatmap] timeline_timestamps:', data.timeline_timestamps);
-        console.log(
-          '[@component:Heatmap] images_by_timestamp keys:',
-          Object.keys(data.images_by_timestamp),
-        );
-        setHeatmapData(data);
-        setTotalFrames(data.timeline_timestamps.length);
-      } catch (err) {
-        console.error('[@component:Heatmap] Error loading data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load heatmap data');
-      } finally {
-        setLoading(false);
+    if (currentGeneration && currentGeneration.status === 'pending') {
+      // Get cached data from generation response (no network calls)
+      const cachedData = getCachedHeatmapData();
+      if (cachedData) {
+        console.log('[@component:Heatmap] Using cached data from generation');
+        setHeatmapData(cachedData);
+        setTotalFrames(cachedData.timeline_timestamps.length);
       }
-    };
-
-    loadData();
-  }, [getHeatmapData]);
+    }
+  }, [currentGeneration, getCachedHeatmapData, setHeatmapData, setTotalFrames]);
 
   // Status polling for generation
   useEffect(() => {

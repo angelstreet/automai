@@ -190,10 +190,11 @@ export const useHeatmap = () => {
           progress: 0,
         };
 
-        // Store the exact data used for generation
+        // Store the exact data used for generation and return it
         if (result.heatmap_data) {
           requestCache.current.data = result.heatmap_data;
           requestCache.current.timestamp = Date.now();
+          console.log('[@hook:useHeatmap:generateHeatmap] Cached heatmap data from generation');
         }
 
         setCurrentGeneration(generation);
@@ -276,8 +277,16 @@ export const useHeatmap = () => {
     }
   }, [currentGeneration]);
 
+  /**
+   * Get cached heatmap data (only returns data from generation, no network calls)
+   */
+  const getCachedHeatmapData = useCallback((): HeatmapData | null => {
+    return requestCache.current.data;
+  }, []);
+
   return {
     getHeatmapData,
+    getCachedHeatmapData,
     generateHeatmap,
     checkGenerationStatus,
     cancelGeneration,
