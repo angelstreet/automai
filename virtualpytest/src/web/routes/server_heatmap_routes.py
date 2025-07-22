@@ -85,7 +85,8 @@ def generate():
         return jsonify({
             'success': True,
             'job_id': job_id,
-            'message': 'Heatmap generation started'
+            'message': 'Heatmap generation started',
+            'heatmap_data': heatmap_data  # Include the exact data used for generation
         })
             
     except Exception as e:

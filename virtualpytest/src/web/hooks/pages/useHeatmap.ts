@@ -190,6 +190,12 @@ export const useHeatmap = () => {
           progress: 0,
         };
 
+        // Store the exact data used for generation
+        if (result.heatmap_data) {
+          requestCache.current.data = result.heatmap_data;
+          requestCache.current.timestamp = Date.now();
+        }
+
         setCurrentGeneration(generation);
         console.log(
           `[@hook:useHeatmap:generateHeatmap] Generation started with job_id: ${result.job_id}`,
