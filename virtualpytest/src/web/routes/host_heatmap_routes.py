@@ -54,10 +54,7 @@ def list_recent_analysis():
         
         # Calculate time cutoff
         cutoff_time = time.time() - (timeframe_minutes * 60)
-        
-        print(f"[@route:host_heatmap:list_recent_analysis] Scanning folder: {capture_folder}")
-        print(f"[@route:host_heatmap:list_recent_analysis] Looking for files newer than: {time.ctime(cutoff_time)}")
-        
+      
         # Build URLs using existing host URL building pattern
         try:
             host = get_host()
@@ -96,11 +93,6 @@ def list_recent_analysis():
                     has_frame_analysis = os.path.exists(frame_json_path)
                     has_audio_analysis = os.path.exists(audio_json_path)
                     
-                    # Debug logging for JSON file detection
-                    print(f"[@route:host_heatmap:list_recent_analysis] File: {filename}")
-                    print(f"[@route:host_heatmap:list_recent_analysis] Expected frame JSON path: {frame_json_path}")
-                    print(f"[@route:host_heatmap:list_recent_analysis] Frame JSON exists (os.path): {has_frame_analysis}")
-                    
                     # If local file check fails, try HTTP check as fallback
                     if not has_frame_analysis:
                         try:
@@ -113,7 +105,6 @@ def list_recent_analysis():
                             import requests
                             response = requests.head(json_url_temp, timeout=1)
                             has_frame_analysis = response.status_code == 200
-                            print(f"[@route:host_heatmap:list_recent_analysis] Frame JSON exists (HTTP): {has_frame_analysis}")
                         except Exception as e:
                             print(f"[@route:host_heatmap:list_recent_analysis] HTTP check failed: {e}")
                     
