@@ -261,6 +261,9 @@ const Heatmap: React.FC = () => {
       return timeDiff < 30000; // Within 30 seconds
     });
 
+    // Current time for duration calculation
+    const currentTime = new Date(timestamp).getTime();
+
     // Analyze each device
     const deviceAnalysis = images.map((image) => {
       const hasIncident = currentIncidents.some(
@@ -306,7 +309,6 @@ const Heatmap: React.FC = () => {
           });
 
           // Calculate duration
-          const currentTime = new Date(timestamp).getTime();
           const durationMs = currentTime - earliestStartTime;
           const durationSec = Math.floor(durationMs / 1000);
           const minutes = Math.floor(durationSec / 60);
