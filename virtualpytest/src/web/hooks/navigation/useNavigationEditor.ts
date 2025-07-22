@@ -178,12 +178,64 @@ export const useNavigationEditor = () => {
   );
 
   const onNodeDoubleClick = useCallback(
-    (_event: React.MouseEvent, node: any) => {
+    async (_event: React.MouseEvent, node: any) => {
       // Prevent opening edit dialog for entry nodes
       if (node.data?.type === 'entry') {
         return;
       }
-      navigation.openNodeDialog(node);
+
+      // Check if node has sub-trees
+      try {
+        const response = await fetch(
+          `/server/navigationTrees/getNodeSubTrees/${navigation.currentTreeId}/${node.id}`,
+        );
+        const result = await response.json();
+
+        if (result.success && result.sub_trees?.length > 0) {
+          // Load existing sub-tree
+          const subTree = result.sub_trees[0];
+          const treeResponse = await fetch(`/server/navigationTrees/getTree/${subTree.id}`);
+          const treeResult = await treeResponse.json();
+
+          if (treeResult.success) {
+            const treeData = treeResult.tree.metadata || {};
+            navigation.setNodes(treeData.nodes || []);
+            navigation.setEdges(treeData.edges || []);
+
+            // Navigation stack will be handled by the NavigationEditor component
+          }
+        } else {
+          // Create empty sub-tree
+          const emptyTree = {
+            nodes: [
+              {
+                id: 'entry',
+                type: 'uiScreen',
+                position: { x: 250, y: 250 },
+                data: { type: 'entry', label: 'ENTRY' },
+              },
+            ],
+            edges: [],
+          };
+
+          navigation.setNodes(emptyTree.nodes);
+          navigation.setEdges(emptyTree.edges);
+
+          // Push to navigation stack with temporary ID
+          if (window.navigationStack) {
+            window.navigationStack.pushLevel(
+              `temp-${Date.now()}`,
+              node.id,
+              `${node.data.label} Actions`,
+              node.data.label,
+            );
+          }
+        }
+      } catch (error) {
+        console.error('Error handling node double-click:', error);
+        // Fallback to edit dialog
+        navigation.openNodeDialog(node);
+      }
     },
     [navigation],
   );

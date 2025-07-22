@@ -484,9 +484,9 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         title={
           screenshotUrl
             ? 'Double-click to view full size'
-            : data.type === 'menu'
-              ? 'Double-click to navigate to nested tree'
-              : ''
+            : data.type === 'entry'
+              ? ''
+              : 'Double-click to explore actions'
         }
       >
         {!screenshotUrl && (
@@ -497,8 +497,25 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
               textAlign: 'center',
             }}
           >
-            {data.type === 'menu' ? 'Menu - Double-click to explore' : 'No Screenshot'}
+            {data.type === 'entry' ? 'Entry Point' : 'Double-click to explore'}
           </div>
+        )}
+
+        {/* Visual indicator for nodes that can have sub-trees */}
+        {data.type !== 'entry' && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '4px',
+              right: '4px',
+              width: '8px',
+              height: '8px',
+              backgroundColor: '#2196F3',
+              borderRadius: '50%',
+              opacity: 0.7,
+            }}
+            title="Can contain actions"
+          />
         )}
       </div>
 

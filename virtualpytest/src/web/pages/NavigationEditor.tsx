@@ -44,6 +44,11 @@ import {
 } from '../contexts/navigation/NavigationConfigContext';
 import { useNavigation } from '../contexts/navigation/NavigationContext';
 import { NavigationEditorProvider } from '../contexts/navigation/NavigationEditorProvider';
+import {
+  NavigationStackProvider,
+  useNavigationStack,
+} from '../contexts/navigation/NavigationStackContext';
+import { NavigationBreadcrumb } from '../components/navigation/NavigationBreadcrumb';
 import { useNavigationEditor } from '../hooks/navigation/useNavigationEditor';
 import {
   NodeForm,
@@ -148,6 +153,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     // Get theme context for dynamic styling
     const { actualMode } = useTheme();
 
+    // Get navigation stack for nested navigation
+    const { popLevel, pushLevel, currentLevel } = useNavigationStack();
+
     // Get current node ID from NavigationContext
     const { currentNodeId } = useNavigation();
 
@@ -212,7 +220,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       onConnect,
       onNodeClick,
       onEdgeClick,
-      onNodeDoubleClick,
+      onNodeDoubleClick: originalOnNodeDoubleClick,
       onPaneClick,
 
       // Actions
@@ -343,6 +351,15 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       setShowGotoPanel(false);
       setSelectedNodeForGoto(null);
     }, []);
+
+    // Handle navigation back to parent tree
+    const handleNavigateBack = useCallback(async () => {
+      popLevel();
+      // Reload main tree - simplified version
+      if (loadFromConfig && actualUserInterfaceId) {
+        await loadFromConfig(actualUserInterfaceId);
+      }
+    }, [popLevel, loadFromConfig, actualUserInterfaceId]);
 
     // Memoize the selectedHost to prevent unnecessary re-renders
     const stableSelectedHost = useMemo(() => selectedHost, [selectedHost]);
@@ -557,6 +574,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           overflow: 'hidden',
         }}
       >
+        {/* Breadcrumb for nested navigation */}
+        <NavigationBreadcrumb onNavigateBack={handleNavigateBack} />
+
         {/* Header with NavigationEditorHeader component */}
         <NavigationEditorHeader
           hasUnsavedChanges={hasUnsavedChanges}
@@ -575,8 +595,25 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           availableHosts={availableHosts}
           onAddNewNode={handleAddNewNodeWrapper}
           onFitView={fitView}
-          onSaveToConfig={() => {
-            if (actualUserInterfaceId && saveToConfig) {
+          onSaveToConfig={async () => {
+            if (currentLevel) {
+              // Save nested tree
+              const response = await fetch('/server/navigationTrees/createSubTree', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  parent_tree_id: actualTreeId,
+                  parent_node_id: currentLevel.parentNodeId,
+                  sub_tree_name: currentLevel.treeName,
+                  tree_data: { nodes, edges },
+                  description: `Actions for ${currentLevel.parentNodeLabel}`,
+                }),
+              });
+              const result = await response.json();
+              if (result.success) {
+                console.log('Sub-tree saved successfully');
+              }
+            } else if (actualUserInterfaceId && saveToConfig) {
               saveToConfig(actualUserInterfaceId);
             }
           }}
@@ -657,7 +694,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                   onConnect={onConnect}
                   onNodeClick={wrappedOnNodeClick}
                   onEdgeClick={wrappedOnEdgeClick}
-                  onNodeDoubleClick={onNodeDoubleClick}
+                  onNodeDoubleClick={originalOnNodeDoubleClick}
                   onPaneClick={wrappedOnPaneClick}
                   onInit={setReactFlowInstance}
                   nodeTypes={nodeTypes}
@@ -884,7 +921,9 @@ const NavigationEditor: React.FC = () => {
     <ReactFlowProvider>
       <NavigationConfigProvider>
         <NavigationEditorProvider>
-          <NavigationEditorContent userInterfaceId={userInterfaceId} />
+          <NavigationStackProvider>
+            <NavigationEditorContent userInterfaceId={userInterfaceId} />
+          </NavigationStackProvider>
         </NavigationEditorProvider>
       </NavigationConfigProvider>
     </ReactFlowProvider>

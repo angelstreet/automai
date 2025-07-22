@@ -113,125 +113,351 @@ Body: { tree_id: string, node_id: string, has_sub_tree: boolean }
 Response: { success: boolean, message: string }
 ```
 
-## Usage Examples
+---
 
-### Creating a Sub-Tree
+# Frontend Implementation Plan
 
-```python
-# Example: Create sub-tree for "Live TV" node actions
-from src.lib.supabase.navigation_trees_db import create_sub_tree
+## Use Cases & Workflows
 
-# Sub-tree for channel operations
-sub_tree_data = {
-    "nodes": [
-        {
-            "id": "live-entry",
-            "data": {"type": "entry", "label": "LIVE_ENTRY"}
-        },
-        {
-            "id": "channel-up",
-            "data": {"type": "screen", "label": "Channel Up", "action_type": "in_context"}
-        },
-        {
-            "id": "channel-down",
-            "data": {"type": "screen", "label": "Channel Down", "action_type": "in_context"}
-        },
-        {
-            "id": "info-bar",
-            "data": {"type": "overlay", "label": "Info Bar", "action_type": "in_context"}
-        }
-    ],
-    "edges": [
-        {"id": "e1", "source": "live-entry", "target": "channel-up"},
-        {"id": "e2", "source": "live-entry", "target": "channel-down"},
-        {"id": "e3", "source": "live-entry", "target": "info-bar"}
-    ]
+### Use Case 1: Node Without Actions (First Time)
+
+**Scenario**: User double-clicks a "Live TV" node that has no sub-trees yet.
+
+**Workflow**:
+
+1. **Double-click Detection**: `onNodeDoubleClick` handler detects non-entry node
+2. **Sub-tree Check**: Check if node has existing sub-trees via API call
+3. **Create Empty Sub-tree**:
+   - Create new sub-tree with single entry node
+   - Set `parent_tree_id` and `parent_node_id` references
+   - **Don't save to DB yet** - keep in local state
+4. **Navigation**:
+   - Push current tree to navigation stack
+   - Load empty sub-tree in editor
+   - Show breadcrumb: "Main > Live TV"
+5. **Edit Mode**: User can add nodes and edges within the sub-tree
+6. **Save Trigger**: Only save to DB when user clicks "Save" button
+
+### Use Case 2: Node With Existing Actions
+
+**Scenario**: User double-clicks "Live TV" node that already has sub-trees.
+
+**Workflow**:
+
+1. **Double-click Detection**: Handler detects node with `has_sub_tree: true`
+2. **Load Sub-trees**: Fetch existing sub-trees for this node
+3. **Cache Check**: Check if sub-trees are already cached
+4. **Load Primary Sub-tree**: Display the first/primary sub-tree
+5. **Navigation**: Update breadcrumb and navigation stack
+6. **Multiple Sub-trees**: If multiple exist, show selector UI
+
+### Use Case 3: Empty Sub-tree Deletion
+
+**Scenario**: User deletes all nodes inside a sub-tree.
+
+**Decision**: **Keep the empty sub-tree** for these reasons:
+
+- User might want to add nodes later
+- Preserves navigation structure and breadcrumbs
+- Avoids accidental data loss
+- Consistent with main tree behavior (empty trees are valid)
+
+**Workflow**:
+
+1. **Node Deletion**: User deletes last node in sub-tree
+2. **Empty State**: Show empty state message: "This sub-tree is empty. Add nodes to define actions."
+3. **Save Behavior**: Empty sub-tree is saved to DB (consistent with empty main trees)
+4. **Manual Cleanup**: Provide explicit "Delete Sub-tree" action if user wants to remove entirely
+
+## Detailed Component Architecture
+
+### 1. Core Context Enhancements
+
+#### **NavigationStack Context** (New)
+
+```typescript
+interface NavigationStackContextType {
+  // Stack management
+  navigationStack: TreeLevel[];
+  currentLevel: number;
+
+  // Stack operations
+  pushLevel: (treeId: string, nodeId: string, treeName: string) => void;
+  popLevel: () => void;
+  navigateToLevel: (level: number) => void;
+
+  // Breadcrumb data
+  getBreadcrumb: () => BreadcrumbItem[];
+
+  // Cache management
+  getCachedTree: (treeId: string) => CachedTree | null;
+  setCachedTree: (treeId: string, data: CachedTree) => void;
 }
 
-success, message, created_tree = create_sub_tree(
-    parent_tree_id="main-tree-id",
-    parent_node_id="live-tv-node",
-    sub_tree_name="live_tv_actions",
-    tree_data=sub_tree_data,
-    team_id="team-123",
-    description="Channel and info actions for Live TV"
-)
+interface TreeLevel {
+  treeId: string;
+  treeName: string;
+  parentNodeId: string | null;
+  parentNodeLabel: string;
+  hasUnsavedChanges: boolean;
+}
 ```
 
-### Loading Sub-Trees On-Demand
+#### **Enhanced NavigationContext**
 
-```python
-# Frontend workflow for loading sub-trees
-from src.lib.supabase.navigation_trees_db import get_node_sub_trees
+```typescript
+// Add to existing NavigationContextType
+interface NavigationContextType {
+  // ... existing fields ...
 
-# 1. User double-clicks "Live TV" node
-# 2. Check if node has sub-trees
-success, message, sub_trees = get_node_sub_trees("main-tree-id", "live-tv-node", "team-123")
-
-if sub_trees:
-    # 3. Load the first sub-tree for detailed view
-    main_sub_tree = sub_trees[0]
-    # 4. Display new ReactFlow graph with sub-tree content
+  // Nested navigation fields
+  isNestedView: boolean;
+  setIsNestedView: (nested: boolean) => void;
+  parentTreeId: string | null;
+  setParentTreeId: (id: string | null) => void;
+  parentNodeId: string | null;
+  setParentNodeId: (id: string | null) => void;
+}
 ```
 
-### Breadcrumb Navigation
+### 2. Enhanced Components
 
-```python
-from src.lib.supabase.navigation_trees_db import get_tree_breadcrumb
+#### **NavigationEditor Enhancements**
 
-# Get navigation path for current tree
-success, message, breadcrumb = get_tree_breadcrumb("sub-tree-id", "team-123")
+- **File**: `virtualpytest/src/web/pages/NavigationEditor.tsx`
+- **Changes**:
+  - Wrap with `NavigationStackProvider`
+  - Enhance `onNodeDoubleClick` handler for nested navigation
+  - Add breadcrumb navigation bar
+  - Handle nested tree loading and saving
 
-# Result: [
-#   {"tree_id": "root-id", "tree_name": "Main Navigation", "parent_node_id": null},
-#   {"tree_id": "sub-tree-id", "tree_name": "Live TV Actions", "parent_node_id": "live-tv-node", "is_current": true}
-# ]
+#### **NavigationBreadcrumb Component** (New)
+
+- **File**: `virtualpytest/src/web/components/navigation/NavigationBreadcrumb.tsx`
+- **Purpose**: Display hierarchical navigation path
+- **Features**:
+  - Clickable breadcrumb items to navigate back
+  - Visual indicators for unsaved changes at each level
+  - Overflow handling for deep nesting
+
+#### **Enhanced NavigationEditorHeader**
+
+- **File**: `virtualpytest/src/web/components/navigation/Navigation_EditorHeader.tsx`
+- **Changes**:
+  - Add breadcrumb navigation
+  - Show nested tree indicators
+  - Handle save/discard for nested trees
+
+#### **SubTreeCache Hook** (New)
+
+- **File**: `virtualpytest/src/web/hooks/navigation/useSubTreeCache.ts`
+- **Purpose**: LRU cache for sub-trees
+- **Features**:
+  - Cache recently accessed sub-trees
+  - Automatic eviction of old entries
+  - Dirty state tracking for unsaved changes
+
+### 3. Visual Indicators & Styling
+
+#### **Node Visual Enhancements**
+
+- **Files**:
+  - `virtualpytest/src/web/components/navigation/Navigation_NavigationNode.tsx`
+  - `virtualpytest/src/web/components/navigation/Navigation_MenuNode.tsx`
+- **Changes**:
+  - Add visual indicator for nodes with sub-trees (small tree icon)
+  - Different styling for nested vs main tree nodes
+  - Hover effects showing "Double-click to explore"
+
+#### **New CSS Classes**
+
+```css
+/* Nested navigation indicators */
+.node-has-subtree {
+  border-left: 3px solid #2196f3;
+}
+
+.node-nested-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #2196f3;
+  border-radius: 50%;
+}
+
+/* Breadcrumb styling */
+.navigation-breadcrumb {
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+  padding: 8px 16px;
+}
+
+.breadcrumb-item {
+  color: #666;
+  text-decoration: none;
+}
+
+.breadcrumb-item:hover {
+  color: #2196f3;
+  text-decoration: underline;
+}
+
+.breadcrumb-current {
+  color: #333;
+  font-weight: 500;
+}
 ```
 
-## Frontend Integration Plan
+## Implementation Phases
 
-### Phase 1: Core Infrastructure
+### Phase 1: Core Infrastructure ⏳ IN PROGRESS
 
-- [ ] Enhance NavigationEditor to support nested tree creation
-- [ ] Add breadcrumb navigation component
-- [ ] Implement drill-down UI (double-click to enter sub-tree)
-- [ ] Add visual indicators for nodes with sub-trees
+- [x] Database schema enhancements
+- [x] Backend API endpoints
+- [ ] NavigationStack context
+- [ ] Enhanced double-click handler
+- [ ] Basic breadcrumb navigation
 
-### Phase 2: User Experience
+### Phase 2: Sub-tree Management
 
-- [ ] Sub-tree loading with caching
-- [ ] Navigation stack management
-- [ ] Back/forward navigation between tree levels
-- [ ] Context-aware action execution
+- [ ] Sub-tree cache implementation
+- [ ] Empty sub-tree creation workflow
+- [ ] Sub-tree loading and saving
+- [ ] Visual indicators for nested nodes
 
-### Phase 3: Advanced Features
+### Phase 3: User Experience
 
-- [ ] Bulk sub-tree operations
+- [ ] Breadcrumb navigation component
+- [ ] Nested tree creation UI
+- [ ] Multiple sub-tree management
+- [ ] Unsaved changes tracking across levels
+
+### Phase 4: Advanced Features
+
 - [ ] Sub-tree templates and cloning
 - [ ] Cross-tree navigation references
 - [ ] Performance optimizations
+- [ ] Bulk operations for nested trees
 
-## Benefits of This Architecture
+## Files to Modify
 
-1. **Scalability**: Each sub-tree is a separate database record, allowing efficient loading
-2. **Maintainability**: Clear separation between main navigation and detailed actions
-3. **Performance**: On-demand loading reduces initial tree complexity
-4. **Flexibility**: Support for multiple sub-trees per node
-5. **History**: Full version control for all tree levels
-6. **Breadcrumbs**: Clear navigation context for users
+### Context Files
 
-## Migration Strategy
+1. **`src/contexts/navigation/NavigationStackProvider.tsx`** (New)
 
-1. **Backward Compatibility**: All existing trees continue to work as-is
-2. **Gradual Enhancement**: Teams can add nested navigation incrementally
-3. **Data Integrity**: Existing tree_level and hierarchy fields already in place
-4. **No Breaking Changes**: New fields are optional and have sensible defaults
+   - Navigation stack management
+   - Tree level caching
+   - Breadcrumb generation
 
-## Testing Strategy
+2. **`src/contexts/navigation/NavigationContext.tsx`** (Enhance)
+   - Add nested navigation state
+   - Parent tree tracking
 
-1. **Unit Tests**: Database functions with various hierarchy scenarios
-2. **Integration Tests**: API endpoints with nested tree operations
-3. **Performance Tests**: Loading trees with deep nesting levels
-4. **UI Tests**: Frontend navigation and breadcrumb functionality
+### Component Files
 
-This backend implementation provides a solid foundation for the hierarchical navigation system while maintaining compatibility with existing trees and workflows.
+3. **`src/pages/NavigationEditor.tsx`** (Enhance)
+
+   - Wrap with NavigationStackProvider
+   - Enhanced double-click handler
+   - Breadcrumb integration
+
+4. **`src/components/navigation/NavigationBreadcrumb.tsx`** (New)
+
+   - Breadcrumb display and navigation
+   - Level switching functionality
+
+5. **`src/components/navigation/Navigation_EditorHeader.tsx`** (Enhance)
+
+   - Breadcrumb integration
+   - Nested tree save/discard
+
+6. **`src/components/navigation/Navigation_NavigationNode.tsx`** (Enhance)
+
+   - Visual indicators for sub-trees
+   - Enhanced double-click handling
+
+7. **`src/components/navigation/Navigation_MenuNode.tsx`** (Enhance)
+   - Sub-tree indicators
+   - Nested navigation support
+
+### Hook Files
+
+8. **`src/hooks/navigation/useSubTreeCache.ts`** (New)
+
+   - LRU cache for sub-trees
+   - Cache invalidation
+
+9. **`src/hooks/navigation/useNavigationEditor.ts`** (Enhance)
+
+   - Nested tree operations
+   - Stack-aware save/load
+
+10. **`src/hooks/navigation/useNestedNavigation.ts`** (New)
+    - Nested navigation logic
+    - Sub-tree management
+
+### Type Files
+
+11. **`src/types/pages/Navigation_Types.ts`** (Enhance)
+    - Nested navigation types
+    - Stack management types
+
+## Workflow Summary
+
+### Double-click Handler Flow
+
+```typescript
+const handleNodeDoubleClick = async (node: UINavigationNode) => {
+  // 1. Check if node is entry type (skip)
+  if (node.data.type === 'entry') return;
+
+  // 2. Check for existing sub-trees
+  const subTrees = await getNodeSubTrees(currentTreeId, node.id);
+
+  if (subTrees.length > 0) {
+    // 3a. Load existing sub-tree
+    const primarySubTree = subTrees[0];
+    await loadSubTree(primarySubTree.id);
+    pushNavigationLevel(primarySubTree.id, node.id, primarySubTree.name);
+  } else {
+    // 3b. Create empty sub-tree (in memory only)
+    const emptySubTree = createEmptySubTree(node);
+    setCurrentSubTree(emptySubTree);
+    pushNavigationLevel(emptySubTree.id, node.id, `${node.data.label} Actions`);
+  }
+
+  // 4. Update UI state
+  setIsNestedView(true);
+  updateBreadcrumb();
+};
+```
+
+### Save Handler Flow
+
+```typescript
+const handleSave = async () => {
+  const currentLevel = navigationStack.getCurrentLevel();
+
+  if (currentLevel.isNested) {
+    // Save nested tree
+    await saveSubTree(currentLevel.treeId, {
+      parent_tree_id: currentLevel.parentTreeId,
+      parent_node_id: currentLevel.parentNodeId,
+      tree_data: { nodes, edges },
+    });
+
+    // Update parent node metadata
+    await updateNodeSubTreeReference(currentLevel.parentTreeId, currentLevel.parentNodeId, true);
+  } else {
+    // Save main tree (existing logic)
+    await saveToConfig(userInterfaceId);
+  }
+
+  // Clear unsaved changes flag
+  currentLevel.hasUnsavedChanges = false;
+};
+```
+
+This comprehensive plan provides a clear roadmap for implementing nested navigation trees while maintaining backward compatibility and following the existing architectural patterns.
