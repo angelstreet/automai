@@ -193,30 +193,23 @@ def get_cached_analysis_for_host(host_name: str, device_id: str) -> Optional[boo
 def determine_border_color_from_analysis(image_data: Dict) -> str:
     """
     Determine border color based on analysis data.
-    Green if audio/video OK, Red if incidents detected OR no audio/video.
+    Green if no incidents detected, Red if any incidents found.
+    Uses only JSON analysis data (blackscreen, freeze, audio_loss) for consistency with frontend.
     """
     try:
         analysis_json = image_data.get('analysis_json', {})
         
-        # Check for any incidents
+        # Check for any incidents (same logic as frontend)
         has_incidents = (
             analysis_json.get('blackscreen', False) or
             analysis_json.get('freeze', False) or
             analysis_json.get('audio_loss', False)
         )
         
-        # Check if we have any analysis data
-        has_analysis = (
-            analysis_json.get('has_video', False) or
-            analysis_json.get('has_audio', False)
-        )
-        
         if has_incidents:
             return '#FF0000'  # Red for incidents
-        elif has_analysis:
-            return '#00FF00'  # Green for OK with analysis
         else:
-            return '#FF0000'  # Red for no analysis (no audio/video)
+            return '#00FF00'  # Green for no incidents
             
     except Exception as e:
         print(f"[@heatmap_utils:determine_border_color_from_analysis] Error: {e}")
@@ -474,12 +467,26 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                             except Exception as e:
                                 print(f"[@heatmap_utils] Failed to download audio JSON for {image_info['host_name']}: {e}")
                         
+                        # Combine frame and audio analysis into analysis_json format expected by border color logic
+                        analysis_json = {}
+                        if frame_analysis and isinstance(frame_analysis, dict):
+                            # Extract from analysis sub-object if present
+                            frame_data = frame_analysis.get('analysis', frame_analysis)
+                            analysis_json['blackscreen'] = frame_data.get('blackscreen', False)
+                            analysis_json['freeze'] = frame_data.get('freeze', False)
+                        
+                        if audio_analysis and isinstance(audio_analysis, dict):
+                            # Extract from analysis sub-object if present  
+                            audio_data = audio_analysis.get('analysis', audio_analysis)
+                            analysis_json['audio_loss'] = audio_data.get('audio_loss', False)
+                        
                         processed_images.append({
                             'host_name': image_info['host_name'],
                             'device_id': image_info['device_id'],
                             'image_data': image_data,
                             'frame_analysis': frame_analysis,
                             'audio_analysis': audio_analysis,
+                            'analysis_json': analysis_json,  # Add the expected format for border color logic
                             'has_analysis': frame_analysis is not None or audio_analysis is not None,
                             'original_timestamp': image_info.get('original_timestamp', timestamp)
                         })

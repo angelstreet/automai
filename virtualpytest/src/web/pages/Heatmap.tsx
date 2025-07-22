@@ -295,14 +295,10 @@ const Heatmap: React.FC = () => {
 
     const images = heatmapData.images_by_timestamp[timestamp] || [];
 
-    // Check if any device in this timestamp has incidents or missing video/audio
+    // Check if any device in this timestamp has incidents (based on JSON analysis only)
     return images.some((image) => {
       const analysisJson = image.analysis_json || {};
-      const hasVideo = analysisJson.has_video || false;
-      const hasAudio = analysisJson.has_audio || false;
       return (
-        !hasVideo ||
-        !hasAudio ||
         analysisJson.blackscreen ||
         analysisJson.freeze ||
         analysisJson.audio_loss
@@ -347,11 +343,6 @@ const Heatmap: React.FC = () => {
 
     // Analyze each device
     const deviceAnalysis = images.map((image) => {
-      const hasIncident = currentIncidents.some(
-        (incident) =>
-          incident.host_name === image.host_name && incident.device_id === image.device_id,
-      );
-
       // Safely access analysis_json with fallback to empty object
       const analysisJson = image.analysis_json || {};
 
@@ -367,6 +358,15 @@ const Heatmap: React.FC = () => {
       // Audio status: No if there's audio loss, Yes if no audio loss
       const hasAudio = !audioLoss; // Audio works if no audio loss
 
+      // hasIncident should be based on JSON analysis data only
+      const hasIncident = blackscreen || freeze || audioLoss;
+
+      // Check database incidents only for mismatch detection
+      const hasDbIncident = currentIncidents.some(
+        (incident) =>
+          incident.host_name === image.host_name && incident.device_id === image.device_id,
+      );
+
       const analysisIncidents = [
         blackscreen ? 'blackscreen' : null,
         freeze ? 'freeze' : null,
@@ -380,9 +380,9 @@ const Heatmap: React.FC = () => {
         )
         .map((incident) => incident.incident_type);
 
-      // Calculate incident duration if applicable
+      // Calculate incident duration if applicable (from database incidents)
       let incidentDuration = '';
-      if (hasIncident) {
+      if (hasDbIncident) {
         // Find the earliest incident for this device
         const deviceIncidents = heatmapData.incidents.filter(
           (incident) =>
