@@ -409,7 +409,7 @@ def get_script_path(script_name: str) -> str:
     src_dir = os.path.dirname(current_dir)  # /src
     project_root = os.path.dirname(src_dir)  # /virtualpytest
     
-    script_path = os.path.join(project_root, 'scripts', f'{script_name}.py')
+    script_path = os.path.join(project_root, 'test-scripts', f'{script_name}.py')
     
     if not os.path.exists(script_path):
         raise ValueError(f'Script not found: {script_path}')
