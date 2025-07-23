@@ -18,10 +18,6 @@ StandardError=journal
 Environment=HOST_NAME=sunri-pi1
 Environment=PYTHONPATH=/home/sunri-pi1/automai/virtualpytest/scripts
 
-# Resource limits
-LimitNOFILE=65536
-MemoryMax=512M
-
 # Security
 NoNewPrivileges=true
 PrivateTmp=true
