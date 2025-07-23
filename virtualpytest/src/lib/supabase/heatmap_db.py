@@ -166,31 +166,33 @@ def get_heatmap_data(
                     timestamp = item.get('timestamp', '')  # YYYYMMDDHHMMSS format
                     
                     if timestamp:
-                        # Calculate bucket key (truncate timestamp to 10-minute buckets)
-                        bucket_key = timestamp[:12] + '00'  # YYYYMMDDHHMM00
-                        
-                        # Initialize bucket if not exists
-                        if bucket_key not in device_latest_by_bucket:
-                            device_latest_by_bucket[bucket_key] = {}
-                        
-                        # Create a unique device key that includes the host name to avoid collisions
-                        device_key = f"{result['host_name']}_{result['device_id']}"
-                        
-                        # Check if we already have a newer image for this device in this bucket
-                        if device_key in device_latest_by_bucket[bucket_key]:
-                            existing_timestamp = device_latest_by_bucket[bucket_key][device_key]['timestamp']
-                            if existing_timestamp > timestamp:
-                                # Skip this image, we already have a newer one
-                                continue
-                        
-                        # Initialize analysis JSON with defaults
-                        analysis_json = {
-                            'blackscreen': False,
-                            'freeze': False,
-                            'audio_loss': False,
-                            'has_audio': False,
-                            'has_video': False
-                        }
+                        # Convert to 10-second bucket
+                        try:
+                            dt = datetime.strptime(timestamp, '%Y%m%d%H%M%S')
+                            # Round down to nearest 10-second window
+                            seconds = (dt.second // 10) * 10
+                            bucket_dt = dt.replace(second=seconds, microsecond=0)
+                            bucket_key = bucket_dt.strftime('%Y%m%d%H%M%S')
+                            
+                            # Create device key for deduplication
+                            device_key = f"{result['host_name']}_{result['device_id']}"
+                            
+                            # Track the latest image per device per bucket
+                            if bucket_key not in device_latest_by_bucket:
+                                device_latest_by_bucket[bucket_key] = {}
+                            
+                            # Only keep the most recent image for this device in this bucket
+                            if (device_key not in device_latest_by_bucket[bucket_key] or 
+                                timestamp > device_latest_by_bucket[bucket_key][device_key]['timestamp']):
+                                
+                                # Download and parse JSON analysis data
+                                analysis_json = {
+                                    'has_audio': False,
+                                    'has_video': False,
+                                    'blackscreen': False,
+                                    'freeze': False,
+                                    'audio_loss': False
+                                }
                                 
                                 # Parse frame analysis if available
                                 frame_json_url = item.get('frame_json_url')
