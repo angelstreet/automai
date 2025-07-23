@@ -47,8 +47,8 @@ def get_heatmap_data(
                         av_capability != 'vnc_stream'):
                         hosts_devices.append({
                             'host_name': host_name,
-                            'device_id': device.get('device_id', 'device1')
-                            # Removed host_data - not used by frontend
+                            'device_id': device.get('device_id', 'device1'),
+                            'host_data': host_data  # Keep host_data for internal processing
                         })
             else:
                 # Fallback for hosts without device config - check if host has av capability
@@ -60,8 +60,8 @@ def get_heatmap_data(
                     av_capability != 'vnc_stream'):
                     hosts_devices.append({
                         'host_name': host_name,
-                        'device_id': 'device1'
-                        # Removed host_data - not used by frontend
+                        'device_id': 'device1',
+                        'host_data': host_data  # Keep host_data for internal processing
                     })
         
         print(f"[@db:heatmap:get_heatmap_data] Found {len(hosts_devices)} host/device combinations")
@@ -249,7 +249,7 @@ def get_heatmap_data(
                                     print(f"[@db:heatmap:get_heatmap_data] Building URL for {result['host_name']} {device_id}: {filename}")
                                     print(f"[@db:heatmap:get_heatmap_data] Host data keys: {list(host_data.keys())}")
                                     
-                                    # Build image URL: host_url/host/stream/capture{N}/captures/filename
+                                    # Build image URL: heatmap fixl/host/stream/capture{N}/captures/filename
                                     host_url = host_data.get('host_url', '').rstrip('/')
                                     image_url = f"{host_url}/host/stream/capture{device_id[-1]}/captures/{filename}"
                                     
@@ -323,8 +323,17 @@ def get_heatmap_data(
         # Create sorted timeline from available timestamps
         timeline_timestamps = sorted(images_by_timestamp.keys())
         
+        # Remove host_data from hosts_devices for frontend (keep only essential fields)
+        frontend_hosts_devices = [
+            {
+                'host_name': hd['host_name'],
+                'device_id': hd['device_id']
+            }
+            for hd in hosts_devices
+        ]
+        
         heatmap_data = {
-            'hosts_devices': hosts_devices,
+            'hosts_devices': frontend_hosts_devices,  # Cleaned for frontend
             'images_by_timestamp': images_by_timestamp,
             'incidents': incidents,
             'timeline_timestamps': timeline_timestamps
