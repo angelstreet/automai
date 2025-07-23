@@ -207,7 +207,7 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             
             # Frames are considered frozen if current frame is similar to EITHER previous frame
             # This catches cases where the stream freezes on any previous frame
-            freeze_threshold = 3.0  # Reduced threshold for better detection
+            freeze_threshold = 0.5  # Very restrictive - only detect truly identical frames
             is_frozen = (mean_diff_1 < freeze_threshold or mean_diff_2 < freeze_threshold)
             
             if is_frozen:
