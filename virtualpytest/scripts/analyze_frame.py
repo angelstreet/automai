@@ -209,7 +209,7 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             print(f"  {prev1_filename} vs {prev2_filename}: diff={mean_diff_3:.2f}")
             
             # Frames are considered frozen if ALL 3 comparisons show very small differences
-            freeze_threshold = 3.0  # Increased from 1.0 to 3.0 to be less aggressive
+            freeze_threshold = 5.0  # Increased from 1.0 to 5.0 to be less aggressive
             is_frozen = (mean_diff_1 < freeze_threshold and 
                         mean_diff_2 < freeze_threshold and 
                         mean_diff_3 < freeze_threshold)
