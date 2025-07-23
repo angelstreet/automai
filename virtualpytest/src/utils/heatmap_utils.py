@@ -32,7 +32,6 @@ class HeatmapJob:
         self.progress = 0  # 0-100
         self.timeframe_minutes = timeframe_minutes
         self.mosaic_urls = []
-        self.metadata = []  # New: array of metadata dicts per timestamp
         self.error = None
         self.created_at = datetime.now()
         self.start_time = None  # When processing actually started
@@ -45,18 +44,16 @@ class HeatmapJob:
             end_time = self.end_time or datetime.now()
             processing_time = (end_time - self.start_time).total_seconds()
             
-        result = {
+        return {
             'job_id': self.job_id,
             'status': self.status,
             'progress': self.progress,
             'mosaic_urls': self.mosaic_urls,
             'error': self.error,
             'created_at': self.created_at.isoformat(),
-            'processing_time': processing_time
+            'processing_time': processing_time,
+            'heatmap_data': self.heatmap_data
         }
-        if self.status == 'completed':
-            result['metadata'] = self.metadata
-        return result
 
 def set_low_priority():
     """Set low process priority to limit CPU usage"""
@@ -461,29 +458,23 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                             except Exception as e:
                                 print(f"[@heatmap_utils] Failed to download audio JSON for {image_info['host_name']}: {e}")
                         
-                        # Extract only incident data - no defaults, require keys to exist
-                        analysis_json = {}
+                        # Extract only incident data - simple logic
+                        analysis_json = {
+                            'blackscreen': False,
+                            'freeze': False,
+                            'audio_loss': False
+                        }
                         
                         if frame_analysis and isinstance(frame_analysis, dict):
-                            frame_data = frame_analysis.get('analysis')
-                            if not frame_data:
-                                raise ValueError(f"Missing 'analysis' in frame JSON for {image_info['host_name']}")
-                            if 'blackscreen' not in frame_data or 'freeze' not in frame_data:
-                                raise ValueError(f"Missing required keys in frame analysis for {image_info['host_name']}")
-                            analysis_json['blackscreen'] = frame_data['blackscreen']
-                            analysis_json['freeze'] = frame_data['freeze']
-                        else:
-                            raise ValueError(f"Invalid or missing frame analysis for {image_info['host_name']}")
+                            # Extract from analysis sub-object if present
+                            frame_data = frame_analysis.get('analysis', frame_analysis)
+                            analysis_json['blackscreen'] = frame_data.get('blackscreen', False)
+                            analysis_json['freeze'] = frame_data.get('freeze', False)
                         
                         if audio_analysis and isinstance(audio_analysis, dict):
-                            audio_data = audio_analysis.get('analysis')
-                            if not audio_data:
-                                raise ValueError(f"Missing 'analysis' in audio JSON for {image_info['host_name']}")
-                            if 'audio_loss' not in audio_data:
-                                raise ValueError(f"Missing 'audio_loss' in audio analysis for {image_info['host_name']}")
-                            analysis_json['audio_loss'] = audio_data['audio_loss']
-                        else:
-                            raise ValueError(f"Invalid or missing audio analysis for {image_info['host_name']}")
+                            # Extract from analysis sub-object if present  
+                            audio_data = audio_analysis.get('analysis', audio_analysis)
+                            analysis_json['audio_loss'] = audio_data.get('audio_loss', False)
                         
                         processed_images.append({
                             'host_name': image_info['host_name'],
@@ -578,9 +569,6 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                         },
                         'upload_success': True
                     })
-                    # Store metadata dict in job
-                    with job_lock:
-                        active_jobs[job_id].metadata.append(metadata)
                     print(f"[@heatmap_utils] Successfully uploaded heatmap for timestamp {timestamp}")
                 else:
                     # Follow script-reports pattern: continue even if R2 upload fails
@@ -615,9 +603,6 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                             'metadata': metadata_upload.get('error', 'Upload failed')
                         }
                     })
-                    # Store metadata dict in job even on fallback
-                    with job_lock:
-                        active_jobs[job_id].metadata.append(metadata)
                     print(f"[@heatmap_utils] R2 upload failed, using local fallback for timestamp {timestamp}")
                     print(f"[@heatmap_utils] Mosaic upload: {mosaic_upload}")
                     print(f"[@heatmap_utils] Metadata upload: {metadata_upload}")

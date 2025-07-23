@@ -54,8 +54,8 @@ export interface HeatmapGeneration {
   progress?: number; // 0-100
   mosaic_urls?: string[]; // URLs to generated mosaic images (one per timestamp)
   error?: string;
+  processing_time?: number; // Processing time in seconds
   heatmap_data?: HeatmapData; // The exact data used for generation
-  metadata?: any[]; // Array of metadata objects (one per mosaic_url)
 }
 
 export const useHeatmap = () => {
@@ -193,12 +193,9 @@ export const useHeatmap = () => {
         progress: result.progress,
         mosaic_urls: result.mosaic_urls,
         error: result.error,
-        metadata: result.metadata, // Directly from response
+        processing_time: result.processing_time,
+        heatmap_data: result.heatmap_data, // Preserve heatmap_data from status updates
       };
-
-      if (result.status === 'completed' && !result.metadata) {
-        throw new Error('Metadata missing in completed status response');
-      }
 
       setCurrentGeneration(generation);
 
