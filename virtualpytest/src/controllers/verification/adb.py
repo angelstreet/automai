@@ -461,7 +461,7 @@ class ADBVerificationController(VerificationControllerInterface):
                 'command': 'waitForElementToAppear',
                 'params': {
                     'search_term': '',      # Empty string for user input
-                    'timeout': 0,           # Default: single check, no polling
+                    'timeout': 0.0,         # Default: single check, no polling
                 },
                 'verification_type': 'adb'
             },
@@ -469,7 +469,7 @@ class ADBVerificationController(VerificationControllerInterface):
                 'command': 'waitForElementToDisappear',
                 'params': {
                     'search_term': '',      # Empty string for user input
-                    'timeout': 0,           # Default: single check, no polling
+                    'timeout': 0.0,         # Default: single check, no polling
                 },
                 'verification_type': 'adb'
             }
@@ -511,7 +511,7 @@ class ADBVerificationController(VerificationControllerInterface):
                 }
             
             # Optional parameters with defaults
-            timeout = params.get('timeout', 0.0)
+            timeout = float(params.get('timeout', 0.0))
             
             print(f"[@controller:ADBVerification] Executing {command} with search term: '{search_term}'")
             print(f"[@controller:ADBVerification] Parameters: timeout={timeout}")
