@@ -92,24 +92,23 @@ const Heatmap: React.FC = () => {
   const handleMouseEnter = (event: React.MouseEvent<HTMLDivElement>, index: number) => {
     const target = event.currentTarget; // Capture immediately
 
-    setTimeout(() => {
-      if (target) {
-        // Position tooltip at the TOP-RIGHT corner of the cell
-        const rect = target.getBoundingClientRect();
-        const tooltipAnchor = document.createElement('div');
-        tooltipAnchor.style.position = 'absolute';
-        tooltipAnchor.style.left = `${rect.right - 10}px`; // 10px from right edge
-        tooltipAnchor.style.top = `${rect.top + 10}px`; // 10px from top edge
-        tooltipAnchor.style.width = '1px';
-        tooltipAnchor.style.height = '1px';
-        tooltipAnchor.style.zIndex = '1000';
-        document.body.appendChild(tooltipAnchor);
+    // Show tooltip instantly - no delay
+    if (target) {
+      // Position tooltip at the TOP-RIGHT corner of the cell
+      const rect = target.getBoundingClientRect();
+      const tooltipAnchor = document.createElement('div');
+      tooltipAnchor.style.position = 'absolute';
+      tooltipAnchor.style.left = `${rect.right - 10}px`; // 10px from right edge
+      tooltipAnchor.style.top = `${rect.top + 10}px`; // 10px from top edge
+      tooltipAnchor.style.width = '1px';
+      tooltipAnchor.style.height = '1px';
+      tooltipAnchor.style.zIndex = '1000';
+      document.body.appendChild(tooltipAnchor);
 
-        setTooltipAnchor(tooltipAnchor);
-        setTooltipIndex(index);
-        setTooltipOpen(true);
-      }
-    }, 500);
+      setTooltipAnchor(tooltipAnchor);
+      setTooltipIndex(index);
+      setTooltipOpen(true);
+    }
   };
 
   const handleMouseLeave = () => {
@@ -359,6 +358,16 @@ const Heatmap: React.FC = () => {
       return [];
     }
     return heatmapData.images_by_timestamp[timestamp] || [];
+  };
+
+  // Check if analysis data has any incidents (matches backend logic)
+  const hasIncidents = (analysisJson: any): boolean => {
+    if (!analysisJson) return false;
+    return (
+      analysisJson.blackscreen === true ||
+      analysisJson.freeze === true ||
+      analysisJson.audio_loss === true
+    );
   };
 
   // Calculate dynamic font size based on number of devices
@@ -853,11 +862,9 @@ const Heatmap: React.FC = () => {
                               width: `${cellWidth}%`,
                               height: `${cellHeight}%`,
                               pointerEvents: 'auto', // Enable mouse events
-                              cursor: image.analysis_json?.freeze ? 'pointer' : 'default',
+                              cursor: hasIncidents(image.analysis_json) ? 'pointer' : 'default',
                               '&:hover': {
-                                outline: image.analysis_json?.freeze
-                                  ? '3px solid rgba(255, 0, 0, 0.8)' // Red outline for freeze
-                                  : '2px solid rgba(255, 255, 255, 0.5)',
+                                outline: '2px solid rgba(255, 255, 255, 0.8)', // Simple white outline for hover
                               },
                             }}
                             onMouseEnter={(e) => handleMouseEnter(e, index)}
