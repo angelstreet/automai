@@ -194,37 +194,41 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             prev1_sampled = prev1_img[::sample_rate, ::sample_rate]
             prev2_sampled = prev2_img[::sample_rate, ::sample_rate]
             
-            # Calculate differences between all 3 frames
+            # Calculate differences between current frame and previous frames
             diff_current_prev1 = cv2.absdiff(img_sampled, prev1_sampled)
             diff_current_prev2 = cv2.absdiff(img_sampled, prev2_sampled)
-            diff_prev1_prev2 = cv2.absdiff(prev1_sampled, prev2_sampled)
             
-            mean_diff_1 = np.mean(diff_current_prev1)
-            mean_diff_2 = np.mean(diff_current_prev2)
-            mean_diff_3 = np.mean(diff_prev1_prev2)
+            mean_diff_1 = np.mean(diff_current_prev1)  # Current vs Previous 1
+            mean_diff_2 = np.mean(diff_current_prev2)  # Current vs Previous 2
             
-            print(f"Comparing {current_filename} with last 2 frames:")
-            print(f"  vs {prev1_filename}: diff={mean_diff_1:.2f}")
-            print(f"  vs {prev2_filename}: diff={mean_diff_2:.2f}")
-            print(f"  {prev1_filename} vs {prev2_filename}: diff={mean_diff_3:.2f}")
+            print(f"Comparing {current_filename} with previous frames:")
+            print(f"  vs {prev1_filename} (n-1): diff={mean_diff_1:.2f}")
+            print(f"  vs {prev2_filename} (n-2): diff={mean_diff_2:.2f}")
             
-            # Frames are considered frozen if ALL 3 comparisons show very small differences
-            freeze_threshold = 5.0  # Increased from 1.0 to 5.0 to be less aggressive
-            is_frozen = (mean_diff_1 < freeze_threshold and 
-                        mean_diff_2 < freeze_threshold and 
-                        mean_diff_3 < freeze_threshold)
+            # Frames are considered frozen if current frame is similar to EITHER previous frame
+            # This catches cases where the stream freezes on any previous frame
+            freeze_threshold = 3.0  # Reduced threshold for better detection
+            is_frozen = (mean_diff_1 < freeze_threshold or mean_diff_2 < freeze_threshold)
             
             if is_frozen:
-                print(f"FREEZE DETECTED: All 3 frames are nearly identical (threshold={freeze_threshold})")
+                # Determine which comparison triggered the freeze detection
+                if mean_diff_1 < freeze_threshold and mean_diff_2 < freeze_threshold:
+                    freeze_reason = f"similar to BOTH previous frames (n-1: {mean_diff_1:.2f}, n-2: {mean_diff_2:.2f})"
+                elif mean_diff_1 < freeze_threshold:
+                    freeze_reason = f"similar to previous frame (n-1: {mean_diff_1:.2f})"
+                else:
+                    freeze_reason = f"similar to frame n-2 ({mean_diff_2:.2f})"
+                print(f"FREEZE DETECTED: Current frame {freeze_reason} (threshold={freeze_threshold})")
             else:
-                print(f"No freeze: At least one frame pair shows significant difference (threshold={freeze_threshold})")
+                print(f"No freeze: Current frame differs from both previous frames (threshold={freeze_threshold})")
             
             # Create freeze details for frontend visualization
             freeze_details = {
                 'frames_compared': [prev2_filename, prev1_filename, current_filename],
-                'frame_differences': [round(mean_diff_3, 2), round(mean_diff_1, 2), round(mean_diff_2, 2)],
+                'frame_differences': [round(mean_diff_2, 2), round(mean_diff_1, 2), 0.0],  # [n-2 vs current, n-1 vs current, current vs current]
                 'threshold': freeze_threshold,
-                'comparison_method': '3_frame_thumbnail' if is_thumbnail else '3_frame_original'
+                'comparison_method': '2_frame_comparison_thumbnail' if is_thumbnail else '2_frame_comparison_original',
+                'freeze_detected_against': 'n-1' if mean_diff_1 < freeze_threshold else 'n-2' if mean_diff_2 < freeze_threshold else None
             }
             
             # Update cache with the 2 most recent frames for next execution
