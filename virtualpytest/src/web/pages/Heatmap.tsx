@@ -667,7 +667,7 @@ const Heatmap: React.FC = () => {
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box display="flex" alignItems="center" gap={1}>
                 <HeatmapIcon color="primary" />
-                <Typography variant="h6">Heatmap Status</Typography>
+                <Typography variant="h6">Heatmap</Typography>
               </Box>
 
               <Box display="flex" alignItems="center" gap={4}>
@@ -689,7 +689,15 @@ const Heatmap: React.FC = () => {
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Status</Typography>
                   <Chip
-                    label={currentGeneration?.status || 'Ready'}
+                    label={
+                      currentGeneration?.status === 'completed' &&
+                      currentGeneration?.processing_time
+                        ? `Completed (${currentGeneration.processing_time.toFixed(1)}s)`
+                        : currentGeneration?.status === 'processing' &&
+                            currentGeneration?.processing_time
+                          ? `Processing (${currentGeneration.processing_time.toFixed(1)}s)`
+                          : currentGeneration?.status || 'Ready'
+                    }
                     color={currentGeneration?.status === 'completed' ? 'success' : 'default'}
                     size="small"
                   />
@@ -704,16 +712,6 @@ const Heatmap: React.FC = () => {
                         const range = getTimeframeRange();
                         return range ? `${range.from} - ${range.to}` : 'N/A';
                       })()}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Processing Time Display */}
-                {currentGeneration?.processing_time && (
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <Typography variant="body2">Processing Time</Typography>
-                    <Typography variant="body2" fontWeight="bold">
-                      {currentGeneration.processing_time.toFixed(1)}s
                     </Typography>
                   </Box>
                 )}
@@ -774,8 +772,7 @@ const Heatmap: React.FC = () => {
             <Box
               sx={{
                 width: '90%',
-                minHeight: '50vh',
-                maxHeight: '60vh',
+                height: '50vh', // Fixed height instead of min/max
                 mx: 'auto',
                 position: 'relative',
                 backgroundColor: 'black',
@@ -792,7 +789,6 @@ const Heatmap: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    minHeight: '50vh',
                     position: 'relative',
                   }}
                 >
@@ -801,11 +797,10 @@ const Heatmap: React.FC = () => {
                     src={getCurrentMosaicUrl()!}
                     alt={`Heatmap Mosaic ${currentFrame + 1}`}
                     style={{
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      width: 'auto',
-                      height: 'auto',
+                      width: '100%',
+                      height: '100%',
                       objectFit: 'contain', // Ensures full image is visible without cropping
+                      objectPosition: 'center', // Center the image within the container
                     }}
                     onLoad={() => {
                       // Ensure browser caches the image by setting cache headers via JavaScript
@@ -912,7 +907,6 @@ const Heatmap: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    minHeight: '50vh',
                   }}
                 >
                   <Typography color="white">No mosaic available</Typography>
