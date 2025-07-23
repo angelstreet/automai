@@ -52,7 +52,7 @@ export const HeatMapAnalysisSection: React.FC<HeatMapAnalysisSectionProps> = ({
           onClick={onToggleExpanded}
           sx={{ cursor: 'pointer' }}
         >
-          <Typography variant="h6">AI Analysis</Typography>
+          <Typography variant="h6">Data Analysis</Typography>
           <Box display="flex" alignItems="center" gap={1}>
             <Typography variant="body2" color="textSecondary">
               {analysis.summary}

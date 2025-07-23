@@ -47,7 +47,7 @@ const Heatmap: React.FC = () => {
   const [currentFrame, setCurrentFrame] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
 
-  // AI Analysis state
+  // Data Analysis state
   const [analysisExpanded, setAnalysisExpanded] = useState(true); // Expanded by default
 
   // Tooltip state
@@ -998,7 +998,7 @@ const Heatmap: React.FC = () => {
         </Card>
       )}
 
-      {/* AI Analysis Section - now using extracted component */}
+      {/* Data Analysis Section - now using extracted component */}
       <HeatMapAnalysisSection
         analysis={analysis}
         analysisExpanded={analysisExpanded}
