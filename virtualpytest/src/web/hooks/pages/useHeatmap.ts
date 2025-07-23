@@ -193,22 +193,11 @@ export const useHeatmap = () => {
         progress: result.progress,
         mosaic_urls: result.mosaic_urls,
         error: result.error,
+        metadata: result.metadata, // Directly from response
       };
 
-      if (result.status === 'completed' && result.mosaic_urls) {
-        generation.metadata = await Promise.all(
-          result.mosaic_urls.map(async (url) => {
-            const metadataUrl = url.replace('mosaic.jpg', 'metadata.json');
-            try {
-              const response = await fetch(metadataUrl);
-              if (!response.ok) throw new Error(`Failed to fetch metadata: ${response.status}`);
-              return await response.json();
-            } catch (err) {
-              console.error(`Failed to fetch metadata for ${url}:`, err);
-              throw err; // Fail early, no fallback
-            }
-          }),
-        );
+      if (result.status === 'completed' && !result.metadata) {
+        throw new Error('Metadata missing in completed status response');
       }
 
       setCurrentGeneration(generation);

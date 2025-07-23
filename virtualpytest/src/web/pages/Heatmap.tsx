@@ -263,16 +263,17 @@ const Heatmap: React.FC = () => {
     };
   }, []);
 
-  // Load data from metadata (fetched in hook)
+  // Load data from metadata (included in status response)
   useEffect(() => {
-    if (currentGeneration?.metadata) {
-      console.log('[@component:Heatmap] Using metadata for analysis');
-      setTotalFrames(currentGeneration.metadata.length);
-    } else if (currentGeneration?.status === 'completed') {
-      // Fail if no metadata
-      console.error('[@component:Heatmap] No metadata available after completion');
-      setError('Analysis data missing - please regenerate');
-      setTotalFrames(0);
+    if (currentGeneration?.status === 'completed') {
+      if (currentGeneration.metadata) {
+        console.log('[@component:Heatmap] Using metadata from status response');
+        setTotalFrames(currentGeneration.metadata.length);
+      } else {
+        console.error('[@component:Heatmap] No metadata in completed status');
+        setError('Analysis data missing - please regenerate');
+        setTotalFrames(0);
+      }
     }
   }, [currentGeneration]);
 
@@ -547,14 +548,25 @@ const Heatmap: React.FC = () => {
     const currentTime = new Date(timestamp).getTime();
 
     const deviceAnalysis = images.map((image) => {
-      const analysisJson = image.analysis_json;
-      if (
+      const analysisJson = image.analysis_json || {};
+      const isIncomplete =
         !analysisJson ||
         typeof analysisJson.blackscreen === 'undefined' ||
         typeof analysisJson.freeze === 'undefined' ||
-        typeof analysisJson.audio_loss === 'undefined'
-      ) {
-        throw new Error(`Incomplete analysis_json for ${image.host_name}-${image.device_id}`);
+        typeof analysisJson.audio_loss === 'undefined';
+
+      if (isIncomplete) {
+        console.error(`Incomplete analysis_json for ${image.host_name}-${image.device_id}`);
+        return {
+          device: `${image.host_name}-${image.device_id}`,
+          hasIncident: true, // Treat as incident for visibility
+          incidentDuration: '',
+          audio: false,
+          video: false,
+          blackscreen: false,
+          freeze: false,
+          analysis_error: 'Missing or incomplete analysis data',
+        };
       }
 
       const blackscreen = analysisJson.blackscreen;

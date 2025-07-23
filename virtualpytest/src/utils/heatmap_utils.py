@@ -32,6 +32,7 @@ class HeatmapJob:
         self.progress = 0  # 0-100
         self.timeframe_minutes = timeframe_minutes
         self.mosaic_urls = []
+        self.metadata = []  # New: array of metadata dicts per timestamp
         self.error = None
         self.created_at = datetime.now()
         self.start_time = None  # When processing actually started
@@ -44,14 +45,18 @@ class HeatmapJob:
             end_time = self.end_time or datetime.now()
             processing_time = (end_time - self.start_time).total_seconds()
             
-        return {
+        result = {
             'job_id': self.job_id,
             'status': self.status,
             'progress': self.progress,
             'mosaic_urls': self.mosaic_urls,
             'error': self.error,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat(),
+            'processing_time': processing_time
         }
+        if self.status == 'completed':
+            result['metadata'] = self.metadata
+        return result
 
 def set_low_priority():
     """Set low process priority to limit CPU usage"""
@@ -573,6 +578,7 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                         },
                         'upload_success': True
                     })
+                    self.metadata.append(metadata)  # Store metadata dict
                     print(f"[@heatmap_utils] Successfully uploaded heatmap for timestamp {timestamp}")
                 else:
                     # Follow script-reports pattern: continue even if R2 upload fails
@@ -607,6 +613,7 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                             'metadata': metadata_upload.get('error', 'Upload failed')
                         }
                     })
+                    self.metadata.append(metadata)  # Still store even on fallback
                     print(f"[@heatmap_utils] R2 upload failed, using local fallback for timestamp {timestamp}")
                     print(f"[@heatmap_utils] Mosaic upload: {mosaic_upload}")
                     print(f"[@heatmap_utils] Metadata upload: {metadata_upload}")
