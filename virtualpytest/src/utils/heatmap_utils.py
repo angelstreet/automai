@@ -52,6 +52,7 @@ class HeatmapJob:
             'error': self.error,
             'created_at': self.created_at.isoformat(),
             'processing_time': processing_time,
+            'heatmap_data': self.heatmap_data
         }
 
 def set_low_priority():
