@@ -215,7 +215,7 @@ def list_scripts():
 
 @server_script_bp.route('/script/execute', methods=['POST'])
 def execute_script():
-    """Proxy script execution to host"""
+    """Execute script asynchronously to prevent timeouts"""
     try:
         data = request.get_json()
         
@@ -240,30 +240,134 @@ def execute_script():
                 'error': f'Host not found: {host_name}'
             }), 404
         
-        # Build host URL
-        host_url = buildHostUrl(host_info, '/host/script/execute')
+        # Create task for async execution
+        from src.utils.task_manager import task_manager
+        task_id = task_manager.create_task('script_execute', {
+            'script_name': script_name,
+            'host_name': host_name,
+            'device_id': device_id,
+            'parameters': parameters
+        })
         
-        # Prepare request payload
+        # Prepare request payload with callback
         payload = {
             'script_name': script_name,
-            'device_id': device_id
+            'device_id': device_id,
+            'task_id': task_id
         }
         
         # Add parameters if provided
         if parameters and parameters.strip():
             payload['parameters'] = parameters.strip()
         
-        # Proxy request to host
-        response = requests.post(
-            host_url,
-            json=payload,
-            timeout=60
-        )
+        # Add callback URL for async completion
+        from src.utils.build_url_utils import buildServerUrl
+        callback_url = buildServerUrl('server/script/taskComplete')
+        payload['callback_url'] = callback_url
         
-        return jsonify(response.json()), response.status_code
+        # Execute in background thread
+        import threading
+        def execute_async():
+            try:
+                print(f"[@route:server_script:execute_script] Starting background execution for task {task_id}")
+                
+                # Build host URL
+                host_url = buildHostUrl(host_info, '/host/script/execute')
+                
+                # Make request to host with extended timeout
+                response = requests.post(
+                    host_url,
+                    json=payload,
+                    timeout=300  # 5 minutes timeout for long-running scripts
+                )
+                
+                result = response.json()
+                
+                if response.status_code != 200:
+                    # Host execution failed, complete task with error
+                    print(f"[@route:server_script:execute_script] Host execution failed for task {task_id}")
+                    task_manager.complete_task(task_id, {}, error=result.get('error', 'Host execution failed'))
+                else:
+                    print(f"[@route:server_script:execute_script] Host execution completed for task {task_id}")
+                    # Task will be completed by the host's callback or directly here if no callback
+                    if 'callback_url' not in payload:
+                        task_manager.complete_task(task_id, result)
+                        
+            except Exception as e:
+                print(f"[@route:server_script:execute_script] Background execution error for task {task_id}: {e}")
+                task_manager.complete_task(task_id, {}, error=str(e))
+        
+        threading.Thread(target=execute_async, daemon=True).start()
+        
+        return jsonify({
+            'success': True,
+            'task_id': task_id,
+            'status': 'started',
+            'message': f'Script "{script_name}" started in background'
+        }), 202
         
     except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e)
-        }), 500 
+        }), 500
+
+@server_script_bp.route('/script/taskComplete', methods=['POST'])
+def task_complete():
+    """Receive script execution completion callback from host"""
+    try:
+        print("[@route:server_script:task_complete] Received script completion callback")
+        
+        # Get callback data
+        callback_data = request.get_json() or {}
+        task_id = callback_data.get('task_id')
+        result = callback_data.get('result', {})
+        error = callback_data.get('error')
+        
+        if not task_id:
+            return jsonify({
+                'success': False,
+                'error': 'task_id required'
+            }), 400
+        
+        # Update task in manager
+        from src.utils.task_manager import task_manager
+        task_manager.complete_task(task_id, result, error)
+        
+        print(f"[@route:server_script:task_complete] Task {task_id} marked as {'failed' if error else 'completed'}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Script completion processed'
+        }), 200
+        
+    except Exception as e:
+        print(f"[@route:server_script:task_complete] Error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@server_script_bp.route('/script/status/<task_id>', methods=['GET'])
+def get_task_status(task_id):
+    """Get status of an async script execution task"""
+    try:
+        from src.utils.task_manager import task_manager
+        task = task_manager.get_task(task_id)
+        
+        if not task:
+            return jsonify({
+                'success': False,
+                'error': 'Task not found'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'task': task
+        }), 200
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
