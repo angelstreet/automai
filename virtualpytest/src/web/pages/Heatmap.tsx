@@ -399,24 +399,11 @@ const Heatmap: React.FC = () => {
       // hasIncident should be based on JSON analysis data only
       const hasIncident = blackscreen || freeze || audioLoss;
 
-      // Check database incidents only for mismatch detection
+      // Check database incidents for duration calculation
       const hasDbIncident = currentIncidents.some(
         (incident) =>
           incident.host_name === image.host_name && incident.device_id === image.device_id,
       );
-
-      const analysisIncidents = [
-        blackscreen ? 'blackscreen' : null,
-        freeze ? 'freeze' : null,
-        audioLoss ? 'audio_loss' : null,
-      ].filter((incident): incident is string => incident !== null);
-
-      const dbIncidents = currentIncidents
-        .filter(
-          (incident) =>
-            incident.host_name === image.host_name && incident.device_id === image.device_id,
-        )
-        .map((incident) => incident.incident_type);
 
       // Calculate incident duration if applicable (from database incidents)
       let incidentDuration = '';
@@ -448,17 +435,10 @@ const Heatmap: React.FC = () => {
         }
       }
 
-      const mismatch =
-        analysisIncidents.length !== dbIncidents.length ||
-        !analysisIncidents.every((type) => dbIncidents.includes(type));
-
       return {
         device: `${image.host_name}-${image.device_id}`,
         hasIncident,
-        analysisIncidents,
-        dbIncidents,
         incidentDuration,
-        mismatch,
         audio: hasAudio,
         video: hasVideo,
         blackscreen,
@@ -468,10 +448,9 @@ const Heatmap: React.FC = () => {
 
     const totalDevices = deviceAnalysis.length;
     const devicesWithIncidents = deviceAnalysis.filter((d) => d.hasIncident).length;
-    const mismatches = deviceAnalysis.filter((d) => d.mismatch).length;
 
     return {
-      summary: `${totalDevices} devices | ${devicesWithIncidents} with incidents | ${mismatches} mismatches`,
+      summary: `${totalDevices} devices | ${devicesWithIncidents} with incidents`,
       details: deviceAnalysis,
     };
   };
@@ -995,9 +974,6 @@ const Heatmap: React.FC = () => {
                         <TableCell>
                           <strong>Duration</strong>
                         </TableCell>
-                        <TableCell>
-                          <strong>Mismatch</strong>
-                        </TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -1050,13 +1026,6 @@ const Heatmap: React.FC = () => {
                                 N/A
                               </Typography>
                             )}
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={device.mismatch ? 'Yes' : 'No'}
-                              color={device.mismatch ? 'warning' : 'success'}
-                              size="small"
-                            />
                           </TableCell>
                         </TableRow>
                       ))}
