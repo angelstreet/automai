@@ -60,11 +60,13 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
   const { progress } = validation;
   const { currentStep, totalSteps, steps, isRunning } = progress;
 
-  // Get the current step being executed
-  const currentStepData = steps.find((step) => step.status === 'running') || steps[currentStep - 1];
+  // Get the current step being executed (only if we have steps)
+  const currentStepData = steps.length > 0 
+    ? (steps.find((step) => step.status === 'running') || steps[currentStep - 1])
+    : null;
 
-  // Calculate progress percentage
-  const progressPercentage = totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0;
+  // For synchronous validation, show indeterminate progress
+  const progressPercentage = steps.length > 0 && totalSteps > 0 ? (currentStep / totalSteps) * 100 : 0;
 
   // Get status icon and color for current step
   const getStatusDisplay = () => {
@@ -100,10 +102,10 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
 
       <DialogContent>
         <Box sx={{ py: 0 }}>
-          {/* Current Step Display */}
-          <Box sx={{ mb: 0.5 }}>
-            {/* Current Step Details */}
-            {currentStepData && (
+          {/* Current Step Display - only show if we have step data */}
+          {currentStepData ? (
+            <Box sx={{ mb: 0.5 }}>
+              {/* Current Step Details */}
               <Box
                 sx={{
                   mt: 0.5,
@@ -140,19 +142,43 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
                   </Typography>
                 )}
               </Box>
-            )}
-          </Box>
+            </Box>
+          ) : (
+            /* Show simple running message for synchronous validation */
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, p: 2 }}>
+              <CircularProgress size={24} />
+              <Typography variant="body1">
+                Running validation... Please wait while we test {totalSteps} navigation steps.
+              </Typography>
+            </Box>
+          )}
 
           {/* Progress Bar */}
           <Box sx={{ mt: 2 }}>
-            <LinearProgress
-              variant="determinate"
-              value={progressPercentage}
-              sx={{ height: 8, borderRadius: 4 }}
-            />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
-              {progressPercentage.toFixed(1)}% complete
-            </Typography>
+            {steps.length > 0 ? (
+              /* Determinate progress for step-by-step validation */
+              <>
+                <LinearProgress
+                  variant="determinate"
+                  value={progressPercentage}
+                  sx={{ height: 8, borderRadius: 4 }}
+                />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+                  {progressPercentage.toFixed(1)}% complete
+                </Typography>
+              </>
+            ) : (
+              /* Indeterminate progress for synchronous validation */
+              <>
+                <LinearProgress
+                  variant="indeterminate"
+                  sx={{ height: 8, borderRadius: 4 }}
+                />
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+                  Validation in progress...
+                </Typography>
+              </>
+            )}
           </Box>
         </Box>
       </DialogContent>
