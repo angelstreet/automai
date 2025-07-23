@@ -21,7 +21,6 @@ Environment=PYTHONPATH=/home/sunri-pi1/automai/virtualpytest/scripts
 # Resource limits
 LimitNOFILE=65536
 MemoryMax=512M
-CPUQuota=50%
 
 # Security
 NoNewPrivileges=true
