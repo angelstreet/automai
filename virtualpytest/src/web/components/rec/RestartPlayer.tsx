@@ -29,6 +29,7 @@ export const RestartPlayer: React.FC<RestartPlayerProps> = ({ host, device }) =>
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   const [previousImageUrl, setPreviousImageUrl] = useState<string | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(false); // Track image loading state
 
   // Track timing for 2-second delays between image changes
   const lastImageChangeTime = useRef<number>(0);
@@ -88,6 +89,7 @@ export const RestartPlayer: React.FC<RestartPlayerProps> = ({ host, device }) =>
 
   // Handle smooth transition when new image loads (matching RecHostPreview logic)
   const handleImageLoad = useCallback(() => {
+    setIsImageLoading(false);
     if (isTransitioning) {
       // Clear the previous image after a brief delay to allow smooth transition
       setTimeout(() => {
@@ -112,6 +114,9 @@ export const RestartPlayer: React.FC<RestartPlayerProps> = ({ host, device }) =>
 
       const performImageChange = async () => {
         try {
+          // Set loading state
+          setIsImageLoading(true);
+
           // Preload the new image
           await preloadImage(newUrl);
 
@@ -125,6 +130,7 @@ export const RestartPlayer: React.FC<RestartPlayerProps> = ({ host, device }) =>
           lastImageChangeTime.current = Date.now();
         } catch (error) {
           console.error(`[RestartPlayer] Failed to load image: ${newUrl}`, error);
+          setIsImageLoading(false);
         }
       };
 
@@ -148,6 +154,7 @@ export const RestartPlayer: React.FC<RestartPlayerProps> = ({ host, device }) =>
       setCurrentImageUrl(null);
       setPreviousImageUrl(null);
       setIsTransitioning(false);
+      setIsImageLoading(false);
     }
   }, [currentFrameUrl, frames.length, loadNewImage]);
 
@@ -255,8 +262,30 @@ export const RestartPlayer: React.FC<RestartPlayerProps> = ({ host, device }) =>
                 setPreviousImageUrl(null);
                 setIsTransitioning(false);
               }
+              setIsImageLoading(false);
             }}
           />
+
+          {/* Loading carousel overlay - shown when loading individual frames */}
+          {isImageLoading && (
+            <Box
+              sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 10,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                borderRadius: '50%',
+                padding: 2,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <CircularProgress size={40} sx={{ color: 'white' }} />
+            </Box>
+          )}
         </Box>
       )}
 

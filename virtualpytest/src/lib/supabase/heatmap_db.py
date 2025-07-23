@@ -234,8 +234,6 @@ def get_heatmap_data(
                                     'bucket_timestamp': bucket_key,  # Bucket timestamp for consistency
                                     'original_timestamp': item.get('timestamp', timestamp),
                                     'analysis_json': analysis_json,
-                                    'frame_json_url': frame_json_url,
-                                    'audio_json_url': audio_json_url,
                                     'has_frame_analysis': item.get('has_frame_analysis', False),
                                     'has_audio_analysis': item.get('has_audio_analysis', False)
                                 }
