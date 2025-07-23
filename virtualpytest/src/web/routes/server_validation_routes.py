@@ -137,14 +137,16 @@ def run_validation(tree_id: str):
         }
         task_manager.update_task_progress(task_id, initial_progress)
         
+        # Get team_id BEFORE starting background thread (while in Flask context)
+        team_id = get_team_id()
+        
         # Execute validation in background thread
         import threading
         def execute_async():
             try:
                 print(f"[@route:run_validation] Starting background validation for task {task_id}")
                 
-                # Get team_id and initialize NavigationExecutor
-                team_id = get_team_id()
+                # Use team_id passed from outside the thread (no Flask context needed)
                 executor = NavigationExecutor(host, device_id, team_id)
                 
                 results = []
