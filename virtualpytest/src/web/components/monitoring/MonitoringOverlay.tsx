@@ -118,11 +118,6 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
             }}
           >
             {analysis?.audio?.has_audio ? 'Yes' : 'No'}
-            {analysis?.audio?.has_audio && (
-              <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
-                ({analysis.audio.volume_percentage}%)
-              </Typography>
-            )}
             {!analysis?.audio?.has_audio && errorTrendData && (
               <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
                 ({errorTrendData.audioLossConsecutive})
