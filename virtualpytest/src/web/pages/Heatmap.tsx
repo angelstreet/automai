@@ -4,9 +4,6 @@ import {
   Cancel as CancelIcon,
   PlayArrow,
   Pause,
-  ExpandMore,
-  ExpandLess,
-  Close as CloseIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -20,21 +17,13 @@ import {
   IconButton,
   LinearProgress,
   Chip,
-  Collapse,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
   Popper,
   Fade,
-  Modal,
-  Grid,
 } from '@mui/material';
 import React, { useState, useEffect, useRef } from 'react';
 
+import { HeatMapAnalysisSection } from '../components/heatmap/HeatMapAnalysisSection';
+import { HeatMapFreezeModal } from '../components/heatmap/HeatMapFreezeModal';
 import { MonitoringOverlay } from '../components/monitoring/MonitoringOverlay';
 import { useHeatmap, HeatmapData, HeatmapImage } from '../hooks/pages/useHeatmap';
 
@@ -555,96 +544,7 @@ const Heatmap: React.FC = () => {
 
   const analysis = analyzeCurrentFrame();
 
-  // Freeze Analysis Modal - Minimalist Version
-  const renderFreezeModal = () => {
-    if (!freezeModalOpen || !freezeModalImage) return null;
-
-    const freezeDetails = freezeModalImage.analysis_json?.freeze_details;
-    if (!freezeDetails) return null;
-
-    return (
-      <Modal
-        open={freezeModalOpen}
-        onClose={() => setFreezeModalOpen(false)}
-        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-      >
-        <Box
-          sx={{
-            width: '90vw',
-            height: '70vh',
-            bgcolor: 'black',
-            position: 'relative',
-            display: 'flex',
-            gap: 1,
-            p: 1,
-          }}
-        >
-          {/* Close button */}
-          <IconButton
-            onClick={() => setFreezeModalOpen(false)}
-            sx={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              color: 'white',
-              bgcolor: 'rgba(0,0,0,0.5)',
-              zIndex: 10,
-              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-
-          {/* 3 Images side by side */}
-          {freezeDetails.frames_compared.map((filename, index) => {
-            const frameUrl = constructFrameUrl(filename, freezeModalImage.image_url);
-            const diff = freezeDetails.frame_differences[index];
-            const isCurrentFrame = index === 2;
-
-            return (
-              <Box
-                key={filename}
-                sx={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  border: isCurrentFrame ? '2px solid red' : '1px solid #333',
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: 'white',
-                    textAlign: 'center',
-                    p: 0.5,
-                    bgcolor: 'rgba(0,0,0,0.7)',
-                  }}
-                >
-                  {isCurrentFrame ? 'Current' : `Frame -${3 - index}`} ({diff})
-                </Typography>
-                <img
-                  src={frameUrl}
-                  alt={`Frame ${index}`}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                  }}
-                  onError={(e) => {
-                    // Try thumbnail version if original fails
-                    const target = e.target as HTMLImageElement;
-                    if (!target.src.includes('_thumbnail')) {
-                      target.src = frameUrl.replace('.jpg', '_thumbnail.jpg');
-                    }
-                  }}
-                />
-              </Box>
-            );
-          })}
-        </Box>
-      </Modal>
-    );
-  };
+  // Freeze Analysis Modal - now using extracted component
 
   // Tooltip component
   const renderTooltip = () => {
@@ -1098,143 +998,19 @@ const Heatmap: React.FC = () => {
         </Card>
       )}
 
-      {/* AI Analysis Box */}
-      <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
-        <CardContent>
-          <Box
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            onClick={() => setAnalysisExpanded(!analysisExpanded)}
-            sx={{ cursor: 'pointer' }}
-          >
-            <Typography variant="h6">AI Analysis</Typography>
-            <Box display="flex" alignItems="center" gap={1}>
-              <Typography variant="body2" color="textSecondary">
-                {analysis.summary}
-              </Typography>
-              {analysisExpanded ? <ExpandLess /> : <ExpandMore />}
-            </Box>
-          </Box>
-
-          <Collapse in={analysisExpanded}>
-            <Box mt={2}>
-              {analysis.details.length > 0 ? (
-                <TableContainer
-                  component={Paper}
-                  variant="outlined"
-                  sx={{
-                    backgroundColor: 'transparent',
-                    '& .MuiPaper-root': {
-                      backgroundColor: 'transparent !important',
-                      boxShadow: 'none',
-                    },
-                  }}
-                >
-                  <Table
-                    size="small"
-                    sx={{
-                      backgroundColor: 'transparent',
-                      '& .MuiTableRow-root': {
-                        backgroundColor: 'transparent !important',
-                      },
-                      '& .MuiTableRow-root:hover': {
-                        backgroundColor: 'transparent !important',
-                      },
-                      '& .MuiTableCell-root': {
-                        backgroundColor: 'transparent !important',
-                      },
-                    }}
-                  >
-                    <TableHead>
-                      <TableRow sx={{ backgroundColor: 'transparent !important' }}>
-                        <TableCell>
-                          <strong>Device</strong>
-                        </TableCell>
-                        <TableCell>
-                          <strong>Audio</strong>
-                        </TableCell>
-                        <TableCell>
-                          <strong>Video</strong>
-                        </TableCell>
-                        <TableCell>
-                          <strong>Blackscreen</strong>
-                        </TableCell>
-                        <TableCell>
-                          <strong>Freeze</strong>
-                        </TableCell>
-                        <TableCell>
-                          <strong>Duration</strong>
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {analysis.details.map((device, index) => (
-                        <TableRow
-                          key={index}
-                          sx={{
-                            backgroundColor: 'transparent !important',
-                            '&:hover': {
-                              backgroundColor: 'transparent !important',
-                            },
-                          }}
-                        >
-                          <TableCell>{device.device}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={device.audio ? 'Yes' : 'No'}
-                              color={device.audio ? 'success' : 'error'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={device.video ? 'Yes' : 'No'}
-                              color={device.video ? 'success' : 'error'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              variant="caption"
-                              color={device.blackscreen ? 'error' : 'success'}
-                            >
-                              {device.blackscreen ? 'Yes' : 'No'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              variant="caption"
-                              color={device.freeze ? 'error' : 'success'}
-                            >
-                              {device.freeze ? 'Yes' : 'No'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            {device.incidentDuration ? (
-                              <Chip label={device.incidentDuration} color="error" size="small" />
-                            ) : (
-                              <Typography variant="caption" color="textSecondary">
-                                N/A
-                              </Typography>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Typography variant="body2" color="textSecondary">
-                  No analysis data available for current frame
-                </Typography>
-              )}
-            </Box>
-          </Collapse>
-        </CardContent>
-      </Card>
+      {/* AI Analysis Section - now using extracted component */}
+      <HeatMapAnalysisSection
+        analysis={analysis}
+        analysisExpanded={analysisExpanded}
+        onToggleExpanded={() => setAnalysisExpanded(!analysisExpanded)}
+      />
       {renderTooltip()}
-      {renderFreezeModal()}
+      <HeatMapFreezeModal
+        freezeModalOpen={freezeModalOpen}
+        freezeModalImage={freezeModalImage}
+        onClose={() => setFreezeModalOpen(false)}
+        constructFrameUrl={constructFrameUrl}
+      />
     </Box>
   );
 };
