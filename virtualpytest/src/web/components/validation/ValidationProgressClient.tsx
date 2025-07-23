@@ -151,7 +151,7 @@ const ValidationProgressClient: React.FC<ValidationProgressClientProps> = ({ tre
               sx={{ height: 8, borderRadius: 4 }}
             />
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
-              {progressPercentage.toFixed(1)}% complete
+              {Math.round(progressPercentage)}% complete
             </Typography>
           </Box>
         </Box>
