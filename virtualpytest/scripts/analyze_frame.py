@@ -194,41 +194,49 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             prev1_sampled = prev1_img[::sample_rate, ::sample_rate]
             prev2_sampled = prev2_img[::sample_rate, ::sample_rate]
             
-            # Calculate differences between current frame and previous frames
-            diff_current_prev1 = cv2.absdiff(img_sampled, prev1_sampled)
-            diff_current_prev2 = cv2.absdiff(img_sampled, prev2_sampled)
+            # Calculate ALL three possible frame comparisons
+            diff_1vs2 = cv2.absdiff(prev2_sampled, prev1_sampled)  # Frame 1 vs Frame 2
+            diff_1vs3 = cv2.absdiff(prev2_sampled, img_sampled)    # Frame 1 vs Frame 3 (current)
+            diff_2vs3 = cv2.absdiff(prev1_sampled, img_sampled)    # Frame 2 vs Frame 3 (current)
             
-            mean_diff_1 = np.mean(diff_current_prev1)  # Current vs Previous 1
-            mean_diff_2 = np.mean(diff_current_prev2)  # Current vs Previous 2
+            mean_diff_1vs2 = np.mean(diff_1vs2)  # Frame 1 vs Frame 2
+            mean_diff_1vs3 = np.mean(diff_1vs3)  # Frame 1 vs Frame 3 (current)
+            mean_diff_2vs3 = np.mean(diff_2vs3)  # Frame 2 vs Frame 3 (current)
             
-            print(f"Comparing {current_filename} with previous frames:")
-            print(f"  vs {prev1_filename} (n-1): diff={mean_diff_1:.2f}")
-            print(f"  vs {prev2_filename} (n-2): diff={mean_diff_2:.2f}")
+            print(f"Comparing all frame pairs for freeze detection:")
+            print(f"  {prev2_filename} vs {prev1_filename} (1vs2): diff={mean_diff_1vs2:.2f}")
+            print(f"  {prev2_filename} vs {current_filename} (1vs3): diff={mean_diff_1vs3:.2f}")
+            print(f"  {prev1_filename} vs {current_filename} (2vs3): diff={mean_diff_2vs3:.2f}")
             
-            # Frames are considered frozen if current frame is similar to EITHER previous frame
-            # This catches cases where the stream freezes on any previous frame
+            # Frames are considered frozen ONLY if ALL THREE comparisons show very small differences
+            # If at least one comparison shows significant difference, the stream is progressing normally
             freeze_threshold = 0.5  # Very restrictive - only detect truly identical frames
-            is_frozen = (mean_diff_1 < freeze_threshold or mean_diff_2 < freeze_threshold)
+            is_frozen = (mean_diff_1vs2 < freeze_threshold and 
+                        mean_diff_1vs3 < freeze_threshold and 
+                        mean_diff_2vs3 < freeze_threshold)
             
             if is_frozen:
-                # Determine which comparison triggered the freeze detection
-                if mean_diff_1 < freeze_threshold and mean_diff_2 < freeze_threshold:
-                    freeze_reason = f"similar to BOTH previous frames (n-1: {mean_diff_1:.2f}, n-2: {mean_diff_2:.2f})"
-                elif mean_diff_1 < freeze_threshold:
-                    freeze_reason = f"similar to previous frame (n-1: {mean_diff_1:.2f})"
-                else:
-                    freeze_reason = f"similar to frame n-2 ({mean_diff_2:.2f})"
-                print(f"FREEZE DETECTED: Current frame {freeze_reason} (threshold={freeze_threshold})")
+                print(f"FREEZE DETECTED: All three frames are nearly identical")
+                print(f"  1vs2: {mean_diff_1vs2:.2f}, 1vs3: {mean_diff_1vs3:.2f}, 2vs3: {mean_diff_2vs3:.2f} (all < {freeze_threshold})")
             else:
-                print(f"No freeze: Current frame differs from both previous frames (threshold={freeze_threshold})")
+                print(f"No freeze: At least one comparison shows significant difference (threshold={freeze_threshold})")
+                # Show which comparisons are different
+                different_pairs = []
+                if mean_diff_1vs2 >= freeze_threshold:
+                    different_pairs.append(f"1vs2: {mean_diff_1vs2:.2f}")
+                if mean_diff_1vs3 >= freeze_threshold:
+                    different_pairs.append(f"1vs3: {mean_diff_1vs3:.2f}")
+                if mean_diff_2vs3 >= freeze_threshold:
+                    different_pairs.append(f"2vs3: {mean_diff_2vs3:.2f}")
+                print(f"  Different pairs: {', '.join(different_pairs)}")
             
             # Create freeze details for frontend visualization
             freeze_details = {
                 'frames_compared': [prev2_filename, prev1_filename, current_filename],
-                'frame_differences': [round(mean_diff_2, 2), round(mean_diff_1, 2), 0.0],  # [n-2 vs current, n-1 vs current, current vs current]
+                'frame_differences': [round(mean_diff_1vs2, 2), round(mean_diff_1vs3, 2), round(mean_diff_2vs3, 2)],  # [1vs2, 1vs3, 2vs3]
                 'threshold': freeze_threshold,
-                'comparison_method': '2_frame_comparison_thumbnail' if is_thumbnail else '2_frame_comparison_original',
-                'freeze_detected_against': 'n-1' if mean_diff_1 < freeze_threshold else 'n-2' if mean_diff_2 < freeze_threshold else None
+                'comparison_method': 'all_pairs_comparison_thumbnail' if is_thumbnail else 'all_pairs_comparison_original',
+                'freeze_detected_against': 'all' if is_frozen else None
             }
             
             # Update cache with the 2 most recent frames for next execution
