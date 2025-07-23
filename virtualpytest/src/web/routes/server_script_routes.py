@@ -188,14 +188,14 @@ def analyze_script():
 
 @server_script_bp.route('/script/list', methods=['GET'])
 def list_scripts():
-    """List all available Python scripts from virtualpytest/scripts folder"""
+    """List all available Python scripts from virtualpytest/test-scripts folder"""
     try:
         # Get the project root directory (virtualpytest)
         current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/routes
         web_dir = os.path.dirname(current_dir)  # /src/web
         src_dir = os.path.dirname(web_dir)  # /src
         project_root = os.path.dirname(src_dir)  # /virtualpytest
-        scripts_dir = os.path.join(project_root, 'scripts')
+        scripts_dir = os.path.join(project_root, 'test-scripts')
         
         # Check if scripts directory exists
         if not os.path.exists(scripts_dir):

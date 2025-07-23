@@ -1,4 +1,4 @@
-import { Terminal as ScriptIcon } from '@mui/icons-material';
+import { Terminal as ScriptIcon, Link as LinkIcon } from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -22,7 +22,6 @@ import {
   TextField,
   Autocomplete,
 } from '@mui/material';
-import { Link as LinkIcon } from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
 
 import { StreamViewer } from '../components/controller/av/StreamViewer';
