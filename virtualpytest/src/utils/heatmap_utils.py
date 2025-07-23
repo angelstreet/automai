@@ -578,7 +578,9 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                         },
                         'upload_success': True
                     })
-                    self.metadata.append(metadata)  # Store metadata dict
+                    # Store metadata dict in job
+                    with job_lock:
+                        active_jobs[job_id].metadata.append(metadata)
                     print(f"[@heatmap_utils] Successfully uploaded heatmap for timestamp {timestamp}")
                 else:
                     # Follow script-reports pattern: continue even if R2 upload fails
@@ -613,7 +615,9 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                             'metadata': metadata_upload.get('error', 'Upload failed')
                         }
                     })
-                    self.metadata.append(metadata)  # Still store even on fallback
+                    # Store metadata dict in job even on fallback
+                    with job_lock:
+                        active_jobs[job_id].metadata.append(metadata)
                     print(f"[@heatmap_utils] R2 upload failed, using local fallback for timestamp {timestamp}")
                     print(f"[@heatmap_utils] Mosaic upload: {mosaic_upload}")
                     print(f"[@heatmap_utils] Metadata upload: {metadata_upload}")
