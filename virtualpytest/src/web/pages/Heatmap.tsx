@@ -717,7 +717,7 @@ const Heatmap: React.FC = () => {
                     onClick={handleGenerate}
                     disabled={loading}
                   >
-                    Generate Heatmap
+                    Generate
                   </Button>
                 ) : (
                   <Button
@@ -763,9 +763,9 @@ const Heatmap: React.FC = () => {
           <CardContent sx={{ p: 0.5 }}>
             <Box
               sx={{
-                width: '80%',
-                minHeight: '35vh',
-                maxHeight: '45vh',
+                width: '90%',
+                minHeight: '50vh',
+                maxHeight: '60vh',
                 mx: 'auto',
                 position: 'relative',
                 backgroundColor: 'black',
@@ -782,7 +782,7 @@ const Heatmap: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    minHeight: '35vh',
+                    minHeight: '50vh',
                     position: 'relative',
                   }}
                 >
@@ -795,7 +795,7 @@ const Heatmap: React.FC = () => {
                       maxHeight: '100%',
                       width: 'auto',
                       height: 'auto',
-                      objectFit: 'contain',
+                      objectFit: 'contain', // Ensures full image is visible without cropping
                     }}
                     onLoad={() => {
                       // Ensure browser caches the image by setting cache headers via JavaScript
@@ -863,9 +863,6 @@ const Heatmap: React.FC = () => {
                               height: `${cellHeight}%`,
                               pointerEvents: 'auto', // Enable mouse events
                               cursor: hasIncidents(image.analysis_json) ? 'pointer' : 'default',
-                              '&:hover': {
-                                outline: '2px solid rgba(255, 255, 255, 0.8)', // Simple white outline for hover
-                              },
                             }}
                             onMouseEnter={(e) => handleMouseEnter(e, index)}
                             onMouseLeave={handleMouseLeave}
@@ -905,7 +902,7 @@ const Heatmap: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    minHeight: '35vh',
+                    minHeight: '50vh',
                   }}
                 >
                   <Typography color="white">No mosaic available</Typography>

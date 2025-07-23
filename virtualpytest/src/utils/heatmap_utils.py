@@ -34,15 +34,23 @@ class HeatmapJob:
         self.mosaic_urls = []
         self.error = None
         self.created_at = datetime.now()
+        self.start_time = None  # When processing actually started
+        self.end_time = None    # When processing completed
         
     def to_dict(self):
+        processing_time = None
+        if self.start_time:
+            end_time = self.end_time or datetime.now()
+            processing_time = (end_time - self.start_time).total_seconds()
+            
         return {
             'job_id': self.job_id,
             'status': self.status,
             'progress': self.progress,
             'mosaic_urls': self.mosaic_urls,
             'error': self.error,
-            'created_at': self.created_at.isoformat()
+            'created_at': self.created_at.isoformat(),
+            'processing_time': processing_time
         }
 
 def set_low_priority():
@@ -85,6 +93,7 @@ def cancel_job(job_id: str) -> bool:
         if job and job.status in ['pending', 'processing']:
             job.status = 'failed'
             job.error = 'Cancelled by user'
+            job.end_time = datetime.now()  # Record when processing was cancelled
             print(f"[@heatmap_utils] Cancelled job: {job_id}")
             return True
     return False
@@ -397,6 +406,7 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
         if not job:
             return
         job.status = 'processing'
+        job.start_time = datetime.now()  # Record when processing actually started
     
     try:
         timestamps = sorted(images_by_timestamp.keys())
@@ -657,6 +667,7 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
             job = active_jobs[job_id]
             job.status = 'completed'
             job.progress = 100
+            job.end_time = datetime.now()  # Record when processing completed
             # Set mosaic_urls for frontend consumption
             job.mosaic_urls = [img['mosaic_url'] for img in generated_images]
             job.result = {
@@ -674,6 +685,7 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
             job = active_jobs[job_id]
             job.status = 'failed'
             job.error = str(e)
+            job.end_time = datetime.now()  # Record when processing failed
 
 # Thread pool for background processing
 executor = ThreadPoolExecutor(max_workers=MAX_WORKER_THREADS)
