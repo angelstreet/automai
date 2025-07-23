@@ -438,52 +438,18 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                     if image_response.status_code == 200:
                         image_data = image_response.content
                         
-                        # Download JSON analysis files if available
-                        frame_analysis = None
-                        audio_analysis = None
-                        
-                        if image_info.get('frame_json_url'):
-                            try:
-                                frame_response = requests.get(image_info['frame_json_url'], timeout=3)
-                                if frame_response.status_code == 200:
-                                    frame_analysis = frame_response.json()
-                            except Exception as e:
-                                print(f"[@heatmap_utils] Failed to download frame JSON for {image_info['host_name']}: {e}")
-                        
-                        if image_info.get('audio_json_url'):
-                            try:
-                                audio_response = requests.get(image_info['audio_json_url'], timeout=3)
-                                if audio_response.status_code == 200:
-                                    audio_analysis = audio_response.json()
-                            except Exception as e:
-                                print(f"[@heatmap_utils] Failed to download audio JSON for {image_info['host_name']}: {e}")
-                        
-                        # Extract only incident data - simple logic
-                        analysis_json = {
+                        # Use pre-parsed analysis data from get_heatmap_data (no re-downloading)
+                        analysis_json = image_info.get('analysis_json', {
                             'blackscreen': False,
                             'freeze': False,
                             'audio_loss': False
-                        }
-                        
-                        if frame_analysis and isinstance(frame_analysis, dict):
-                            # Extract from analysis sub-object if present
-                            frame_data = frame_analysis.get('analysis', frame_analysis)
-                            analysis_json['blackscreen'] = frame_data.get('blackscreen', False)
-                            analysis_json['freeze'] = frame_data.get('freeze', False)
-                        
-                        if audio_analysis and isinstance(audio_analysis, dict):
-                            # Extract from analysis sub-object if present  
-                            audio_data = audio_analysis.get('analysis', audio_analysis)
-                            analysis_json['audio_loss'] = audio_data.get('audio_loss', False)
+                        })
                         
                         processed_images.append({
                             'host_name': image_info['host_name'],
                             'device_id': image_info['device_id'],
                             'image_data': image_data,
-                            'frame_analysis': frame_analysis,
-                            'audio_analysis': audio_analysis,
-                            'analysis_json': analysis_json,  # Add the expected format for border color logic
-                            'has_analysis': frame_analysis is not None or audio_analysis is not None,
+                            'analysis_json': analysis_json,  # Use pre-parsed data
                             'original_timestamp': image_info.get('original_timestamp', timestamp)
                         })
                         

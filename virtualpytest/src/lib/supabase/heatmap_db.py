@@ -47,8 +47,8 @@ def get_heatmap_data(
                         av_capability != 'vnc_stream'):
                         hosts_devices.append({
                             'host_name': host_name,
-                            'device_id': device.get('device_id', 'device1'),
-                            'host_data': host_data
+                            'device_id': device.get('device_id', 'device1')
+                            # Removed host_data - not used by frontend
                         })
             else:
                 # Fallback for hosts without device config - check if host has av capability
@@ -60,8 +60,8 @@ def get_heatmap_data(
                     av_capability != 'vnc_stream'):
                     hosts_devices.append({
                         'host_name': host_name,
-                        'device_id': 'device1',
-                        'host_data': host_data
+                        'device_id': 'device1'
+                        # Removed host_data - not used by frontend
                     })
         
         print(f"[@db:heatmap:get_heatmap_data] Found {len(hosts_devices)} host/device combinations")
@@ -195,13 +195,12 @@ def get_heatmap_data(
                             if (device_key not in device_latest_by_bucket[bucket_key] or 
                                 timestamp > device_latest_by_bucket[bucket_key][device_key]['timestamp']):
                                 
-                                # Download and parse JSON analysis data
+                                # Download and parse JSON analysis data - simplified structure
                                 analysis_json = {
-                                    'has_audio': False,
-                                    'has_video': False,
                                     'blackscreen': False,
                                     'freeze': False,
                                     'audio_loss': False
+                                    # Removed has_audio and has_video - not useful
                                 }
                                 
                                 # Parse frame analysis if available
@@ -212,7 +211,6 @@ def get_heatmap_data(
                                         response = requests.get(frame_json_url, timeout=3)
                                         if response.status_code == 200:
                                             frame_data = response.json()
-                                            analysis_json['has_video'] = True
                                             
                                             # Use correct field structure from actual JSON
                                             analysis = frame_data.get('analysis', {})
@@ -229,8 +227,11 @@ def get_heatmap_data(
                                         response = requests.get(audio_json_url, timeout=3)
                                         if response.status_code == 200:
                                             audio_data = response.json()
-                                            analysis_json['has_audio'] = True
-                                            analysis_json['audio_loss'] = audio_data.get('audio_loss_detected', False)
+                                            # Extract audio_loss from audio analysis
+                                            audio_analysis = audio_data.get('audio_analysis', {})
+                                            # Convert has_audio=False to audio_loss=True
+                                            has_audio = audio_analysis.get('has_audio', True)
+                                            analysis_json['audio_loss'] = not has_audio
                                     except Exception as e:
                                         print(f"[@db:heatmap:get_heatmap_data] Failed to parse audio JSON: {e}")
                                 
@@ -272,7 +273,7 @@ def get_heatmap_data(
                                     'timestamp': timestamp,  # Original timestamp for comparison
                                     'bucket_timestamp': bucket_key,  # Bucket timestamp for consistency
                                     'original_timestamp': item.get('timestamp', timestamp),
-                                    'analysis_json': analysis_json,
+                                    'analysis_json': analysis_json,  # Pre-parsed analysis data
                                     'has_frame_analysis': item.get('has_frame_analysis', False),
                                     'has_audio_analysis': item.get('has_audio_analysis', False)
                                 }

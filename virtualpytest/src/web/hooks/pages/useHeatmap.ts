@@ -13,8 +13,6 @@ export interface HeatmapImage {
   image_url: string;
   timestamp: string;
   analysis_json: {
-    has_audio: boolean;
-    has_video: boolean;
     blackscreen: boolean;
     freeze: boolean;
     audio_loss: boolean;
@@ -41,7 +39,6 @@ export interface HeatmapData {
   hosts_devices: Array<{
     host_name: string;
     device_id: string;
-    host_data?: any; // Put back host_data for now
   }>;
   images_by_timestamp: Record<string, HeatmapImage[]>; // timestamp -> array of images for that time
   incidents: HeatmapIncident[];
