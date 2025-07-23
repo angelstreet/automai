@@ -41,16 +41,23 @@ export const HeatMapFreezeModal: React.FC<HeatMapFreezeModalProps> = ({
           sx={{
             display: 'flex',
             justifyContent: 'flex-end',
-            p: 1,
-            minHeight: '40px',
+            p: 0.25,
+            minHeight: '24px',
             bgcolor: 'rgba(0,0,0,0.8)',
           }}
         >
           <IconButton
             onClick={onClose}
+            size="small"
             sx={{
               color: 'white',
+              padding: '2px',
+              minWidth: '20px',
+              minHeight: '20px',
               '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
+              '& .MuiSvgIcon-root': {
+                fontSize: '16px',
+              },
             }}
           >
             <CloseIcon />
