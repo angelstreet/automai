@@ -372,6 +372,9 @@ def execute_navigation_with_verifications(host, device, transition: Dict[str, An
         }
         
     except Exception as e:
+        import traceback
+        print(f"[@script_utils:execute_navigation_with_verifications] ERROR: {str(e)}")
+        print(f"[@script_utils:execute_navigation_with_verifications] TRACEBACK: {traceback.format_exc()}")
         return {
             'success': False, 
             'error': f'Navigation step with verifications execution error: {str(e)}',
