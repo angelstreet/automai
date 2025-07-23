@@ -13,6 +13,7 @@ interface ScriptExecutionResult {
   stderr: string;
   exit_code: number;
   host?: string;
+  report_url?: string;
 }
 
 interface UseScriptReturn {

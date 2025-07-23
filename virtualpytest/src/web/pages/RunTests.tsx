@@ -444,7 +444,8 @@ const RunTests: React.FC = () => {
                 // Show wizard form when active
                 <>
                   <Grid container spacing={1} sx={{ mb: 1 }}>
-                    <Grid item xs={12} sm={4}>
+                    {/* First row: Script, Host, Device */}
+                    <Grid item xs={12} sm={3}>
                       <FormControl fullWidth size="small">
                         <InputLabel>Script</InputLabel>
                         <Select
@@ -470,7 +471,7 @@ const RunTests: React.FC = () => {
                       </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} sm={4}>
+                    <Grid item xs={12} sm={3}>
                       <FormControl fullWidth size="small">
                         <InputLabel>Host</InputLabel>
                         <Select
@@ -490,7 +491,7 @@ const RunTests: React.FC = () => {
                       </FormControl>
                     </Grid>
 
-                    <Grid item xs={12} sm={4}>
+                    <Grid item xs={12} sm={3}>
                       <FormControl fullWidth size="small">
                         <InputLabel>Device</InputLabel>
                         <Select
@@ -507,20 +508,15 @@ const RunTests: React.FC = () => {
                         </Select>
                       </FormControl>
                     </Grid>
-                  </Grid>
 
-                  {/* Required Parameters Only - Inline */}
-                  {requiredParameters.length > 0 && (
-                    <>
-                      <Grid container spacing={1} sx={{ mb: 1 }}>
-                        {requiredParameters.map((param) => (
-                          <Grid item xs={12} sm={6} key={param.name}>
-                            {renderParameterInput(param)}
-                          </Grid>
-                        ))}
-                      </Grid>
-                    </>
-                  )}
+                    {/* Parameters on the same row if there's space */}
+                    {requiredParameters.length > 0 &&
+                      requiredParameters.map((param) => (
+                        <Grid item xs={12} sm={3} key={param.name}>
+                          {renderParameterInput(param)}
+                        </Grid>
+                      ))}
+                  </Grid>
 
                   <Box display="flex" gap={1}>
                     <Button
