@@ -477,8 +477,10 @@ def execute_command(command: str, timeout: int = 30) -> Tuple[bool, str, str, in
     except Exception as e:
         return False, "", str(e), -1
 
-# Add back simplified execute_script
+# Enhanced execute_script with report generation using shared report_utils function
 def execute_script(script_name: str, device_id: str, parameters: str = "") -> Dict[str, Any]:
+    start_time = time.time()
+    
     try:
         script_path = get_script_path(script_name)
         
@@ -493,7 +495,38 @@ def execute_script(script_name: str, device_id: str, parameters: str = "") -> Di
         else:
             command = f"{base_command}'"
         
-        success, stdout, stderr, exit_code = execute_command(command, timeout=60)
+        success, stdout, stderr, exit_code = execute_command(command, timeout=300)  # Increased timeout
+        
+        total_execution_time = int((time.time() - start_time) * 1000)
+        
+        # Generate and upload report using shared function
+        report_url = ""
+        try:
+            # Get device and host info
+            device_info = get_device_info_for_report(device_id)
+            host_info = get_host_info_for_report()
+            
+            # Use shared report generation function (same as validation.py)
+            from .report_utils import generate_and_upload_script_report
+            
+            report_url = generate_and_upload_script_report(
+                script_name=f'{script_name}.py',
+                device_info=device_info,
+                host_info=host_info,
+                execution_time=total_execution_time,
+                success=success,
+                step_results=None,  # Simple script execution, no steps
+                screenshot_paths=None,  # No screenshots for simple scripts
+                error_message=stderr if not success else "",
+                userinterface_name="",
+                stdout=stdout,
+                stderr=stderr,
+                exit_code=exit_code,
+                parameters=parameters
+            )
+            
+        except Exception as e:
+            print(f"[@utils:script_utils:execute_script] Report generation error: {str(e)}")
         
         return {
             'success': success,
@@ -503,10 +536,14 @@ def execute_script(script_name: str, device_id: str, parameters: str = "") -> Di
             'script_name': script_name,
             'device_id': device_id,
             'script_path': script_path,
-            'parameters': parameters
+            'parameters': parameters,
+            'execution_time_ms': total_execution_time,
+            'report_url': report_url  # Add report URL to response
         }
         
     except Exception as e:
+        total_execution_time = int((time.time() - start_time) * 1000)
+        
         return {
             'success': False,
             'stdout': '',
@@ -514,5 +551,53 @@ def execute_script(script_name: str, device_id: str, parameters: str = "") -> Di
             'exit_code': 1,
             'script_name': script_name,
             'device_id': device_id,
-            'parameters': parameters
-        } 
+            'parameters': parameters,
+            'execution_time_ms': total_execution_time,
+            'report_url': ""
+        }
+
+def get_device_info_for_report(device_id: str) -> Dict[str, Any]:
+    """Get device information for report generation"""
+    try:
+        from .host_utils import get_device_by_id
+        device = get_device_by_id(device_id)
+        
+        if device:
+            return {
+                'device_name': device.device_name,
+                'device_model': device.device_model,
+                'device_id': device.device_id
+            }
+        else:
+            return {
+                'device_name': f'Device {device_id}',
+                'device_model': 'Unknown Model',
+                'device_id': device_id
+            }
+    except Exception:
+        return {
+            'device_name': f'Device {device_id}',
+            'device_model': 'Unknown Model', 
+            'device_id': device_id
+        }
+
+def get_host_info_for_report() -> Dict[str, Any]:
+    """Get host information for report generation"""
+    try:
+        from .host_utils import get_host_instance
+        host = get_host_instance()
+        
+        if host:
+            return {
+                'host_name': host.host_name
+            }
+        else:
+            hostname = os.getenv('HOST_NAME', 'localhost')
+            return {
+                'host_name': hostname
+            }
+    except Exception:
+        hostname = os.getenv('HOST_NAME', 'localhost')
+        return {
+            'host_name': hostname
+        }

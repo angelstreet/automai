@@ -171,6 +171,21 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
                 
                 verifications_html += f'<div class="verification-item">{verification_line} {result_badge}</div>'
         
+        # Add script output if available (for simple script execution)
+        script_output_html = ""
+        script_output = step.get('script_output', {})
+        if script_output and (script_output.get('stdout') or script_output.get('stderr')):
+            script_output_html = "<div><strong>Script Output:</strong></div>"
+            
+            if script_output.get('stdout'):
+                script_output_html += f'<div class="script-output stdout"><strong>Output:</strong><pre>{script_output["stdout"]}</pre></div>'
+            
+            if script_output.get('stderr'):
+                script_output_html += f'<div class="script-output stderr"><strong>Error:</strong><pre>{script_output["stderr"]}</pre></div>'
+            
+            exit_code = script_output.get('exit_code', 0)
+            script_output_html += f'<div class="script-output exit-code"><strong>Exit Code:</strong> {exit_code}</div>'
+        
         # Get corresponding screenshot
         screenshot_html = ''
         if step_index < len(step_screenshots) and step_screenshots[step_index]:
@@ -198,6 +213,7 @@ def create_compact_step_results_section(step_results: List[Dict], screenshots: D
                  <div class="step-info">
                      {actions_html}
                      {verifications_html}
+                     {script_output_html}
                  </div>
                  {screenshot_html}
              </div>
@@ -262,6 +278,130 @@ def format_execution_time(execution_time_ms: int) -> str:
         minutes = execution_time_ms // 60000
         seconds = (execution_time_ms % 60000) / 1000
         return f"{minutes}m {seconds:.1f}s"
+
+def generate_and_upload_script_report(
+    script_name: str,
+    device_info: Dict,
+    host_info: Dict,
+    execution_time: int,
+    success: bool,
+    step_results: List[Dict] = None,
+    screenshot_paths: List[str] = None,
+    error_message: str = "",
+    userinterface_name: str = "",
+    stdout: str = "",
+    stderr: str = "",
+    exit_code: int = 0,
+    parameters: str = ""
+) -> str:
+    """
+    Generate HTML report and upload to R2 storage - extracted from validation.py
+    Can be used by any script execution (validation, simple scripts, etc.)
+    
+    Returns:
+        Report URL if successful, empty string if failed
+    """
+    try:
+        from .cloudflare_utils import upload_script_report, upload_validation_screenshots
+        from datetime import datetime
+        
+        execution_timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        
+        # Handle simple script execution (no step_results)
+        if not step_results:
+            step_results = [{
+                'step_number': 1,
+                'success': success,
+                'screenshot_path': None,
+                'message': f'Script execution: {script_name}',
+                'execution_time_ms': execution_time,
+                'start_time': 'N/A',
+                'end_time': 'N/A',
+                'from_node': 'Script Start',
+                'to_node': 'Script End',
+                'actions': [{
+                    'command': f'python {script_name}',
+                    'params': {'parameters': parameters} if parameters else {},
+                    'label': f'Execute {script_name} script'
+                }],
+                'verifications': [],
+                'verification_results': [],
+                'script_output': {
+                    'stdout': stdout[:2000] if stdout else '',
+                    'stderr': stderr[:2000] if stderr else '',
+                    'exit_code': exit_code
+                }
+            }]
+        
+        # Calculate verification statistics
+        total_verifications = sum(len(step.get('verification_results', [])) for step in step_results)
+        passed_verifications = sum(
+            sum(1 for v in step.get('verification_results', []) if v.get('success', False)) 
+            for step in step_results
+        )
+        failed_verifications = total_verifications - passed_verifications
+        
+        # Prepare report data (same structure as validation.py)
+        report_data = {
+            'script_name': script_name,
+            'device_info': device_info,
+            'host_info': host_info,
+            'execution_time': execution_time,
+            'success': success,
+            'step_results': step_results,
+            'screenshots': {
+                'initial': screenshot_paths[0] if screenshot_paths and len(screenshot_paths) > 0 else None,
+                'steps': screenshot_paths[1:-1] if screenshot_paths and len(screenshot_paths) > 2 else [],
+                'final': screenshot_paths[-1] if screenshot_paths and len(screenshot_paths) > 1 else None
+            },
+            'error_msg': error_message,
+            'timestamp': execution_timestamp,
+            'userinterface_name': userinterface_name or f'script_{script_name}',
+            'total_steps': len(step_results),
+            'passed_steps': sum(1 for step in step_results if step.get('success', False)),
+            'failed_steps': sum(1 for step in step_results if not step.get('success', True)),
+            'total_verifications': total_verifications,
+            'passed_verifications': passed_verifications,
+            'failed_verifications': failed_verifications
+        }
+        
+        # Generate HTML content using existing function
+        html_content = generate_validation_report(report_data)
+        
+        # Upload report to R2
+        upload_result = upload_script_report(
+            html_content=html_content,
+            device_model=device_info.get('device_model', 'unknown'),
+            script_name=script_name.replace('.py', ''),
+            timestamp=execution_timestamp
+        )
+        
+        report_url = ""
+        if upload_result['success']:
+            report_url = upload_result['report_url']
+            print(f"[@utils:report_utils:generate_and_upload_script_report] Report uploaded: {report_url}")
+            
+            # Upload screenshots if provided
+            if screenshot_paths:
+                screenshot_result = upload_validation_screenshots(
+                    screenshot_paths=screenshot_paths,
+                    device_model=device_info.get('device_model', 'unknown'),
+                    script_name=script_name.replace('.py', ''),
+                    timestamp=execution_timestamp
+                )
+                
+                if screenshot_result['success']:
+                    print(f"[@utils:report_utils:generate_and_upload_script_report] Screenshots uploaded: {screenshot_result['uploaded_count']} files")
+                else:
+                    print(f"[@utils:report_utils:generate_and_upload_script_report] Screenshot upload failed: {screenshot_result.get('error', 'Unknown error')}")
+        else:
+            print(f"[@utils:report_utils:generate_and_upload_script_report] Upload failed: {upload_result.get('error', 'Unknown error')}")
+        
+        return report_url
+        
+    except Exception as e:
+        print(f"[@utils:report_utils:generate_and_upload_script_report] Error: {str(e)}")
+        return ""
 
 def create_error_report(error_message: str) -> str:
     """Create a minimal error report when report generation fails."""
