@@ -55,6 +55,22 @@ class CaptureMonitor:
             else:
                 print(f"[@capture_monitor] Skipping non-existent: {capture_dir}")
         return existing
+    
+    def clean_incidents_on_startup(self, capture_dirs):
+        """Delete incidents.json files on startup to prevent phantom alerts"""
+        try: 
+            for capture_dir in capture_dirs:
+                # Get parent directory (capture1, capture2, etc.)
+                parent_dir = os.path.dirname(capture_dir)
+                incidents_file = os.path.join(parent_dir, 'incidents.json')
+                
+                if os.path.exists(incidents_file):
+                    os.remove(incidents_file)
+                   
+            print(f"[@capture_monitor] Incidents cleanup completed - fresh start guaranteed")
+            
+        except Exception as e:
+            print(f"[@capture_monitor] Error deleting incidents files: {e}")
 
     def find_recent_unanalyzed_frames(self, capture_dir, max_frames=5):
         """Find recent frames that don't have JSON analysis files yet"""
@@ -196,6 +212,9 @@ class CaptureMonitor:
         
         # Get existing directories
         capture_dirs = self.get_existing_directories()
+        
+        # Clean incidents.json files on startup to prevent phantom alerts
+        self.clean_incidents_on_startup(capture_dirs)
         if not capture_dirs:
             print(f"[@capture_monitor] No capture directories found, exiting")
             return
