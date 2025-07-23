@@ -5,8 +5,8 @@ echo "🚀 Starting VirtualPyTest Server..."
 
 # Get the script directory and navigate to the correct paths
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-WEB_DIR="$PROJECT_ROOT/virtualpytest/src/web"
+PROJECT_ROOT="$(cd "$(dirname "$SCRIPT_DIR")" && pwd)"
+WEB_DIR="$PROJECT_ROOT/src/web"
 
 echo "📁 Script directory: $SCRIPT_DIR"
 echo "📁 Project root: $PROJECT_ROOT"
