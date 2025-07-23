@@ -443,9 +443,9 @@ const MonitoringIncidents: React.FC = () => {
       )}
 
       {/* Quick Stats */}
-      <Box sx={{ mb: 0.5 }}>
+      <Box sx={{ mb: 0 }}>
         <Card>
-          <CardContent sx={{ py: 0.5 }}>
+          <CardContent sx={{ py: 0 }}>
             <Box display="flex" alignItems="center" justifyContent="space-between">
               <Box display="flex" alignItems="center" gap={1}>
                 <MonitorIcon color="primary" />
@@ -483,13 +483,13 @@ const MonitoringIncidents: React.FC = () => {
         </Card>
       </Box>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={1}>
         {/* Alerts In Progress */}
         <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Alerts In Progress
+              <Typography variant="h6" sx={{ mb: 0.5 }}>
+                In Progress
               </Typography>
 
               <TableContainer
@@ -504,22 +504,22 @@ const MonitoringIncidents: React.FC = () => {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ py: 1, width: 50 }}>
+                      <TableCell sx={{ py: 0.5, width: 50 }}>
                         <strong>Expand</strong>
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>
+                      <TableCell sx={{ py: 0.5 }}>
                         <strong>Incident</strong>
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>
+                      <TableCell sx={{ py: 0.5 }}>
                         <strong>Host</strong>
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>
+                      <TableCell sx={{ py: 0.5 }}>
                         <strong>Device</strong>
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>
+                      <TableCell sx={{ py: 0.5 }}>
                         <strong>Start Time</strong>
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>
+                      <TableCell sx={{ py: 0.5 }}>
                         <strong>Duration</strong>
                       </TableCell>
                     </TableRow>
@@ -607,8 +607,8 @@ const MonitoringIncidents: React.FC = () => {
         <Grid item xs={12}>
           <Card>
             <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                Alerts Closed
+              <Typography variant="h6" sx={{ mb: 0.5 }}>
+                Closed
               </Typography>
 
               <TableContainer
@@ -623,25 +623,25 @@ const MonitoringIncidents: React.FC = () => {
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ py: 1, width: 50 }}>
+                      <TableCell sx={{ py: 0.5, width: 50 }}>
                         <strong>Expand</strong>
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>
+                      <TableCell sx={{ py: 0.5 }}>
                         <strong>Incident</strong>
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>
+                      <TableCell sx={{ py: 0.5 }}>
                         <strong>Host</strong>
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>
+                      <TableCell sx={{ py: 0.5 }}>
                         <strong>Device</strong>
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>
+                      <TableCell sx={{ py: 0.5 }}>
                         <strong>Start Time</strong>
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>
+                      <TableCell sx={{ py: 0.5 }}>
                         <strong>End Time</strong>
                       </TableCell>
-                      <TableCell sx={{ py: 1 }}>
+                      <TableCell sx={{ py: 0.5 }}>
                         <strong>Total Duration</strong>
                       </TableCell>
                     </TableRow>
