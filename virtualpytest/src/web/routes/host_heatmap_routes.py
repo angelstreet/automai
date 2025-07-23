@@ -34,7 +34,8 @@ def list_recent_analysis():
         files = []
         
         for filename in os.listdir(capture_folder):
-            if filename.startswith('capture_') and filename.endswith('.jpg'):
+            if (filename.startswith('capture_') and filename.endswith('.jpg') and 
+                not filename.endswith('_thumbnail.jpg')):
                 filepath = os.path.join(capture_folder, filename)
                 if os.path.getmtime(filepath) >= cutoff_time:
                     # Extract timestamp from filename

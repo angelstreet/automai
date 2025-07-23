@@ -107,7 +107,8 @@ def get_heatmap_data(
                                     'host_name': host_name,
                                     'device_id': device_id,
                                     'success': True,
-                                    'analysis_data': result.get('analysis_data', [])
+                                    'analysis_data': result.get('analysis_data', []),
+                                    'host_data': host_data  # Pass host data for URL building
                                 }
                             else:
                                 print(f"[@db:heatmap:get_heatmap_data] {host_name} {device_id}: FAILED - success=false in response")
@@ -233,12 +234,43 @@ def get_heatmap_data(
                                     except Exception as e:
                                         print(f"[@db:heatmap:get_heatmap_data] Failed to parse audio JSON: {e}")
                                 
+                                # Build URLs if not provided by host (for minimalist host implementation)
+                                image_url = item.get('image_url')
+                                frame_json_url = item.get('frame_json_url')
+                                audio_json_url = item.get('audio_json_url')
+                                
+                                if not image_url and item.get('filename'):
+                                    # Build URLs from host data and filename
+                                    host_data = result.get('host_data', {})
+                                    device_id = result['device_id']
+                                    filename = item['filename']
+                                    
+                                    print(f"[@db:heatmap:get_heatmap_data] Building URL for {result['host_name']} {device_id}: {filename}")
+                                    print(f"[@db:heatmap:get_heatmap_data] Host data keys: {list(host_data.keys())}")
+                                    
+                                    # Build image URL: host_url/host/stream/capture{N}/captures/filename
+                                    host_url = host_data.get('host_url', '').rstrip('/')
+                                    image_url = f"{host_url}/host/stream/capture{device_id[-1]}/captures/{filename}"
+                                    
+                                    print(f"[@db:heatmap:get_heatmap_data] Built image URL: {image_url}")
+                                    
+                                    # Build JSON URLs if analysis exists
+                                    if item.get('has_frame_analysis'):
+                                        base_name = filename.replace('.jpg', '')
+                                        frame_json_url = f"{host_url}/host/stream/capture{device_id[-1]}/captures/{base_name}.json"
+                                    
+                                    if item.get('has_audio_analysis'):
+                                        base_name = filename.replace('.jpg', '')
+                                        audio_json_url = f"{host_url}/host/stream/capture{device_id[-1]}/captures/{base_name}_audio.json"
+                                
                                 # Store the latest data for this device in this bucket
                                 device_latest_by_bucket[bucket_key][device_key] = {
                                     'host_name': result['host_name'],
                                     'device_id': result['device_id'],
                                     'filename': item.get('filename'),
-                                    'image_url': item.get('image_url'),
+                                    'image_url': image_url,
+                                    'frame_json_url': frame_json_url,
+                                    'audio_json_url': audio_json_url,
                                     'timestamp': timestamp,  # Original timestamp for comparison
                                     'bucket_timestamp': bucket_key,  # Bucket timestamp for consistency
                                     'original_timestamp': item.get('timestamp', timestamp),
