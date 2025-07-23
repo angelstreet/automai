@@ -32,74 +32,94 @@ export const HeatMapFreezeModal: React.FC<HeatMapFreezeModalProps> = ({
           width: '90vw',
           height: '70vh',
           bgcolor: 'black',
-          position: 'relative',
           display: 'flex',
-          gap: 1,
-          p: 1,
+          flexDirection: 'column',
         }}
       >
-        {/* Close button */}
-        <IconButton
-          onClick={onClose}
+        {/* Header with close button */}
+        <Box
           sx={{
-            position: 'absolute',
-            top: 8,
-            right: 8,
-            color: 'white',
-            bgcolor: 'rgba(0,0,0,0.5)',
-            zIndex: 10,
-            '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+            display: 'flex',
+            justifyContent: 'flex-end',
+            p: 1,
+            minHeight: '40px',
+            bgcolor: 'rgba(0,0,0,0.8)',
           }}
         >
-          <CloseIcon />
-        </IconButton>
+          <IconButton
+            onClick={onClose}
+            sx={{
+              color: 'white',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
 
         {/* 3 Images side by side */}
-        {freezeDetails.frames_compared.map((filename, index) => {
-          const frameUrl = constructFrameUrl(filename, freezeModalImage.image_url);
-          const diff = freezeDetails.frame_differences[index];
-          const isCurrentFrame = index === 2;
+        <Box sx={{ display: 'flex', flex: 1, gap: 1, p: 1 }}>
+          {freezeDetails.frames_compared.map((filename, index) => {
+            const frameUrl = constructFrameUrl(filename, freezeModalImage.image_url);
+            const diff = freezeDetails.frame_differences[index];
+            
+            // Extract timestamp from filename (assuming format: capture_YYYYMMDDHHMMSS.jpg)
+            const timestampMatch = filename.match(/capture_(\d{14})/);
+            const timestamp = timestampMatch ? timestampMatch[1] : '';
+            
+            // Format timestamp to readable format
+            const formatTimestamp = (ts: string) => {
+              if (ts.length !== 14) return ts;
+              const year = ts.substring(0, 4);
+              const month = ts.substring(4, 6);
+              const day = ts.substring(6, 8);
+              const hour = ts.substring(8, 10);
+              const minute = ts.substring(10, 12);
+              const second = ts.substring(12, 14);
+              return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+            };
 
-          return (
-            <Box
-              key={filename}
-              sx={{
-                flex: 1,
-                display: 'flex',
-                flexDirection: 'column',
-                border: isCurrentFrame ? '2px solid red' : '1px solid #333',
-              }}
-            >
-              <Typography
-                variant="caption"
+            return (
+              <Box
+                key={filename}
                 sx={{
-                  color: 'white',
-                  textAlign: 'center',
-                  p: 0.5,
-                  bgcolor: 'rgba(0,0,0,0.7)',
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
                 }}
               >
-                {isCurrentFrame ? 'Current' : `Frame -${3 - index}`} ({diff})
-              </Typography>
-              <img
-                src={frameUrl}
-                alt={`Frame ${index}`}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                }}
-                onError={(e) => {
-                  // Try thumbnail version if original fails
-                  const target = e.target as HTMLImageElement;
-                  if (!target.src.includes('_thumbnail')) {
-                    target.src = frameUrl.replace('.jpg', '_thumbnail.jpg');
-                  }
-                }}
-              />
-            </Box>
-          );
-        })}
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'white',
+                    textAlign: 'center',
+                    p: 0.5,
+                    bgcolor: 'rgba(0,0,0,0.7)',
+                    fontSize: '0.75rem',
+                  }}
+                >
+                  {timestamp ? formatTimestamp(timestamp) : `Frame ${index + 1}`} - Frame ({diff})
+                </Typography>
+                <img
+                  src={frameUrl}
+                  alt={`Frame ${index}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover', // Fill the space
+                  }}
+                  onError={(e) => {
+                    // Try thumbnail version if original fails
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.includes('_thumbnail')) {
+                      target.src = frameUrl.replace('.jpg', '_thumbnail.jpg');
+                    }
+                  }}
+                />
+              </Box>
+            );
+          })}
+        </Box>
       </Box>
     </Modal>
   );
