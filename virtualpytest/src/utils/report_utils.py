@@ -237,6 +237,10 @@ def create_error_section(error_msg: str) -> str:
 
 def get_thumbnail_screenshot_html(screenshot_path: Optional[str], label: str = None) -> str:
     """Get HTML for displaying a thumbnail screenshot that expands on click."""
+    # Return empty string if no screenshot path provided
+    if not screenshot_path:
+        return ''
+    
     # Convert to thumbnail path
     thumbnail_path = screenshot_path.replace('.jpg', '_thumbnail.jpg')
     
