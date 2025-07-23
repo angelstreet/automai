@@ -166,188 +166,54 @@ export const useValidation = (treeId: string) => {
       try {
         console.log(`[@hook:useValidation] Starting validation for tree ${treeId}`);
 
-        // Execute validation step by step
-        const results: any[] = [];
-        let successful_count = 0;
-        let failed_count = 0;
-        let current_node_id = null;
+        // Call validation run endpoint (which generates report)
+        const response = await fetch(`/server/validation/run/${treeId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            host: selectedHost,
+            device_id: selectedDeviceId,
+            edges_to_validate: edgesToValidate,
+          }),
+        });
 
-        for (let i = 0; i < edgesToValidate.length; i++) {
-          const edge = edgesToValidate[i];
-          const to_node = edge.to_node;
+        const apiResult: any = await response.json();
 
-          console.log(
-            `[@hook:useValidation] Step ${i + 1}/${edgesToValidate.length}: Navigating to ${to_node}`,
-          );
-
-          // Update progress to show current step running
-          updateValidationState(treeId, {
-            progress: {
-              currentStep: i + 1,
-              totalSteps: edgesToValidate.length,
-              steps: initialSteps.map((step, index) => ({
-                ...step,
-                status: index < i ? 'success' : index === i ? 'running' : 'pending',
-              })),
-              isRunning: true,
-            },
-          });
-
-          try {
-            // Call navigation execute endpoint for this step
-            const response = await fetch(`/server/navigation/execute/${treeId}/${to_node}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                host: selectedHost,
-                device_id: selectedDeviceId,
-                current_node_id: current_node_id,
-              }),
-            });
-
-            const result: any = await response.json();
-            const success = result.success || false;
-            const executionTime = result.execution_time || 0;
-
-            if (success) {
-              successful_count++;
-              current_node_id = result.final_position_node_id || to_node;
-            } else {
-              failed_count++;
-              if (result.final_position_node_id) {
-                current_node_id = result.final_position_node_id;
-              }
-            }
-
-            // Update step status
-            const updatedSteps = [...initialSteps];
-            updatedSteps[i] = {
-              ...updatedSteps[i],
-              status: success ? 'success' : 'failed',
-              error: success ? undefined : result.error,
-              executionTime,
-            };
-
-            // Update progress with completed step
-            updateValidationState(treeId, {
-              progress: {
-                currentStep: i + 1,
-                totalSteps: edgesToValidate.length,
-                steps: updatedSteps,
-                isRunning: i < edgesToValidate.length - 1,
-              },
-            });
-
-            // Build result entry
-            const result_entry = {
-              from_node: edge.from_node,
-              to_node: edge.to_node,
-              from_name: edge.from_name,
-              to_name: edge.to_name,
-              success: success,
-              skipped: false,
-              step_number: i + 1,
-              total_steps: edgesToValidate.length,
-              error_message: success ? null : result.error,
-              execution_time: executionTime,
-              transitions_executed: result.transitions_executed || 0,
-              total_transitions: result.total_transitions || 0,
-              actions_executed: result.actions_executed || 0,
-              total_actions: result.total_actions || 0,
-              verification_results: result.verification_results || [],
-            };
-
-            results.push(result_entry);
-
-            // Small delay to show progress
-            await new Promise((resolve) => setTimeout(resolve, 2000));
-          } catch (stepError) {
-            console.error(`[@hook:useValidation] Error in step ${i + 1}:`, stepError);
-            failed_count++;
-
-            // Update step status to failed
-            const updatedSteps = [...initialSteps];
-            updatedSteps[i] = {
-              ...updatedSteps[i],
-              status: 'failed',
-              error: stepError instanceof Error ? stepError.message : 'Unknown error',
-            };
-
-            updateValidationState(treeId, {
-              progress: {
-                currentStep: i + 1,
-                totalSteps: edgesToValidate.length,
-                steps: updatedSteps,
-                isRunning: i < edgesToValidate.length - 1,
-              },
-            });
-
-            // Build failed result entry
-            const result_entry = {
-              from_node: edge.from_node,
-              to_node: edge.to_node,
-              from_name: edge.from_name,
-              to_name: edge.to_name,
-              success: false,
-              skipped: false,
-              step_number: i + 1,
-              total_steps: edgesToValidate.length,
-              error_message: stepError instanceof Error ? stepError.message : 'Unknown error',
-              execution_time: 0,
-              transitions_executed: 0,
-              total_transitions: 0,
-              actions_executed: 0,
-              total_actions: 0,
-              verification_results: [],
-            };
-
-            results.push(result_entry);
-          }
+        if (!apiResult.success) {
+          throw new Error(apiResult.error || 'Validation failed');
         }
 
-        // Calculate overall health
-        const total_tested = successful_count + failed_count;
-        const health_percentage = (successful_count / total_tested) * 100 || 0;
+        const { summary, results, report_url } = apiResult;
 
-        let overall_health: 'excellent' | 'good' | 'fair' | 'poor';
-        if (health_percentage >= 90) {
-          overall_health = 'excellent';
-        } else if (health_percentage >= 75) {
-          overall_health = 'good';
-        } else if (health_percentage >= 50) {
-          overall_health = 'fair';
-        } else {
-          overall_health = 'poor';
-        }
-
-        // Convert to expected ValidationResults format
+        // Convert API response to ValidationResults format
         const validationResults: ValidationResults = {
           treeId,
           summary: {
-            totalNodes: total_tested,
-            totalEdges: total_tested,
-            validNodes: successful_count,
-            errorNodes: failed_count,
-            skippedEdges: skippedEdges.length,
-            overallHealth: overall_health,
-            executionTime: results.reduce((sum, r) => sum + r.execution_time, 0),
+            totalNodes: summary.totalTested,
+            totalEdges: summary.totalTested,
+            validNodes: summary.successful,
+            errorNodes: summary.failed,
+            skippedEdges: summary.skipped,
+            overallHealth: summary.overallHealth,
+            executionTime: results.reduce((sum: number, r: any) => sum + r.execution_time, 0),
           },
           nodeResults: [],
-          edgeResults: results.map((edgeResult) => ({
-            from: edgeResult.from_node,
-            to: edgeResult.to_node,
-            fromName: edgeResult.from_name,
-            toName: edgeResult.to_name,
-            success: edgeResult.success,
-            skipped: edgeResult.skipped,
+          edgeResults: results.map((result: any) => ({
+            from: result.from_node,
+            to: result.to_node,
+            fromName: result.from_name,
+            toName: result.to_name,
+            success: result.success,
+            skipped: result.skipped,
             retryAttempts: 0,
-            errors: edgeResult.error_message ? [edgeResult.error_message] : [],
-            actionsExecuted: edgeResult.actions_executed,
-            totalActions: edgeResult.total_actions,
-            executionTime: edgeResult.execution_time,
+            errors: result.error_message ? [result.error_message] : [],
+            actionsExecuted: result.actions_executed,
+            totalActions: result.total_actions,
+            executionTime: result.execution_time,
           })),
+          reportUrl: report_url, // Include report URL from API response
         };
 
         console.log('[@hook:useValidation] Setting results and showResults to true');
@@ -358,7 +224,7 @@ export const useValidation = (treeId: string) => {
         });
 
         console.log(
-          `[@hook:useValidation] Validation completed: ${successful_count}/${total_tested} successful`,
+          `[@hook:useValidation] Validation completed: ${summary.successful}/${summary.totalTested} successful`,
         );
       } catch (error) {
         console.error('[@hook:useValidation] Error running validation:', error);

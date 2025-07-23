@@ -62,6 +62,7 @@ export interface ValidationResults {
       inputValue?: string;
     }>;
   }>;
+  reportUrl?: string; // URL to the generated HTML report
 }
 
 // API Response Types from server validation endpoints

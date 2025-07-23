@@ -213,6 +213,17 @@ const ValidationResultsClient: React.FC<ValidationResultsClientProps> = ({ treeI
       </DialogContent>
 
       <DialogActions>
+        {validation.validationResults?.reportUrl && (
+          <Button
+            href={validation.validationResults.reportUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            color="secondary"
+            variant="outlined"
+          >
+            View Full Report
+          </Button>
+        )}
         <Button onClick={handleClose} color="primary">
           Close
         </Button>

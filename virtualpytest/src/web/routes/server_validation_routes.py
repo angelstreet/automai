@@ -160,6 +160,88 @@ def run_validation(tree_id: str):
         
         print(f"[@route:run_validation] Validation completed: {successful_count}/{total_tested} successful ({health_percentage:.1f}%)")
         
+        # Generate HTML report (same as validation script)
+        report_url = ""
+        try:
+            from src.utils.report_utils import generate_validation_report
+            from src.utils.cloudflare_utils import upload_script_report
+            from datetime import datetime
+            
+            # Prepare report data (same format as validation script)
+            execution_timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            total_execution_time = sum(result.get('execution_time', 0) for result in results)
+            
+            # Calculate verification statistics
+            total_verifications = sum(len(result.get('verification_results', [])) for result in results)
+            passed_verifications = sum(
+                sum(1 for v in result.get('verification_results', []) if v.get('success', False)) 
+                for result in results
+            )
+            
+            report_data = {
+                'script_name': 'validation (web interface)',
+                'device_info': {
+                    'device_name': host.get('device_name', 'Unknown Device'),
+                    'device_model': host.get('device_model', 'Unknown Model'),
+                    'device_id': device_id or 'web_interface'
+                },
+                'host_info': {
+                    'host_name': host.get('host_name', 'Unknown Host')
+                },
+                'execution_time': int(total_execution_time * 1000),  # Convert to ms
+                'success': successful_count == total_tested,
+                'step_results': [
+                    {
+                        'step_number': result['step_number'],
+                        'success': result['success'],
+                        'screenshot_path': None,  # Web interface doesn't capture screenshots
+                        'message': f"{result['from_name']} → {result['to_name']}",
+                        'execution_time_ms': int(result.get('execution_time', 0) * 1000),
+                        'start_time': 'N/A',
+                        'end_time': 'N/A',
+                        'from_node': result['from_name'],
+                        'to_node': result['to_name'],
+                        'actions': [],  # Actions not detailed in web interface
+                        'verifications': [],  # Verifications not detailed in web interface
+                        'verification_results': result.get('verification_results', [])
+                    }
+                    for result in results
+                ],
+                'screenshots': {
+                    'initial': None,
+                    'steps': [],
+                    'final': None
+                },
+                'error_msg': '',
+                'timestamp': execution_timestamp,
+                'userinterface_name': f'tree_{tree_id}',
+                'total_steps': len(results),
+                'passed_steps': successful_count,
+                'failed_steps': failed_count,
+                'total_verifications': total_verifications,
+                'passed_verifications': passed_verifications,
+                'failed_verifications': total_verifications - passed_verifications
+            }
+            
+            html_content = generate_validation_report(report_data)
+            
+            # Upload report to R2
+            upload_result = upload_script_report(
+                html_content=html_content,
+                device_model=host.get('device_model', 'web_interface'),
+                script_name="validation",
+                timestamp=execution_timestamp
+            )
+            
+            if upload_result['success']:
+                report_url = upload_result['report_url']
+                print(f"[@route:run_validation] Report uploaded: {report_url}")
+            else:
+                print(f"[@route:run_validation] Report upload failed: {upload_result.get('error', 'Unknown error')}")
+                
+        except Exception as e:
+            print(f"[@route:run_validation] Report generation failed: {str(e)}")
+        
         return jsonify({
             'success': True,
             'tree_id': tree_id,
@@ -171,7 +253,8 @@ def run_validation(tree_id: str):
                 'overallHealth': overall_health,
                 'healthPercentage': health_percentage
             },
-            'results': results
+            'results': results,
+            'report_url': report_url  # Add report URL to response
         })
         
     except Exception as e:
