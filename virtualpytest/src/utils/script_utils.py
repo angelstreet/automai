@@ -409,18 +409,50 @@ def capture_validation_screenshot(host, device: Any, step_name: str, script_name
     except Exception:
         return "" 
 
-# Add back simplified get_script_path at the end of the file
-def get_script_path(script_name: str) -> str:
+# Script folder configuration - single source of truth
+def get_scripts_directory() -> str:
+    """Get the scripts directory path - single source of truth"""
     current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/utils
     src_dir = os.path.dirname(current_dir)  # /src
     project_root = os.path.dirname(src_dir)  # /virtualpytest
     
-    script_path = os.path.join(project_root, 'test-scripts', f'{script_name}.py')
+    # Use test-scripts folder as the primary scripts location
+    return os.path.join(project_root, 'test-scripts')
+
+def get_script_path(script_name: str) -> str:
+    """Get full path to a script file"""
+    scripts_dir = get_scripts_directory()
+    script_path = os.path.join(scripts_dir, f'{script_name}.py')
     
     if not os.path.exists(script_path):
         raise ValueError(f'Script not found: {script_path}')
     
     return script_path
+
+def list_available_scripts() -> list:
+    """List all available Python scripts in the scripts directory"""
+    import glob
+    
+    scripts_dir = get_scripts_directory()
+    
+    if not os.path.exists(scripts_dir):
+        return []
+    
+    # Find all Python files in the scripts directory
+    script_pattern = os.path.join(scripts_dir, '*.py')
+    script_files = glob.glob(script_pattern)
+    
+    # Extract just the filenames without path and extension
+    available_scripts = []
+    for script_file in script_files:
+        filename = os.path.basename(script_file)
+        script_name = os.path.splitext(filename)[0]  # Remove .py extension
+        available_scripts.append(script_name)
+    
+    # Sort alphabetically
+    available_scripts.sort()
+    
+    return available_scripts
 
 # Add back simplified execute_command
 def execute_command(command: str, timeout: int = 30) -> Tuple[bool, str, str, int]:

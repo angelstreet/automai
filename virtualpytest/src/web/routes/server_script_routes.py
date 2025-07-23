@@ -3,7 +3,6 @@ Server Script Routes - Script management and execution proxy
 """
 import os
 import re
-import glob
 from flask import Blueprint, request, jsonify
 import requests
 from src.utils.host_utils import get_host_manager
@@ -148,17 +147,16 @@ def analyze_script():
                 'error': 'script_name is required'
             }), 400
         
-        # Find script in virtualpytest/scripts folder
-        # Get the project root directory (virtualpytest)
-        current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/routes
-        web_dir = os.path.dirname(current_dir)  # /src/web
-        src_dir = os.path.dirname(web_dir)  # /src
-        project_root = os.path.dirname(src_dir)  # /virtualpytest
+        # Use centralized script path logic
+        from src.utils.script_utils import get_script_path
         
-        # Build script path
-        script_path = os.path.join(project_root, 'scripts', script_name)
-        if not script_name.endswith('.py'):
-            script_path += '.py'
+        try:
+            script_path = get_script_path(script_name)
+        except ValueError as e:
+            return jsonify({
+                'success': False,
+                'error': str(e)
+            }), 404
         
         print(f"[@analyze_script] Looking for script at: {script_path}")
         print(f"[@analyze_script] Script exists: {os.path.exists(script_path)}")
@@ -188,40 +186,25 @@ def analyze_script():
 
 @server_script_bp.route('/script/list', methods=['GET'])
 def list_scripts():
-    """List all available Python scripts from virtualpytest/test-scripts folder"""
+    """List all available Python scripts using centralized script utils"""
     try:
-        # Get the project root directory (virtualpytest)
-        current_dir = os.path.dirname(os.path.abspath(__file__))  # /src/web/routes
-        web_dir = os.path.dirname(current_dir)  # /src/web
-        src_dir = os.path.dirname(web_dir)  # /src
-        project_root = os.path.dirname(src_dir)  # /virtualpytest
-        scripts_dir = os.path.join(project_root, 'test-scripts')
+        # Use centralized script listing logic
+        from src.utils.script_utils import list_available_scripts, get_scripts_directory
         
-        # Check if scripts directory exists
-        if not os.path.exists(scripts_dir):
+        available_scripts = list_available_scripts()
+        scripts_dir = get_scripts_directory()
+        
+        if not available_scripts:
             return jsonify({
                 'success': False,
-                'error': f'Scripts directory not found: {scripts_dir}'
+                'error': f'No scripts found in directory: {scripts_dir}'
             }), 404
-        
-        # Find all Python files in the scripts directory
-        script_pattern = os.path.join(scripts_dir, '*.py')
-        script_files = glob.glob(script_pattern)
-        
-        # Extract just the filenames without path and extension
-        available_scripts = []
-        for script_file in script_files:
-            filename = os.path.basename(script_file)
-            script_name = os.path.splitext(filename)[0]  # Remove .py extension
-            available_scripts.append(script_name)
-        
-        # Sort alphabetically
-        available_scripts.sort()
         
         return jsonify({
             'success': True,
             'scripts': available_scripts,
-            'count': len(available_scripts)
+            'count': len(available_scripts),
+            'scripts_directory': scripts_dir
         })
         
     except Exception as e:
