@@ -264,13 +264,11 @@ def get_heatmap_data(
                                         audio_json_url = f"{host_url}/host/stream/capture{device_id[-1]}/captures/{base_name}_audio.json"
                                 
                                 # Store the latest data for this device in this bucket
-                                device_latest_by_bucket[bucket_key][device_key] = {
+                                device_data = {
                                     'host_name': result['host_name'],
                                     'device_id': result['device_id'],
                                     'filename': item.get('filename'),
                                     'image_url': image_url,
-                                    'frame_json_url': frame_json_url,
-                                    'audio_json_url': audio_json_url,
                                     'timestamp': timestamp,  # Original timestamp for comparison
                                     'bucket_timestamp': bucket_key,  # Bucket timestamp for consistency
                                     'original_timestamp': item.get('timestamp', timestamp),
@@ -278,6 +276,14 @@ def get_heatmap_data(
                                     'has_frame_analysis': item.get('has_frame_analysis', False),
                                     'has_audio_analysis': item.get('has_audio_analysis', False)
                                 }
+                                
+                                # Only include URLs if they are not null
+                                if frame_json_url:
+                                    device_data['frame_json_url'] = frame_json_url
+                                if audio_json_url:
+                                    device_data['audio_json_url'] = audio_json_url
+                                    
+                                device_latest_by_bucket[bucket_key][device_key] = device_data
                                 
                         except Exception as e:
                             print(f"[@db:heatmap:get_heatmap_data] Error processing timestamp {timestamp}: {e}")

@@ -217,18 +217,19 @@ const Heatmap: React.FC = () => {
   const mosaicImageRef = useRef<HTMLImageElement>(null);
   const statusCheckInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Load data directly from generation object (no cache)
+  // Load data directly from generation object (no cache, no fallbacks)
   useEffect(() => {
-    if (
-      currentGeneration &&
-      currentGeneration.status === 'pending' &&
-      currentGeneration.heatmap_data
-    ) {
-      // Use data directly from generation object
+    if (currentGeneration?.heatmap_data) {
+      // Use data directly from generation object - fail if no data
       const generationData = currentGeneration.heatmap_data;
       console.log('[@component:Heatmap] Using data directly from generation object');
       setHeatmapData(generationData);
       setTotalFrames(generationData.timeline_timestamps.length);
+    } else if (currentGeneration) {
+      // Clear data if no heatmap_data - no fallbacks
+      console.log('[@component:Heatmap] No heatmap_data in generation object - clearing data');
+      setHeatmapData(null);
+      setTotalFrames(0);
     }
   }, [currentGeneration]);
 

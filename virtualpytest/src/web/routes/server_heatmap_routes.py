@@ -79,7 +79,8 @@ def generate():
         start_heatmap_generation(
             job_id, 
             heatmap_data.get('images_by_timestamp', {}),
-            heatmap_data.get('incidents', [])
+            heatmap_data.get('incidents', []),
+            heatmap_data  # Pass the complete heatmap data
         )
         
         return jsonify({

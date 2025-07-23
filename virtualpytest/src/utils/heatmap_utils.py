@@ -36,6 +36,7 @@ class HeatmapJob:
         self.created_at = datetime.now()
         self.start_time = None  # When processing actually started
         self.end_time = None    # When processing completed
+        self.heatmap_data = None  # Store the original heatmap data
         
     def to_dict(self):
         processing_time = None
@@ -50,7 +51,8 @@ class HeatmapJob:
             'mosaic_urls': self.mosaic_urls,
             'error': self.error,
             'created_at': self.created_at.isoformat(),
-            'processing_time': processing_time
+            'processing_time': processing_time,
+            'heatmap_data': self.heatmap_data
         }
 
 def set_low_priority():
@@ -690,8 +692,14 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
 # Thread pool for background processing
 executor = ThreadPoolExecutor(max_workers=MAX_WORKER_THREADS)
 
-def start_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[Dict]], incidents: List[Dict]):
+def start_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[Dict]], incidents: List[Dict], heatmap_data: Dict = None):
     """Start heatmap generation in background"""
+    # Store the original heatmap data in the job
+    with job_lock:
+        job = active_jobs.get(job_id)
+        if job and heatmap_data:
+            job.heatmap_data = heatmap_data
+    
     future = executor.submit(process_heatmap_generation, job_id, images_by_timestamp, incidents)
     print(f"[@heatmap_utils] Started background processing for job: {job_id}")
     return future

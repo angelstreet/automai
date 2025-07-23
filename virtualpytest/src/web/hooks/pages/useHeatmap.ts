@@ -154,7 +154,9 @@ export const useHeatmap = () => {
         // Store the exact data used for generation in the generation object
         if (result.heatmap_data) {
           generation.heatmap_data = result.heatmap_data;
-          console.log('[@hook:useHeatmap:generateHeatmap] Stored heatmap data in generation object');
+          console.log(
+            '[@hook:useHeatmap:generateHeatmap] Stored heatmap data in generation object',
+          );
         }
 
         setCurrentGeneration(generation);
@@ -192,6 +194,7 @@ export const useHeatmap = () => {
         mosaic_urls: result.mosaic_urls,
         error: result.error,
         processing_time: result.processing_time,
+        heatmap_data: result.heatmap_data, // Preserve heatmap_data from status updates
       };
 
       setCurrentGeneration(generation);
