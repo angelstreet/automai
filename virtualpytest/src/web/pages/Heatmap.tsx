@@ -20,7 +20,7 @@ import {
   Popper,
   Fade,
 } from '@mui/material';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 import { HeatMapAnalysisSection } from '../components/heatmap/HeatMapAnalysisSection';
 import { HeatMapFreezeModal } from '../components/heatmap/HeatMapFreezeModal';
@@ -217,6 +217,52 @@ const Heatmap: React.FC = () => {
   const mosaicImageRef = useRef<HTMLImageElement>(null);
   const statusCheckInterval = useRef<NodeJS.Timeout | null>(null);
 
+  // State to track actual rendered image dimensions for precise label positioning
+  const [actualImageBounds, setActualImageBounds] = useState<{
+    width: number;
+    height: number;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
+
+  // Calculate actual rendered image bounds (accounts for objectFit: contain)
+  const calculateActualImageBounds = useCallback((): {
+    width: number;
+    height: number;
+    offsetX: number;
+    offsetY: number;
+  } | null => {
+    const img = mosaicImageRef.current;
+    if (!img || !img.naturalWidth || !img.naturalHeight) return null;
+
+    const containerRect = img.getBoundingClientRect();
+    const containerWidth = containerRect.width;
+    const containerHeight = containerRect.height;
+
+    const naturalWidth = img.naturalWidth;
+    const naturalHeight = img.naturalHeight;
+
+    // Calculate the scale factor for objectFit: contain
+    const scaleX = containerWidth / naturalWidth;
+    const scaleY = containerHeight / naturalHeight;
+    const scale = Math.min(scaleX, scaleY);
+
+    // Calculate actual rendered dimensions
+    const renderedWidth = naturalWidth * scale;
+    const renderedHeight = naturalHeight * scale;
+
+    // Calculate offset (centering)
+    const offsetX = (containerWidth - renderedWidth) / 2;
+    const offsetY = (containerHeight - renderedHeight) / 2;
+
+    return {
+      width: renderedWidth,
+      height: renderedHeight,
+      offsetX,
+      offsetY,
+    };
+  }, []);
+
   // Load data directly from generation object (no cache, no fallbacks)
   useEffect(() => {
     if (currentGeneration?.heatmap_data) {
@@ -272,6 +318,19 @@ const Heatmap: React.FC = () => {
     }
     return () => clearInterval(interval);
   }, [isPlaying, totalFrames]);
+
+  // Handle window resize to recalculate image bounds
+  useEffect(() => {
+    const handleResize = () => {
+      if (mosaicImageRef.current && actualImageBounds) {
+        const bounds = calculateActualImageBounds();
+        setActualImageBounds(bounds);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [actualImageBounds, calculateActualImageBounds]);
 
   // Generate heatmap handler
   const handleGenerate = async () => {
@@ -384,11 +443,12 @@ const Heatmap: React.FC = () => {
     return baseSize;
   };
 
-  // Calculate position for host name labels based on index
+  // Calculate position for host name labels based on index and actual image dimensions
   const calculateLabelPosition = (
     index: number,
     totalCount: number,
-  ): { top: string; left: string } => {
+    actualImageBounds?: { width: number; height: number; offsetX: number; offsetY: number },
+  ): { top: string; left: string; width: string; height: string } => {
     // Use same grid calculation logic as backend
     let cols, rows;
 
@@ -418,11 +478,32 @@ const Heatmap: React.FC = () => {
     const row = Math.floor(index / cols);
     const col = index % cols;
 
-    // Calculate percentage positions
-    const top = `${(row * 100) / rows}%`;
-    const left = `${(col * 100) / cols}%`;
+    if (actualImageBounds) {
+      // Calculate positions based on actual rendered image dimensions
+      const cellWidth = actualImageBounds.width / cols;
+      const cellHeight = actualImageBounds.height / rows;
 
-    return { top, left };
+      const cellLeft = actualImageBounds.offsetX + col * cellWidth;
+      const cellTop = actualImageBounds.offsetY + row * cellHeight;
+
+      return {
+        top: `${cellTop}px`,
+        left: `${cellLeft}px`,
+        width: `${cellWidth}px`,
+        height: `${cellHeight}px`,
+      };
+    } else {
+      // Fallback to percentage positioning (original behavior)
+      const cellWidthPercent = 100 / cols;
+      const cellHeightPercent = 100 / rows;
+
+      return {
+        top: `${row * cellHeightPercent}%`,
+        left: `${col * cellWidthPercent}%`,
+        width: `${cellWidthPercent}%`,
+        height: `${cellHeightPercent}%`,
+      };
+    }
   };
 
   // Check if a specific frame/timestamp has any incidents
@@ -805,6 +886,10 @@ const Heatmap: React.FC = () => {
                       objectPosition: 'center', // Center the image within the container
                     }}
                     onLoad={() => {
+                      // Calculate and store actual image bounds for precise label positioning
+                      const bounds = calculateActualImageBounds();
+                      setActualImageBounds(bounds);
+
                       // Ensure browser caches the image by setting cache headers via JavaScript
                       if (mosaicImageRef.current) {
                         mosaicImageRef.current.style.imageRendering = 'auto';
@@ -824,39 +909,12 @@ const Heatmap: React.FC = () => {
                     }}
                   >
                     {getCurrentImages().map((image, index, array) => {
-                      const position = calculateLabelPosition(index, array.length);
+                      const position = calculateLabelPosition(
+                        index,
+                        array.length,
+                        actualImageBounds || undefined,
+                      );
                       const fontSize = calculateFontSize();
-
-                      // Calculate cell dimensions using same logic as backend
-                      const numDevices = array.length;
-                      let cols, rows;
-
-                      // Match the backend grid calculation logic
-                      if (numDevices <= 1) {
-                        cols = 1;
-                        rows = 1;
-                      } else if (numDevices === 2) {
-                        cols = 2;
-                        rows = 1; // 2 devices side by side
-                      } else if (numDevices === 3) {
-                        cols = 2;
-                        rows = 2; // 3 devices in 2x2 grid
-                      } else if (numDevices === 4) {
-                        cols = 2;
-                        rows = 2; // Perfect 2x2 grid
-                      } else if (numDevices <= 6) {
-                        cols = 3;
-                        rows = 2; // 3x2 grid
-                      } else if (numDevices <= 9) {
-                        cols = 3;
-                        rows = 3;
-                      } else {
-                        cols = Math.ceil(Math.sqrt(numDevices));
-                        rows = Math.ceil(numDevices / cols);
-                      }
-
-                      const cellWidth = 100 / cols;
-                      const cellHeight = 100 / rows;
 
                       return (
                         <React.Fragment key={`${image.host_name}-${image.device_id}-${index}`}>
@@ -866,8 +924,8 @@ const Heatmap: React.FC = () => {
                               position: 'absolute',
                               top: position.top,
                               left: position.left,
-                              width: `${cellWidth}%`,
-                              height: `${cellHeight}%`,
+                              width: position.width,
+                              height: position.height,
                               pointerEvents: 'auto', // Enable mouse events
                               cursor: hasIncidents(image.analysis_json) ? 'pointer' : 'default',
                             }}
@@ -882,12 +940,12 @@ const Heatmap: React.FC = () => {
                               position: 'absolute',
                               top: position.top,
                               left: position.left,
-                              width: `${cellWidth}%`,
-                              height: `${cellHeight}%`,
+                              width: position.width,
+                              height: position.height,
                               display: 'flex',
                               alignItems: 'flex-start',
                               justifyContent: 'flex-start',
-                              padding: '8px',
+                              padding: actualImageBounds ? '4px' : '8px', // Smaller padding for pixel positioning
                               color: 'white',
                               fontWeight: 'bold',
                               fontSize: `${fontSize}px`,
