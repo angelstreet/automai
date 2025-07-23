@@ -882,11 +882,13 @@ const Heatmap: React.FC = () => {
                               position: 'absolute',
                               top: position.top,
                               left: position.left,
-                              transform: 'translate(10px, 10px)', // Offset from corner
+                              width: `${cellWidth}%`,
+                              height: `${cellHeight}%`,
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              justifyContent: 'flex-start',
+                              padding: '8px',
                               color: 'white',
-                              backgroundColor: 'rgba(0,0,0,0.5)',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
                               fontWeight: 'bold',
                               fontSize: `${fontSize}px`,
                               textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
@@ -894,7 +896,15 @@ const Heatmap: React.FC = () => {
                               pointerEvents: 'none', // Disable mouse events
                             }}
                           >
-                            {image.host_name}-{image.device_id}
+                            <Box
+                              sx={{
+                                backgroundColor: 'rgba(0,0,0,0.7)',
+                                padding: '2px 6px',
+                                borderRadius: '4px',
+                              }}
+                            >
+                              {image.host_name}-{image.device_id}
+                            </Box>
                           </Typography>
                         </React.Fragment>
                       );
