@@ -384,7 +384,6 @@ const RunTests: React.FC = () => {
               size="small"
               fullWidth
               error={param.required && !value.trim()}
-              helperText={param.help}
             />
           )}
         />
@@ -401,7 +400,6 @@ const RunTests: React.FC = () => {
         size="small"
         fullWidth
         error={param.required && !value.trim()}
-        helperText={param.help}
         placeholder={param.default || ''}
       />
     );
