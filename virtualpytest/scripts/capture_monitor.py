@@ -28,8 +28,7 @@ HOST_NAME = os.environ.get('HOST_NAME', os.uname().nodename)
 SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))  # Current script directory
 VENV_PATH = os.path.expanduser("~/myvenv/bin/activate")  # Use ~ expansion
 
-AUDIO_ANALYSIS_INTERVAL = 5   # seconds
-FRAME_ANALYSIS_INTERVAL = 1   # Process every second for better coverage
+UNIFIED_ANALYSIS_INTERVAL = 3   # seconds - aligned timing for video + audio
 
 class CaptureMonitor:
     def __init__(self):
@@ -120,11 +119,11 @@ class CaptureMonitor:
                     
                 print(f"[@capture_monitor] Processing frame (thumbnail-only): {os.path.basename(frame_path)}")
                 
-                # Run frame analysis with ORIGINAL path (analyze_frame.py will find the thumbnail)
+                # Run unified analysis with ORIGINAL path (analyze_audio_video.py will find the thumbnail)
                 # This ensures the JSON file is named correctly (capture_*.json, not capture_*_thumbnail.json)
                 cmd = [
                     "bash", "-c",
-                    f"source {VENV_PATH} && python {SCRIPTS_DIR}/analyze_frame.py '{frame_path}' '{HOST_NAME}'"
+                    f"source {VENV_PATH} && python {SCRIPTS_DIR}/analyze_audio_video.py '{frame_path}' '{HOST_NAME}'"
                 ]
                 
                 result = subprocess.run(
@@ -136,125 +135,61 @@ class CaptureMonitor:
                 )
                 
                 if result.returncode == 0:
-                    print(f"[@capture_monitor] Frame analysis completed: {os.path.basename(frame_path)}")
+                    print(f"[@capture_monitor] Unified analysis completed: {os.path.basename(frame_path)}")
                 else:
-                    print(f"[@capture_monitor] Frame analysis failed: {result.stderr}")
+                    print(f"[@capture_monitor] Unified analysis failed: {result.stderr}")
                     
         except subprocess.TimeoutExpired:
-            print(f"[@capture_monitor] Frame analysis timeout: {frame_path}")
+            print(f"[@capture_monitor] Unified analysis timeout: {frame_path}")
         except Exception as e:
-            print(f"[@capture_monitor] Frame analysis error: {e}")
+            print(f"[@capture_monitor] Unified analysis error: {e}")
 
-    def process_audio(self, capture_dir):
-        """Process audio for a capture directory"""
-        try:
-            # Get parent directory (remove /captures suffix)
-            main_capture_dir = os.path.dirname(capture_dir)
-            
-            if not os.path.exists(main_capture_dir):
-                return
-                
-            print(f"[@capture_monitor] Processing audio: {main_capture_dir}")
-            
-            # Run audio analysis
-            cmd = [
-                "bash", "-c", 
-                f"source {VENV_PATH} && python {SCRIPTS_DIR}/analyze_audio.py '{main_capture_dir}' '{HOST_NAME}'"
-            ]
-            
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=15
-            )
-            
-            if result.returncode == 0:
-                print(f"[@capture_monitor] Audio analysis completed: {os.path.basename(main_capture_dir)}")
-            else:
-                print(f"[@capture_monitor] Audio analysis failed: {result.stderr}")
-                
-        except subprocess.TimeoutExpired:
-            print(f"[@capture_monitor] Audio analysis timeout: {capture_dir}")
-        except Exception as e:
-            print(f"[@capture_monitor] Audio analysis error: {e}")
 
-    def frame_worker(self, capture_dir):
-        """Background frame analysis worker - ALIGNED WITH AUDIO WORKER"""
-        print(f"[@capture_monitor] Started frame worker for: {capture_dir}")
+
+    def unified_worker(self, capture_dir):
+        """Unified analysis worker - processes both video and audio"""
+        print(f"[@capture_monitor] Started unified worker for: {capture_dir}")
         
         while self.running:
             try:
                 self.process_recent_frames(capture_dir)
                 
-                # Sleep in small intervals to allow quick shutdown (same as audio)
-                for _ in range(FRAME_ANALYSIS_INTERVAL):
-                    if not self.running:
-                        break
-                    time.sleep(1)
-                    
-            except Exception as e:
-                print(f"[@capture_monitor] Frame worker error: {e}")
-                time.sleep(5)
-                
-        print(f"[@capture_monitor] Frame worker stopped for: {capture_dir}")
-            
-    def audio_worker(self, capture_dir):
-        """Background audio analysis worker for a specific capture directory"""
-        print(f"[@capture_monitor] Started audio worker for: {capture_dir}")
-        
-        while self.running:
-            try:
-                self.process_audio(capture_dir)
-                
                 # Sleep in small intervals to allow quick shutdown
-                for _ in range(AUDIO_ANALYSIS_INTERVAL):
+                for _ in range(UNIFIED_ANALYSIS_INTERVAL):
                     if not self.running:
                         break
                     time.sleep(1)
                     
             except Exception as e:
-                print(f"[@capture_monitor] Audio worker error: {e}")
+                print(f"[@capture_monitor] Unified worker error: {e}")
                 time.sleep(5)
                 
-        print(f"[@capture_monitor] Audio worker stopped for: {capture_dir}")
-
-    def start_frame_workers(self, capture_dirs):
-        """Start frame analysis workers for all capture directories - ALIGNED WITH AUDIO"""
+        print(f"[@capture_monitor] Unified worker stopped for: {capture_dir}")
+            
+    def start_unified_workers(self, capture_dirs):
+        """Start unified analysis workers for all capture directories"""
         for capture_dir in capture_dirs:
             thread = threading.Thread(
-                target=self.frame_worker,
+                target=self.unified_worker,
                 args=(capture_dir,),
                 daemon=True
             )
             thread.start()
-            print(f"[@capture_monitor] Started frame thread for: {capture_dir}")
-        
-    def start_audio_workers(self, capture_dirs):
-        """Start audio analysis workers for all capture directories"""
-        for capture_dir in capture_dirs:
-            thread = threading.Thread(
-                target=self.audio_worker,
-                args=(capture_dir,),
-                daemon=True
-            )
-            thread.start()
-            print(f"[@capture_monitor] Started audio thread for: {capture_dir}")
+            print(f"[@capture_monitor] Started unified thread for: {capture_dir}")
             
     def run(self):
         """Main monitoring loop - SIMPLIFIED"""
-        print(f"[@capture_monitor] Starting Capture Monitor Service v2.2 - MULTI-FRAME PROCESSING")
+        print(f"[@capture_monitor] Starting Capture Monitor Service v3.0 - UNIFIED ANALYSIS")
         print(f"[@capture_monitor] Host: {HOST_NAME}")
         print(f"[@capture_monitor] Scripts: {SCRIPTS_DIR}")
-        print(f"[@capture_monitor] Frame analysis interval: {FRAME_ANALYSIS_INTERVAL}s (processes up to 3 recent unanalyzed frames)")
-        print(f"[@capture_monitor] Audio analysis interval: {AUDIO_ANALYSIS_INTERVAL}s")
+        print(f"[@capture_monitor] Unified analysis interval: {UNIFIED_ANALYSIS_INTERVAL}s (video + audio)")
         print(f"[@capture_monitor] PID: {os.getpid()}")
         
         # Perform aggressive startup cleanup to prevent phantom alerts
         try:
             print(f"[@capture_monitor] Performing aggressive startup cleanup...")
             sys.path.append(SCRIPTS_DIR)
-            from alert_manager import startup_cleanup_on_restart
+            from alert_system import startup_cleanup_on_restart
             startup_cleanup_on_restart()
         except Exception as e:
             print(f"[@capture_monitor] Aggressive startup cleanup failed (continuing anyway): {e}")
@@ -265,16 +200,10 @@ class CaptureMonitor:
             print(f"[@capture_monitor] No capture directories found, exiting")
             return
             
-        # Start audio analysis workers (unchanged)
-        self.start_audio_workers(capture_dirs)
+        # Start unified analysis workers (they handle alerts directly)
+        self.start_unified_workers(capture_dirs)
         
-        # Start frame analysis workers (NEW - aligned with audio)
-        self.start_frame_workers(capture_dirs)
-        
-        # Start alert processor service
-        self.start_alert_processor()
-        
-        print(f"[@capture_monitor] All workers started - multi-frame processing (up to 3 frames per cycle)")
+        print(f"[@capture_monitor] All workers started - unified analysis with direct alert processing (every {UNIFIED_ANALYSIS_INTERVAL}s)")
         
         # Simple main loop - just keep alive
         while self.running:
@@ -289,37 +218,7 @@ class CaptureMonitor:
                 
         print(f"[@capture_monitor] Monitoring stopped")
         
-    def start_alert_processor(self):
-        """Start alert processor if not already running"""
-        try:
-            # Check if already running
-            result = subprocess.run(
-                ["pgrep", "-f", "alert_processor.py"],
-                capture_output=True,
-                text=True
-            )
-            
-            if result.returncode == 0:
-                print(f"[@capture_monitor] Alert processor already running")
-                return
-                
-            # Start alert processor
-            cmd = [
-                "bash", "-c",
-                f"source {VENV_PATH} && python {SCRIPTS_DIR}/alert_processor.py"
-            ]
-            
-            subprocess.Popen(
-                cmd,
-                stdout=open("/tmp/alert_processor.log", "a"),
-                stderr=subprocess.STDOUT,
-                cwd=SCRIPTS_DIR
-            )
-            
-            print(f"[@capture_monitor] Started alert processor service")
-            
-        except Exception as e:
-            print(f"[@capture_monitor] Error starting alert processor: {e}")
+
 
 def main():
     """Main entry point"""

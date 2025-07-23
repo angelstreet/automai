@@ -203,42 +203,25 @@ def get_heatmap_data(
                                     # Removed has_audio and has_video - not useful
                                 }
                                 
-                                # Parse frame analysis if available
+                                # Parse analysis if available
                                 frame_json_url = item.get('frame_json_url')
                                 if frame_json_url:
                                     try:
                                         import requests
                                         response = requests.get(frame_json_url, timeout=3)
                                         if response.status_code == 200:
-                                            frame_data = response.json()
+                                            data = response.json()
                                             
-                                            # Use correct field structure from actual JSON
-                                            analysis = frame_data.get('analysis', {})
-                                            analysis_json['blackscreen'] = analysis.get('blackscreen', False)
-                                            analysis_json['freeze'] = analysis.get('freeze', False)
+                                            # Extract analysis data
+                                            analysis_json['blackscreen'] = data.get('blackscreen', False)
+                                            analysis_json['freeze'] = data.get('freeze', False)
+                                            analysis_json['audio_loss'] = not data.get('audio', True)
                                     except Exception as e:
-                                        print(f"[@db:heatmap:get_heatmap_data] Failed to parse frame JSON: {e}")
-                                
-                                # Parse audio analysis if available  
-                                audio_json_url = item.get('audio_json_url')
-                                if audio_json_url:
-                                    try:
-                                        import requests
-                                        response = requests.get(audio_json_url, timeout=3)
-                                        if response.status_code == 200:
-                                            audio_data = response.json()
-                                            # Extract audio_loss from audio analysis
-                                            audio_analysis = audio_data.get('audio_analysis', {})
-                                            # Convert has_audio=False to audio_loss=True
-                                            has_audio = audio_analysis.get('has_audio', True)
-                                            analysis_json['audio_loss'] = not has_audio
-                                    except Exception as e:
-                                        print(f"[@db:heatmap:get_heatmap_data] Failed to parse audio JSON: {e}")
+                                        print(f"[@db:heatmap:get_heatmap_data] Failed to parse analysis JSON: {e}")
                                 
                                 # Build URLs if not provided by host (for minimalist host implementation)
                                 image_url = item.get('image_url')
                                 frame_json_url = item.get('frame_json_url')
-                                audio_json_url = item.get('audio_json_url')
                                 
                                 if not image_url and item.get('filename'):
                                     # Build URLs from host data and filename
@@ -255,14 +238,10 @@ def get_heatmap_data(
                                     
                                     print(f"[@db:heatmap:get_heatmap_data] Built image URL: {image_url}")
                                     
-                                    # Build JSON URLs if analysis exists
+                                    # Build JSON URL if analysis exists
                                     if item.get('has_frame_analysis'):
                                         base_name = filename.replace('.jpg', '')
                                         frame_json_url = f"{host_url}/host/stream/capture{device_id[-1]}/captures/{base_name}.json"
-                                    
-                                    if item.get('has_audio_analysis'):
-                                        base_name = filename.replace('.jpg', '')
-                                        audio_json_url = f"{host_url}/host/stream/capture{device_id[-1]}/captures/{base_name}_audio.json"
                                 
                                 # Store the latest data for this device in this bucket
                                 device_data = {
@@ -274,15 +253,12 @@ def get_heatmap_data(
                                     'bucket_timestamp': bucket_key,  # Bucket timestamp for consistency
                                     'original_timestamp': item.get('timestamp', timestamp),
                                     'analysis_json': analysis_json,  # Pre-parsed analysis data
-                                    'has_frame_analysis': item.get('has_frame_analysis', False),
-                                    'has_audio_analysis': item.get('has_audio_analysis', False)
+                                    'has_frame_analysis': item.get('has_frame_analysis', False)
                                 }
                                 
-                                # Only include URLs if they are not null
+                                # Only include URL if it is not null
                                 if frame_json_url:
                                     device_data['frame_json_url'] = frame_json_url
-                                if audio_json_url:
-                                    device_data['audio_json_url'] = audio_json_url
                                     
                                 device_latest_by_bucket[bucket_key][device_key] = device_data
                                 
