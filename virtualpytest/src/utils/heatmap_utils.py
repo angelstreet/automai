@@ -50,9 +50,7 @@ class HeatmapJob:
             'progress': self.progress,
             'mosaic_urls': self.mosaic_urls,
             'error': self.error,
-            'created_at': self.created_at.isoformat(),
-            'processing_time': processing_time,
-            'heatmap_data': self.heatmap_data
+            'created_at': self.created_at.isoformat()
         }
 
 def set_low_priority():
@@ -458,23 +456,29 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                             except Exception as e:
                                 print(f"[@heatmap_utils] Failed to download audio JSON for {image_info['host_name']}: {e}")
                         
-                        # Extract only incident data - simple logic
-                        analysis_json = {
-                            'blackscreen': False,
-                            'freeze': False,
-                            'audio_loss': False
-                        }
+                        # Extract only incident data - no defaults, require keys to exist
+                        analysis_json = {}
                         
                         if frame_analysis and isinstance(frame_analysis, dict):
-                            # Extract from analysis sub-object if present
-                            frame_data = frame_analysis.get('analysis', frame_analysis)
-                            analysis_json['blackscreen'] = frame_data.get('blackscreen', False)
-                            analysis_json['freeze'] = frame_data.get('freeze', False)
+                            frame_data = frame_analysis.get('analysis')
+                            if not frame_data:
+                                raise ValueError(f"Missing 'analysis' in frame JSON for {image_info['host_name']}")
+                            if 'blackscreen' not in frame_data or 'freeze' not in frame_data:
+                                raise ValueError(f"Missing required keys in frame analysis for {image_info['host_name']}")
+                            analysis_json['blackscreen'] = frame_data['blackscreen']
+                            analysis_json['freeze'] = frame_data['freeze']
+                        else:
+                            raise ValueError(f"Invalid or missing frame analysis for {image_info['host_name']}")
                         
                         if audio_analysis and isinstance(audio_analysis, dict):
-                            # Extract from analysis sub-object if present  
-                            audio_data = audio_analysis.get('analysis', audio_analysis)
-                            analysis_json['audio_loss'] = audio_data.get('audio_loss', False)
+                            audio_data = audio_analysis.get('analysis')
+                            if not audio_data:
+                                raise ValueError(f"Missing 'analysis' in audio JSON for {image_info['host_name']}")
+                            if 'audio_loss' not in audio_data:
+                                raise ValueError(f"Missing 'audio_loss' in audio analysis for {image_info['host_name']}")
+                            analysis_json['audio_loss'] = audio_data['audio_loss']
+                        else:
+                            raise ValueError(f"Invalid or missing audio analysis for {image_info['host_name']}")
                         
                         processed_images.append({
                             'host_name': image_info['host_name'],

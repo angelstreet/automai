@@ -5,7 +5,7 @@
  * Manages mosaic image creation from host device captures over last 1 minute.
  */
 
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 export interface HeatmapImage {
   host_name: string;
@@ -54,8 +54,8 @@ export interface HeatmapGeneration {
   progress?: number; // 0-100
   mosaic_urls?: string[]; // URLs to generated mosaic images (one per timestamp)
   error?: string;
-  processing_time?: number; // Processing time in seconds
   heatmap_data?: HeatmapData; // The exact data used for generation
+  metadata?: any[]; // Array of metadata objects (one per mosaic_url)
 }
 
 export const useHeatmap = () => {
@@ -193,9 +193,23 @@ export const useHeatmap = () => {
         progress: result.progress,
         mosaic_urls: result.mosaic_urls,
         error: result.error,
-        processing_time: result.processing_time,
-        heatmap_data: result.heatmap_data, // Preserve heatmap_data from status updates
       };
+
+      if (result.status === 'completed' && result.mosaic_urls) {
+        generation.metadata = await Promise.all(
+          result.mosaic_urls.map(async (url) => {
+            const metadataUrl = url.replace('mosaic.jpg', 'metadata.json');
+            try {
+              const response = await fetch(metadataUrl);
+              if (!response.ok) throw new Error(`Failed to fetch metadata: ${response.status}`);
+              return await response.json();
+            } catch (err) {
+              console.error(`Failed to fetch metadata for ${url}:`, err);
+              throw err; // Fail early, no fallback
+            }
+          }),
+        );
+      }
 
       setCurrentGeneration(generation);
 

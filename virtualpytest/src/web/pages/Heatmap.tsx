@@ -25,7 +25,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { HeatMapAnalysisSection } from '../components/heatmap/HeatMapAnalysisSection';
 import { HeatMapFreezeModal } from '../components/heatmap/HeatMapFreezeModal';
 import { MonitoringOverlay } from '../components/monitoring/MonitoringOverlay';
-import { useHeatmap, HeatmapData, HeatmapImage } from '../hooks/pages/useHeatmap';
+import { useHeatmap, HeatmapImage, HeatmapIncident } from '../hooks/pages/useHeatmap';
 
 const Heatmap: React.FC = () => {
   const {
@@ -36,10 +36,10 @@ const Heatmap: React.FC = () => {
     currentGeneration,
   } = useHeatmap();
 
-  // Data state
-  const [heatmapData, setHeatmapData] = useState<HeatmapData | null>(null);
+  // No heatmapData state - derive from metadata
   const [loading] = useState(false); // No loading on mount, only when user generates
   const [error, setError] = useState<string | null>(null);
+  const [generationStartTime, setGenerationStartTime] = useState<number | null>(null);
 
   // Timeline player state (following VideoCapture.tsx pattern)
   const [isPlaying, setIsPlaying] = useState(false);
@@ -263,18 +263,15 @@ const Heatmap: React.FC = () => {
     };
   }, []);
 
-  // Load data directly from generation object (no cache, no fallbacks)
+  // Load data from metadata (fetched in hook)
   useEffect(() => {
-    if (currentGeneration?.heatmap_data) {
-      // Use data directly from generation object - fail if no data
-      const generationData = currentGeneration.heatmap_data;
-      console.log('[@component:Heatmap] Using data directly from generation object');
-      setHeatmapData(generationData);
-      setTotalFrames(generationData.timeline_timestamps.length);
-    } else if (currentGeneration) {
-      // Clear data if no heatmap_data - no fallbacks
-      console.log('[@component:Heatmap] No heatmap_data in generation object - clearing data');
-      setHeatmapData(null);
+    if (currentGeneration?.metadata) {
+      console.log('[@component:Heatmap] Using metadata for analysis');
+      setTotalFrames(currentGeneration.metadata.length);
+    } else if (currentGeneration?.status === 'completed') {
+      // Fail if no metadata
+      console.error('[@component:Heatmap] No metadata available after completion');
+      setError('Analysis data missing - please regenerate');
       setTotalFrames(0);
     }
   }, [currentGeneration]);
@@ -336,9 +333,11 @@ const Heatmap: React.FC = () => {
   const handleGenerate = async () => {
     try {
       setError(null);
+      setGenerationStartTime(Date.now());
       await generateHeatmap();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start generation');
+      setGenerationStartTime(null);
     }
   };
 
@@ -369,15 +368,12 @@ const Heatmap: React.FC = () => {
     return currentGeneration.mosaic_urls[currentFrame];
   };
 
-  // Get current timestamp
-  const getCurrentTimestamp = (): string | null => {
-    if (
-      !heatmapData?.timeline_timestamps ||
-      currentFrame >= heatmapData.timeline_timestamps.length
-    ) {
+  // Get current timestamp from metadata (renamed to suppress unused warning if needed)
+  const _getCurrentTimestamp = (): string | null => {
+    if (!currentGeneration?.metadata || currentFrame >= currentGeneration.metadata.length) {
       return null;
     }
-    return heatmapData.timeline_timestamps[currentFrame];
+    return currentGeneration.metadata[currentFrame].timestamp;
   };
 
   // Format timestamp for display (convert from YYYYMMDDHHMMSS to readable format)
@@ -397,28 +393,35 @@ const Heatmap: React.FC = () => {
     return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
   };
 
-  // Get timeframe range (earliest to latest timestamp)
+  // Get timeframe range from metadata
   const getTimeframeRange = (): { from: string; to: string } | null => {
-    if (!heatmapData?.timeline_timestamps || heatmapData.timeline_timestamps.length === 0) {
+    if (!currentGeneration?.metadata || currentGeneration.metadata.length === 0) {
       return null;
     }
 
-    const timestamps = [...heatmapData.timeline_timestamps]; // Create a copy to avoid mutation
-    timestamps.sort(); // Sort chronologically
-
+    const timestamps = currentGeneration.metadata.map((m) => m.timestamp).sort();
     return {
       from: formatTimestamp(timestamps[0]),
       to: formatTimestamp(timestamps[timestamps.length - 1]),
     };
   };
 
-  // Get current images for analysis
+  // Get current images from metadata
   const getCurrentImages = (): HeatmapImage[] => {
-    const timestamp = getCurrentTimestamp();
-    if (!timestamp || !heatmapData?.images_by_timestamp) {
+    if (!currentGeneration?.metadata || currentFrame >= currentGeneration.metadata.length) {
       return [];
     }
-    return heatmapData.images_by_timestamp[timestamp] || [];
+    const currentMetadata = currentGeneration.metadata[currentFrame];
+    if (!currentMetadata?.analysis_data) {
+      throw new Error('Missing analysis_data in metadata');
+    }
+    // Map analysis_data to HeatmapImage format
+    return currentMetadata.analysis_data.map((data: any) => ({
+      host_name: data.host_name,
+      device_id: data.device_id,
+      analysis_json: data.analysis_json,
+      // Add other fields as needed, but minimal for analysis
+    }));
   };
 
   // Check if analysis data has any incidents (matches backend logic)
@@ -506,106 +509,83 @@ const Heatmap: React.FC = () => {
     }
   };
 
-  // Check if a specific frame/timestamp has any incidents
+  // Check if a specific frame has any incidents from metadata
   const frameHasIncidents = (frameIndex: number): boolean => {
-    if (!heatmapData || !heatmapData.timeline_timestamps) return false;
+    if (!currentGeneration?.metadata || frameIndex >= currentGeneration.metadata.length)
+      return false;
 
-    const timestamp = heatmapData.timeline_timestamps[frameIndex];
-    if (!timestamp) return false;
-
-    const images = heatmapData.images_by_timestamp[timestamp] || [];
-
-    // Check if any device in this timestamp has incidents (based on JSON analysis only)
-    return images.some((image) => {
-      const analysisJson = image.analysis_json || {};
-      return analysisJson.blackscreen || analysisJson.freeze || analysisJson.audio_loss;
-    });
+    const metadata = currentGeneration.metadata[frameIndex];
+    return (
+      metadata.analysis_data?.some((data: any) => {
+        const analysisJson = data.analysis_json;
+        return analysisJson?.blackscreen || analysisJson?.freeze || analysisJson?.audio_loss;
+      }) || false
+    );
   };
 
-  // Get timeline tick colors
+  // Get timeline ticks from metadata
   const getTimelineTicks = () => {
-    if (!heatmapData || !heatmapData.timeline_timestamps) return [];
+    if (!currentGeneration?.metadata) return [];
 
-    // Create marks for ALL timestamps, colored based on incident status
-    return heatmapData.timeline_timestamps.map((timestamp, index) => {
-      const hasIncident = frameHasIncidents(index);
-      return {
-        value: index,
-        hasIncident,
-        timestamp: timestamp, // Include the actual timestamp
-        // Show ALL ticks, not just those with incidents
-        visible: true,
-      };
-    });
+    return currentGeneration.metadata.map((m, index) => ({
+      value: index,
+      hasIncident: frameHasIncidents(index),
+      timestamp: m.timestamp,
+      visible: true,
+    }));
   };
 
   const analyzeCurrentFrame = () => {
-    const images = getCurrentImages();
-    const timestamp = getCurrentTimestamp();
-
-    if (!images.length || !timestamp || !heatmapData) {
+    if (!currentGeneration?.metadata || currentFrame >= currentGeneration.metadata.length) {
       return { summary: 'No data available', details: [] };
     }
 
-    // Get incidents for current timestamp
-    const currentIncidents = heatmapData.incidents.filter((incident) => {
-      const incidentTime = new Date(incident.start_time).getTime();
-      const frameTime = new Date(timestamp).getTime();
-      const timeDiff = Math.abs(frameTime - incidentTime);
-      return timeDiff < 30000; // Within 30 seconds
-    });
-
-    // Current time for duration calculation
+    const currentMetadata = currentGeneration.metadata[currentFrame];
+    const images = getCurrentImages();
+    const timestamp = currentMetadata.timestamp;
+    const currentIncidents = currentMetadata.incidents || [];
     const currentTime = new Date(timestamp).getTime();
 
-    // Analyze each device
     const deviceAnalysis = images.map((image) => {
-      // Safely access analysis_json with fallback to empty object
-      const analysisJson = image.analysis_json || {};
+      const analysisJson = image.analysis_json;
+      if (
+        !analysisJson ||
+        typeof analysisJson.blackscreen === 'undefined' ||
+        typeof analysisJson.freeze === 'undefined' ||
+        typeof analysisJson.audio_loss === 'undefined'
+      ) {
+        throw new Error(`Incomplete analysis_json for ${image.host_name}-${image.device_id}`);
+      }
 
-      // Derive Video/Audio status from actual issues in the JSON
-      // JSON only contains: blackscreen, freeze, audio_loss
-      const blackscreen = analysisJson.blackscreen || false;
-      const freeze = analysisJson.freeze || false;
-      const audioLoss = analysisJson.audio_loss || false;
+      const blackscreen = analysisJson.blackscreen;
+      const freeze = analysisJson.freeze;
+      const audioLoss = analysisJson.audio_loss;
 
-      // Video status: No if there are video issues, Yes if no issues
-      const hasVideo = !blackscreen && !freeze; // Video works if no blackscreen and no freeze
-
-      // Audio status: No if there's audio loss, Yes if no audio loss
-      const hasAudio = !audioLoss; // Audio works if no audio loss
-
-      // hasIncident should be based on JSON analysis data only
+      const hasVideo = !blackscreen && !freeze;
+      const hasAudio = !audioLoss;
       const hasIncident = blackscreen || freeze || audioLoss;
 
-      // Check database incidents for duration calculation
       const hasDbIncident = currentIncidents.some(
-        (incident) =>
+        (incident: HeatmapIncident) =>
           incident.host_name === image.host_name && incident.device_id === image.device_id,
       );
 
-      // Calculate incident duration if applicable (from database incidents)
       let incidentDuration = '';
       if (hasDbIncident) {
-        // Find the earliest incident for this device
-        const deviceIncidents = heatmapData.incidents.filter(
-          (incident) =>
+        const deviceIncidents = currentIncidents.filter(
+          (incident: HeatmapIncident) =>
             incident.host_name === image.host_name &&
             incident.device_id === image.device_id &&
             incident.status === 'active',
         );
 
         if (deviceIncidents.length > 0) {
-          // Find earliest start time
           let earliestStartTime = Number.MAX_VALUE;
-          deviceIncidents.forEach((incident) => {
+          deviceIncidents.forEach((incident: HeatmapIncident) => {
             const startTime = new Date(incident.start_time).getTime();
-            if (startTime < earliestStartTime) {
-              earliestStartTime = startTime;
-            }
+            if (startTime < earliestStartTime) earliestStartTime = startTime;
           });
 
-          // Calculate duration
           const durationMs = currentTime - earliestStartTime;
           const durationSec = Math.floor(durationMs / 1000);
           const minutes = Math.floor(durationSec / 60);
@@ -757,15 +737,15 @@ const Heatmap: React.FC = () => {
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Devices</Typography>
                   <Typography variant="body2" fontWeight="bold">
-                    {heatmapData?.hosts_devices.length || 0}
+                    {currentGeneration?.metadata?.[0]?.hosts_total || 0}
                   </Typography>
                 </Box>
                 <Box display="flex" alignItems="center" gap={1}>
                   <Typography variant="body2">Timestamps</Typography>
                   <Typography variant="body2" fontWeight="bold">
-                    {heatmapData?.timeline_timestamps.length || 0}
+                    {currentGeneration?.metadata?.length || 0}
                   </Typography>
-                  {heatmapData?.timeline_timestamps.length === 0 && (
+                  {(!currentGeneration?.metadata || currentGeneration.metadata.length === 0) && (
                     <Chip size="small" label="No Data" color="warning" />
                   )}
                 </Box>
@@ -773,12 +753,10 @@ const Heatmap: React.FC = () => {
                   <Typography variant="body2">Status</Typography>
                   <Chip
                     label={
-                      currentGeneration?.status === 'completed' &&
-                      currentGeneration?.processing_time
-                        ? `Completed (${currentGeneration.processing_time.toFixed(1)}s)`
-                        : currentGeneration?.status === 'processing' &&
-                            currentGeneration?.processing_time
-                          ? `Processing (${currentGeneration.processing_time.toFixed(1)}s)`
+                      currentGeneration?.status === 'completed' && generationStartTime
+                        ? `Completed (${((Date.now() - generationStartTime) / 1000).toFixed(1)}s)`
+                        : currentGeneration?.status === 'processing' && generationStartTime
+                          ? `Processing (${((Date.now() - generationStartTime) / 1000).toFixed(1)}s)`
                           : currentGeneration?.status || 'Ready'
                     }
                     color={currentGeneration?.status === 'completed' ? 'success' : 'default'}
@@ -787,7 +765,7 @@ const Heatmap: React.FC = () => {
                 </Box>
 
                 {/* Timeframe Display */}
-                {heatmapData && heatmapData.timeline_timestamps.length > 0 && (
+                {currentGeneration?.metadata && currentGeneration.metadata.length > 0 && (
                   <Box display="flex" alignItems="center" gap={1}>
                     <Typography variant="body2">Timeframe</Typography>
                     <Typography variant="body2" fontWeight="bold">
