@@ -95,7 +95,7 @@ def get_heatmap_data(
                             'device_id': device_id,
                             'timeframe_minutes': timeframe_minutes
                         },
-                        timeout=aiohttp.ClientTimeout(total=10),  # Increased timeout from 5 to 10 seconds
+                        timeout=aiohttp.ClientTimeout(total=30),  # Increased timeout to 30 seconds for 5-minute timeframes
                         ssl=False  # Skip SSL verification for internal hosts
                     ) as response:
                         if response.status == 200:
@@ -121,7 +121,7 @@ def get_heatmap_data(
                         }
                         
                 except asyncio.TimeoutError:
-                    print(f"[@db:heatmap:get_heatmap_data] {host_name} {device_id}: TIMEOUT after 10 seconds")
+                    print(f"[@db:heatmap:get_heatmap_data] {host_name} {device_id}: TIMEOUT after 30 seconds")
                     return {
                         'host_name': host_name,
                         'device_id': device_id,
