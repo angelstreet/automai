@@ -29,7 +29,6 @@ import { useHeatmap, HeatmapData, HeatmapImage } from '../hooks/pages/useHeatmap
 
 const Heatmap: React.FC = () => {
   const {
-    getCachedHeatmapData,
     generateHeatmap,
     checkGenerationStatus,
     cancelGeneration,
@@ -218,18 +217,20 @@ const Heatmap: React.FC = () => {
   const mosaicImageRef = useRef<HTMLImageElement>(null);
   const statusCheckInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Load data ONLY when generation provides it (no fallback to getData)
+  // Load data directly from generation object (no cache)
   useEffect(() => {
-    if (currentGeneration && currentGeneration.status === 'pending') {
-      // Get cached data from generation response (no network calls)
-      const cachedData = getCachedHeatmapData();
-      if (cachedData) {
-        console.log('[@component:Heatmap] Using cached data from generation');
-        setHeatmapData(cachedData);
-        setTotalFrames(cachedData.timeline_timestamps.length);
-      }
+    if (
+      currentGeneration &&
+      currentGeneration.status === 'pending' &&
+      currentGeneration.heatmap_data
+    ) {
+      // Use data directly from generation object
+      const generationData = currentGeneration.heatmap_data;
+      console.log('[@component:Heatmap] Using data directly from generation object');
+      setHeatmapData(generationData);
+      setTotalFrames(generationData.timeline_timestamps.length);
     }
-  }, [currentGeneration, getCachedHeatmapData, setHeatmapData, setTotalFrames]);
+  }, [currentGeneration]);
 
   // Status polling for generation
   useEffect(() => {

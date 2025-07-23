@@ -55,105 +55,59 @@ export interface HeatmapGeneration {
   mosaic_urls?: string[]; // URLs to generated mosaic images (one per timestamp)
   error?: string;
   processing_time?: number; // Processing time in seconds
-}
-
-// Cache interface for deduplicating requests
-interface RequestCache {
-  data: HeatmapData | null;
-  timestamp: number;
-  promise: Promise<HeatmapData> | null;
+  heatmap_data?: HeatmapData; // The exact data used for generation
 }
 
 export const useHeatmap = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [currentGeneration, setCurrentGeneration] = useState<HeatmapGeneration | null>(null);
 
-  // Request cache to prevent duplicate requests
-  const requestCache = useRef<RequestCache>({
-    data: null,
-    timestamp: 0,
-    promise: null,
-  });
-
   /**
-   * Get heatmap data (last 1 minute images + incidents)
+   * Get heatmap data (last 1 minute images + incidents) - Direct fetch without cache
    */
   const getHeatmapData = useMemo(
     () => async (): Promise<HeatmapData> => {
       try {
-        // Check cache - use cached data if it's less than 5 seconds old
-        const now = Date.now();
-        if (requestCache.current.data && now - requestCache.current.timestamp < 5000) {
-          console.log('[@hook:useHeatmap:getHeatmapData] Using cached data');
-          return requestCache.current.data;
-        }
-
-        // If there's already a request in progress, return that promise
-        if (requestCache.current.promise) {
-          console.log(
-            '[@hook:useHeatmap:getHeatmapData] Request already in progress, reusing promise',
-          );
-          return requestCache.current.promise;
-        }
-
         console.log('[@hook:useHeatmap:getHeatmapData] Fetching heatmap data from server');
 
-        // Create a new promise for the request
-        requestCache.current.promise = (async () => {
-          const response = await fetch('/server/heatmap/getData');
+        const response = await fetch('/server/heatmap/getData');
+        console.log('[@hook:useHeatmap:getHeatmapData] Response status:', response.status);
 
-          console.log('[@hook:useHeatmap:getHeatmapData] Response status:', response.status);
-
-          if (!response.ok) {
-            let errorMessage = `Failed to fetch heatmap data: ${response.status} ${response.statusText}`;
-            try {
-              const errorData = await response.text();
-              if (response.headers.get('content-type')?.includes('application/json')) {
-                const jsonError = JSON.parse(errorData);
-                errorMessage = jsonError.error || errorMessage;
-              } else {
-                if (errorData.includes('<!doctype') || errorData.includes('<html')) {
-                  errorMessage =
-                    'Server endpoint not available. Make sure the Flask server is running on the correct port and the proxy is configured properly.';
-                }
+        if (!response.ok) {
+          let errorMessage = `Failed to fetch heatmap data: ${response.status} ${response.statusText}`;
+          try {
+            const errorData = await response.text();
+            if (response.headers.get('content-type')?.includes('application/json')) {
+              const jsonError = JSON.parse(errorData);
+              errorMessage = jsonError.error || errorMessage;
+            } else {
+              if (errorData.includes('<!doctype') || errorData.includes('<html')) {
+                errorMessage =
+                  'Server endpoint not available. Make sure the Flask server is running on the correct port and the proxy is configured properly.';
               }
-            } catch {
-              console.log('[@hook:useHeatmap:getHeatmapData] Could not parse error response');
             }
-
-            throw new Error(errorMessage);
+          } catch {
+            console.log('[@hook:useHeatmap:getHeatmapData] Could not parse error response');
           }
 
-          const contentType = response.headers.get('content-type');
-          if (!contentType || !contentType.includes('application/json')) {
-            throw new Error(
-              `Expected JSON response but got ${contentType}. This usually means the Flask server is not running or the proxy is misconfigured.`,
-            );
-          }
+          throw new Error(errorMessage);
+        }
 
-          const data = await response.json();
-          console.log(
-            `[@hook:useHeatmap:getHeatmapData] Successfully loaded data with ${data.timeline_timestamps?.length || 0} timestamps`,
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error(
+            `Expected JSON response but got ${contentType}. This usually means the Flask server is not running or the proxy is misconfigured.`,
           );
+        }
 
-          // Update cache
-          requestCache.current.data = data;
-          requestCache.current.timestamp = Date.now();
+        const data = await response.json();
+        console.log(
+          `[@hook:useHeatmap:getHeatmapData] Successfully loaded data with ${data.timeline_timestamps?.length || 0} timestamps`,
+        );
 
-          return data;
-        })();
-
-        // Wait for the promise to resolve
-        const result = await requestCache.current.promise;
-
-        // Clear the promise reference
-        requestCache.current.promise = null;
-
-        return result;
+        return data;
       } catch (error) {
         console.error('[@hook:useHeatmap:getHeatmapData] Error fetching heatmap data:', error);
-        // Clear the promise reference on error
-        requestCache.current.promise = null;
         throw error;
       }
     },
@@ -197,11 +151,10 @@ export const useHeatmap = () => {
           progress: 0,
         };
 
-        // Store the exact data used for generation and return it
+        // Store the exact data used for generation in the generation object
         if (result.heatmap_data) {
-          requestCache.current.data = result.heatmap_data;
-          requestCache.current.timestamp = Date.now();
-          console.log('[@hook:useHeatmap:generateHeatmap] Cached heatmap data from generation');
+          generation.heatmap_data = result.heatmap_data;
+          console.log('[@hook:useHeatmap:generateHeatmap] Stored heatmap data in generation object');
         }
 
         setCurrentGeneration(generation);
@@ -285,16 +238,8 @@ export const useHeatmap = () => {
     }
   }, [currentGeneration]);
 
-  /**
-   * Get cached heatmap data (only returns data from generation, no network calls)
-   */
-  const getCachedHeatmapData = useCallback((): HeatmapData | null => {
-    return requestCache.current.data;
-  }, []);
-
   return {
     getHeatmapData,
-    getCachedHeatmapData,
     generateHeatmap,
     checkGenerationStatus,
     cancelGeneration,
