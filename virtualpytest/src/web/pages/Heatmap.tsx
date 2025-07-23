@@ -708,6 +708,16 @@ const Heatmap: React.FC = () => {
                   </Box>
                 )}
 
+                {/* Processing Time Display */}
+                {currentGeneration?.processing_time && (
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Typography variant="body2">Processing Time</Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                      {currentGeneration.processing_time.toFixed(1)}s
+                    </Typography>
+                  </Box>
+                )}
+
                 {/* Generate/Cancel Button */}
                 {!isGenerating ? (
                   <Button

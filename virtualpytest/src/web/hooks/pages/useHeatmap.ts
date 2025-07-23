@@ -54,6 +54,7 @@ export interface HeatmapGeneration {
   progress?: number; // 0-100
   mosaic_urls?: string[]; // URLs to generated mosaic images (one per timestamp)
   error?: string;
+  processing_time?: number; // Processing time in seconds
 }
 
 // Cache interface for deduplicating requests
@@ -237,6 +238,7 @@ export const useHeatmap = () => {
         progress: result.progress,
         mosaic_urls: result.mosaic_urls,
         error: result.error,
+        processing_time: result.processing_time,
       };
 
       setCurrentGeneration(generation);
