@@ -33,43 +33,46 @@ export const useRestart = ({ host, device }: UseRestartParams): UseRestartReturn
   // Auto-play timer
   const playTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Loading cache to prevent duplicate requests
+  // Track loaded ranges to prevent duplicate requests
+  const loadedRanges = useRef<Array<{ start: number; end: number }>>([]);
   const loadingRanges = useRef<Set<string>>(new Set());
 
-  // Load URLs for a specific range of frames
-  const loadFrameBatch = useCallback(
-    async (centerIndex: number, allFrames?: RestartFrame[]) => {
-      const framesToUse = allFrames || frames;
-      if (framesToUse.length === 0) return;
+  // Check if a frame range is already loaded
+  const isRangeLoaded = useCallback((start: number, end: number): boolean => {
+    return loadedRanges.current.some((range) => range.start <= start && range.end >= end);
+  }, []);
 
-      // Define batch range around center index
-      const batchSize = 20;
-      const startIndex = Math.max(0, centerIndex - Math.floor(batchSize / 2));
-      const endIndex = Math.min(framesToUse.length, startIndex + batchSize);
+  // Smart batch loading - only when actually needed
+  const loadFrameBatch = useCallback(
+    async (startIndex: number, batchSize: number = 20) => {
+      if (frames.length === 0) return;
+
+      const endIndex = Math.min(frames.length, startIndex + batchSize);
+
+      // Check if this range is already loaded
+      if (isRangeLoaded(startIndex, endIndex)) {
+        return;
+      }
 
       // Create cache key for this range
       const rangeKey = `${startIndex}-${endIndex}`;
 
       // Skip if already loading this range
       if (loadingRanges.current.has(rangeKey)) {
-        console.log(`[@hook:useRestart] Already loading range ${rangeKey}, skipping`);
         return;
       }
 
-      // Check if any frames in this range need URLs
-      const needsLoading = framesToUse
-        .slice(startIndex, endIndex)
-        .some((frame) => !frame.image_url);
+      // Check if any frames in this range actually need URLs
+      const needsLoading = frames.slice(startIndex, endIndex).some((frame) => !frame.image_url);
       if (!needsLoading) {
-        console.log(`[@hook:useRestart] Range ${rangeKey} already loaded, skipping`);
+        // Mark as loaded if all frames have URLs
+        loadedRanges.current.push({ start: startIndex, end: endIndex });
         return;
       }
 
       try {
         loadingRanges.current.add(rangeKey);
-        console.log(
-          `[@hook:useRestart] Loading frame batch ${startIndex}-${endIndex} around index ${centerIndex}`,
-        );
+        console.log(`[@hook:useRestart] Loading frame batch ${startIndex}-${endIndex}`);
 
         const response = await fetch('/server/rec/getRestartImages', {
           method: 'POST',
@@ -110,6 +113,9 @@ export const useRestart = ({ host, device }: UseRestartParams): UseRestartReturn
             });
             return newFrames;
           });
+
+          // Track this range as loaded
+          loadedRanges.current.push({ start: startIndex, end: endIndex });
         }
       } catch (error) {
         console.error(`[@hook:useRestart] Error loading frame batch:`, error);
@@ -117,7 +123,52 @@ export const useRestart = ({ host, device }: UseRestartParams): UseRestartReturn
         loadingRanges.current.delete(rangeKey);
       }
     },
-    [host, device.device_id, frames],
+    [host, device.device_id, frames, isRangeLoaded],
+  );
+
+  // Smart preloading based on current position and direction
+  const smartPreload = useCallback(
+    (targetIndex: number) => {
+      if (frames.length === 0) return;
+
+      const batchSize = 20;
+
+      // Find which batch this index belongs to
+      const currentBatch = Math.floor(targetIndex / batchSize);
+      const currentBatchStart = currentBatch * batchSize;
+
+      // Always ensure current batch is loaded
+      if (
+        !isRangeLoaded(currentBatchStart, Math.min(frames.length, currentBatchStart + batchSize))
+      ) {
+        loadFrameBatch(currentBatchStart, batchSize);
+      }
+
+      // Smart preloading: only preload if we're near boundaries
+      const positionInBatch = targetIndex - currentBatchStart;
+
+      // If we're in the last 5 frames of current batch, preload next batch
+      if (positionInBatch >= batchSize - 5) {
+        const nextBatchStart = currentBatchStart + batchSize;
+        if (
+          nextBatchStart < frames.length &&
+          !isRangeLoaded(nextBatchStart, Math.min(frames.length, nextBatchStart + batchSize))
+        ) {
+          console.log(`[@hook:useRestart] Preloading next batch starting at ${nextBatchStart}`);
+          loadFrameBatch(nextBatchStart, batchSize);
+        }
+      }
+
+      // If we're in the first 5 frames of current batch, preload previous batch
+      if (positionInBatch <= 5 && currentBatchStart > 0) {
+        const prevBatchStart = Math.max(0, currentBatchStart - batchSize);
+        if (!isRangeLoaded(prevBatchStart, currentBatchStart)) {
+          console.log(`[@hook:useRestart] Preloading previous batch starting at ${prevBatchStart}`);
+          loadFrameBatch(prevBatchStart, batchSize);
+        }
+      }
+    },
+    [frames, loadFrameBatch, isRangeLoaded],
   );
 
   // Initial metadata fetch - get ALL frame metadata (fast)
@@ -153,6 +204,7 @@ export const useRestart = ({ host, device }: UseRestartParams): UseRestartReturn
         console.log(
           `[@hook:useRestart] Successfully loaded metadata for ${data.frames.length} frames`,
         );
+
         // Set frames with just metadata (no URLs yet)
         const frameMetadata = data.frames.map((frame: any) => ({
           ...frame,
@@ -164,10 +216,6 @@ export const useRestart = ({ host, device }: UseRestartParams): UseRestartReturn
         // Set to latest frame initially (newest first)
         if (frameMetadata.length > 0) {
           setCurrentIndex(0);
-          // Load initial batch around first frame
-          setTimeout(() => {
-            loadFrameBatch(0, frameMetadata);
-          }, 100);
         }
       } else {
         console.warn(`[@hook:useRestart] No frames available or request failed:`, data.error);
@@ -179,7 +227,7 @@ export const useRestart = ({ host, device }: UseRestartParams): UseRestartReturn
     } finally {
       setIsInitialLoading(false);
     }
-  }, [host, device.device_id, loadFrameBatch]);
+  }, [host, device.device_id]);
 
   // Auto-play functionality
   const startAutoPlay = useCallback(() => {
@@ -219,14 +267,14 @@ export const useRestart = ({ host, device }: UseRestartParams): UseRestartReturn
     });
   }, [startAutoPlay, stopAutoPlay]);
 
-  // Handle slider change
+  // Handle slider change - this is where smart loading happens
   const handleSliderChange = useCallback(
     (_event: Event, newValue: number | number[]) => {
       const index = Array.isArray(newValue) ? newValue[0] : newValue;
       setCurrentIndex(index);
 
-      // Load frames around new position
-      loadFrameBatch(index);
+      // Smart preload only when user manually changes position
+      smartPreload(index);
 
       // Pause auto-play when manually scrubbing
       if (isPlaying) {
@@ -234,15 +282,8 @@ export const useRestart = ({ host, device }: UseRestartParams): UseRestartReturn
         stopAutoPlay();
       }
     },
-    [isPlaying, stopAutoPlay, loadFrameBatch],
+    [isPlaying, stopAutoPlay, smartPreload],
   );
-
-  // Load frames around current index when it changes
-  useEffect(() => {
-    if (frames.length > 0 && !isInitialLoading) {
-      loadFrameBatch(currentIndex);
-    }
-  }, [currentIndex, frames.length, isInitialLoading, loadFrameBatch]);
 
   // Get current frame URL
   const currentFrameUrl =
@@ -254,6 +295,15 @@ export const useRestart = ({ host, device }: UseRestartParams): UseRestartReturn
   useEffect(() => {
     fetchFrameMetadata();
   }, [fetchFrameMetadata]);
+
+  // Load initial batch when frames are available (only once)
+  const hasLoadedInitial = useRef(false);
+  useEffect(() => {
+    if (frames.length > 0 && !isInitialLoading && !hasLoadedInitial.current) {
+      hasLoadedInitial.current = true;
+      smartPreload(0);
+    }
+  }, [frames.length, isInitialLoading, smartPreload]);
 
   // Cleanup on unmount
   useEffect(() => {

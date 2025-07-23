@@ -1,0 +1,16 @@
+[Unit]
+Description=Run VirtualPyTest Host Flask App server
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=sunri-pi1
+Group=sunri-pi1
+WorkingDirectory=/home/sunri-pi1/automai/virtualpytest/scripts
+ExecStartPre=/usr/bin/git pull
+ExecStart=/bin/bash /home/sunri-pi1/automai/virtualpytest/scripts/launch_virtualhost.sh 
+Restart=always
+
+[Install]
+WantedBy=multi-user.target 

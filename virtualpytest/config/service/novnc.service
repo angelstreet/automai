@@ -1,0 +1,13 @@
+[Unit]
+Description=noVNC websockify service
+After=network.target
+
+[Service]
+Type=simple
+User=sunri-pi1
+WorkingDirectory=/home/sunri-pi1/noVNC
+ExecStart=/usr/bin/websockify --web . 6080 localhost:5901
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,0 @@
-[
-  {"node": "Home", "priority": 1.0},
-  {"node": "VideoPlayer", "priority": 0.8},
-  {"node": "PlayingVideo", "priority": 0.9},
-  {"node": "Settings", "priority": 0.5}
-] 

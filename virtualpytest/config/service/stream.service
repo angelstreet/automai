@@ -1,0 +1,14 @@
+[Unit]
+Description=FFmpeg Capture and Rename Service
+After=network.target
+
+[Service]
+ExecStart=/bin/bash /usr/local/bin/run_ffmpeg_and_rename.sh
+Restart=always
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/html/stream
+TimeoutStopSec=10
+
+[Install]
+WantedBy=multi-user.target

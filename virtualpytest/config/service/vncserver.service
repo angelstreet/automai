@@ -1,0 +1,13 @@
+[Unit]
+Description=Xtightvnc full-control service for display 1
+After=network.target
+
+[Service]
+Type=forking
+User=sunri-pi1
+ExecStart=/usr/bin/vncserver :1 -rfbauth /home/sunri-pi1/.vnc/passwd -rfbport 5901
+ExecStop=/usr/bin/vncserver -kill :1
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
