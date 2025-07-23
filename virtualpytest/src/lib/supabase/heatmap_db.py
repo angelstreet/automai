@@ -87,7 +87,7 @@ def get_heatmap_data(
                     from src.utils.build_url_utils import buildHostUrl
                     host_url = buildHostUrl(host_data, '/host/heatmap/listRecentAnalysis')
                     
-                    print(f"[@db:heatmap:get_heatmap_data] Querying {host_name}: {host_url}")
+                    print(f"[@db:heatmap:get_heatmap_data] Querying {host_name} {device_id}: {host_url}")
                     
                     async with session.post(
                         host_url,
@@ -95,19 +95,24 @@ def get_heatmap_data(
                             'device_id': device_id,
                             'timeframe_minutes': timeframe_minutes
                         },
-                        timeout=aiohttp.ClientTimeout(total=5),  # Fast timeout
+                        timeout=aiohttp.ClientTimeout(total=10),  # Increased timeout from 5 to 10 seconds
                         ssl=False  # Skip SSL verification for internal hosts
                     ) as response:
                         if response.status == 200:
                             result = await response.json()
                             if result.get('success'):
+                                analysis_count = len(result.get('analysis_data', []))
+                                print(f"[@db:heatmap:get_heatmap_data] {host_name} {device_id}: SUCCESS - {analysis_count} analysis records")
                                 return {
                                     'host_name': host_name,
                                     'device_id': device_id,
                                     'success': True,
                                     'analysis_data': result.get('analysis_data', [])
                                 }
+                            else:
+                                print(f"[@db:heatmap:get_heatmap_data] {host_name} {device_id}: FAILED - success=false in response")
                         
+                        print(f"[@db:heatmap:get_heatmap_data] {host_name} {device_id}: FAILED - HTTP {response.status}")
                         return {
                             'host_name': host_name,
                             'device_id': device_id,
@@ -116,6 +121,7 @@ def get_heatmap_data(
                         }
                         
                 except asyncio.TimeoutError:
+                    print(f"[@db:heatmap:get_heatmap_data] {host_name} {device_id}: TIMEOUT after 10 seconds")
                     return {
                         'host_name': host_name,
                         'device_id': device_id,
@@ -123,6 +129,7 @@ def get_heatmap_data(
                         'error': 'timeout'
                     }
                 except Exception as e:
+                    print(f"[@db:heatmap:get_heatmap_data] {host_name} {device_id}: EXCEPTION - {str(e)}")
                     return {
                         'host_name': host_name,
                         'device_id': device_id,
@@ -151,13 +158,15 @@ def get_heatmap_data(
             # Process results and group by timestamp
             device_latest_by_bucket = {}  # Track latest image per device per bucket
             
+            print(f"[@db:heatmap:get_heatmap_data] Processing {len(host_results)} host query results")
+            
             for result in host_results:
                 if isinstance(result, Exception):
                     print(f"[@db:heatmap:get_heatmap_data] Host query exception: {result}")
                     continue
                     
                 if not result.get('success'):
-                    print(f"[@db:heatmap:get_heatmap_data] Host {result['host_name']} failed: {result.get('error')}")
+                    print(f"[@db:heatmap:get_heatmap_data] Host {result['host_name']} {result['device_id']} failed: {result.get('error')}")
                     continue
                 
                 # Group analysis data by timestamp buckets (10-second windows)
