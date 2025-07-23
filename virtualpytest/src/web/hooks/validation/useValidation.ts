@@ -139,8 +139,17 @@ export const useValidation = (treeId: string) => {
         (edge) => !skippedEdges.includes(`${edge.from_node}-${edge.to_node}`),
       );
 
-      // For synchronous validation, don't show step-by-step progress
-      // Just show a simple "running" state
+      // Initialize progress tracking
+      const initialSteps: ValidationStep[] = edgesToValidate.map((edge, index) => ({
+        stepNumber: index + 1,
+        totalSteps: edgesToValidate.length,
+        fromNode: edge.from_node,
+        toNode: edge.to_node,
+        fromName: edge.from_name,
+        toName: edge.to_name,
+        status: 'pending' as const,
+      }));
+
       updateValidationState(treeId, {
         isValidating: true,
         validationError: null,
@@ -149,7 +158,7 @@ export const useValidation = (treeId: string) => {
         progress: {
           currentStep: 0,
           totalSteps: edgesToValidate.length,
-          steps: [],
+          steps: initialSteps,
           isRunning: true,
         },
       });

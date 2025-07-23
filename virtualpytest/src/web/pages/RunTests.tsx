@@ -507,16 +507,16 @@ const RunTests: React.FC = () => {
                           ))}
                         </Select>
                       </FormControl>
-                    </Grid>
+                  </Grid>
 
                     {/* Parameters on the same row if there's space */}
                     {requiredParameters.length > 0 &&
                       requiredParameters.map((param) => (
                         <Grid item xs={12} sm={3} key={param.name}>
-                          {renderParameterInput(param)}
-                        </Grid>
-                      ))}
-                  </Grid>
+                            {renderParameterInput(param)}
+                          </Grid>
+                        ))}
+                      </Grid>
 
                   <Box display="flex" gap={1}>
                     <Button
