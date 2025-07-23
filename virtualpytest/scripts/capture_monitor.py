@@ -24,8 +24,9 @@ CAPTURE_DIRS = [
 ]
 
 HOST_NAME = os.environ.get('HOST_NAME', os.uname().nodename)
-SCRIPTS_DIR = "/home/sunri-pi1/automai/virtualpytest/scripts"
-VENV_PATH = "/home/sunri-pi1/myvenv/bin/activate"
+# Use relative paths like other scripts - no hardcoded user paths needed
+SCRIPTS_DIR = os.path.dirname(os.path.abspath(__file__))  # Current script directory
+VENV_PATH = os.path.expanduser("~/myvenv/bin/activate")  # Use ~ expansion
 
 AUDIO_ANALYSIS_INTERVAL = 5   # seconds
 FRAME_ANALYSIS_INTERVAL = 1   # Process every second for better coverage
