@@ -247,6 +247,9 @@ def execute_verification_directly(host, device, verification: Dict[str, Any]) ->
         }
             
     except Exception as e:
+        import traceback
+        print(f"[@script_utils:execute_verification_directly] ERROR: {str(e)}")
+        print(f"[@script_utils:execute_verification_directly] TRACEBACK: {traceback.format_exc()}")
         return {'success': False, 'error': f'Verification execution error: {str(e)}'}
 
 

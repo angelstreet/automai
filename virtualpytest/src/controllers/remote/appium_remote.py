@@ -757,7 +757,7 @@ class AppiumRemoteController(RemoteControllerInterface):
             params = {}
         
         # Extract wait_time from params
-        wait_time = params.get('wait_time', 0)
+        wait_time = int(params.get('wait_time', 0))
         
         print(f"Remote[{self.device_type.upper()}]: Executing command '{command}' with params: {params}")
         
