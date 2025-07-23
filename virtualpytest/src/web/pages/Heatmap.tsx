@@ -750,12 +750,13 @@ const Heatmap: React.FC = () => {
 
       {/* Mosaic Player */}
       {currentGeneration?.status === 'completed' && currentGeneration.mosaic_urls && (
-        <Card sx={{ mb: 1 }}>
-          <CardContent sx={{ p: 1 }}>
+        <Card sx={{ mb: 0.5 }}>
+          <CardContent sx={{ p: 0.5 }}>
             <Box
               sx={{
-                width: '90%',
-                minHeight: '50vh',
+                width: '80%',
+                minHeight: '35vh',
+                maxHeight: '45vh',
                 mx: 'auto',
                 position: 'relative',
                 backgroundColor: 'black',
@@ -772,7 +773,7 @@ const Heatmap: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    minHeight: '50vh',
+                    minHeight: '35vh',
                     position: 'relative',
                   }}
                 >
@@ -897,7 +898,7 @@ const Heatmap: React.FC = () => {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    minHeight: '50vh',
+                    minHeight: '35vh',
                   }}
                 >
                   <Typography color="white">No mosaic available</Typography>
@@ -909,9 +910,9 @@ const Heatmap: React.FC = () => {
             {totalFrames > 0 && (
               <Box
                 sx={{
-                  mt: 2,
+                  mt: 0.5,
                   px: 2,
-                  py: 1,
+                  py: 0.5,
                   display: 'flex',
                   alignItems: 'center',
                   backgroundColor: 'rgba(0,0,0,0.05)',

@@ -303,6 +303,7 @@ def create_mosaic_image(images_data: List[Dict], target_size: Tuple[int, int] = 
                 
                 # Determine border color based on analysis
                 border_color = determine_border_color_from_analysis(image_data)
+                print(f"[@heatmap_utils:create_mosaic_image] {image_data.get('host_name')} {image_data.get('device_id')}: analysis_json={image_data.get('analysis_json')}, border_color={border_color}")
                 bordered_image = add_border_to_image(device_image, border_color, border_width)
                 
                 # Paste image to fill entire cell (bordered_image is already cell_width x cell_height)
