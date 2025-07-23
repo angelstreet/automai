@@ -12,7 +12,7 @@ The core logic is the same as /server/action/executeBatch but available as a reu
 import time
 import requests
 from typing import Dict, List, Optional, Any
-from src.web.utils.routeUtils import proxy_to_host
+from src.web.utils.routeUtils import proxy_to_host_direct
 
 
 class ActionExecutor:
@@ -150,8 +150,8 @@ class ActionExecutor:
             # Use action params directly - wait_time is already in params from database
             params = action.get('params', {})
             
-            # Proxy to host remote command endpoint (same as API)
-            response_data, status_code = proxy_to_host('/host/remote/executeCommand', 'POST', {
+            # Proxy to host remote command endpoint using direct host info (no Flask context needed)
+            response_data, status_code = proxy_to_host_direct(self.host, '/host/remote/executeCommand', 'POST', {
                 'command': action.get('command'),
                 'params': params
             })

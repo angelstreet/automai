@@ -11,7 +11,7 @@ The core logic is the same as /server/verification/executeBatch but available as
 
 import time
 from typing import Dict, List, Optional, Any
-from src.web.utils.routeUtils import proxy_to_host
+from src.web.utils.routeUtils import proxy_to_host_direct
 
 
 class VerificationExecutor:
@@ -174,19 +174,19 @@ class VerificationExecutor:
                 'model': model
             }
             
-            # Dispatch to appropriate host endpoint based on verification type
+            # Dispatch to appropriate host endpoint based on verification type using direct host info (no Flask context needed)
             if verification_type == 'image':
-                result, status = proxy_to_host('/host/verification/image/execute', 'POST', individual_request, timeout=60)
+                result, status = proxy_to_host_direct(self.host, '/host/verification/image/execute', 'POST', individual_request, timeout=60)
             elif verification_type == 'text':
-                result, status = proxy_to_host('/host/verification/text/execute', 'POST', individual_request, timeout=60)
+                result, status = proxy_to_host_direct(self.host, '/host/verification/text/execute', 'POST', individual_request, timeout=60)
             elif verification_type == 'adb':
-                result, status = proxy_to_host('/host/verification/adb/execute', 'POST', individual_request, timeout=60)
+                result, status = proxy_to_host_direct(self.host, '/host/verification/adb/execute', 'POST', individual_request, timeout=60)
             elif verification_type == 'appium':
-                result, status = proxy_to_host('/host/verification/appium/execute', 'POST', individual_request, timeout=60)
+                result, status = proxy_to_host_direct(self.host, '/host/verification/appium/execute', 'POST', individual_request, timeout=60)
             elif verification_type == 'audio':
-                result, status = proxy_to_host('/host/verification/audio/execute', 'POST', individual_request, timeout=60)
+                result, status = proxy_to_host_direct(self.host, '/host/verification/audio/execute', 'POST', individual_request, timeout=60)
             elif verification_type == 'video':
-                result, status = proxy_to_host('/host/verification/video/execute', 'POST', individual_request, timeout=60)
+                result, status = proxy_to_host_direct(self.host, '/host/verification/video/execute', 'POST', individual_request, timeout=60)
             else:
                 return {
                     'success': False,
