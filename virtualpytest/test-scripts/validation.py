@@ -58,15 +58,15 @@ from src.lib.supabase.script_results_db import record_script_execution_start, up
 def main():
     """Main validation function with report generation"""
     parser = argparse.ArgumentParser(description='Validate navigation tree transitions')
-    parser.add_argument('userinterface_name', help='Name of the userinterface to validate (e.g., horizon_android_mobile)')
-    parser.add_argument('--host', help='Specific host to use (optional)')
-    parser.add_argument('--device', help='Specific device to use (optional)')
+    parser.add_argument('userinterface_name', nargs='?', default='horizon_android_mobile', help='Name of the userinterface to validate (default: horizon_android_mobile)')
+    parser.add_argument('--host', help='Specific host to use (default: sunri-pi1)')
+    parser.add_argument('--device', help='Specific device to use (default: device1)')
     
     args = parser.parse_args()
     
     userinterface_name = args.userinterface_name
-    host_name = args.host
-    device_id = args.device
+    host_name = args.host or 'sunri-pi1'
+    device_id = args.device or "device1"
     
     print(f"🎯 [validation] Starting validation for: {userinterface_name}")
     
