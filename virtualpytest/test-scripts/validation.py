@@ -94,8 +94,9 @@ def main():
         host = setup_result['host']
         team_id = setup_result['team_id']
         
-        # 2. Select device (centralized)
-        device_result = select_device(host, device_id, "validation")
+        # 2. Select device (centralized) - default to device1 if not provided
+        device_id_to_use = device_id or "device1"
+        device_result = select_device(host, device_id_to_use, "validation")
         if not device_result['success']:
             error_message = f"Device selection failed: {device_result['error']}"
             print(f"❌ [validation] {error_message}")
