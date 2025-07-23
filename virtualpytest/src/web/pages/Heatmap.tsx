@@ -75,6 +75,30 @@ const Heatmap: React.FC = () => {
   const [freezeModalOpen, setFreezeModalOpen] = useState(false);
   const [freezeModalImage, setFreezeModalImage] = useState<HeatmapImage | null>(null);
 
+  // Process image URLs with HTTP to HTTPS proxy logic (same pattern as other components)
+  const processImageUrl = (url: string): string => {
+    if (!url) return '';
+
+    // Handle data URLs (base64) - return as is
+    if (url.startsWith('data:')) {
+      return url;
+    }
+
+    // Handle HTTP URLs - use proxy to convert to HTTPS
+    if (url.startsWith('http:')) {
+      const encodedUrl = encodeURIComponent(url);
+      return `/server/av/proxy-image?url=${encodedUrl}`;
+    }
+
+    // Handle HTTPS URLs - return as is (no proxy needed)
+    if (url.startsWith('https:')) {
+      return url;
+    }
+
+    // For relative paths or other formats, use directly
+    return url;
+  };
+
   // Tooltip handlers
   const handleMouseEnter = (event: React.MouseEvent<HTMLDivElement>, index: number) => {
     const target = event.currentTarget; // Capture immediately
@@ -184,17 +208,22 @@ const Heatmap: React.FC = () => {
     }
   };
 
-  // Helper function to construct frame URLs
-  const constructFrameUrl = (filename: string, hostName: string, deviceId: string): string => {
-    // Extract device number from deviceId (e.g., "device2" -> "2")
-    const deviceNum = deviceId.replace('device', '');
+  // Helper function to construct frame URLs using proper URL building
+  const constructFrameUrl = (filename: string, originalImageUrl: string): string => {
+    // Extract the base URL from the original image URL
+    // Example: "http://host/path/capture_20250723155519.jpg" -> "http://host/path/"
+    const lastSlashIndex = originalImageUrl.lastIndexOf('/');
+    if (lastSlashIndex === -1) {
+      console.error('[@Heatmap] Invalid image URL format:', originalImageUrl);
+      return filename;
+    }
 
-    // Check if it's already a thumbnail filename, if not make it one
-    const thumbnailFilename = filename.includes('_thumbnail')
-      ? filename
-      : filename.replace('.jpg', '_thumbnail.jpg');
+    const baseUrl = originalImageUrl.substring(0, lastSlashIndex + 1);
+    const frameUrl = `${baseUrl}${filename}`;
 
-    return `/stream/capture${deviceNum}/captures/${thumbnailFilename}`;
+    // Use processImageUrl to handle HTTP-to-HTTPS proxy logic
+    // This ensures the same URL processing as other components
+    return processImageUrl(frameUrl);
   };
 
   // Refs
@@ -526,7 +555,7 @@ const Heatmap: React.FC = () => {
 
   const analysis = analyzeCurrentFrame();
 
-  // Freeze Analysis Modal
+  // Freeze Analysis Modal - Minimalist Version
   const renderFreezeModal = () => {
     if (!freezeModalOpen || !freezeModalImage) return null;
 
@@ -539,127 +568,80 @@ const Heatmap: React.FC = () => {
         onClose={() => setFreezeModalOpen(false)}
         sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       >
-        <Card sx={{ maxWidth: 900, maxHeight: '90vh', overflow: 'auto', m: 2 }}>
-          <CardContent>
-            {/* Header */}
-            <Box
-              sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}
-            >
-              <Typography variant="h6" color="error">
-                🔴 Freeze Detection Analysis
-              </Typography>
-              <IconButton onClick={() => setFreezeModalOpen(false)}>
-                <CloseIcon />
-              </IconButton>
-            </Box>
+        <Box
+          sx={{
+            width: '90vw',
+            height: '70vh',
+            bgcolor: 'black',
+            position: 'relative',
+            display: 'flex',
+            gap: 1,
+            p: 1,
+          }}
+        >
+          {/* Close button */}
+          <IconButton
+            onClick={() => setFreezeModalOpen(false)}
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              color: 'white',
+              bgcolor: 'rgba(0,0,0,0.5)',
+              zIndex: 10,
+              '&:hover': { bgcolor: 'rgba(0,0,0,0.7)' },
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
 
-            {/* Device Info */}
-            <Box sx={{ mb: 3, p: 2, bgcolor: 'rgba(255, 0, 0, 0.1)', borderRadius: 1 }}>
-              <Typography variant="subtitle1" fontWeight="bold">
-                {freezeModalImage.host_name}-{freezeModalImage.device_id}
-              </Typography>
-              <Typography variant="body2" color="textSecondary">
-                Timestamp: {formatTimestamp(freezeModalImage.timestamp)}
-              </Typography>
-              <Typography variant="body2" color="error">
-                All frame differences below {freezeDetails.threshold} threshold
-              </Typography>
-            </Box>
+          {/* 3 Images side by side */}
+          {freezeDetails.frames_compared.map((filename, index) => {
+            const frameUrl = constructFrameUrl(filename, freezeModalImage.image_url);
+            const diff = freezeDetails.frame_differences[index];
+            const isCurrentFrame = index === 2;
 
-            {/* Frame Comparison */}
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Frame Comparison Analysis
-            </Typography>
-
-            <Grid container spacing={3}>
-              {freezeDetails.frames_compared.map((filename, index) => {
-                const frameUrl = constructFrameUrl(
-                  filename,
-                  freezeModalImage.host_name,
-                  freezeModalImage.device_id,
-                );
-                const diff = freezeDetails.frame_differences[index];
-                const isCurrentFrame = index === 2;
-
-                return (
-                  <Grid item xs={4} key={index}>
-                    <Card
-                      variant="outlined"
-                      sx={{
-                        border: isCurrentFrame ? '3px solid red' : '1px solid #ddd',
-                        bgcolor: isCurrentFrame ? 'rgba(255, 0, 0, 0.05)' : 'white',
-                      }}
-                    >
-                      <CardContent sx={{ textAlign: 'center', p: 2 }}>
-                        <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
-                          {index === 0 ? 'Frame -2' : index === 1 ? 'Frame -1' : 'Current Frame'}
-                        </Typography>
-
-                        {/* Large thumbnail */}
-                        <Box sx={{ mb: 2 }}>
-                          <img
-                            src={frameUrl}
-                            alt={`Frame ${index + 1}`}
-                            style={{
-                              width: '200px',
-                              height: '150px',
-                              objectFit: 'cover',
-                              borderRadius: '4px',
-                              border: '1px solid #ddd',
-                            }}
-                          />
-                        </Box>
-
-                        {/* Frame info */}
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          <strong>File:</strong> {filename}
-                        </Typography>
-
-                        {index > 0 && (
-                          <Box>
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                color:
-                                  diff < freezeDetails.threshold ? 'error.main' : 'success.main',
-                                fontWeight: 'bold',
-                              }}
-                            >
-                              Difference: {diff?.toFixed(2)}
-                            </Typography>
-                            <Typography variant="caption" color="textSecondary">
-                              vs {index === 1 ? 'Frame -2' : 'Frame -1'}
-                            </Typography>
-                          </Box>
-                        )}
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                );
-              })}
-            </Grid>
-
-            {/* Analysis Summary */}
-            <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(255, 0, 0, 0.1)', borderRadius: 1 }}>
-              <Typography variant="subtitle2" fontWeight="bold" color="error" sx={{ mb: 1 }}>
-                Freeze Detection Summary
-              </Typography>
-              <Typography variant="body2">
-                <strong>Method:</strong> {freezeDetails.comparison_method}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Threshold:</strong> {freezeDetails.threshold} (pixel difference)
-              </Typography>
-              <Typography variant="body2">
-                <strong>Result:</strong> All frame comparisons show differences below threshold
-              </Typography>
-              <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
-                This indicates the video stream is frozen - all 3 consecutive frames are nearly
-                identical.
-              </Typography>
-            </Box>
-          </CardContent>
-        </Card>
+            return (
+              <Box
+                key={filename}
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  border: isCurrentFrame ? '2px solid red' : '1px solid #333',
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'white',
+                    textAlign: 'center',
+                    p: 0.5,
+                    bgcolor: 'rgba(0,0,0,0.7)',
+                  }}
+                >
+                  {isCurrentFrame ? 'Current' : `Frame -${3 - index}`} ({diff})
+                </Typography>
+                <img
+                  src={frameUrl}
+                  alt={`Frame ${index}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                  }}
+                  onError={(e) => {
+                    // Try thumbnail version if original fails
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.includes('_thumbnail')) {
+                      target.src = frameUrl.replace('.jpg', '_thumbnail.jpg');
+                    }
+                  }}
+                />
+              </Box>
+            );
+          })}
+        </Box>
       </Modal>
     );
   };
