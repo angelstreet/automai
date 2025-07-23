@@ -5,12 +5,11 @@ Wants=network.target
 
 [Service]
 Type=simple
-User=sunri-pi1
-Group=sunri-pi1
+User=sunri-pi2
+Group=sunri-pi2
 WorkingDirectory=/home/sunri-pi1/automai/virtualpytest/scripts
 ExecStartPre=/usr/bin/git pull
 ExecStart=/bin/bash /home/sunri-pi1/automai/virtualpytest/scripts/launch_virtualhost.sh 
-Restart=always
 
 [Install]
 WantedBy=multi-user.target 
