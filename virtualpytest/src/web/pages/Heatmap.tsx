@@ -63,6 +63,11 @@ const Heatmap: React.FC = () => {
   const [tooltipAnchor, setTooltipAnchor] = useState<HTMLElement | null>(null);
   const [tooltipIndex, setTooltipIndex] = useState<number | null>(null);
 
+  // Timeline tick tooltip state
+  const [tickTooltipOpen, setTickTooltipOpen] = useState(false);
+  const [tickTooltipAnchor, setTickTooltipAnchor] = useState<HTMLElement | null>(null);
+  const [tickTooltipTimestamp, setTickTooltipTimestamp] = useState<string | null>(null);
+
   // Tooltip handlers
   const handleMouseEnter = (event: React.MouseEvent<HTMLDivElement>, index: number) => {
     const target = event.currentTarget; // Capture immediately
@@ -93,6 +98,34 @@ const Heatmap: React.FC = () => {
       document.body.removeChild(tooltipAnchor);
     }
     setTooltipAnchor(null);
+  };
+
+  // Timeline tick tooltip handlers
+  const handleTickMouseEnter = (event: React.MouseEvent<HTMLDivElement>, timestamp: string) => {
+    const target = event.currentTarget;
+    const rect = target.getBoundingClientRect();
+
+    const tooltipAnchor = document.createElement('div');
+    tooltipAnchor.style.position = 'absolute';
+    tooltipAnchor.style.left = `${rect.left}px`;
+    tooltipAnchor.style.top = `${rect.top - 10}px`; // Position above the tick
+    tooltipAnchor.style.width = '1px';
+    tooltipAnchor.style.height = '1px';
+    tooltipAnchor.style.zIndex = '1000';
+    document.body.appendChild(tooltipAnchor);
+
+    setTickTooltipAnchor(tooltipAnchor);
+    setTickTooltipTimestamp(timestamp);
+    setTickTooltipOpen(true);
+  };
+
+  const handleTickMouseLeave = () => {
+    setTickTooltipOpen(false);
+    if (tickTooltipAnchor && document.body.contains(tickTooltipAnchor)) {
+      document.body.removeChild(tickTooltipAnchor);
+    }
+    setTickTooltipAnchor(null);
+    setTickTooltipTimestamp(null);
   };
 
   // Refs
@@ -200,6 +233,38 @@ const Heatmap: React.FC = () => {
     return heatmapData.timeline_timestamps[currentFrame];
   };
 
+  // Format timestamp for display (convert from YYYYMMDDHHMMSS to readable format)
+  const formatTimestamp = (timestamp: string): string => {
+    if (!timestamp || timestamp.length !== 14) {
+      return timestamp; // Return as-is if invalid
+    }
+
+    // Extract parts: YYYY-MM-DD HH:MM:SS
+    const year = timestamp.substring(0, 4);
+    const month = timestamp.substring(4, 6);
+    const day = timestamp.substring(6, 8);
+    const hour = timestamp.substring(8, 10);
+    const minute = timestamp.substring(10, 12);
+    const second = timestamp.substring(12, 14);
+
+    return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+  };
+
+  // Get timeframe range (earliest to latest timestamp)
+  const getTimeframeRange = (): { from: string; to: string } | null => {
+    if (!heatmapData?.timeline_timestamps || heatmapData.timeline_timestamps.length === 0) {
+      return null;
+    }
+
+    const timestamps = [...heatmapData.timeline_timestamps]; // Create a copy to avoid mutation
+    timestamps.sort(); // Sort chronologically
+
+    return {
+      from: formatTimestamp(timestamps[0]),
+      to: formatTimestamp(timestamps[timestamps.length - 1]),
+    };
+  };
+
   // Get current images for analysis
   const getCurrentImages = (): HeatmapImage[] => {
     const timestamp = getCurrentTimestamp();
@@ -283,11 +348,12 @@ const Heatmap: React.FC = () => {
     if (!heatmapData || !heatmapData.timeline_timestamps) return [];
 
     // Create marks for ALL timestamps, colored based on incident status
-    return heatmapData.timeline_timestamps.map((_, index) => {
+    return heatmapData.timeline_timestamps.map((timestamp, index) => {
       const hasIncident = frameHasIncidents(index);
       return {
         value: index,
         hasIncident,
+        timestamp: timestamp, // Include the actual timestamp
         // Show ALL ticks, not just those with incidents
         visible: true,
       };
@@ -414,65 +480,99 @@ const Heatmap: React.FC = () => {
 
   // Tooltip component
   const renderTooltip = () => {
-    if (!tooltipOpen || tooltipIndex === null) return null;
+    // Handle image tooltip
+    if (tooltipOpen && tooltipIndex !== null) {
+      const images = getCurrentImages();
+      const tooltipImage = images[tooltipIndex];
+      if (!tooltipImage) return null;
 
-    const images = getCurrentImages();
-    const tooltipImage = images[tooltipIndex];
-    if (!tooltipImage) return null;
+      // Get the corrected analysis values
+      const analysisJson = tooltipImage.analysis_json || {};
 
-    // Get the corrected analysis values
-    const analysisJson = tooltipImage.analysis_json || {};
+      // Use same logic as main analysis - derive from actual issues
+      const blackscreen = analysisJson.blackscreen || false;
+      const freeze = analysisJson.freeze || false;
+      const audioLoss = analysisJson.audio_loss || false;
 
-    // Use same logic as main analysis - derive from actual issues
-    const blackscreen = analysisJson.blackscreen || false;
-    const freeze = analysisJson.freeze || false;
-    const audioLoss = analysisJson.audio_loss || false;
+      // Audio status: No if there's audio loss, Yes if no audio loss
+      const hasAudio = !audioLoss;
 
-    // Audio status: No if there's audio loss, Yes if no audio loss
-    const hasAudio = !audioLoss;
+      // Convert to MonitoringAnalysis format
+      const analysis = {
+        blackscreen,
+        freeze,
+        subtitles: false,
+        errors: blackscreen || freeze || audioLoss,
+        text: '',
+        audio: {
+          has_audio: hasAudio,
+          volume_percentage: 0, // Not available in our data
+        },
+      };
 
-    // Convert to MonitoringAnalysis format
-    const analysis = {
-      blackscreen,
-      freeze,
-      subtitles: false,
-      errors: blackscreen || freeze || audioLoss,
-      text: '',
-      audio: {
-        has_audio: hasAudio,
-        volume_percentage: 0, // Not available in our data
-      },
-    };
+      return (
+        <Popper
+          open={tooltipOpen}
+          anchorEl={tooltipAnchor}
+          placement="bottom-start"
+          transition
+          style={{ zIndex: 1500 }}
+        >
+          {({ TransitionProps }) => (
+            <Fade {...TransitionProps} timeout={300}>
+              <Box>
+                <Box
+                  sx={{
+                    p: 1,
+                    bgcolor: 'rgba(0, 0, 0, 0.8)',
+                    borderRadius: 1,
+                    maxWidth: 300,
+                  }}
+                >
+                  <MonitoringOverlay
+                    overrideAnalysis={analysis}
+                    sx={{ position: 'relative', top: 'auto', left: 'auto', p: 0 }}
+                  />
+                </Box>
+              </Box>
+            </Fade>
+          )}
+        </Popper>
+      );
+    }
 
-    return (
-      <Popper
-        open={tooltipOpen}
-        anchorEl={tooltipAnchor}
-        placement="bottom-start"
-        transition
-        style={{ zIndex: 1500 }}
-      >
-        {({ TransitionProps }) => (
-          <Fade {...TransitionProps} timeout={300}>
-            <Box>
+    // Handle timeline tick tooltip
+    if (tickTooltipOpen && tickTooltipAnchor && tickTooltipTimestamp) {
+      return (
+        <Popper
+          open={tickTooltipOpen}
+          anchorEl={tickTooltipAnchor}
+          placement="top"
+          transition
+          style={{ zIndex: 1500 }}
+        >
+          {({ TransitionProps }) => (
+            <Fade {...TransitionProps} timeout={200}>
               <Box
                 sx={{
                   p: 1,
                   bgcolor: 'rgba(0, 0, 0, 0.8)',
+                  color: 'white',
                   borderRadius: 1,
-                  maxWidth: 300,
+                  fontSize: '0.75rem',
+                  maxWidth: 200,
+                  textAlign: 'center',
                 }}
               >
-                <MonitoringOverlay
-                  overrideAnalysis={analysis}
-                  sx={{ position: 'relative', top: 'auto', left: 'auto', p: 0 }}
-                />
+                {formatTimestamp(tickTooltipTimestamp)}
               </Box>
-            </Box>
-          </Fade>
-        )}
-      </Popper>
-    );
+            </Fade>
+          )}
+        </Popper>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -517,6 +617,19 @@ const Heatmap: React.FC = () => {
                     size="small"
                   />
                 </Box>
+
+                {/* Timeframe Display */}
+                {heatmapData && heatmapData.timeline_timestamps.length > 0 && (
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Typography variant="body2">Timeframe</Typography>
+                    <Typography variant="body2" fontWeight="bold">
+                      {(() => {
+                        const range = getTimeframeRange();
+                        return range ? `${range.from} - ${range.to}` : 'N/A';
+                      })()}
+                    </Typography>
+                  </Box>
+                )}
 
                 {/* Generate/Cancel Button */}
                 {!isGenerating ? (
@@ -786,8 +899,11 @@ const Heatmap: React.FC = () => {
                         height: 12,
                         backgroundColor: tick.hasIncident ? '#FF0000' : '#00FF00',
                         borderRadius: 1,
-                        pointerEvents: 'none',
+                        cursor: 'pointer', // Make it look interactive
+                        pointerEvents: 'auto', // Enable mouse events
                       }}
+                      onMouseEnter={(e) => handleTickMouseEnter(e, tick.timestamp)}
+                      onMouseLeave={handleTickMouseLeave}
                     />
                   ))}
                 </Box>
