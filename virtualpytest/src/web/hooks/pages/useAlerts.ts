@@ -16,7 +16,22 @@ export interface Alert {
   consecutive_count: number;
   start_time: string;
   end_time?: string;
-  metadata: any;
+  metadata: {
+    freeze_details?: {
+      frames_compared: string[];
+      frame_differences: number[];
+      threshold: number;
+      comparison_method: string;
+    };
+    r2_images?: {
+      original_url: string;
+      thumbnail_url: string;
+      original_r2_path: string;
+      thumbnail_r2_path: string;
+      timestamp: string;
+    };
+    [key: string]: any;
+  };
 }
 
 export const useAlerts = () => {

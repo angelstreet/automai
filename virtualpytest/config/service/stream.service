@@ -3,12 +3,13 @@ Description=FFmpeg Capture and Rename Service
 After=network.target
 
 [Service]
+ExecStartPre=/bin/bash -c 'rm -f /var/www/html/stream/capture1/*.ts /var/www/html/stream/capture1/output.m3u8 /var/www/html/stream/capture2/*.ts /var/www/html/stream/capture2/output.m3u8 /var/www/html/stream/capture3/*.ts /var/www/html/stream/capture3/output.m3u8 /var/www/html/stream/capture4/*.ts /var/www/html/stream/capture4/output.m3u8'
 ExecStart=/bin/bash /usr/local/bin/run_ffmpeg_and_rename.sh
 Restart=always
 User=www-data
 Group=www-data
 WorkingDirectory=/var/www/html/stream
-TimeoutStopSec=10
+TimeoutStopSec=20
 
 [Install]
 WantedBy=multi-user.target

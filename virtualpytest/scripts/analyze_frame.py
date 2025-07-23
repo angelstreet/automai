@@ -115,13 +115,13 @@ def analyze_freeze(image_path, previous_frames_cache=None):
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             print(f"Error: Could not load image for freeze analysis: {image_path}", file=sys.stderr)
-            return False
+            return False, None
         
         # Extract timestamp from current filename
         current_match = re.search(r'capture_(\d{14})(?:_thumbnail)?\.jpg', image_path)
         if not current_match:
             print(f"Could not extract timestamp from filename: {image_path}", file=sys.stderr)
-            return False
+            return False, None
         
         current_timestamp = current_match.group(1)
         current_filename = os.path.basename(image_path)
@@ -143,7 +143,7 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             
             if current_filename not in all_files:
                 print(f"Current file not found in directory listing: {current_filename}")
-                return False
+                return False, None
             
             current_index = all_files.index(current_filename)
             
@@ -156,7 +156,7 @@ def analyze_freeze(image_path, previous_frames_cache=None):
                     'last_updated': current_timestamp
                 }
                 save_frame_cache(cache_file_path, new_cache)
-                return False
+                return False, None
             
             # Get the 2 previous frames
             prev1_filename = all_files[current_index - 1]  # Most recent previous
@@ -181,12 +181,12 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             
             if prev1_img is None or prev2_img is None:
                 print(f"Could not load previous images: {prev1_filename}, {prev2_filename}")
-                return False
+                return False, None
             
             # Check if all images have same dimensions
             if img.shape != prev1_img.shape or img.shape != prev2_img.shape:
                 print(f"Image dimensions don't match: {img.shape} vs {prev1_img.shape} vs {prev2_img.shape}")
-                return False
+                return False, None
             
             # Optimized sampling for pixel difference (every 10th pixel for performance)
             sample_rate = SAMPLING_PATTERNS["freeze_sample_rate"]
@@ -219,6 +219,14 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             else:
                 print(f"No freeze: At least one frame pair shows significant difference (threshold={freeze_threshold})")
             
+            # Create freeze details for frontend visualization
+            freeze_details = {
+                'frames_compared': [prev2_filename, prev1_filename, current_filename],
+                'frame_differences': [round(mean_diff_3, 2), round(mean_diff_1, 2), round(mean_diff_2, 2)],
+                'threshold': freeze_threshold,
+                'comparison_method': '3_frame_thumbnail' if is_thumbnail else '3_frame_original'
+            }
+            
             # Update cache with the 2 most recent frames for next execution
             # Extract timestamps for proper ordering
             prev1_match = re.search(r'capture_(\d{14})(?:_thumbnail)?\.jpg', prev1_filename)
@@ -232,15 +240,15 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             save_frame_cache(cache_file_path, new_cache)
             print(f"Updated cache with {prev1_filename} and {current_filename}")
             
-            return is_frozen
+            return is_frozen, freeze_details
             
         except Exception as e:
             print(f"Could not compare with previous frames: {e}")
-            return False
+            return False, None
         
     except Exception as e:
         print(f"Error analyzing freeze: {e}", file=sys.stderr)
-        return False
+        return False, None
 
 def analyze_errors_only(image_path):
     """Detect error messages without subtitle dependency - Optimized with region processing and sampling"""
@@ -463,7 +471,7 @@ def main():
         
         # Run core analysis on thumbnail
         blackscreen = analyze_blackscreen(analysis_image)
-        frozen = analyze_freeze(analysis_image)
+        frozen, freeze_details = analyze_freeze(analysis_image)
         
         # Create analysis result - thumbnail-based processing
         analysis_result = {
@@ -472,7 +480,8 @@ def main():
             'thumbnail': os.path.basename(thumbnail_path),
             'analysis': {
                 'blackscreen': bool(blackscreen),
-                'freeze': bool(frozen)
+                'freeze': bool(frozen),
+                'freeze_details': freeze_details if frozen else None
             },
             'processing_info': {
                 'analyzed_at': datetime.now().isoformat(),

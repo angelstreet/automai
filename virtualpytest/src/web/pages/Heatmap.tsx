@@ -6,6 +6,7 @@ import {
   Pause,
   ExpandMore,
   ExpandLess,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import {
   Box,
@@ -29,6 +30,8 @@ import {
   Paper,
   Popper,
   Fade,
+  Modal,
+  Grid,
 } from '@mui/material';
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -67,6 +70,10 @@ const Heatmap: React.FC = () => {
   const [tickTooltipOpen, setTickTooltipOpen] = useState(false);
   const [tickTooltipAnchor, setTickTooltipAnchor] = useState<HTMLElement | null>(null);
   const [tickTooltipTimestamp, setTickTooltipTimestamp] = useState<string | null>(null);
+
+  // Freeze modal state
+  const [freezeModalOpen, setFreezeModalOpen] = useState(false);
+  const [freezeModalImage, setFreezeModalImage] = useState<HeatmapImage | null>(null);
 
   // Tooltip handlers
   const handleMouseEnter = (event: React.MouseEvent<HTMLDivElement>, index: number) => {
@@ -126,6 +133,28 @@ const Heatmap: React.FC = () => {
     }
     setTickTooltipAnchor(null);
     setTickTooltipTimestamp(null);
+  };
+
+  // Cell click handler for freeze analysis
+  const handleCellClick = (image: HeatmapImage) => {
+    // Only open modal if there's freeze detection data
+    if (image.analysis_json?.freeze && image.analysis_json?.freeze_details) {
+      setFreezeModalImage(image);
+      setFreezeModalOpen(true);
+    }
+  };
+
+  // Helper function to construct frame URLs
+  const constructFrameUrl = (filename: string, hostName: string, deviceId: string): string => {
+    // Extract device number from deviceId (e.g., "device2" -> "2")
+    const deviceNum = deviceId.replace('device', '');
+
+    // Check if it's already a thumbnail filename, if not make it one
+    const thumbnailFilename = filename.includes('_thumbnail')
+      ? filename
+      : filename.replace('.jpg', '_thumbnail.jpg');
+
+    return `/stream/capture${deviceNum}/captures/${thumbnailFilename}`;
   };
 
   // Refs
@@ -457,6 +486,144 @@ const Heatmap: React.FC = () => {
 
   const analysis = analyzeCurrentFrame();
 
+  // Freeze Analysis Modal
+  const renderFreezeModal = () => {
+    if (!freezeModalOpen || !freezeModalImage) return null;
+
+    const freezeDetails = freezeModalImage.analysis_json?.freeze_details;
+    if (!freezeDetails) return null;
+
+    return (
+      <Modal
+        open={freezeModalOpen}
+        onClose={() => setFreezeModalOpen(false)}
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Card sx={{ maxWidth: 900, maxHeight: '90vh', overflow: 'auto', m: 2 }}>
+          <CardContent>
+            {/* Header */}
+            <Box
+              sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}
+            >
+              <Typography variant="h6" color="error">
+                🔴 Freeze Detection Analysis
+              </Typography>
+              <IconButton onClick={() => setFreezeModalOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+
+            {/* Device Info */}
+            <Box sx={{ mb: 3, p: 2, bgcolor: 'rgba(255, 0, 0, 0.1)', borderRadius: 1 }}>
+              <Typography variant="subtitle1" fontWeight="bold">
+                {freezeModalImage.host_name}-{freezeModalImage.device_id}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                Timestamp: {formatTimestamp(freezeModalImage.timestamp)}
+              </Typography>
+              <Typography variant="body2" color="error">
+                All frame differences below {freezeDetails.threshold} threshold
+              </Typography>
+            </Box>
+
+            {/* Frame Comparison */}
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Frame Comparison Analysis
+            </Typography>
+
+            <Grid container spacing={3}>
+              {freezeDetails.frames_compared.map((filename, index) => {
+                const frameUrl = constructFrameUrl(
+                  filename,
+                  freezeModalImage.host_name,
+                  freezeModalImage.device_id,
+                );
+                const diff = freezeDetails.frame_differences[index];
+                const isCurrentFrame = index === 2;
+
+                return (
+                  <Grid item xs={4} key={index}>
+                    <Card
+                      variant="outlined"
+                      sx={{
+                        border: isCurrentFrame ? '3px solid red' : '1px solid #ddd',
+                        bgcolor: isCurrentFrame ? 'rgba(255, 0, 0, 0.05)' : 'white',
+                      }}
+                    >
+                      <CardContent sx={{ textAlign: 'center', p: 2 }}>
+                        <Typography variant="subtitle2" fontWeight="bold" sx={{ mb: 1 }}>
+                          {index === 0 ? 'Frame -2' : index === 1 ? 'Frame -1' : 'Current Frame'}
+                        </Typography>
+
+                        {/* Large thumbnail */}
+                        <Box sx={{ mb: 2 }}>
+                          <img
+                            src={frameUrl}
+                            alt={`Frame ${index + 1}`}
+                            style={{
+                              width: '200px',
+                              height: '150px',
+                              objectFit: 'cover',
+                              borderRadius: '4px',
+                              border: '1px solid #ddd',
+                            }}
+                          />
+                        </Box>
+
+                        {/* Frame info */}
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          <strong>File:</strong> {filename}
+                        </Typography>
+
+                        {index > 0 && (
+                          <Box>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color:
+                                  diff < freezeDetails.threshold ? 'error.main' : 'success.main',
+                                fontWeight: 'bold',
+                              }}
+                            >
+                              Difference: {diff?.toFixed(2)}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              vs {index === 1 ? 'Frame -2' : 'Frame -1'}
+                            </Typography>
+                          </Box>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                );
+              })}
+            </Grid>
+
+            {/* Analysis Summary */}
+            <Box sx={{ mt: 3, p: 2, bgcolor: 'rgba(255, 0, 0, 0.1)', borderRadius: 1 }}>
+              <Typography variant="subtitle2" fontWeight="bold" color="error" sx={{ mb: 1 }}>
+                Freeze Detection Summary
+              </Typography>
+              <Typography variant="body2">
+                <strong>Method:</strong> {freezeDetails.comparison_method}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Threshold:</strong> {freezeDetails.threshold} (pixel difference)
+              </Typography>
+              <Typography variant="body2">
+                <strong>Result:</strong> All frame comparisons show differences below threshold
+              </Typography>
+              <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+                This indicates the video stream is frozen - all 3 consecutive frames are nearly
+                identical.
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      </Modal>
+    );
+  };
+
   // Tooltip component
   const renderTooltip = () => {
     // Handle image tooltip
@@ -763,13 +930,16 @@ const Heatmap: React.FC = () => {
                               width: `${cellWidth}%`,
                               height: `${cellHeight}%`,
                               pointerEvents: 'auto', // Enable mouse events
-                              cursor: 'pointer',
+                              cursor: image.analysis_json?.freeze ? 'pointer' : 'default',
                               '&:hover': {
-                                outline: '2px solid rgba(255, 255, 255, 0.5)',
+                                outline: image.analysis_json?.freeze
+                                  ? '3px solid rgba(255, 0, 0, 0.8)' // Red outline for freeze
+                                  : '2px solid rgba(255, 255, 255, 0.5)',
                               },
                             }}
                             onMouseEnter={(e) => handleMouseEnter(e, index)}
                             onMouseLeave={handleMouseLeave}
+                            onClick={() => handleCellClick(image)}
                           />
 
                           {/* Host name label */}
@@ -1042,6 +1212,7 @@ const Heatmap: React.FC = () => {
         </CardContent>
       </Card>
       {renderTooltip()}
+      {renderFreezeModal()}
     </Box>
   );
 };

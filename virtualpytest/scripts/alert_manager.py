@@ -580,6 +580,12 @@ def check_and_update_alerts(
                             'analysis_result': analysis_result
                         }
                         
+                        # Add freeze detection details to metadata if it's a freeze incident
+                        if incident_type == 'freeze' and 'analysis' in analysis_result:
+                            freeze_details = analysis_result['analysis'].get('freeze_details')
+                            if freeze_details:
+                                metadata['freeze_details'] = freeze_details
+                        
                         alert_id = trigger_alert(
                             incident_type=incident_type,
                             host_name=host_name,

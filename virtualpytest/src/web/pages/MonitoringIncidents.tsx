@@ -226,85 +226,186 @@ const MonitoringIncidents: React.FC = () => {
     };
   };
 
+  // Helper function to construct frame URLs for freeze analysis
+  const constructFrameUrl = (filename: string, hostName: string, deviceId: string): string => {
+    // Extract device number from deviceId (e.g., "device2" -> "2")
+    const deviceNum = deviceId.replace('device', '');
+
+    // Check if it's already a thumbnail filename, if not make it one
+    const thumbnailFilename = filename.includes('_thumbnail')
+      ? filename
+      : filename.replace('.jpg', '_thumbnail.jpg');
+
+    return `/stream/capture${deviceNum}/captures/${thumbnailFilename}`;
+  };
+
   // Render expandable row content - minimalist design
   const renderExpandedContent = (alert: Alert) => {
     const imageUrls = getAlertImageUrls(alert);
-
-    if (!imageUrls.hasR2Images) {
-      return (
-        <Box sx={{ p: 2, textAlign: 'center', color: 'text.secondary' }}>
-          <Typography variant="body2">No images available for this alert</Typography>
-        </Box>
-      );
-    }
+    const freezeDetails = alert.metadata?.freeze_details;
 
     return (
       <Box sx={{ p: 2 }}>
-        <Grid container spacing={3} alignItems="center">
-          {/* Start Time Image */}
-          <Grid item>
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="caption" display="block" sx={{ mb: 1, color: 'text.secondary' }}>
-                Start Time
-              </Typography>
-              <Box
-                component="img"
-                src={imageUrls.thumbnailUrl}
-                alt="Alert start"
-                sx={{
-                  width: 120,
-                  height: 'auto',
-                  borderRadius: 1,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    opacity: 0.8,
-                  },
-                }}
-                onClick={() => {
-                  // TODO: Open modal with full size image
-                  window.open(imageUrls.originalUrl || imageUrls.thumbnailUrl, '_blank');
-                }}
-              />
-            </Box>
-          </Grid>
+        {/* Freeze Detection Analysis */}
+        {alert.incident_type === 'freeze' && freezeDetails && (
+          <Box sx={{ mb: 3 }}>
+            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold', color: 'error.main' }}>
+              🔴 Freeze Detection Frames
+            </Typography>
+            <Grid container spacing={2} alignItems="center">
+              {freezeDetails.frames_compared.map((filename, index) => {
+                const frameUrl = constructFrameUrl(filename, alert.host_name, alert.device_id);
+                const diff = freezeDetails.frame_differences[index];
+                const isCurrentFrame = index === 2;
 
-          {/* End Time Image (if resolved) */}
-          {alert.status === 'resolved' && (
-            <Grid item>
-              <Box sx={{ textAlign: 'center' }}>
-                <Typography
-                  variant="caption"
-                  display="block"
-                  sx={{ mb: 1, color: 'text.secondary' }}
-                >
-                  End Time
-                </Typography>
-                <Box
-                  component="img"
-                  src={imageUrls.thumbnailUrl}
-                  alt="Alert end"
-                  sx={{
-                    width: 120,
-                    height: 'auto',
-                    borderRadius: 1,
-                    border: '1px solid',
-                    borderColor: 'divider',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      opacity: 0.8,
-                    },
-                  }}
-                  onClick={() => {
-                    // TODO: Open modal with full size image
-                    window.open(imageUrls.originalUrl || imageUrls.thumbnailUrl, '_blank');
-                  }}
-                />
-              </Box>
+                return (
+                  <Grid item key={index}>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{
+                          mb: 1,
+                          color: isCurrentFrame ? 'error.main' : 'text.secondary',
+                          fontWeight: isCurrentFrame ? 'bold' : 'normal',
+                        }}
+                      >
+                        {index === 0 ? 'Frame -2' : index === 1 ? 'Frame -1' : 'Current'}
+                      </Typography>
+                      <Box
+                        component="img"
+                        src={frameUrl}
+                        alt={`Freeze frame ${index + 1}`}
+                        sx={{
+                          width: 120,
+                          height: 90,
+                          borderRadius: 1,
+                          border: isCurrentFrame ? '2px solid' : '1px solid',
+                          borderColor: isCurrentFrame ? 'error.main' : 'divider',
+                          cursor: 'pointer',
+                          '&:hover': {
+                            opacity: 0.8,
+                          },
+                        }}
+                        onClick={() => {
+                          window.open(frameUrl, '_blank');
+                        }}
+                      />
+                      {index > 0 && (
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          sx={{
+                            mt: 0.5,
+                            color: diff < freezeDetails.threshold ? 'error.main' : 'success.main',
+                            fontWeight: 'bold',
+                          }}
+                        >
+                          Diff: {diff?.toFixed(1)}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Grid>
+                );
+              })}
+
+              {/* Threshold info */}
+              <Grid item>
+                <Box sx={{ ml: 2, p: 1, bgcolor: 'rgba(255, 0, 0, 0.1)', borderRadius: 1 }}>
+                  <Typography variant="caption" color="error.main" fontWeight="bold">
+                    Threshold: {freezeDetails.threshold}
+                  </Typography>
+                  <Typography variant="caption" display="block" color="text.secondary">
+                    All diffs below = freeze
+                  </Typography>
+                </Box>
+              </Grid>
             </Grid>
-          )}
-        </Grid>
+          </Box>
+        )}
+
+        {/* Regular alert images */}
+        {imageUrls.hasR2Images && (
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
+              Alert Images
+            </Typography>
+            <Grid container spacing={3} alignItems="center">
+              {/* Start Time Image */}
+              <Grid item>
+                <Box sx={{ textAlign: 'center' }}>
+                  <Typography
+                    variant="caption"
+                    display="block"
+                    sx={{ mb: 1, color: 'text.secondary' }}
+                  >
+                    Start Time
+                  </Typography>
+                  <Box
+                    component="img"
+                    src={imageUrls.thumbnailUrl}
+                    alt="Alert start"
+                    sx={{
+                      width: 120,
+                      height: 'auto',
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        opacity: 0.8,
+                      },
+                    }}
+                    onClick={() => {
+                      window.open(imageUrls.originalUrl || imageUrls.thumbnailUrl, '_blank');
+                    }}
+                  />
+                </Box>
+              </Grid>
+
+              {/* End Time Image (if resolved) */}
+              {alert.status === 'resolved' && (
+                <Grid item>
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography
+                      variant="caption"
+                      display="block"
+                      sx={{ mb: 1, color: 'text.secondary' }}
+                    >
+                      End Time
+                    </Typography>
+                    <Box
+                      component="img"
+                      src={imageUrls.thumbnailUrl}
+                      alt="Alert end"
+                      sx={{
+                        width: 120,
+                        height: 'auto',
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          opacity: 0.8,
+                        },
+                      }}
+                      onClick={() => {
+                        window.open(imageUrls.originalUrl || imageUrls.thumbnailUrl, '_blank');
+                      }}
+                    />
+                  </Box>
+                </Grid>
+              )}
+            </Grid>
+          </Box>
+        )}
+
+        {/* No data state */}
+        {!freezeDetails && !imageUrls.hasR2Images && (
+          <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
+            <Typography variant="body2">No additional data available for this alert</Typography>
+          </Box>
+        )}
       </Box>
     );
   };
@@ -391,13 +492,13 @@ const MonitoringIncidents: React.FC = () => {
                 Alerts In Progress
               </Typography>
 
-              <TableContainer 
-                component={Paper} 
-                variant="outlined" 
-                sx={{ 
-                  "& .MuiTableRow-root:hover": {
-                    backgroundColor: "transparent !important"
-                  }
+              <TableContainer
+                component={Paper}
+                variant="outlined"
+                sx={{
+                  '& .MuiTableRow-root:hover': {
+                    backgroundColor: 'transparent !important',
+                  },
                 }}
               >
                 <Table size="small">
@@ -510,13 +611,13 @@ const MonitoringIncidents: React.FC = () => {
                 Alerts Closed
               </Typography>
 
-              <TableContainer 
-                component={Paper} 
-                variant="outlined" 
-                sx={{ 
-                  "& .MuiTableRow-root:hover": {
-                    backgroundColor: "transparent !important"
-                  }
+              <TableContainer
+                component={Paper}
+                variant="outlined"
+                sx={{
+                  '& .MuiTableRow-root:hover': {
+                    backgroundColor: 'transparent !important',
+                  },
                 }}
               >
                 <Table size="small">

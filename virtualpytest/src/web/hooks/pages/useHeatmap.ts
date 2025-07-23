@@ -18,6 +18,12 @@ export interface HeatmapImage {
     blackscreen: boolean;
     freeze: boolean;
     audio_loss: boolean;
+    freeze_details?: {
+      frames_compared: string[];
+      frame_differences: number[];
+      threshold: number;
+      comparison_method: string;
+    };
   };
 }
 
