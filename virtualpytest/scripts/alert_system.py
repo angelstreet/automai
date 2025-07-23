@@ -72,57 +72,118 @@ def process_alert_directly(analysis_result, host_name, analysis_path):
         freeze = analysis_result.get('freeze', False) 
         audio = analysis_result.get('audio', True)
         
-        # Determine current incidents
-        current_incidents = []
-        if blackscreen: current_incidents.append('blackscreen')
-        if freeze: current_incidents.append('freeze')
-        if not audio: current_incidents.append('audio_loss')
+        # Determine current incidents (2 types only)
+        video_issue = None
+        audio_issue = False
+        
+        # Video issues are mutually exclusive (blackscreen takes priority over freeze)
+        if blackscreen:
+            video_issue = 'blackscreen'
+        elif freeze:
+            video_issue = 'freeze'
+        
+        # Audio issue is independent
+        if not audio:
+            audio_issue = True
         
         current_time = datetime.now().isoformat()
         state_changed = False
         
-        print(f"[@alert_system] {device_id}: Current incidents: {current_incidents}, Active: {list(active_incidents.keys())}")
+        print(f"[@alert_system] {device_id}: Video issue: {video_issue}, Audio issue: {audio_issue}, Active: {list(active_incidents.keys())}")
         
-        # Process each possible incident type
-        for incident_type in ['blackscreen', 'freeze', 'audio_loss']:
-            is_currently_detected = incident_type in current_incidents
-            was_previously_active = incident_type in active_incidents
+        # Process VIDEO ISSUE (mutually exclusive: blackscreen OR freeze)
+        video_was_active = 'video_issue' in active_incidents
+        
+        if video_issue and not video_was_active:
+            # NEW VIDEO INCIDENT - Create in DB
+            print(f"[@alert_system] {device_id}: NEW video incident detected: {video_issue}")
+            alert_id = create_incident_in_db('video_issue', host_name, device_id, analysis_result, video_issue)
             
-            if is_currently_detected and not was_previously_active:
-                # NEW INCIDENT - Insert to DB and add to local state
-                print(f"[@alert_system] {device_id}: NEW {incident_type} incident detected")
-                alert_id = create_incident_in_db(incident_type, host_name, device_id, analysis_result)
+            if alert_id:
+                active_incidents['video_issue'] = {
+                    "alert_id": alert_id,
+                    "issue_type": video_issue,
+                    "start_time": current_time,
+                    "consecutive_count": 1,
+                    "last_updated": current_time
+                }
+                state_changed = True
+                
+        elif video_issue and video_was_active:
+            # ONGOING OR CHANGED VIDEO INCIDENT
+            existing_issue_type = active_incidents['video_issue'].get('issue_type')
+            
+            if existing_issue_type != video_issue:
+                # VIDEO ISSUE TYPE CHANGED (blackscreen <-> freeze)
+                print(f"[@alert_system] {device_id}: Video issue changed from {existing_issue_type} to {video_issue}")
+                
+                # Resolve old incident
+                old_alert_id = active_incidents['video_issue']['alert_id']
+                resolve_incident_in_db(old_alert_id)
+                
+                # Create new incident
+                alert_id = create_incident_in_db('video_issue', host_name, device_id, analysis_result, video_issue)
                 
                 if alert_id:
-                    active_incidents[incident_type] = {
+                    active_incidents['video_issue'] = {
                         "alert_id": alert_id,
+                        "issue_type": video_issue,
                         "start_time": current_time,
                         "consecutive_count": 1,
                         "last_updated": current_time
                     }
                     state_changed = True
-                    
-            elif is_currently_detected and was_previously_active:
-                # ONGOING INCIDENT - Update local state, periodic DB update
-                incident_data = active_incidents[incident_type]
+            else:
+                # SAME VIDEO ISSUE CONTINUING - Just update local count
+                incident_data = active_incidents['video_issue']
                 incident_data["consecutive_count"] += 1
                 incident_data["last_updated"] = current_time
-                
-                # Update DB every 10 detections (30 seconds) to reduce load
-                if incident_data["consecutive_count"] % 10 == 0:
-                    print(f"[@alert_system] {device_id}: Updating {incident_type} in DB (count: {incident_data['consecutive_count']})")
-                    update_incident_in_db(incident_data["alert_id"], analysis_result)
-                
+                print(f"[@alert_system] {device_id}: {video_issue} ongoing (count: {incident_data['consecutive_count']})")
                 state_changed = True
                 
-            elif not is_currently_detected and was_previously_active:
-                # RESOLVED INCIDENT - Update DB and remove from local state
-                incident_data = active_incidents[incident_type]
-                print(f"[@alert_system] {device_id}: RESOLVED {incident_type} incident (duration: {incident_data['consecutive_count']} detections)")
-                
-                resolve_incident_in_db(incident_data["alert_id"])
-                del active_incidents[incident_type]
+        elif not video_issue and video_was_active:
+            # VIDEO ISSUE RESOLVED
+            incident_data = active_incidents['video_issue']
+            issue_type = incident_data.get('issue_type', 'unknown')
+            print(f"[@alert_system] {device_id}: RESOLVED video incident: {issue_type} (duration: {incident_data['consecutive_count']} detections)")
+            
+            resolve_incident_in_db(incident_data["alert_id"])
+            del active_incidents['video_issue']
+            state_changed = True
+        
+        # Process AUDIO ISSUE (independent)
+        audio_was_active = 'audio_loss' in active_incidents
+        
+        if audio_issue and not audio_was_active:
+            # NEW AUDIO INCIDENT - Create in DB
+            print(f"[@alert_system] {device_id}: NEW audio_loss incident detected")
+            alert_id = create_incident_in_db('audio_loss', host_name, device_id, analysis_result)
+            
+            if alert_id:
+                active_incidents['audio_loss'] = {
+                    "alert_id": alert_id,
+                    "start_time": current_time,
+                    "consecutive_count": 1,
+                    "last_updated": current_time
+                }
                 state_changed = True
+                
+        elif audio_issue and audio_was_active:
+            # ONGOING AUDIO ISSUE - Just update local count
+            incident_data = active_incidents['audio_loss']
+            incident_data["consecutive_count"] += 1
+            incident_data["last_updated"] = current_time
+            print(f"[@alert_system] {device_id}: audio_loss ongoing (count: {incident_data['consecutive_count']})")
+            state_changed = True
+            
+        elif not audio_issue and audio_was_active:
+            # AUDIO ISSUE RESOLVED
+            incident_data = active_incidents['audio_loss']
+            print(f"[@alert_system] {device_id}: RESOLVED audio_loss incident (duration: {incident_data['consecutive_count']} detections)")
+            
+            resolve_incident_in_db(incident_data["alert_id"])
+            del active_incidents['audio_loss']
+            state_changed = True
         
         # Update state if changed
         if state_changed:
@@ -135,51 +196,63 @@ def process_alert_directly(analysis_result, host_name, analysis_path):
         print(f"[@alert_system] Error processing alert for {device_id}: {e}")
 
 # ==================== OPTIMIZED DATABASE FUNCTIONS ====================
-def create_incident_in_db(incident_type, host_name, device_id, analysis_result):
+def create_incident_in_db(incident_type, host_name, device_id, analysis_result, issue_type=None):
     """Create new incident in database - returns alert_id"""
     try:
-        print(f"[@alert_system] DB INSERT: Creating {incident_type} incident for {device_id}")
-        # TODO: Actual database call here
-        # from lib.supabase.alerts_db import create_alert
-        # result = create_alert({
-        #     'host_name': host_name,
-        #     'device_id': device_id, 
-        #     'incident_type': incident_type,
-        #     'status': 'active',
-        #     'start_time': datetime.now().isoformat(),
-        #     'metadata': analysis_result
-        # })
-        # return result.get('id')
+        print(f"[@alert_system] DB INSERT: Creating {incident_type} incident for {device_id}" + (f" ({issue_type})" if issue_type else ""))
         
-        # Mock alert ID for now
-        import uuid
-        return str(uuid.uuid4())[:8]
+        # Import database function exactly as before
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+        from src.lib.supabase.alerts_db import create_alert_safe
+        
+        # Enhance metadata with issue_type for video incidents
+        enhanced_metadata = analysis_result.copy()
+        if issue_type:
+            enhanced_metadata['issue_type'] = issue_type
+        
+        # Call database exactly as before
+        result = create_alert_safe(
+            host_name=host_name,
+            device_id=device_id,
+            incident_type=incident_type,
+            consecutive_count=1,  # Always start with 1
+            metadata=enhanced_metadata
+        )
+        
+        if result.get('success'):
+            alert_id = result.get('alert_id')
+            print(f"[@alert_system] DB INSERT SUCCESS: Created alert {alert_id}")
+            return alert_id
+        else:
+            print(f"[@alert_system] DB INSERT FAILED: {result.get('error')}")
+            return None
         
     except Exception as e:
         print(f"[@alert_system] DB ERROR: Failed to create {incident_type} incident: {e}")
         return None
 
-def update_incident_in_db(alert_id, analysis_result):
-    """Update existing incident in database"""
-    try:
-        print(f"[@alert_system] DB UPDATE: Updating incident {alert_id}")
-        # TODO: Actual database call here
-        # from lib.supabase.alerts_db import update_alert
-        # update_alert(alert_id, {
-        #     'last_updated': datetime.now().isoformat(),
-        #     'metadata': analysis_result
-        # })
-        
-    except Exception as e:
-        print(f"[@alert_system] DB ERROR: Failed to update incident {alert_id}: {e}")
+# REMOVED: update_incident_in_db - No periodic updates needed
 
 def resolve_incident_in_db(alert_id):
     """Resolve incident in database"""
     try:
         print(f"[@alert_system] DB UPDATE: Resolving incident {alert_id}")
-        # TODO: Actual database call here
-        # from lib.supabase.alerts_db import resolve_alert
-        # resolve_alert(alert_id)
+        
+        # Import database function exactly as before
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+        from src.lib.supabase.alerts_db import resolve_alert
+        
+        # Call database exactly as before
+        result = resolve_alert(alert_id)
+        
+        if result.get('success'):
+            print(f"[@alert_system] DB UPDATE SUCCESS: Resolved alert {alert_id}")
+        else:
+            print(f"[@alert_system] DB UPDATE FAILED: {result.get('error')}")
         
     except Exception as e:
         print(f"[@alert_system] DB ERROR: Failed to resolve incident {alert_id}: {e}")
