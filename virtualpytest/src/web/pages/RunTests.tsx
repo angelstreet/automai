@@ -22,6 +22,7 @@ import {
   TextField,
   Autocomplete,
 } from '@mui/material';
+import { Link as LinkIcon } from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
 
 import { StreamViewer } from '../components/controller/av/StreamViewer';
@@ -40,6 +41,7 @@ interface ExecutionRecord {
   endTime?: string;
   status: 'running' | 'completed' | 'failed';
   parameters?: string;
+  reportUrl?: string;
 }
 
 // Script parameter interface
@@ -319,6 +321,7 @@ const RunTests: React.FC = () => {
                 ...exec,
                 endTime: new Date().toLocaleTimeString(),
                 status: result?.success === false ? 'failed' : 'completed',
+                reportUrl: result?.report_url,
               }
             : exec,
         ),
@@ -657,6 +660,7 @@ const RunTests: React.FC = () => {
                         <TableCell>Start Time</TableCell>
                         <TableCell>End Time</TableCell>
                         <TableCell>Status</TableCell>
+                        <TableCell>Report</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -673,6 +677,24 @@ const RunTests: React.FC = () => {
                           <TableCell>{execution.startTime}</TableCell>
                           <TableCell>{execution.endTime || '-'}</TableCell>
                           <TableCell>{getStatusChip(execution.status)}</TableCell>
+                          <TableCell>
+                            {execution.reportUrl ? (
+                              <Chip
+                                label="View Report"
+                                component="a"
+                                href={execution.reportUrl}
+                                target="_blank"
+                                clickable
+                                size="small"
+                                sx={{ cursor: 'pointer' }}
+                                icon={<LinkIcon />}
+                                color="primary"
+                                variant="outlined"
+                              />
+                            ) : (
+                              <Chip label="No Report" size="small" variant="outlined" disabled />
+                            )}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
