@@ -152,7 +152,7 @@ def get_current_analysis_status(image_data: Dict) -> Optional[bool]:
         
         # Check audio analysis  
         if audio_analysis and isinstance(audio_analysis, dict):
-            audio_data = audio_analysis.get('audio_analysis', {})
+            audio_data = audio_analysis.get('analysis', audio_analysis)
             if not audio_data.get('has_audio', True):  # No audio is considered an error
                 has_errors = True
         
@@ -311,20 +311,7 @@ def create_mosaic_image(images_data: List[Dict], target_size: Tuple[int, int] = 
                 
                 mosaic.paste(bordered_image, (paste_x, paste_y))
                 
-                # Add overlay label (top-left corner INSIDE the image)
-                draw = ImageDraw.Draw(mosaic)
-                try:
-                    font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 10)
-                except:
-                    font = ImageFont.load_default()
-                
-                host_name = image_data.get('host_name', 'Unknown')
-                # Position label inside the bordered image area
-                label_x = x + border_width + 5
-                label_y = y + border_width + 5
-                label_bg_rect = [label_x, label_y, label_x + len(host_name) * 7 + 10, label_y + 15]
-                draw.rectangle(label_bg_rect, fill=(0, 0, 0))  # Solid black background
-                draw.text((label_x + 3, label_y + 2), host_name, fill='white', font=font)
+                # Don't add the small black label in the corner - the main host name is already in the image
                 
             else:
                 # Always show placeholder instead of empty - never leave empty
@@ -348,18 +335,7 @@ def create_mosaic_image(images_data: List[Dict], target_size: Tuple[int, int] = 
                 text_y = y + (cell_height - text_height) // 2
                 draw.text((text_x, text_y), error_text, fill='white', font=font)
                 
-                # Add overlay label for placeholder inside the cell
-                host_name = image_data.get('host_name', 'Unknown')
-                try:
-                    label_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 10)
-                except:
-                    label_font = ImageFont.load_default()
-                
-                label_x = x + border_width + 5
-                label_y = y + border_width + 5
-                label_bg_rect = [label_x, label_y, label_x + len(host_name) * 7 + 10, label_y + 15]
-                draw.rectangle(label_bg_rect, fill=(0, 0, 0))
-                draw.text((label_x + 3, label_y + 2), host_name, fill='white', font=label_font)
+                # Don't add the small black label in the corner for placeholders either
                 
         except Exception as e:
             print(f"[@heatmap_utils:create_mosaic_image] Error processing image for {image_data.get('host_name')}: {e}")
@@ -368,18 +344,19 @@ def create_mosaic_image(images_data: List[Dict], target_size: Tuple[int, int] = 
             error_rect = [x, y, x + cell_width, y + cell_height]
             draw.rectangle(error_rect, fill='#660000', outline='#FF0000', width=border_width)
             
-            # Add error overlay label inside the cell
-            host_name = image_data.get('host_name', 'Unknown')
+            # Add error message to the center of the cell
             try:
-                label_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 10)
+                label_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 14)
             except:
                 label_font = ImageFont.load_default()
             
-            label_x = x + border_width + 5
-            label_y = y + border_width + 5
-            label_bg_rect = [label_x, label_y, label_x + (len(host_name) + 6) * 7 + 10, label_y + 15]
-            draw.rectangle(label_bg_rect, fill=(0, 0, 0))
-            draw.text((label_x + 3, label_y + 2), f"{host_name}-ERROR", fill='white', font=label_font)
+            error_text = "ERROR"
+            text_bbox = draw.textbbox((0, 0), error_text, font=label_font)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
+            text_x = x + (cell_width - text_width) // 2
+            text_y = y + (cell_height - text_height) // 2
+            draw.text((text_x, text_y), error_text, fill='white', font=label_font)
     
     return mosaic
 
