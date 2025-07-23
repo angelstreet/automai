@@ -711,9 +711,9 @@ class VideoVerificationController(VerificationControllerInterface):
             
             # Execute verification based on command
             if command == 'WaitForVideoToAppear':
-                motion_threshold = params.get('motion_threshold', 5.0)
-                duration = params.get('duration', 3.0)
-                timeout = params.get('timeout', 10.0)
+                motion_threshold = float(params.get('motion_threshold', 5.0))  # Keep float for threshold
+                duration = int(params.get('duration', 3))
+                timeout = int(params.get('timeout', 10))
                 
                 success = self.waitForVideoToAppear(motion_threshold, duration, timeout)
                 message = f"Video {'appeared' if success else 'did not appear'} (motion threshold: {motion_threshold}%)"
@@ -724,9 +724,9 @@ class VideoVerificationController(VerificationControllerInterface):
                 }
                 
             elif command == 'WaitForVideoToDisappear':
-                motion_threshold = params.get('motion_threshold', 5.0)
-                duration = params.get('duration', 3.0)
-                timeout = params.get('timeout', 10.0)
+                motion_threshold = float(params.get('motion_threshold', 5.0))  # Keep float for threshold
+                duration = int(params.get('duration', 3))
+                timeout = int(params.get('timeout', 10))
                 
                 success = self.waitForVideoToDisappear(motion_threshold, duration, timeout)
                 message = f"Video {'disappeared' if success else 'still present'} (motion threshold: {motion_threshold}%)"
@@ -737,8 +737,8 @@ class VideoVerificationController(VerificationControllerInterface):
                 }
                 
             elif command == 'DetectMotion':
-                duration = params.get('duration', 3.0)
-                threshold = params.get('threshold', self.motion_threshold)
+                duration = int(params.get('duration', 3))
+                threshold = float(params.get('threshold', self.motion_threshold))
                 
                 success = self.detect_motion(duration, threshold)
                 message = f"Motion {'detected' if success else 'not detected'}"
@@ -748,8 +748,8 @@ class VideoVerificationController(VerificationControllerInterface):
                 }
                 
             elif command == 'WaitForVideoChange':
-                timeout = params.get('timeout', 10.0)
-                threshold = params.get('threshold', self.frame_comparison_threshold)
+                timeout = int(params.get('timeout', 10))
+                threshold = float(params.get('threshold', self.frame_comparison_threshold))
                 
                 success = self.wait_for_video_change(timeout, threshold)
                 message = f"Video change {'detected' if success else 'not detected'}"
@@ -787,7 +787,7 @@ class VideoVerificationController(VerificationControllerInterface):
                         'details': {'error': 'Missing expected_state parameter'}
                     }
                 
-                timeout = params.get('timeout', 5.0)
+                timeout = int(params.get('timeout', 5))
                 
                 success = self.verify_screen_state(expected_state, timeout)
                 message = f"Screen state '{expected_state}' {'verified' if success else 'not verified'}"

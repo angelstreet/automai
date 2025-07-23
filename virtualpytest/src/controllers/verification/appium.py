@@ -668,8 +668,8 @@ class AppiumVerificationController(VerificationControllerInterface):
                 }
             
             # Optional parameters with defaults
-            timeout = params.get('timeout', 10.0)
-            check_interval = params.get('check_interval', 1.0)
+            timeout = int(params.get('timeout', 10))
+            check_interval = int(params.get('check_interval', 1))
             
             print(f"[@controller:AppiumVerification] Executing {command} with search term: '{search_term}'")
             print(f"[@controller:AppiumVerification] Parameters: timeout={timeout}, check_interval={check_interval}, platform={self.platform_name}")

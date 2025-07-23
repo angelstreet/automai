@@ -511,7 +511,7 @@ class ADBVerificationController(VerificationControllerInterface):
                 }
             
             # Optional parameters with defaults
-            timeout = float(params.get('timeout', 0.0))
+            timeout = int(params.get('timeout', 0))
             
             print(f"[@controller:ADBVerification] Executing {command} with search term: '{search_term}'")
             print(f"[@controller:ADBVerification] Parameters: timeout={timeout}")

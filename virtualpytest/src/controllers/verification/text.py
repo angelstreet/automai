@@ -336,7 +336,7 @@ class TextVerificationController:
                 }
             
             # Optional parameters with defaults
-            timeout = params.get('timeout', 0.0)
+            timeout = int(params.get('timeout', 0))
             area = params.get('area')
             image_filter = params.get('image_filter', 'none')
             

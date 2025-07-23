@@ -433,8 +433,8 @@ class ImageVerificationController:
                 }
             
             # Optional parameters with defaults
-            threshold = params.get('threshold', 0.8)
-            timeout = params.get('timeout', 1.0)
+            threshold = float(params.get('threshold', 0.8))  # Keep float for threshold (0.0-1.0 range)
+            timeout = int(params.get('timeout', 1))
             area = params.get('area')
             image_filter = params.get('image_filter', 'none')
             model = params.get('model')
