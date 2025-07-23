@@ -38,11 +38,11 @@ export const AndroidTvRemote = React.memo(
       handleRemoteCommand,
     } = useAndroidTv(host, deviceId, isConnected);
 
-    const [showOverlays, setShowOverlays] = useState(!isCollapsed);
+    const [showOverlays, setShowOverlays] = useState(false);
 
     // Update showOverlays when isCollapsed changes
     useEffect(() => {
-      setShowOverlays(!isCollapsed);
+      setShowOverlays(false);
     }, [isCollapsed]);
 
     const handleDisconnectWithCallback = async () => {
