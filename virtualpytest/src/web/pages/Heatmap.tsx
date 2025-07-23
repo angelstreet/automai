@@ -136,11 +136,51 @@ const Heatmap: React.FC = () => {
   };
 
   // Cell click handler for freeze analysis
-  const handleCellClick = (image: HeatmapImage) => {
-    // Only open modal if there's freeze detection data
-    if (image.analysis_json?.freeze && image.analysis_json?.freeze_details) {
+  const handleCellClick = async (image: HeatmapImage) => {
+    // Only open modal if there's a freeze detected
+    if (!image.analysis_json?.freeze) {
+      return;
+    }
+
+    // If we already have freeze_details, use them
+    if (image.analysis_json?.freeze_details) {
       setFreezeModalImage(image);
       setFreezeModalOpen(true);
+      return;
+    }
+
+    // Fetch freeze_details from the JSON file directly
+    try {
+      // Construct JSON URL from image URL (same pattern as monitoring system)
+      const jsonUrl = image.image_url.replace('.jpg', '.json');
+      console.log('[@Heatmap] Fetching freeze details from:', jsonUrl);
+
+      const response = await fetch(jsonUrl);
+      if (response.ok) {
+        const analysisData = await response.json();
+        const analysis = analysisData.analysis || {};
+
+        // Check if we have freeze_details in the analysis
+        if (analysis.freeze_details) {
+          // Create enhanced image object with freeze_details
+          const enhancedImage: HeatmapImage = {
+            ...image,
+            analysis_json: {
+              ...image.analysis_json,
+              freeze_details: analysis.freeze_details,
+            },
+          };
+
+          setFreezeModalImage(enhancedImage);
+          setFreezeModalOpen(true);
+        } else {
+          console.log('[@Heatmap] No freeze_details found in JSON analysis');
+        }
+      } else {
+        console.log('[@Heatmap] Failed to fetch JSON analysis:', response.status);
+      }
+    } catch (error) {
+      console.error('[@Heatmap] Error fetching freeze details:', error);
     }
   };
 
