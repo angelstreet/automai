@@ -283,7 +283,8 @@ def generate():
             job_id, 
             heatmap_data.get('images_by_timestamp', {}),
             heatmap_data.get('incidents', []),
-            heatmap_data
+            heatmap_data,
+            team_id  # Pass team_id to background thread
         )
         
         return jsonify({

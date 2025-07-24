@@ -193,20 +193,16 @@ def get_cached_analysis_for_host(host_name: str, device_id: str) -> Optional[boo
     return None
 
 def determine_border_color_from_analysis(image_data: Dict) -> str:
-    """
-    Determine border color based on analysis data.
-    Green if no incidents detected, Red if any incidents found.
-    Uses only JSON analysis data (blackscreen, freeze, audio_loss) for consistency with frontend.
-    """
+    """Determine border color based on analysis data."""
     try:
-        analysis_json = image_data.get('analysis_json', {})
-        
-        # Check for any incidents (same logic as frontend)
-        has_incidents = (
-            analysis_json.get('blackscreen', False) or
-            analysis_json.get('freeze', False) or
-            analysis_json.get('audio_loss', False)
-        )
+        analysis_json = image_data.get('analysis_json')
+        if not analysis_json:
+            print(f"[@heatmap_utils:determine_border_color_from_analysis] No analysis data, using red border")
+            return "#FF0000"  # Red for missing analysis
+            
+        freeze = analysis_json.get('freeze', False)
+        blackscreen = analysis_json.get('blackscreen', False)
+        audio = analysis_json.get('audio', True)
         
         if has_incidents:
             return '#FF0000'  # Red for incidents
@@ -416,7 +412,7 @@ def upload_to_r2(image: Image.Image, filename: str) -> Optional[str]:
         print(f"[@heatmap_utils] Failed to upload to R2: {e}")
         return None
 
-def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[Dict]], incidents: List[Dict]):
+def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[Dict]], incidents: List[Dict], team_id: str):
     """Process heatmap generation with image downloading and JSON analysis"""
     import os
     set_low_priority()
@@ -555,11 +551,9 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                 
                 # Only proceed if all uploads succeed
                 if mosaic_upload['success'] and metadata_upload['success'] and html_upload['success']:
-                    # Save to database
+                    # Save to database using passed team_id
                     from src.lib.supabase.heatmap_db import save_heatmap_to_db
-                    from src.utils.app_utils import get_team_id
                     
-                    team_id = get_team_id()
                     hosts_included = len([img for img in processed_images if img.get('image_data')])
                     hosts_total = len(processed_images)
                     incidents_count = len([inc for inc in incidents if timestamp in inc.get('start_time', '')])
@@ -661,7 +655,7 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
 # Thread pool for background processing
 executor = ThreadPoolExecutor(max_workers=MAX_WORKER_THREADS)
 
-def start_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[Dict]], incidents: List[Dict], heatmap_data: Dict = None):
+def start_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[Dict]], incidents: List[Dict], heatmap_data: Dict = None, team_id: str = None):
     """Start heatmap generation in background"""
     # Store the original heatmap data in the job
     with job_lock:
@@ -669,7 +663,7 @@ def start_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[Di
         if job and heatmap_data:
             job.heatmap_data = heatmap_data
     
-    future = executor.submit(process_heatmap_generation, job_id, images_by_timestamp, incidents)
+    future = executor.submit(process_heatmap_generation, job_id, images_by_timestamp, incidents, team_id)
     print(f"[@heatmap_utils] Started background processing for job: {job_id}")
     return future
 
