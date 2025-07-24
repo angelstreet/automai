@@ -2,8 +2,7 @@
 
 # Configuration array for grabbers: video_device|audio_device|capture_dir|fps
 declare -A GRABBERS=(
-  ["0"]="/dev/video0|plughw:2,0|/var/www/html/stream/capture1|25"
-  ["1"]="/dev/video2|plughw:3,0|/var/www/html/stream/capture2|5"
+  ["0"]="/dev/video0|plughw:2,0|/var/www/html/stream/capture1|5"
 )
 
 # Simple log reset function - truncates log if over 30MB
