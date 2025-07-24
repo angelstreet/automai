@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional
 import time
 import asyncio
 from ..base_controller import PowerControllerInterface
+import threading
 
 
 class TapoPowerController(PowerControllerInterface):
@@ -66,6 +67,7 @@ class TapoPowerController(PowerControllerInterface):
                     self.device_type_tapo = "p100"
                 
                 # Use asyncio.wait_for with timeout to fail early
+                print(f"[@controller:TapoPower] About to call asyncio.run() - Current thread: {threading.current_thread().name}")
                 asyncio.run(asyncio.wait_for(setup(), timeout=10.0))
                 print(f"[@controller:TapoPower] Tapo client initialized successfully as {self.device_type_tapo}")
                 
