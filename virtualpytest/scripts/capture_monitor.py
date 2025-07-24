@@ -12,8 +12,20 @@ import signal
 import subprocess
 import threading
 import glob
+import logging
 from datetime import datetime
 from pathlib import Path
+
+# Setup logging to /tmp/capture_monitor.log
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[
+        logging.FileHandler('/tmp/capture_monitor.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Configuration
 CAPTURE_DIRS = [
@@ -42,7 +54,7 @@ class CaptureMonitor:
         
     def shutdown(self, signum, frame):
         """Graceful shutdown handler"""
-        print(f"[@capture_monitor] Received signal {signum}, shutting down...")
+        logger.info(f"Received signal {signum}, shutting down...")
         self.running = False
         
     def get_existing_directories(self):
@@ -51,9 +63,9 @@ class CaptureMonitor:
         for capture_dir in CAPTURE_DIRS:
             if os.path.exists(capture_dir):
                 existing.append(capture_dir)
-                print(f"[@capture_monitor] Monitoring: {capture_dir}")
+                logger.info(f"Monitoring: {capture_dir}")
             else:
-                print(f"[@capture_monitor] Skipping non-existent: {capture_dir}")
+                logger.info(f"Skipping non-existent: {capture_dir}")
         return existing
     
     def clean_incidents_on_startup(self, capture_dirs):
@@ -67,10 +79,10 @@ class CaptureMonitor:
                 if os.path.exists(incidents_file):
                     os.remove(incidents_file)
                    
-            print(f"[@capture_monitor] Incidents cleanup completed - fresh start guaranteed")
+            logger.info("Incidents cleanup completed - fresh start guaranteed")
             
         except Exception as e:
-            print(f"[@capture_monitor] Error deleting incidents files: {e}")
+            logger.error(f"Error deleting incidents files: {e}")
 
     def find_recent_unanalyzed_frames(self, capture_dir, max_frames=5):
         """Find recent frames that don't have JSON analysis files yet"""
@@ -100,7 +112,7 @@ class CaptureMonitor:
             return unanalyzed
             
         except Exception as e:
-            print(f"[@capture_monitor] Error finding recent frames in {capture_dir}: {e}")
+            logger.error(f"Error finding recent frames in {capture_dir}: {e}")
             return []
 
     def process_recent_frames(self, capture_dir):
@@ -112,7 +124,7 @@ class CaptureMonitor:
             if not unanalyzed_frames:
                 return
                 
-            print(f"[@capture_monitor] Found {len(unanalyzed_frames)} unanalyzed frames in {os.path.basename(capture_dir)}")
+            logger.info(f"Found {len(unanalyzed_frames)} unanalyzed frames in {os.path.basename(capture_dir)}")
             
             # Process each frame (most recent first)
             for frame_path in unanalyzed_frames:
@@ -122,7 +134,7 @@ class CaptureMonitor:
                 # Check if thumbnail exists (required for thumbnail-only processing)
                 thumbnail_path = frame_path.replace('.jpg', '_thumbnail.jpg')
                 if not os.path.exists(thumbnail_path):
-                    print(f"[@capture_monitor] Skipping {os.path.basename(frame_path)} - thumbnail not found")
+                    logger.warning(f"Skipping {os.path.basename(frame_path)} - thumbnail not found")
                     continue
                     
                 # Wait a bit to ensure files are fully written
@@ -130,10 +142,10 @@ class CaptureMonitor:
                 
                 # Check if files still exist and are readable
                 if not os.path.exists(frame_path) or not os.path.exists(thumbnail_path):
-                    print(f"[@capture_monitor] Frame or thumbnail disappeared: {os.path.basename(frame_path)}")
+                    logger.warning(f"Frame or thumbnail disappeared: {os.path.basename(frame_path)}")
                     continue
                     
-                print(f"[@capture_monitor] Processing frame (thumbnail-only): {os.path.basename(frame_path)}")
+                logger.info(f"Processing frame (thumbnail-only): {os.path.basename(frame_path)}")
                 
                 # Run unified analysis with ORIGINAL path (analyze_audio_video.py will find the thumbnail)
                 # This ensures the JSON file is named correctly (capture_*.json, not capture_*_thumbnail.json)
@@ -151,14 +163,14 @@ class CaptureMonitor:
                 )
                 
                 if result.returncode == 0:
-                    print(f"[@capture_monitor] Unified analysis completed: {os.path.basename(frame_path)}")
+                    logger.info(f"Unified analysis completed: {os.path.basename(frame_path)}")
                 else:
-                    print(f"[@capture_monitor] Unified analysis failed: {result.stderr}")
+                    logger.error(f"Unified analysis failed: {result.stderr}")
                     
         except subprocess.TimeoutExpired:
-            print(f"[@capture_monitor] Unified analysis timeout: {frame_path}")
+            logger.error(f"Unified analysis timeout: {frame_path}")
         except Exception as e:
-            print(f"[@capture_monitor] Unified analysis error: {e}")
+            logger.error(f"Unified analysis error: {e}")
 
 
 

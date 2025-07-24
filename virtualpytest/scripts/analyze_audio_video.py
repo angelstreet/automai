@@ -17,7 +17,23 @@ import time
 import hashlib
 import pickle
 import fcntl
+import logging
 from datetime import datetime
+
+# Setup logging to /tmp/analysis.log
+log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# File handler
+file_handler = logging.FileHandler('/tmp/analysis.log')
+file_handler.setFormatter(log_formatter)
+logger.addHandler(file_handler)
+
+# Console handler (for backward compatibility)
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(log_formatter)
+logger.addHandler(console_handler)
 
 # Optional import for text extraction
 try:
@@ -137,7 +153,7 @@ def analyze_blackscreen(image_path, threshold=10):
         
         # If >95% of pixels are very dark, it's blackscreen
         is_blackscreen = dark_percentage > 95
-        print(f"Blackscreen check: {dark_percentage:.1f}% pixels <= {threshold} ({'BLACKSCREEN' if is_blackscreen else 'Normal'})")
+        logger.info(f"Blackscreen check: {dark_percentage:.1f}% pixels <= {threshold} ({'BLACKSCREEN' if is_blackscreen else 'Normal'})")
         return is_blackscreen
     except Exception:
         return False
@@ -247,7 +263,8 @@ def analyze_freeze(image_path, previous_frames_cache=None):
         }
         save_frame_cache(cache_file_path, new_cache)
         
-        print(f"Freeze check: {'FREEZE' if is_frozen else 'Normal'} (diffs: {mean_diff_1vs2:.2f}, {mean_diff_1vs3:.2f}, {mean_diff_2vs3:.2f})")
+        logger.info(f"Freeze check: {'FREEZE' if is_frozen else 'Normal'} (diffs: {mean_diff_1vs2:.2f}, {mean_diff_1vs3:.2f}, {mean_diff_2vs3:.2f})")
+        logger.debug(f"Freeze details: {freeze_details}")
         return is_frozen, freeze_details
         
     except Exception:
@@ -300,11 +317,11 @@ def main():
         if segment_path:
             has_audio, volume_percentage, mean_volume_db = analyze_audio_volume(segment_path)
             analyzed_segment = os.path.basename(segment_path)
-            print(f"Audio analysis: {volume_percentage}% volume, audio={'Yes' if has_audio else 'No'}")
+            logger.info(f"Audio analysis: {volume_percentage}% volume, audio={'Yes' if has_audio else 'No'}")
         else:
             has_audio, volume_percentage, mean_volume_db = False, 0, -100.0
             analyzed_segment = "no_recent_segment"
-            print("Audio analysis: No recent segments found")
+            logger.warning("Audio analysis: No recent segments found")
         
         # Result
         result = {
@@ -328,8 +345,8 @@ def main():
         with open(json_path, 'w') as f:
             json.dump(result, f, indent=2)
         
-        print(f"Analysis complete: {json_filename}")
-        print(f"Results: blackscreen={blackscreen}, freeze={frozen}, audio={has_audio}")
+        logger.info(f"Analysis complete: {json_filename}")
+        logger.info(f"Results: blackscreen={blackscreen}, freeze={frozen}, audio={has_audio}")
         
         # Process alerts directly if host_name provided
         if host_name:
@@ -337,19 +354,20 @@ def main():
                 sys.path.append(os.path.dirname(__file__))
                 from alert_system import process_alert_directly
                 
+                logger.info(f"Processing alerts for host: {host_name}")
                 process_alert_directly(
                     analysis_result=result,
                     host_name=host_name,
                     analysis_path=image_path
                 )
                 
-                print(f"Alert processed directly (host: {host_name})")
+                logger.info(f"Alert processed directly (host: {host_name})")
             except ImportError as e:
-                print(f"Warning: Could not import alert_system: {e}")
+                logger.error(f"Could not import alert_system: {e}")
             except Exception as e:
-                print(f"Warning: Alert processing failed: {e}")
+                logger.error(f"Alert processing failed: {e}")
         else:
-            print("Note: Host name not provided, skipping alert processing")
+            logger.warning("Host name not provided, skipping alert processing")
         
     except Exception as e:
         print(f"Analysis failed: {e}", file=sys.stderr)
