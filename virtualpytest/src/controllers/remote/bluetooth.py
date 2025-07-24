@@ -17,7 +17,7 @@ from ..base_controller import RemoteControllerInterface
 class BluetoothRemoteController(RemoteControllerInterface):
     """Bluetooth remote controller using HID protocol."""
     
-    # Bluetooth HID keycodes (USB HID standard)
+    # Bluetooth HID keycodes (Tapo HID standard)
     BT_KEYCODES = {
         # Navigation
         'UP': 0x52,

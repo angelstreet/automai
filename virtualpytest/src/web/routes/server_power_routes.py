@@ -2,7 +2,7 @@
 Power Management Routes (Abstract)
 
 Session-based power control with abstract power controller methods.
-Routes work with any power controller type (USB, network, etc.)
+Routes work with any power controller type (Tapo, network, etc.)
 """
 
 from flask import Blueprint, request, jsonify, current_app

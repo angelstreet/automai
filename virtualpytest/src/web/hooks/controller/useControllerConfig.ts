@@ -82,10 +82,10 @@ const CONTROLLER_CONFIGURATIONS: ControllerConfigMap = {
   network: [],
   power: [
     {
-      id: 'usb',
-      name: 'USB Power',
+      id: 'tapo',
+      name: 'Tapo Power',
       description: '',
-      implementation: 'usb',
+      implementation: 'tapo',
       status: 'available',
       inputFields: [],
     },

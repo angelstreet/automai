@@ -38,7 +38,7 @@ from .desktop.bash import BashDesktopController
 from .web.playwright import PlaywrightWebController
 
 # Import power implementations
-from .power.usb_power import USBPowerController
+from .power.tapo_power import TapoPowerController
 
 # Import verification implementations
 from .verification.image import ImageVerificationController
@@ -79,7 +79,7 @@ CONTROLLER_REGISTRY = {
         'ai': TextVerificationController,    # Use text verification until AI implementation is available
     },
     'power': {
-        'usb': USBPowerController,           # USB hub power control via SSH + uhubctl
+        'tapo': TapoPowerController,           # Tapo power control via SSH + uhubctl
     },
     'desktop': {
         'bash': BashDesktopController,      # Bash desktop controller for executing commands
@@ -134,7 +134,7 @@ class ControllerFactory:
         Args:
             capture_type: Type of capture implementation (mock, hdmi, adb, camera, etc.)
             device_name: Name of the device for logging
-            capture_source: Source for capture (HDMI, Network, USB, etc.)
+            capture_source: Source for capture (HDMI, Network, Tapo, etc.)
             **kwargs: Additional parameters for the controller
         
         Returns:
@@ -177,7 +177,7 @@ class ControllerFactory:
     
     @staticmethod
     def create_power_controller(
-        power_type: str = "usb",
+        power_type: str = "tapo",
         device_name: str = "Unknown Device",
         **kwargs
     ) -> PowerControllerInterface:

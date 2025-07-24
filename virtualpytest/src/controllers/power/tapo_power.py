@@ -1,8 +1,8 @@
 """
-USB Power Controller Implementation
+Tapo Power Controller Implementation
 
-This controller provides USB power management functionality using uhubctl.
-Based on direct USB hub control commands.
+This controller provides Tapo power management functionality using uhubctl.
+Based on direct Tapo hub control commands.
 """
 
 from typing import Dict, Any, Optional
@@ -12,27 +12,27 @@ import subprocess
 from ..base_controller import PowerControllerInterface
 
 
-class USBPowerController(PowerControllerInterface):
-    """USB power controller using uhubctl commands."""
+class TapoPowerController(PowerControllerInterface):
+    """Tapo power controller using uhubctl commands."""
     
-    def __init__(self, usb_hub: int = 1, **kwargs):
+    def __init__(self, tapo: int = 1, **kwargs):
         """
-        Initialize the USB power controller.
+        Initialize the Tapo power controller.
         
         Args:
-            usb_hub: USB hub number (default: 1)
+            tapo: Tapo hub number (default: 1)
         """
-        super().__init__("USB Power", "usb")
+        super().__init__("Tapo Power", "tapo")
         
-        # USB parameters
-        self.usb_hub = usb_hub
+        # Tapo parameters
+        self.tapo = tapo
         
-        print(f"[@controller:USBPower] Initialized for USB hub {self.usb_hub}")
+        print(f"[@controller:TapoPower] Initialized for Tapo hub {self.tapo}")
         
     def connect(self) -> bool:
-        """Connect to USB hub."""
+        """Connect to Tapo hub."""
         try:
-            print(f"Power[{self.power_type.upper()}]: Connecting to USB hub {self.usb_hub}")
+            print(f"Power[{self.power_type.upper()}]: Connecting to Tapo hub {self.tapo}")
             
             # Test uhubctl command availability
             result = subprocess.run(['uhubctl', '--version'], capture_output=True, text=True)
@@ -40,7 +40,7 @@ class USBPowerController(PowerControllerInterface):
                 print(f"Power[{self.power_type.upper()}]: uhubctl command not available")
                 return False
                 
-            print(f"Power[{self.power_type.upper()}]: USB hub connection established")
+            print(f"Power[{self.power_type.upper()}]: Tapo hub connection established")
             
             self.is_connected = True
             return True
@@ -51,7 +51,7 @@ class USBPowerController(PowerControllerInterface):
             return False
             
     def disconnect(self) -> bool:
-        """Disconnect from USB hub."""
+        """Disconnect from Tapo hub."""
         try:
             print(f"Power[{self.power_type.upper()}]: Disconnecting from {self.device_name}")
             
@@ -66,21 +66,21 @@ class USBPowerController(PowerControllerInterface):
             return False
             
     def power_on(self, timeout: float = 10.0) -> bool:
-        """Turn USB hub on using uhubctl."""
+        """Turn Tapo hub on using uhubctl."""
         if not self.is_connected:
-            print(f"Power[{self.power_type.upper()}]: ERROR - Not connected to USB hub")
+            print(f"Power[{self.power_type.upper()}]: ERROR - Not connected to Tapo hub")
             return False
             
         try:
-            print(f"Power[{self.power_type.upper()}]: Powering on USB hub {self.usb_hub}")
+            print(f"Power[{self.power_type.upper()}]: Powering on Tapo hub {self.tapo}")
             
             # Test uhubctl command availability
-            result = subprocess.run(['uhubctl', '-l', str(self.usb_hub), '-a', 'on'], capture_output=True, text=True, timeout=timeout)
+            result = subprocess.run(['uhubctl', '-l', str(self.tapo), '-a', 'on'], capture_output=True, text=True, timeout=timeout)
             if result.returncode != 0:
-                print(f"Power[{self.power_type.upper()}]: Failed to power on USB hub: {result.stderr}")
+                print(f"Power[{self.power_type.upper()}]: Failed to power on Tapo hub: {result.stderr}")
                 return False
                 
-            print(f"Power[{self.power_type.upper()}]: Successfully powered on USB hub {self.usb_hub}")
+            print(f"Power[{self.power_type.upper()}]: Successfully powered on Tapo hub {self.tapo}")
             self.current_power_state = "on"
             return True
             
@@ -89,21 +89,21 @@ class USBPowerController(PowerControllerInterface):
             return False
             
     def power_off(self, force: bool = False, timeout: float = 5.0) -> bool:
-        """Turn USB hub off using uhubctl."""
+        """Turn Tapo hub off using uhubctl."""
         if not self.is_connected:
-            print(f"Power[{self.power_type.upper()}]: ERROR - Not connected to USB hub")
+            print(f"Power[{self.power_type.upper()}]: ERROR - Not connected to Tapo hub")
             return False
             
         try:
-            print(f"Power[{self.power_type.upper()}]: Powering off USB hub {self.usb_hub}")
+            print(f"Power[{self.power_type.upper()}]: Powering off Tapo hub {self.tapo}")
             
             # Test uhubctl command availability
-            result = subprocess.run(['uhubctl', '-l', str(self.usb_hub), '-a', 'off'], capture_output=True, text=True, timeout=timeout)
+            result = subprocess.run(['uhubctl', '-l', str(self.tapo), '-a', 'off'], capture_output=True, text=True, timeout=timeout)
             if result.returncode != 0:
-                print(f"Power[{self.power_type.upper()}]: Failed to power off USB hub: {result.stderr}")
+                print(f"Power[{self.power_type.upper()}]: Failed to power off Tapo hub: {result.stderr}")
                 return False
                 
-            print(f"Power[{self.power_type.upper()}]: Successfully powered off USB hub {self.usb_hub}")
+            print(f"Power[{self.power_type.upper()}]: Successfully powered off Tapo hub {self.tapo}")
             self.current_power_state = "off"
             return True
             
@@ -114,7 +114,7 @@ class USBPowerController(PowerControllerInterface):
     def reboot(self, timeout: float = 20.0) -> bool:
         """Reboot by turning off then on."""
         try:
-            print(f"Power[{self.power_type.upper()}]: Rebooting USB hub {self.usb_hub}")
+            print(f"Power[{self.power_type.upper()}]: Rebooting Tapo hub {self.tapo}")
             
             # Power off first
             if not self.power_off(timeout=5.0):
@@ -127,7 +127,7 @@ class USBPowerController(PowerControllerInterface):
             if not self.power_on(timeout=10.0):
                 return False
             
-            print(f"Power[{self.power_type.upper()}]: Successfully rebooted USB hub {self.usb_hub}")
+            print(f"Power[{self.power_type.upper()}]: Successfully rebooted Tapo hub {self.tapo}")
             return True
             
         except Exception as e:
@@ -135,19 +135,19 @@ class USBPowerController(PowerControllerInterface):
             return False
             
     def get_power_status(self) -> Dict[str, Any]:
-        """Get current USB hub power status using uhubctl."""
+        """Get current Tapo power status using uhubctl."""
         if not self.is_connected:
             return {
                 'power_state': 'unknown',
                 'connected': False,
-                'error': 'Not connected to USB hub'
+                'error': 'Not connected to Tapo hub'
             }
             
         try:
-            print(f"Power[{self.power_type.upper()}]: Checking power status for USB hub {self.usb_hub}")
+            print(f"Power[{self.power_type.upper()}]: Checking power status for Tapo hub {self.tapo}")
             
             # Test uhubctl command availability
-            result = subprocess.run(['uhubctl', '-l', str(self.usb_hub)], capture_output=True, text=True, timeout=10)
+            result = subprocess.run(['uhubctl', '-l', str(self.tapo)], capture_output=True, text=True, timeout=10)
             if result.returncode != 0:
                 print(f"Power[{self.power_type.upper()}]: uhubctl command failed: {result.stderr}")
                 return {
@@ -218,7 +218,7 @@ class USBPowerController(PowerControllerInterface):
             
             return {
                 'power_state': power_state,
-                'usb_hub': self.usb_hub,
+                'tapo': self.tapo,
                 'connected': True,
                 'uhubctl_output': result.stdout
             }
@@ -237,7 +237,7 @@ class USBPowerController(PowerControllerInterface):
             'controller_type': self.controller_type,
             'power_type': self.power_type,
             'device_name': self.device_name,
-            'usb_hub': self.usb_hub,
+            'tapo': self.tapo,
             'connected': self.is_connected,
             'connection_timeout': self.connection_timeout,
             'current_power_state': self.current_power_state,

@@ -1,5 +1,5 @@
 // Power controller configuration types
-export type PowerType = 'usb-power';
+export type PowerType = 'tapo-power';
 
 export interface PowerDeviceConfig {
   type: PowerType;
@@ -13,10 +13,10 @@ export interface PowerDeviceConfig {
   };
 }
 
-// USB Power configuration - uses abstract power controller
-export const USB_POWER_CONFIG: PowerDeviceConfig = {
-  type: 'usb-power',
-  name: 'USB Power Control',
+// Tapo Power configuration - uses abstract power controller
+export const tapo_power_CONFIG: PowerDeviceConfig = {
+  type: 'tapo-power',
+  name: 'Tapo Power Control',
   icon: 'Power',
   serverEndpoints: {
     powerOn: '/server/power/power-on', // Abstract power controller
@@ -27,7 +27,7 @@ export const USB_POWER_CONFIG: PowerDeviceConfig = {
 
 // Power configuration registry
 export const POWER_CONFIGS = {
-  'usb-power': USB_POWER_CONFIG,
+  'tapo-power': tapo_power_CONFIG,
 } as const;
 
 // Helper function to get power config by type

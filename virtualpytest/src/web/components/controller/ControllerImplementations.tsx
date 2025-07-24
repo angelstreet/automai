@@ -41,7 +41,7 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
   controllerTypes,
 }) => {
   // Modal states - only keep the one that's actually used
-  const [usbPowerModalOpen, setUsbPowerModalOpen] = useState(false);
+  const [tapoPowerModalOpen, settapoPowerModalOpen] = useState(false);
 
   const getControllerIcon = (type: string) => {
     switch (type) {
@@ -82,8 +82,8 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
       // setBluetoothModalOpen(true);
     } else if (category === 'av' && controller.id === 'hdmi_stream') {
       // setHdmiStreamModalOpen(true);
-    } else if (category === 'power' && controller.id === 'usb') {
-      setUsbPowerModalOpen(true);
+    } else if (category === 'power' && controller.id === 'tapo') {
+      settapoPowerModalOpen(true);
     }
   };
 
@@ -175,10 +175,10 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
       />
       */}
 
-      {/* USB Power Control Modal */}
+      {/* Tapo Power Control Modal */}
       <Dialog
-        open={usbPowerModalOpen}
-        onClose={() => setUsbPowerModalOpen(false)}
+        open={tapoPowerModalOpen}
+        onClose={() => settapoPowerModalOpen(false)}
         maxWidth="md"
         fullWidth
       >
@@ -191,19 +191,19 @@ export const ControllerImplementations: React.FC<ControllerImplementationsProps>
             alignItems: 'center',
           }}
         >
-          USB Power Control
+          Tapo Power Control
           <IconButton
             aria-label="close"
-            onClick={() => setUsbPowerModalOpen(false)}
+            onClick={() => settapoPowerModalOpen(false)}
             sx={{ color: (theme) => theme.palette.grey[500] }}
           >
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          {/* TODO: Uncomment when USBPowerPanel is available */}
-          {/* <USBPowerPanel /> */}
-          <Typography>USB Power Panel - Coming Soon</Typography>
+          {/* TODO: Uncomment when TapoPowerPanel is available */}
+          {/* <TapoPowerPanel /> */}
+          <Typography>Tapo Power Panel - Coming Soon</Typography>
         </DialogContent>
       </Dialog>
     </>

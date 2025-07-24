@@ -82,7 +82,7 @@ export const BLUETOOTH_CONFIG: RemoteDeviceConfig = {
   },
 };
 
-// Configuration registry (USB_POWER_CONFIG moved to power controller)
+// Configuration registry (tapo_power_CONFIG moved to power controller)
 export const REMOTE_CONFIGS = {
   'android-tv': ANDROID_TV_CONFIG,
   'android-mobile': ANDROID_MOBILE_CONFIG,

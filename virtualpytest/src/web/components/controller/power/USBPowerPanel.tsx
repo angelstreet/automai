@@ -32,7 +32,7 @@ interface PowerStatus {
   error?: string;
 }
 
-export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) => {
+export const TapoPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) => {
   const {} = useHostManager();
 
   // UI state
@@ -61,12 +61,12 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
 
       if (result.success && result.connected) {
         setIsConnected(true);
-        console.log('[@component:USBPowerPanel] Found existing power connection');
+        console.log('[@component:TapoPowerPanel] Found existing power connection');
         // Immediately check power status for existing connection
         await checkPowerStatus();
       }
     } catch (error) {
-      console.log('[@component:USBPowerPanel] Could not check connection status:', error);
+      console.log('[@component:TapoPowerPanel] Could not check connection status:', error);
     }
   };
 
@@ -74,7 +74,7 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
     if (!isConnected) return;
 
     try {
-      console.log('[@component:USBPowerPanel] Checking power status...');
+      console.log('[@component:TapoPowerPanel] Checking power status...');
       const response = await fetch('/server/power/power-status');
       const result = await response.json();
 
@@ -85,14 +85,14 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
           error: result.power_status.error,
         });
         console.log(
-          '[@component:USBPowerPanel] Power status updated:',
+          '[@component:TapoPowerPanel] Power status updated:',
           result.power_status.power_state,
         );
       } else {
-        console.log('[@component:USBPowerPanel] Could not get power status:', result.error);
+        console.log('[@component:TapoPowerPanel] Could not get power status:', result.error);
       }
     } catch (error) {
-      console.log('[@component:USBPowerPanel] Could not check power status:', error);
+      console.log('[@component:TapoPowerPanel] Could not check power status:', error);
       setPowerStatus((prev) => ({ ...prev, error: 'Failed to check power status' }));
     }
   };
@@ -103,7 +103,7 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
     setSuccessMessage(null);
 
     try {
-      console.log('[@component:USBPowerPanel] Starting power connection...');
+      console.log('[@component:TapoPowerPanel] Starting power connection...');
 
       const response = await fetch('/server/power/takeControl', {
         method: 'POST',
@@ -113,10 +113,10 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
       });
 
       const result = await response.json();
-      console.log('[@component:USBPowerPanel] Connection response:', result);
+      console.log('[@component:TapoPowerPanel] Connection response:', result);
 
       if (result.success) {
-        console.log('[@component:USBPowerPanel] Successfully connected to power controller');
+        console.log('[@component:TapoPowerPanel] Successfully connected to power controller');
         setIsConnected(true);
         setSuccessMessage(result.message);
 
@@ -124,12 +124,12 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
         setTimeout(checkPowerStatus, 1000);
       } else {
         const errorMsg = result.error || 'Failed to connect to power controller';
-        console.error('[@component:USBPowerPanel] Connection failed:', errorMsg);
+        console.error('[@component:TapoPowerPanel] Connection failed:', errorMsg);
         setError(errorMsg);
       }
     } catch (err: any) {
       const errorMsg = err.message || 'Connection failed - network or server error';
-      console.error('[@component:USBPowerPanel] Exception during connection:', err);
+      console.error('[@component:TapoPowerPanel] Exception during connection:', err);
       setError(errorMsg);
     } finally {
       setIsConnecting(false);
@@ -142,14 +142,14 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
     setSuccessMessage(null);
 
     try {
-      console.log('[@component:USBPowerPanel] Disconnecting power controller...');
+      console.log('[@component:TapoPowerPanel] Disconnecting power controller...');
       await fetch('/server/power/releaseControl', {
         method: 'POST',
       });
 
-      console.log('[@component:USBPowerPanel] Disconnection successful');
+      console.log('[@component:TapoPowerPanel] Disconnection successful');
     } catch (err: any) {
-      console.error('[@component:USBPowerPanel] Disconnect error:', err);
+      console.error('[@component:TapoPowerPanel] Disconnect error:', err);
     } finally {
       // Always reset state
       setIsConnected(false);
@@ -158,7 +158,7 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
         connected: false,
       });
       setSuccessMessage(null);
-      console.log('[@component:USBPowerPanel] Session state reset');
+      console.log('[@component:TapoPowerPanel] Session state reset');
       setIsConnecting(false);
     }
   };
@@ -174,7 +174,7 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
     setSuccessMessage(null);
 
     try {
-      console.log('[@component:USBPowerPanel] Toggling power...');
+      console.log('[@component:TapoPowerPanel] Toggling power...');
       const response = await fetch('/server/power/toggle', {
         method: 'POST',
         headers: {
@@ -183,10 +183,10 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
       });
 
       const result = await response.json();
-      console.log('[@component:USBPowerPanel] Toggle response:', result);
+      console.log('[@component:TapoPowerPanel] Toggle response:', result);
 
       if (result.success) {
-        console.log('[@component:USBPowerPanel] Power toggle successful');
+        console.log('[@component:TapoPowerPanel] Power toggle successful');
         // Update power status
         setPowerStatus((prev) => ({
           ...prev,
@@ -197,12 +197,12 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
         setTimeout(checkPowerStatus, 2000);
       } else {
         const errorMsg = result.error || 'Failed to toggle power';
-        console.error('[@component:USBPowerPanel] Power toggle failed:', errorMsg);
+        console.error('[@component:TapoPowerPanel] Power toggle failed:', errorMsg);
         setError(errorMsg);
       }
     } catch (err: any) {
       const errorMsg = err.message || 'Power toggle failed - network or server error';
-      console.error('[@component:USBPowerPanel] Exception during power toggle:', err);
+      console.error('[@component:TapoPowerPanel] Exception during power toggle:', err);
       setError(errorMsg);
     } finally {
       setIsLoading(false);
@@ -220,7 +220,7 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
     setSuccessMessage(null);
 
     try {
-      console.log('[@component:USBPowerPanel] Rebooting device...');
+      console.log('[@component:TapoPowerPanel] Rebooting device...');
       const response = await fetch('/server/power/reboot', {
         method: 'POST',
         headers: {
@@ -229,10 +229,10 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
       });
 
       const result = await response.json();
-      console.log('[@component:USBPowerPanel] Reboot response:', result);
+      console.log('[@component:TapoPowerPanel] Reboot response:', result);
 
       if (result.success) {
-        console.log('[@component:USBPowerPanel] Device reboot initiated');
+        console.log('[@component:TapoPowerPanel] Device reboot initiated');
         // Set power state to unknown during reboot
         setPowerStatus((prev) => ({
           ...prev,
@@ -243,12 +243,12 @@ export const USBPowerPanel: React.FC<PowerPanelProps> = ({ hostName, sx = {} }) 
         setTimeout(checkPowerStatus, 10000); // 10 seconds for reboot
       } else {
         const errorMsg = result.error || 'Failed to reboot device';
-        console.error('[@component:USBPowerPanel] Device reboot failed:', errorMsg);
+        console.error('[@component:TapoPowerPanel] Device reboot failed:', errorMsg);
         setError(errorMsg);
       }
     } catch (err: any) {
       const errorMsg = err.message || 'Device reboot failed - network or server error';
-      console.error('[@component:USBPowerPanel] Exception during device reboot:', err);
+      console.error('[@component:TapoPowerPanel] Exception during device reboot:', err);
       setError(errorMsg);
     } finally {
       setIsLoading(false);

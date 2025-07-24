@@ -426,10 +426,10 @@ def get_all_controllers():
             ],
             'power': [
                 {
-                    'id': 'usb',
-                    'name': 'USB Hub Power Control',
-                    'description': 'USB hub power control via uhubctl',
-                    'implementation': 'usb',
+                    'id': 'tapo',
+                    'name': 'Tapo power Control',
+                    'description': 'Tapo power control via uhubctl',
+                    'implementation': 'tapo',
                     'status': 'available',
                     'parameters': ['hub_location', 'port_number']
                 }
