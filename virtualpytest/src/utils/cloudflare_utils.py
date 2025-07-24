@@ -317,6 +317,51 @@ def upload_navigation_screenshot(local_path: str, model: str, screenshot_name: s
     remote_path = f"navigation/{model}/{screenshot_name}"
     return uploader.upload_file(local_path, remote_path)
 
+def upload_heatmap_html(html_content: str, timestamp: str) -> Dict:
+    """Upload heatmap HTML to R2 in the heatmaps folder."""
+    try:
+        uploader = get_cloudflare_utils()
+        
+        # Create heatmap HTML path: heatmaps/{timestamp}/mosaic.html
+        html_path = f"heatmaps/{timestamp}/mosaic.html"
+        
+        # Create temporary HTML file
+        import tempfile
+        import os
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as temp_file:
+            temp_file.write(html_content)
+            temp_file_path = temp_file.name
+        
+        try:
+            # Upload HTML file
+            result = uploader.upload_file(temp_file_path, html_path)
+            
+            if result['success']:
+                logger.info(f"Uploaded heatmap HTML: {html_path}")
+                return {
+                    'success': True,
+                    'html_path': html_path,
+                    'html_url': result['url']
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': result.get('error', 'Upload failed')
+                }
+                
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+                
+    except Exception as e:
+        logger.error(f"Heatmap HTML upload failed: {str(e)}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
 def upload_script_report(html_content: str, device_model: str, script_name: str, timestamp: str) -> Dict:
     """Upload script report HTML to R2 in the script-reports folder."""
     try:

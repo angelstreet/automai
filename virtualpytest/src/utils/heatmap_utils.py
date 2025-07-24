@@ -518,7 +518,7 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                 'generated_at': datetime.now().isoformat()
             }
             
-            # Upload to R2 (following existing cloudflare_utils pattern)
+            # Upload to R2 - no fallbacks
             try:
                 from src.utils.cloudflare_utils import get_cloudflare_utils
                 uploader = get_cloudflare_utils()
@@ -540,56 +540,71 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                 metadata_r2_path = f"heatmaps/{timestamp}/metadata.json"
                 metadata_upload = uploader.upload_file(temp_json_path, metadata_r2_path)
                 
-                # Always add to generated_images (like script-reports pattern)
-                # Use R2 URLs if upload succeeded, fallback URLs if failed
-                if mosaic_upload['success'] and metadata_upload['success']:
+                # Generate and upload HTML report
+                from src.utils.heatmap_report_utils import generate_heatmap_html
+                from src.utils.cloudflare_utils import upload_heatmap_html
+                
+                html_content = generate_heatmap_html({
+                    'timestamp': timestamp,
+                    'mosaic_url': mosaic_upload['url'] if mosaic_upload['success'] else '',
+                    'analysis_data': serializable_analysis,
+                    'incidents': [inc for inc in incidents if timestamp in inc.get('start_time', '')]
+                })
+                
+                html_upload = upload_heatmap_html(html_content, timestamp)
+                
+                # Only proceed if all uploads succeed
+                if mosaic_upload['success'] and metadata_upload['success'] and html_upload['success']:
+                    # Save to database
+                    from src.lib.supabase.heatmap_db import save_heatmap_to_db
+                    from src.utils.app_utils import get_team_id
+                    
+                    team_id = get_team_id()
+                    hosts_included = len([img for img in processed_images if img.get('image_data')])
+                    hosts_total = len(processed_images)
+                    incidents_count = len([inc for inc in incidents if timestamp in inc.get('start_time', '')])
+                    
+                    heatmap_id = save_heatmap_to_db(
+                        team_id=team_id,
+                        timestamp=timestamp,
+                        job_id=job_id,
+                        mosaic_r2_path=mosaic_r2_path,
+                        mosaic_r2_url=mosaic_upload['url'],
+                        metadata_r2_path=metadata_r2_path,
+                        metadata_r2_url=metadata_upload['url'],
+                        html_r2_path=html_upload['html_path'],
+                        html_r2_url=html_upload['html_url'],
+                        hosts_included=hosts_included,
+                        hosts_total=hosts_total,
+                        incidents_count=incidents_count
+                    )
+                    
                     generated_images.append({
                         'timestamp': timestamp,
                         'mosaic_url': mosaic_upload['url'],
                         'metadata_url': metadata_upload['url'],
+                        'html_url': html_upload['html_url'],
+                        'heatmap_id': heatmap_id,
                         'r2_paths': {
                             'mosaic': mosaic_r2_path,
-                            'metadata': metadata_r2_path
-                        },
-                        'upload_success': True
-                    })
-                    print(f"[@heatmap_utils] Successfully uploaded heatmap for timestamp {timestamp}")
-                else:
-                    # Follow script-reports pattern: continue even if R2 upload fails
-                    # Save files locally and provide fallback URLs
-                    local_mosaic_path = f"/var/www/html/heatmaps/{timestamp}/mosaic.jpg"
-                    local_metadata_path = f"/var/www/html/heatmaps/{timestamp}/metadata.json"
-                    
-                    # Ensure directory exists
-                    import os
-                    os.makedirs(os.path.dirname(local_mosaic_path), exist_ok=True)
-                    
-                    # Copy temp files to local serving directory
-                    import shutil
-                    shutil.copy2(temp_path, local_mosaic_path)
-                    shutil.copy2(temp_json_path, local_metadata_path)
-                    
-                    # Generate fallback URLs using host serving pattern
-                    fallback_mosaic_url = f"/host/heatmaps/{timestamp}/mosaic.jpg"
-                    fallback_metadata_url = f"/host/heatmaps/{timestamp}/metadata.json"
-                    
-                    generated_images.append({
-                        'timestamp': timestamp,
-                        'mosaic_url': fallback_mosaic_url,
-                        'metadata_url': fallback_metadata_url,
-                        'local_paths': {
-                            'mosaic': local_mosaic_path,
-                            'metadata': local_metadata_path
-                        },
-                        'upload_success': False,
-                        'upload_error': {
-                            'mosaic': mosaic_upload.get('error', 'Upload failed'),
-                            'metadata': metadata_upload.get('error', 'Upload failed')
+                            'metadata': metadata_r2_path,
+                            'html': html_upload['html_path']
                         }
                     })
-                    print(f"[@heatmap_utils] R2 upload failed, using local fallback for timestamp {timestamp}")
-                    print(f"[@heatmap_utils] Mosaic upload: {mosaic_upload}")
-                    print(f"[@heatmap_utils] Metadata upload: {metadata_upload}")
+                    print(f"[@heatmap_utils] Successfully uploaded heatmap with HTML for timestamp {timestamp}")
+                else:
+                    # Upload failed - raise exception to fail the job
+                    errors = []
+                    if not mosaic_upload['success']:
+                        errors.append(f"Mosaic: {mosaic_upload.get('error', 'Unknown')}")
+                    if not metadata_upload['success']:
+                        errors.append(f"Metadata: {metadata_upload.get('error', 'Unknown')}")
+                    if not html_upload['success']:
+                        errors.append(f"HTML: {html_upload.get('error', 'Unknown')}")
+                    
+                    error_msg = f"R2 upload failed - {', '.join(errors)}"
+                    print(f"[@heatmap_utils] {error_msg}")
+                    raise Exception(error_msg)
                 
                 # Cleanup temp files
                 for temp_file in [temp_path, temp_json_path]:
@@ -598,38 +613,6 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                 
             except Exception as upload_error:
                 print(f"[@heatmap_utils] Upload error for timestamp {timestamp}: {upload_error}")
-                import traceback
-                print(f"[@heatmap_utils] Upload traceback: {traceback.format_exc()}")
-                
-                # Even on exception, try to provide local fallback
-                try:
-                    local_mosaic_path = f"/var/www/html/heatmaps/{timestamp}/mosaic.jpg"
-                    local_metadata_path = f"/var/www/html/heatmaps/{timestamp}/metadata.json"
-                    
-                    import os
-                    os.makedirs(os.path.dirname(local_mosaic_path), exist_ok=True)
-                    
-                    import shutil
-                    if os.path.exists(temp_path):
-                        shutil.copy2(temp_path, local_mosaic_path)
-                    if os.path.exists(temp_json_path):
-                        shutil.copy2(temp_json_path, local_metadata_path)
-                    
-                    generated_images.append({
-                        'timestamp': timestamp,
-                        'mosaic_url': f"/host/heatmaps/{timestamp}/mosaic.jpg",
-                        'metadata_url': f"/host/heatmaps/{timestamp}/metadata.json",
-                        'local_paths': {
-                            'mosaic': local_mosaic_path,
-                            'metadata': local_metadata_path
-                        },
-                        'upload_success': False,
-                        'upload_error': str(upload_error)
-                    })
-                    print(f"[@heatmap_utils] Exception fallback: saved locally for timestamp {timestamp}")
-                except Exception as fallback_error:
-                    print(f"[@heatmap_utils] Fallback also failed for timestamp {timestamp}: {fallback_error}")
-                
                 # Cleanup temp files
                 for temp_file in [temp_path, temp_json_path]:
                     if os.path.exists(temp_file):
@@ -637,6 +620,8 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                             os.remove(temp_file)
                         except:
                             pass
+                # Re-raise to fail the job
+                raise upload_error
             
             # Update progress
             progress = int((i + 1) / total_timestamps * 100)
