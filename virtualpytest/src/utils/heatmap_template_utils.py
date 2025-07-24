@@ -73,7 +73,7 @@ def create_heatmap_html_template() -> str:
 <body>
     <div class="container">
         <div class="header">
-            <h1>Heatmap Analysis Report - Generated: {generated_at} - {total_devices} Devices - {total_timestamps} Timestamps - {incidents_count} Incidents</h1>
+            <h1>Heatmap Report</h1> - Generated: {generated_at} - {total_devices} Devices - {total_timestamps} Timestamps - {incidents_count} Incidents
         </div>
         
         <div class="mosaic-player">
