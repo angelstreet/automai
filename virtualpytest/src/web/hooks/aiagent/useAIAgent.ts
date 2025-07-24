@@ -103,15 +103,16 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
             await new Promise((resolve) => setTimeout(resolve, pollInterval));
 
             try {
-              const statusResponse = await fetch(
-                `/server/aiagent/getStatus?device_id=${device?.device_id}`,
-                {
-                  method: 'GET',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
+              const statusResponse = await fetch('/server/aiagent/getStatus', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
                 },
-              );
+                body: JSON.stringify({
+                  host: host,
+                  device_id: device?.device_id,
+                }),
+              });
 
               const statusResult = await statusResponse.json();
               console.log('[useAIAgent] Status poll result:', statusResult);

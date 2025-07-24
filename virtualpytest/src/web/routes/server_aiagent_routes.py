@@ -30,18 +30,17 @@ def execute_task():
             'error': str(e)
         }), 500
 
-@server_aiagent_bp.route('/getStatus', methods=['GET'])
+@server_aiagent_bp.route('/getStatus', methods=['POST'])
 def get_status():
     """Proxy AI agent status request to selected host"""
     try:
         print("[@route:server_aiagent:get_status] Proxying AI status request")
         
-        # Get query params and convert to dict for proxy
-        device_id = request.args.get('device_id', 'device1')
-        request_data = {'device_id': device_id}
+        # Get request data
+        request_data = request.get_json() or {}
         
-        # Proxy to host (convert GET to POST for consistency)
-        response_data, status_code = proxy_to_host('/host/aiagent/getStatus', 'GET', request_data)
+        # Proxy to host
+        response_data, status_code = proxy_to_host('/host/aiagent/getStatus', 'POST', request_data)
         
         return jsonify(response_data), status_code
         

@@ -186,12 +186,13 @@ def execute_task():
             'error': f'AI task execution error: {str(e)}'
         }), 500
 
-@host_aiagent_bp.route('/getStatus', methods=['GET'])
+@host_aiagent_bp.route('/getStatus', methods=['POST'])
 def get_status():
     """Get AI agent execution status."""
     try:
-        # Get device_id from query params (defaults to device1)
-        device_id = request.args.get('device_id', 'device1')
+        # Get device_id from request (defaults to device1)
+        data = request.get_json() or {}
+        device_id = data.get('device_id', 'device1')
         
         print(f"[@route:host_aiagent:get_status] Getting AI status for device: {device_id}")
         
