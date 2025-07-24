@@ -5,17 +5,17 @@ This module provides server-side image processing functionality for creating
 heatmap mosaics from host device captures with CPU limiting and R2 storage.
 """
 
-import os
-import json
-import time
-import uuid
-import threading
-import io
+import tempfile
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+from typing import Dict, List, Optional, Tuple
+import io
+import json
+import uuid
+import os
 from PIL import Image, ImageDraw, ImageFont
-import requests
+import threading
 
 # Global state for job management
 active_jobs = {}
@@ -197,8 +197,8 @@ def determine_border_color_from_analysis(image_data: Dict) -> str:
     try:
         analysis_json = image_data.get('analysis_json')
         if not analysis_json:
-            print(f"[@heatmap_utils:determine_border_color_from_analysis] No analysis data, using red border")
-            return "#FF0000"  # Red for missing analysis
+            print(f"[@heatmap_utils:determine_border_color_from_analysis] No analysis data, treating as no incidents (green border)")
+            return "#00FF00"  # Green for missing analysis (assume no incidents)
             
         # Use pre-calculated has_incidents from host
         has_incidents = analysis_json.get('has_incidents', False)
@@ -210,7 +210,7 @@ def determine_border_color_from_analysis(image_data: Dict) -> str:
             
     except Exception as e:
         print(f"[@heatmap_utils:determine_border_color_from_analysis] Error: {e}")
-        return "#FF0000"  # Red for error
+        return "#00FF00"  # Green for error (assume no incidents)
 
 def calculate_grid_layout(num_devices: int) -> Tuple[int, int]:
     """Calculate optimal grid layout for mosaic"""
@@ -445,13 +445,13 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
             processed_images = []
             
             for image_info in images_data:
+                print(f"[@heatmap_utils:process_heatmap_generation] Processing {image_info['host_name']} {image_info['device_id']}: analysis_json={image_info.get('analysis_json')}")
                 try:
-                    # Download image
-                    image_response = requests.get(image_info['image_url'], timeout=5)
-                    if image_response.status_code == 200:
-                        image_data = image_response.content
-                        
-                        # Use pre-parsed analysis data from get_heatmap_data (no re-downloading)
+                    # Use pre-downloaded image data (no more HTTP requests to hosts)
+                    image_data = image_info.get('image_data')
+                    
+                    if image_data:
+                        # Use pre-parsed analysis data from initial host query
                         analysis_json = image_info.get('analysis_json', {
                             'blackscreen': False,
                             'freeze': False,
@@ -462,22 +462,22 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                             'host_name': image_info['host_name'],
                             'device_id': image_info['device_id'],
                             'image_data': image_data,
-                            'analysis_json': analysis_json,  # Use pre-parsed data
+                            'analysis_json': analysis_json,
                             'original_timestamp': image_info.get('original_timestamp', timestamp)
                         })
                         
                     else:
-                        print(f"[@heatmap_utils] Failed to download image for {image_info['host_name']}: HTTP {image_response.status_code}")
+                        print(f"[@heatmap_utils] No image data for {image_info['host_name']}: using placeholder")
                         # Add placeholder for missing image to keep grid layout
                         processed_images.append({
                             'host_name': image_info['host_name'],
                             'device_id': image_info['device_id'],
                             'image_data': None,
-                            'error': f'HTTP {image_response.status_code}'
+                            'error': 'No image data available'
                         })
                         
                 except Exception as e:
-                    print(f"[@heatmap_utils] Error downloading data for {image_info['host_name']}: {e}")
+                    print(f"[@heatmap_utils] Error processing data for {image_info['host_name']}: {e}")
                     # Add placeholder for error to keep grid layout
                     processed_images.append({
                         'host_name': image_info['host_name'],

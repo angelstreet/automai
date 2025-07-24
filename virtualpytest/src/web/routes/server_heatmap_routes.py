@@ -11,6 +11,7 @@ from flask import Blueprint, request, jsonify
 import asyncio
 import aiohttp
 from datetime import datetime, timedelta
+import time
 
 # Import database functions and utilities
 from src.lib.supabase.heatmap_db import (
@@ -70,7 +71,7 @@ def get_hosts_devices():
     return hosts_devices
 
 async def query_host_analysis(session, host_device, timeframe_minutes):
-    """Query single host for recent analysis data"""
+    """Query single host for recent analysis data and download images"""
     try:
         host_data = host_device['host_data']
         device_id = host_device['device_id']
@@ -91,11 +92,33 @@ async def query_host_analysis(session, host_device, timeframe_minutes):
             if response.status == 200:
                 result = await response.json()
                 if result.get('success'):
+                    analysis_data = result.get('analysis_data', [])
+                    
+                    # Download images for each analysis item
+                    for item in analysis_data:
+                        filename = item['filename']
+                        host_url_base = host_data.get('host_url', '').rstrip('/')
+                        image_url = f"{host_url_base}/host/stream/capture{device_id[-1]}/captures/{filename}"
+                        
+                        try:
+                            async with session.get(image_url, timeout=aiohttp.ClientTimeout(total=10)) as img_response:
+                                if img_response.status == 200:
+                                    item['image_data'] = await img_response.read()
+                                    item['image_url'] = image_url  # Keep URL for reference
+                                else:
+                                    print(f"[@query_host_analysis] Failed to download image {filename} from {host_name}: HTTP {img_response.status}")
+                                    item['image_data'] = None
+                                    item['image_url'] = image_url
+                        except Exception as img_error:
+                            print(f"[@query_host_analysis] Error downloading image {filename} from {host_name}: {img_error}")
+                            item['image_data'] = None
+                            item['image_url'] = image_url
+                    
                     return {
                         'host_name': host_name,
                         'device_id': device_id,
                         'success': True,
-                        'analysis_data': result.get('analysis_data', []),
+                        'analysis_data': analysis_data,
                         'host_data': host_data
                     }
             
@@ -156,7 +179,8 @@ def process_host_results(host_results):
                             'filename': filename,
                             'image_url': image_url,
                             'timestamp': timestamp,
-                            'analysis_json': item.get('analysis_json')  # Direct pass-through
+                            'analysis_json': item.get('analysis_json'),  # Direct pass-through
+                            'image_data': item.get('image_data')  # Pass through downloaded image data
                         }
                         
                         device_latest_by_bucket[bucket_key][device_key] = device_data
@@ -183,23 +207,17 @@ def get_data():
     team_id = get_team_id()
     
     try:
+        # Fetch analysis data from hosts
         hosts_devices = get_hosts_devices()
-        images_by_timestamp = {}
         
         if hosts_devices:
-            async def query_all_hosts():
-                async with aiohttp.ClientSession() as session:
-                    tasks = [query_host_analysis(session, hd, 1) for hd in hosts_devices]
-                    results = await asyncio.gather(*tasks, return_exceptions=True)
-                    return results
+            # Add small delay to allow analysis processing to complete
+            time.sleep(2)
             
-            try:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                host_results = loop.run_until_complete(query_all_hosts())
+            async with aiohttp.ClientSession() as session:
+                tasks = [query_host_analysis(session, hd, 1) for hd in hosts_devices]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
                 loop.close()
-            except Exception:
-                host_results = []
             
             images_by_timestamp = process_host_results(host_results)
         
@@ -245,6 +263,8 @@ def generate():
         images_by_timestamp = {}
         
         if hosts_devices:
+            # Add small delay to allow analysis processing to complete
+            time.sleep(2)
             async def query_all_hosts():
                 async with aiohttp.ClientSession() as session:
                     tasks = [query_host_analysis(session, hd, timeframe_minutes) for hd in hosts_devices]
