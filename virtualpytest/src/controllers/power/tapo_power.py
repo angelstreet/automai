@@ -68,7 +68,21 @@ class TapoPowerController(PowerControllerInterface):
                 
                 # Use asyncio.wait_for with timeout to fail early
                 print(f"[@controller:TapoPower] About to call asyncio.run() - Current thread: {threading.current_thread().name}")
-                asyncio.run(asyncio.wait_for(setup(), timeout=10.0))
+                
+                # Use smart event loop handling (same as PlaywrightUtils)
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # If loop is running, create a new thread
+                        import concurrent.futures
+                        with concurrent.futures.ThreadPoolExecutor() as executor:
+                            future = executor.submit(asyncio.run, asyncio.wait_for(setup(), timeout=10.0))
+                            future.result()
+                    else:
+                        loop.run_until_complete(asyncio.wait_for(setup(), timeout=10.0))
+                except RuntimeError:
+                    # No event loop exists, create one
+                    asyncio.run(asyncio.wait_for(setup(), timeout=10.0))
                 print(f"[@controller:TapoPower] Tapo client initialized successfully as {self.device_type_tapo}")
                 
                 # Cache the initialized client for reuse
