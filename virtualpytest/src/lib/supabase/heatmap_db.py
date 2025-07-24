@@ -63,7 +63,8 @@ def save_heatmap_to_db(
     html_r2_url: str,
     hosts_included: int = 0,
     hosts_total: int = 0,
-    incidents_count: int = 0
+    incidents_count: int = 0,
+    processing_time: float = None
 ) -> Optional[str]:
     """Save heatmap record to database."""
     try:
@@ -83,6 +84,7 @@ def save_heatmap_to_db(
             'hosts_included': hosts_included,
             'hosts_total': hosts_total,
             'incidents_count': incidents_count,
+            'processing_time': processing_time,
             'generated_at': datetime.now().isoformat()
         }
         
@@ -120,6 +122,7 @@ def get_recent_heatmaps(team_id: str, limit: int = 10) -> List[Dict]:
                 'hosts_included': heatmap.get('hosts_included', 0),
                 'hosts_total': heatmap.get('hosts_total', 0),
                 'incidents_count': heatmap.get('incidents_count', 0),
+                'processing_time': heatmap.get('processing_time'),
                 'generated_at': heatmap.get('generated_at')
             })
         
@@ -128,4 +131,25 @@ def get_recent_heatmaps(team_id: str, limit: int = 10) -> List[Dict]:
         
     except Exception as e:
         print(f"[@db:heatmap:get_recent_heatmaps] Error: {str(e)}")
-        return [] 
+        return []
+
+def update_heatmaps_with_html_url(job_id: str, html_r2_url: str) -> bool:
+    """Update all heatmap records for a job with the comprehensive HTML URL."""
+    try:
+        print(f"[@db:heatmap:update_heatmaps_with_html_url] Updating heatmaps for job: {job_id}")
+        
+        supabase = get_supabase()
+        result = supabase.table('heatmaps').update({
+            'html_r2_url': html_r2_url
+        }).eq('job_id', job_id).execute()
+        
+        if result.data:
+            print(f"[@db:heatmap:update_heatmaps_with_html_url] Updated {len(result.data)} records")
+            return True
+        else:
+            print(f"[@db:heatmap:update_heatmaps_with_html_url] No records updated")
+            return False
+            
+    except Exception as e:
+        print(f"[@db:heatmap:update_heatmaps_with_html_url] Error: {str(e)}")
+        return False 

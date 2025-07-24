@@ -418,8 +418,11 @@ def get_history():
             # Generate report name from timestamp
             report_name = f"Heatmap Report {formatted_timestamp}"
             
-            # Calculate processing time (placeholder - could be added to DB later)
-            processing_time = None
+            # Format processing time for display
+            processing_time = heatmap.get('processing_time')
+            if processing_time is not None:
+                # Round to 2 decimal places for display
+                processing_time = round(float(processing_time), 2)
             
             reports.append({
                 'id': heatmap.get('id'),

@@ -540,6 +540,13 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                     hosts_total = len(processed_images)
                     incidents_count = len([inc for inc in incidents if timestamp in inc.get('start_time', '')])
                     
+                    # Calculate processing time from job start
+                    current_processing_time = None
+                    with job_lock:
+                        job = active_jobs.get(job_id)
+                        if job and job.start_time:
+                            current_processing_time = (datetime.now() - job.start_time).total_seconds()
+                    
                     heatmap_id = save_heatmap_to_db(
                         team_id=team_id,
                         timestamp=timestamp,
@@ -552,7 +559,8 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                         html_r2_url=None, # No individual HTML URL for comprehensive report
                         hosts_included=hosts_included,
                         hosts_total=hosts_total,
-                        incidents_count=incidents_count
+                        incidents_count=incidents_count,
+                        processing_time=current_processing_time
                     )
                     
                     generated_images.append({
@@ -654,6 +662,17 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                 if html_upload['success']:
                     job.html_url = html_upload['html_url']  # Store single HTML URL
                     print(f"[@heatmap_utils] Comprehensive HTML report uploaded: {html_upload['html_url']}")
+                    
+                    # Update all database records for this job with the comprehensive HTML URL
+                    try:
+                        from src.lib.supabase.heatmap_db import update_heatmaps_with_html_url
+                        update_success = update_heatmaps_with_html_url(job_id, html_upload['html_url'])
+                        if update_success:
+                            print(f"[@heatmap_utils] Database records updated with HTML URL")
+                        else:
+                            print(f"[@heatmap_utils] Failed to update database records with HTML URL")
+                    except Exception as update_error:
+                        print(f"[@heatmap_utils] Error updating database with HTML URL: {update_error}")
                 else:
                     print(f"[@heatmap_utils] HTML report upload failed: {html_upload.get('error', 'Unknown')}")
                     
