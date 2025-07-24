@@ -158,10 +158,10 @@ const RecHostStreamModalContent: React.FC<{
 
   // Check if device has power control capability
   const hasPowerControl = useMemo(() => {
-    // Check if device has power controller in its controller types list
-    const controllerTypes = device?.device_controller_types;
-    return controllerTypes && controllerTypes.some((type) => type.includes('power'));
-  }, [device?.device_controller_types]);
+    // Check if device has power capability in its capabilities
+    const capabilities = device?.device_capabilities;
+    return capabilities && capabilities.power !== null && capabilities.power !== undefined;
+  }, [device?.device_capabilities]);
 
   // Handle remote/terminal toggle
   const handleToggleRemote = useCallback(() => {

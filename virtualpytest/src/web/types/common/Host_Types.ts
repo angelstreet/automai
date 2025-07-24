@@ -33,6 +33,7 @@ export interface ControllerObject {
 export interface DeviceCapabilities {
   av?: string; // 'hdmi_stream' | null
   remote?: string; // 'android_mobile' | 'android_tv' | 'appium' | null
+  power?: string; // 'tapo' | null
   verification?: string[]; // ['image', 'text', 'adb', 'appium']
 }
 
