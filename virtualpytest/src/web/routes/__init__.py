@@ -127,6 +127,7 @@ def _register_host_routes(app):
         ('host_verification_routes', 'host_verification_bp'),  # ✅ General verification
         ('host_script_routes', 'host_script_bp'),  # ✅ Script execution
         ('host_av_routes', 'host_av_bp'),  # ✅ Audio/Video operations
+        ('host_power_routes', 'host_power_bp'),  # ✅ Power control operations
         ('host_control_routes', 'host_control_bp'),  # ✅ Control operations
         ('host_heatmap_routes', 'host_heatmap_bp'),  # ✅ Heatmap data collection
         ('host_rec_routes', 'host_rec_bp'),  # ✅ Rec timeline and restart player data
