@@ -21,7 +21,7 @@ DEVICE_CONTROLLER_MAP = {
         'remote': ['android_tv'],
         'desktop': [],
         'web': [],
-        'power': [],
+        'power': ['tapo'],
         'network': [],
         'ai': ['ai_agent']
     },
@@ -39,7 +39,7 @@ DEVICE_CONTROLLER_MAP = {
         'remote': [],
         'desktop': [],
         'web': [],
-        'power': [],
+        'power': ['tapo'],  # Add tapo power controller for STB
         'network': [],
         'ai': ['ai_agent']
     },
@@ -57,7 +57,7 @@ DEVICE_CONTROLLER_MAP = {
         'remote': [],
         'desktop': ['bash'],  # Add bash desktop controller
         'web': ['playwright'],  # Add playwright web controller
-        'power': ['tapo'],  # Add tapo power controller
+        'power': [],  # Add tapo power controller
         'network': [],
         'ai': ['ai_agent']
     }
