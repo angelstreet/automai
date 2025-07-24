@@ -121,6 +121,12 @@ export const useHeatmap = () => {
     try {
       console.log('[@hook:useHeatmap:generateHeatmap] Starting heatmap generation');
 
+      // Add 5-second delay to ensure all analysis is complete before requesting data
+      console.log(
+        '[@hook:useHeatmap:generateHeatmap] Waiting 5 seconds for analysis completion...',
+      );
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
       const response = await fetch('/server/heatmap/generate', {
         method: 'POST',
         headers: {
