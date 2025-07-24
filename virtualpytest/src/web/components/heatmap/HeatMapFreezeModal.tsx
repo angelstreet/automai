@@ -125,7 +125,7 @@ export const HeatMapFreezeModal: React.FC<HeatMapFreezeModalProps> = ({
                   style={{
                     width: '100%',
                     height: '100%',
-                    objectFit: 'cover', // Fill the space
+                    objectFit: 'contain', // Keep original size and aspect ratio
                   }}
                   onError={(e) => {
                     // Try thumbnail version if original fails
