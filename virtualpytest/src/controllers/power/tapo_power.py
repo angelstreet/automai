@@ -14,6 +14,9 @@ from ..base_controller import PowerControllerInterface
 class TapoPowerController(PowerControllerInterface):
     """Tapo power controller using Tapo API commands."""
     
+    # Class-level cache for initialized clients (singleton pattern)
+    _clients_cache = {}
+    
     def __init__(self, device_ip: str, email: str, password: str, **kwargs):
         """
         Initialize the Tapo power controller.
@@ -43,25 +46,43 @@ class TapoPowerController(PowerControllerInterface):
         
         print(f"[@controller:TapoPower] Initialized for Tapo device {self.device_ip}")
         
-        # Initialize Tapo client and device
-        try:
-            from tapo import ApiClient
-            
-            async def setup():
-                self.client = ApiClient(self.email, self.password)
-                self.device = await self.client.p100(self.device_ip)
-                self.device_type_tapo = "p100"
-            
-            # Use asyncio.wait_for with timeout to fail early
-            asyncio.run(asyncio.wait_for(setup(), timeout=10.0))
-            print(f"[@controller:TapoPower] Tapo client initialized successfully as {self.device_type_tapo}")
-            
-        except asyncio.TimeoutError:
-            print(f"[@controller:TapoPower] Tapo client initialization timed out after 10 seconds")
-            raise ValueError(f"Tapo device {self.device_ip} connection timeout - check device availability")
-        except Exception as e:
-            print(f"[@controller:TapoPower] Failed to initialize Tapo client: {e}")
-            raise ValueError(f"Tapo device {self.device_ip} initialization failed: {e}")
+        # Check if client already exists for this device IP (singleton pattern)
+        cache_key = f"{self.device_ip}:{self.email}"
+        
+        if cache_key in TapoPowerController._clients_cache:
+            print(f"[@controller:TapoPower] Using cached client for device {self.device_ip}")
+            cached_data = TapoPowerController._clients_cache[cache_key]
+            self.client = cached_data['client']
+            self.device = cached_data['device']
+            self.device_type_tapo = cached_data['device_type']
+        else:
+            # Initialize Tapo client and device
+            try:
+                from tapo import ApiClient
+                
+                async def setup():
+                    self.client = ApiClient(self.email, self.password)
+                    self.device = await self.client.p100(self.device_ip)
+                    self.device_type_tapo = "p100"
+                
+                # Use asyncio.wait_for with timeout to fail early
+                asyncio.run(asyncio.wait_for(setup(), timeout=10.0))
+                print(f"[@controller:TapoPower] Tapo client initialized successfully as {self.device_type_tapo}")
+                
+                # Cache the initialized client for reuse
+                TapoPowerController._clients_cache[cache_key] = {
+                    'client': self.client,
+                    'device': self.device,
+                    'device_type': self.device_type_tapo
+                }
+                print(f"[@controller:TapoPower] Cached client for device {self.device_ip}")
+                
+            except asyncio.TimeoutError:
+                print(f"[@controller:TapoPower] Tapo client initialization timed out after 10 seconds")
+                raise ValueError(f"Tapo device {self.device_ip} connection timeout - check device availability")
+            except Exception as e:
+                print(f"[@controller:TapoPower] Failed to initialize Tapo client: {e}")
+                raise ValueError(f"Tapo device {self.device_ip} initialization failed: {e}")
         
     def connect(self) -> bool:
         """Connect to Tapo device (always returns True after init)."""
