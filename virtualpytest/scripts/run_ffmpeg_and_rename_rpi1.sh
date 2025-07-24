@@ -95,19 +95,18 @@ for index in "${!GRABBERS[@]}"; do
   IFS='|' read -r video_device audio_device capture_dir fps <<< "${GRABBERS[$index]}"
   
   # Build the FFMPEG command for display
-  FFMPEG_CMD="/usr/bin/ffmpeg -y -f v4l2 -framerate \"$fps\" -video_size 1920x1080 -i $video_device \
-    -f alsa -thread_queue_size 1024 -i \"$audio_device\" \
+  FFMPEG_CMD="/usr/bin/ffmpeg -y -f v4l2 -framerate \"$fps\" -video_size 1024x768 -i $video_device \
+    -f alsa -thread_queue_size 4096 -i \"$audio_device\" \
     -filter_complex \"[0:v]split=2[stream][capture];[stream]scale=640:360[streamout];[capture]fps=1[captureout]\" \
     -map \"[streamout]\" -map 1:a \
-    -c:v libx264 -preset veryfast -tune zerolatency -crf 28 -maxrate 1200k -bufsize 2400k -g 30 \
-    -pix_fmt yuv420p -profile:v baseline -level 3.0 \
-    -c:a aac -b:a 64k -ar 44100 -ac 2 \
+    -c:v h264_v4l2m2m -b:v 1200k -maxrate 1200k -bufsize 2400k -g 20 \
+    -c:a aac -b:a 64k -ar 48000 -ac 2 \
     -f hls -hls_time 2 -hls_list_size 5 -hls_flags delete_segments \
     -hls_segment_filename $capture_dir/segment_%03d.ts \
     $capture_dir/output.m3u8 \
     -map \"[captureout]\" -c:v mjpeg -q:v 5 -r 1 -f image2 \
     $capture_dir/captures/test_capture_%06d.jpg"
-  
+
   echo "FFMPEG Command for $video_device (audio: $audio_device):"
   echo "$FFMPEG_CMD"
   echo
