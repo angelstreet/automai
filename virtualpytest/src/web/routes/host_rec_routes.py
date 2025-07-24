@@ -22,13 +22,14 @@ def list_restart_images():
         data = request.get_json() or {}
         device_id = data.get('device_id', 'device1')
         timeframe_minutes = data.get('timeframe_minutes', 5)
+        max_frames = data.get('max_frames', None)  # Optional frame limit
         
         # Progressive loading parameters
         start_index = data.get('start_index', 0)  # Starting index for batch
         batch_size = data.get('batch_size', 20)   # How many to load
         metadata_only = data.get('metadata_only', False)  # Just get frame list without URLs
         
-        print(f"[@route:host_rec:list_restart_images] Device: {device_id}, Timeframe: {timeframe_minutes}min, Start: {start_index}, Batch: {batch_size}, MetadataOnly: {metadata_only}")
+        print(f"[@route:host_rec:list_restart_images] Device: {device_id}, Timeframe: {timeframe_minutes}min, MaxFrames: {max_frames}, Start: {start_index}, Batch: {batch_size}, MetadataOnly: {metadata_only}")
         
         # Get image controller for the specified device
         image_controller = get_controller(device_id, 'verification_image')
@@ -82,8 +83,13 @@ def list_restart_images():
                         'file_mtime': int(os.path.getmtime(filepath) * 1000)
                     })
         
-        # Sort by timestamp (newest first)
-        all_frames_metadata.sort(key=lambda x: x['timestamp'], reverse=True)
+        # Sort by timestamp (oldest first)
+        all_frames_metadata.sort(key=lambda x: x['timestamp'], reverse=False)
+        
+        # Apply max_frames limit if specified
+        if max_frames is not None and max_frames > 0:
+            all_frames_metadata = all_frames_metadata[:max_frames]
+            print(f"[@route:host_rec:list_restart_images] Limited to {max_frames} frames, got {len(all_frames_metadata)}")
         
         # If metadata_only, return just the frame list
         if metadata_only:
@@ -94,6 +100,7 @@ def list_restart_images():
                 'device_id': device_id,
                 'host_name': 'unknown',  # Skip host lookup for metadata-only
                 'timeframe_minutes': timeframe_minutes,
+                'max_frames': max_frames,
                 'metadata_only': True
             })
         
@@ -143,6 +150,7 @@ def list_restart_images():
             'device_id': device_id,
             'host_name': host_dict.get('host_name', 'unknown'),
             'timeframe_minutes': timeframe_minutes,
+            'max_frames': max_frames,
             'has_more': end_index < len(all_frames_metadata)
         })
         
