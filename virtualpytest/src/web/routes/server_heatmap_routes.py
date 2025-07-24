@@ -140,6 +140,7 @@ async def query_host_analysis(session, host_device, timeframe_minutes):
 def process_host_results(host_results):
     """Process host results and group by timestamp"""
     images_by_timestamp = {}
+    images_with_data_by_timestamp = {}  # For background processing with image data
     device_latest_by_bucket = {}
     
     for result in host_results:
@@ -173,25 +174,41 @@ def process_host_results(host_results):
                         host_url = host_data.get('host_url', '').rstrip('/')
                         image_url = f"{host_url}/host/stream/capture{device_id[-1]}/captures/{filename}"
                         
-                        device_data = {
+                        # Frontend data (without image bytes)
+                        frontend_device_data = {
+                            'host_name': result['host_name'],
+                            'device_id': result['device_id'],
+                            'filename': filename,
+                            'image_url': image_url,
+                            'timestamp': timestamp,
+                            'analysis_json': item.get('analysis_json')  # Direct pass-through
+                        }
+                        
+                        # Background processing data (with image bytes)
+                        background_device_data = {
                             'host_name': result['host_name'],
                             'device_id': result['device_id'],
                             'filename': filename,
                             'image_url': image_url,
                             'timestamp': timestamp,
                             'analysis_json': item.get('analysis_json'),  # Direct pass-through
-                            'image_data': item.get('image_data')  # Pass through downloaded image data
+                            'image_data': item.get('image_data')  # Image bytes for background processing
                         }
                         
-                        device_latest_by_bucket[bucket_key][device_key] = device_data
+                        device_latest_by_bucket[bucket_key][device_key] = {
+                            'frontend': frontend_device_data,
+                            'background': background_device_data
+                        }
                         
                 except Exception:
                     continue
     
+    # Separate frontend and background data
     for bucket_key, devices in device_latest_by_bucket.items():
-        images_by_timestamp[bucket_key] = list(devices.values())
+        images_by_timestamp[bucket_key] = [device_data['frontend'] for device_data in devices.values()]
+        images_with_data_by_timestamp[bucket_key] = [device_data['background'] for device_data in devices.values()]
     
-    return images_by_timestamp
+    return images_by_timestamp, images_with_data_by_timestamp
 
 # =====================================================
 # HEATMAP ENDPOINTS
@@ -229,7 +246,7 @@ def get_data():
             except Exception:
                 host_results = []
             
-            images_by_timestamp = process_host_results(host_results)
+            images_by_timestamp, images_with_data_by_timestamp = process_host_results(host_results)
         
         incidents = get_heatmap_incidents(team_id, 1)
         timeline_timestamps = sorted(images_by_timestamp.keys())
@@ -289,7 +306,7 @@ def generate():
             except Exception:
                 host_results = []
             
-            images_by_timestamp = process_host_results(host_results)
+            images_by_timestamp, images_with_data_by_timestamp = process_host_results(host_results)
         
         incidents = get_heatmap_incidents(team_id, timeframe_minutes)
         timeline_timestamps = sorted(images_by_timestamp.keys())
@@ -311,7 +328,7 @@ def generate():
         
         start_heatmap_generation(
             job_id, 
-            heatmap_data.get('images_by_timestamp', {}),
+            images_with_data_by_timestamp,  # Use background data with image bytes
             heatmap_data.get('incidents', []),
             heatmap_data,
             team_id  # Pass team_id to background thread
