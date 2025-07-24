@@ -171,8 +171,8 @@ def process_alert_with_memory_state(analysis_result, host_name, device_id, incid
                 enhanced_metadata['last_3_filenames'] = last_3_filenames
                 enhanced_metadata['last_3_thumbnails'] = last_3_thumbnails
                 
-                # Upload freeze frames to R2 if it's a freeze incident
-                if incident_type == 'freeze' and last_3_filenames:
+                # Upload frames to R2 for all incident types
+                if last_3_filenames:
                     r2_urls = upload_freeze_frames_to_r2(last_3_filenames, last_3_thumbnails, device_id, current_time)
                     if r2_urls:
                         enhanced_metadata['r2_images'] = r2_urls
@@ -284,8 +284,8 @@ def process_alert_directly(analysis_result, host_name, analysis_path):
                 enhanced_metadata['last_3_filenames'] = last_3_filenames
                 enhanced_metadata['last_3_thumbnails'] = last_3_thumbnails
                 
-                # Upload freeze frames to R2 if it's a freeze incident
-                if incident_type == 'freeze' and last_3_filenames:
+                # Upload frames to R2 for all incident types
+                if last_3_filenames:
                     r2_urls = upload_freeze_frames_to_r2(last_3_filenames, last_3_thumbnails, device_id, current_time)
                     if r2_urls:
                         enhanced_metadata['r2_images'] = r2_urls
