@@ -74,24 +74,27 @@ def generate_comprehensive_heatmap_html(all_heatmap_data: List[Dict]) -> str:
                             if device_has_incidents:
                                 has_incidents = True
                             
-                            # Generate status strings
-                            freeze_status = "Freeze Detected" if analysis_json.get('freeze', False) else "Normal"
-                            blackscreen_status = "Blackscreen" if analysis_json.get('blackscreen', False) else "Normal"
-                            audio_status = "No Audio" if not analysis_json.get('audio', True) else "Audio OK"
+                            # Generate table row (matching React component exactly)
+                            has_video = not analysis_json.get('blackscreen', False) and not analysis_json.get('freeze', False)
+                            has_audio = analysis_json.get('audio', True)
+                            volume_percentage = analysis_json.get('volume_percentage', 0)
+                            mean_volume_db = analysis_json.get('mean_volume_db', -100)
+                            blackscreen_percentage = analysis_json.get('blackscreen_percentage', 0)
+                            freeze_diffs = analysis_json.get('freeze_diffs', [])
                             
-                            error_class = "error" if has_error or device_has_incidents else ""
-                            error_info = f"<div style='color: #dc3545; font-size: 0.8em;'>Error: {item.get('error', 'No image')}</div>" if has_error else ""
+                            # Format freeze diffs as comma-separated string
+                            freeze_diffs_str = ', '.join(map(str, freeze_diffs)) if freeze_diffs else ''
                             
                             analysis_items.append(f"""
-                            <div class="analysis-item {error_class}">
-                                <h3>{host_name} - {device_id}</h3>
-                                <div class="analysis-data">
-                                    <div>Freeze: <strong>{freeze_status}</strong></div>
-                                    <div>Screen: <strong>{blackscreen_status}</strong></div>
-                                    <div>Audio: <strong>{audio_status}</strong></div>
-                                    {error_info}
-                                </div>
-                            </div>
+                            <tr>
+                                <td>{host_name}-{device_id}</td>
+                                <td><span class="chip {'success' if has_audio else 'error'}">{'Yes' if has_audio else 'No'}</span></td>
+                                <td><span class="chip {'success' if has_video else 'error'}">{'Yes' if has_video else 'No'}</span></td>
+                                <td>{volume_percentage}%</td>
+                                <td>{mean_volume_db} dB</td>
+                                <td><span class="{'text-success' if not analysis_json.get('blackscreen', False) else 'text-error'}">{'No' if not analysis_json.get('blackscreen', False) else f'Yes ({blackscreen_percentage}%)'}</span></td>
+                                <td><span class="{'text-success' if not analysis_json.get('freeze', False) else 'text-error'}">{'No' if not analysis_json.get('freeze', False) else f'Yes ({freeze_diffs_str})'}</span></td>
+                            </tr>
                             """)
             
             # Add to JavaScript data

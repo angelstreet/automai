@@ -20,12 +20,7 @@ def create_heatmap_html_template() -> str:
         }}
         .container {{ max-width: 1400px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
         .header {{ background: linear-gradient(135deg, #4a90e2, #357abd); color: white; padding: 20px; }}
-        .header h1 {{ font-size: 1.8em; margin-bottom: 8px; }}
-        .header .info {{ opacity: 0.9; font-size: 0.9em; display: flex; justify-content: space-between; align-items: center; }}
-        .stats {{ display: flex; gap: 20px; }}
-        .stat {{ display: flex; flex-direction: column; align-items: center; }}
-        .stat-value {{ font-size: 1.2em; font-weight: bold; }}
-        .stat-label {{ font-size: 0.8em; opacity: 0.8; }}
+        .header h1 {{ font-size: 1.4em; margin: 0; }}
         
         .mosaic-player {{ padding: 20px; }}
         .mosaic-container {{ 
@@ -59,12 +54,15 @@ def create_heatmap_html_template() -> str:
         .frame-counter {{ font-size: 0.9em; min-width: 60px; text-align: right; }}
         
         .analysis-section {{ padding: 20px; }}
-        .analysis-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px; }}
-        .analysis-item {{ background: #f8f9fa; padding: 15px; border-radius: 6px; border-left: 4px solid #4a90e2; }}
-        .analysis-item.error {{ border-left-color: #dc3545; }}
-        .analysis-item h3 {{ font-size: 1em; margin-bottom: 8px; color: #555; }}
-        .analysis-data {{ font-size: 0.9em; }}
-        .analysis-data div {{ margin: 2px 0; }}
+        .analysis-table {{ width: 100%; border-collapse: collapse; margin-top: 15px; background: white; }}
+        .analysis-table th {{ background: #f5f5f5; padding: 12px 8px; text-align: left; font-weight: bold; border-bottom: 1px solid #ddd; }}
+        .analysis-table td {{ padding: 8px; border-bottom: 1px solid #eee; }}
+        .analysis-table tr:hover {{ background-color: #f9f9f9; }}
+        .chip {{ display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.75em; font-weight: 500; }}
+        .chip.success {{ background-color: #e8f5e8; color: #2e7d32; }}
+        .chip.error {{ background-color: #ffebee; color: #c62828; }}
+        .text-success {{ color: #2e7d32; }}
+        .text-error {{ color: #c62828; }}
         
         .modal {{ display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); }}
         .modal.active {{ display: flex; justify-content: center; align-items: center; }}
@@ -75,24 +73,7 @@ def create_heatmap_html_template() -> str:
 <body>
     <div class="container">
         <div class="header">
-            <h1>Heatmap Analysis Report</h1>
-            <div class="info">
-                <div>Generated: {generated_at}</div>
-                <div class="stats">
-                    <div class="stat">
-                        <div class="stat-value">{total_devices}</div>
-                        <div class="stat-label">Devices</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-value">{total_timestamps}</div>
-                        <div class="stat-label">Timestamps</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-value">{incidents_count}</div>
-                        <div class="stat-label">Incidents</div>
-                    </div>
-                </div>
-            </div>
+            <h1>Heatmap Analysis Report - Generated: {generated_at} - {total_devices} Devices - {total_timestamps} Timestamps - {incidents_count} Incidents</h1>
         </div>
         
         <div class="mosaic-player">
@@ -114,9 +95,22 @@ def create_heatmap_html_template() -> str:
         
         <div class="analysis-section">
             <h2>Device Analysis</h2>
-            <div id="currentAnalysis" class="analysis-grid">
-                {first_analysis_items}
-            </div>
+            <table id="currentAnalysis" class="analysis-table">
+                <thead>
+                    <tr>
+                        <th>Device</th>
+                        <th>Audio</th>
+                        <th>Video</th>
+                        <th>Volume %</th>
+                        <th>Mean dB</th>
+                        <th>Blackscreen</th>
+                        <th>Freeze</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {first_analysis_items}
+                </tbody>
+            </table>
         </div>
     </div>
     
@@ -144,7 +138,7 @@ def create_heatmap_html_template() -> str:
             document.getElementById('frameCounter').textContent = `${{currentFrame + 1}} / ${{mosaicData.length}}`;
             
             // Update analysis
-            document.getElementById('currentAnalysis').innerHTML = data.analysis_html;
+            document.getElementById('currentAnalysis').getElementsByTagName('tbody')[0].innerHTML = data.analysis_html;
         }}
         
         function togglePlay() {{

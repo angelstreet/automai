@@ -26,6 +26,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 import { HeatMapAnalysisSection } from '../components/heatmap/HeatMapAnalysisSection';
 import { HeatMapFreezeModal } from '../components/heatmap/HeatMapFreezeModal';
+import { HeatMapHistory } from '../components/heatmap/HeatMapHistory';
 import { MonitoringOverlay } from '../components/monitoring/MonitoringOverlay';
 import { useHeatmap, HeatmapData, HeatmapImage } from '../hooks/pages/useHeatmap';
 
@@ -951,6 +952,10 @@ const Heatmap: React.FC = () => {
         analysisExpanded={analysisExpanded}
         onToggleExpanded={() => setAnalysisExpanded(!analysisExpanded)}
       />
+
+      {/* Heatmap History Section */}
+      <HeatMapHistory />
+
       {renderTooltip()}
       <HeatMapFreezeModal
         freezeModalOpen={freezeModalOpen}
