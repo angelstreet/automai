@@ -45,17 +45,15 @@ class HeatmapJob:
             end_time = self.end_time or datetime.now()
             processing_time = (end_time - self.start_time).total_seconds()
         
-        # Extract HTML URLs from result if available
-        html_urls = []
-        if hasattr(self, 'result') and self.result and 'generated_images' in self.result:
-            html_urls = [img.get('html_url') for img in self.result['generated_images'] if img.get('html_url')]
+        # Get single HTML URL if available
+        html_url = getattr(self, 'html_url', None)
             
         return {
             'job_id': self.job_id,
             'status': self.status,
             'progress': self.progress,
             'mosaic_urls': self.mosaic_urls,
-            'html_urls': html_urls,  # Add HTML report URLs
+            'html_url': html_url,  # Single HTML report URL
             'error': self.error,
             'created_at': self.created_at.isoformat(),
             'processing_time': processing_time,
@@ -542,21 +540,8 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                 metadata_r2_path = f"heatmaps/{timestamp}/metadata.json"
                 metadata_upload = uploader.upload_file(temp_json_path, metadata_r2_path)
                 
-                # Generate and upload HTML report
-                from src.utils.heatmap_report_utils import generate_heatmap_html
-                from src.utils.cloudflare_utils import upload_heatmap_html
-                
-                html_content = generate_heatmap_html({
-                    'timestamp': timestamp,
-                    'mosaic_url': mosaic_upload['url'] if mosaic_upload['success'] else '',
-                    'analysis_data': serializable_analysis,
-                    'incidents': [inc for inc in incidents if timestamp in inc.get('start_time', '')]
-                })
-                
-                html_upload = upload_heatmap_html(html_content, timestamp)
-                
-                # Only proceed if all uploads succeed
-                if mosaic_upload['success'] and metadata_upload['success'] and html_upload['success']:
+                # Only proceed if uploads succeed (no individual HTML generation)
+                if mosaic_upload['success'] and metadata_upload['success']:
                     # Save to database using passed team_id
                     from src.lib.supabase.heatmap_db import save_heatmap_to_db
                     
@@ -572,8 +557,8 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                         mosaic_r2_url=mosaic_upload['url'],
                         metadata_r2_path=metadata_r2_path,
                         metadata_r2_url=metadata_upload['url'],
-                        html_r2_path=html_upload['html_path'],
-                        html_r2_url=html_upload['html_url'],
+                        html_r2_path=None, # No individual HTML path for comprehensive report
+                        html_r2_url=None, # No individual HTML URL for comprehensive report
                         hosts_included=hosts_included,
                         hosts_total=hosts_total,
                         incidents_count=incidents_count
@@ -583,15 +568,15 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                         'timestamp': timestamp,
                         'mosaic_url': mosaic_upload['url'],
                         'metadata_url': metadata_upload['url'],
-                        'html_url': html_upload['html_url'],
+                        'html_url': None, # No individual HTML URL for comprehensive report
                         'heatmap_id': heatmap_id,
                         'r2_paths': {
                             'mosaic': mosaic_r2_path,
                             'metadata': metadata_r2_path,
-                            'html': html_upload['html_path']
+                            'html': None # No individual HTML path for comprehensive report
                         }
                     })
-                    print(f"[@heatmap_utils] Successfully uploaded heatmap with HTML for timestamp {timestamp}")
+                    print(f"[@heatmap_utils] Successfully uploaded heatmap with metadata for timestamp {timestamp}")
                 else:
                     # Upload failed - raise exception to fail the job
                     errors = []
@@ -599,8 +584,6 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                         errors.append(f"Mosaic: {mosaic_upload.get('error', 'Unknown')}")
                     if not metadata_upload['success']:
                         errors.append(f"Metadata: {metadata_upload.get('error', 'Unknown')}")
-                    if not html_upload['success']:
-                        errors.append(f"HTML: {html_upload.get('error', 'Unknown')}")
                     
                     error_msg = f"R2 upload failed - {', '.join(errors)}"
                     print(f"[@heatmap_utils] {error_msg}")
@@ -641,6 +624,39 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
             job.end_time = datetime.now()  # Record when processing completed
             # Set mosaic_urls for frontend consumption
             job.mosaic_urls = [img['mosaic_url'] for img in generated_images]
+            
+            # Generate ONE comprehensive HTML report with all mosaics
+            try:
+                from src.utils.heatmap_report_utils import generate_comprehensive_heatmap_html
+                from src.utils.cloudflare_utils import upload_heatmap_html
+                
+                # Prepare all heatmap data for comprehensive report
+                all_heatmap_data = []
+                for img in generated_images:
+                    heatmap_data = {
+                        'timestamp': img['timestamp'],
+                        'mosaic_url': img['mosaic_url'],
+                        'analysis_data': [item for item in processed_images if item.get('original_timestamp') == img['timestamp']],
+                        'incidents': [inc for inc in incidents if img['timestamp'] in inc.get('start_time', '')]
+                    }
+                    all_heatmap_data.append(heatmap_data)
+                
+                # Generate comprehensive HTML
+                html_content = generate_comprehensive_heatmap_html(all_heatmap_data)
+                
+                # Upload ONE HTML report for the entire job
+                job_timestamp = timestamps[0] if timestamps else datetime.now().strftime('%Y%m%d%H%M%S')
+                html_upload = upload_heatmap_html(html_content, job_timestamp)
+                
+                if html_upload['success']:
+                    job.html_url = html_upload['html_url']  # Store single HTML URL
+                    print(f"[@heatmap_utils] Comprehensive HTML report uploaded: {html_upload['html_url']}")
+                else:
+                    print(f"[@heatmap_utils] HTML report upload failed: {html_upload.get('error', 'Unknown')}")
+                    
+            except Exception as html_error:
+                print(f"[@heatmap_utils] HTML report generation failed: {html_error}")
+            
             job.result = {
                 'generated_images': generated_images,
                 'total_timestamps': total_timestamps,

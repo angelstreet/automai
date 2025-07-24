@@ -670,20 +670,18 @@ const Heatmap: React.FC = () => {
                 )}
 
                 {/* HTML Report Link */}
-                {currentGeneration?.status === 'completed' &&
-                  currentGeneration?.html_urls &&
-                  currentGeneration.html_urls.length > 0 && (
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      href={currentGeneration.html_urls[0]}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      sx={{ ml: 1 }}
-                    >
-                      View Report
-                    </Button>
-                  )}
+                {currentGeneration?.status === 'completed' && currentGeneration?.html_url && (
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    href={currentGeneration.html_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{ ml: 1 }}
+                  >
+                    View Report
+                  </Button>
+                )}
               </Box>
             </Box>
           </CardContent>
