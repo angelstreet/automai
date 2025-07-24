@@ -126,7 +126,7 @@ class CaptureMonitor:
             logger.error(f"Error finding recent frames in {capture_dir}: {e}")
             return []
 
-    def process_recent_frames(self, capture_dir):
+    def process_recent_frames(self, capture_dir, device_id):
         """Process recent unanalyzed frames in a capture directory"""
         try:
             # Find recent frames that need analysis
@@ -207,7 +207,7 @@ class CaptureMonitor:
         
         while self.running:
             try:
-                self.process_recent_frames(capture_dir)
+                self.process_recent_frames(capture_dir, device_id)
                 
                 # Sleep in small intervals to allow quick shutdown
                 for _ in range(UNIFIED_ANALYSIS_INTERVAL):
