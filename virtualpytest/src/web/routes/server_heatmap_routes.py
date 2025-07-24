@@ -209,15 +209,25 @@ def get_data():
     try:
         # Fetch analysis data from hosts
         hosts_devices = get_hosts_devices()
+        images_by_timestamp = {}
         
         if hosts_devices:
             # Add small delay to allow analysis processing to complete
             time.sleep(2)
             
-            async with aiohttp.ClientSession() as session:
-                tasks = [query_host_analysis(session, hd, 1) for hd in hosts_devices]
-                results = await asyncio.gather(*tasks, return_exceptions=True)
+            async def query_all_hosts():
+                async with aiohttp.ClientSession() as session:
+                    tasks = [query_host_analysis(session, hd, 1) for hd in hosts_devices]
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+                    return results
+            
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                host_results = loop.run_until_complete(query_all_hosts())
                 loop.close()
+            except Exception:
+                host_results = []
             
             images_by_timestamp = process_host_results(host_results)
         
