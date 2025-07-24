@@ -383,4 +383,59 @@ def cancel(job_id):
             return jsonify({'error': 'Job not found or cannot be cancelled'}), 404
             
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@server_heatmap_bp.route('/history', methods=['GET'])
+def get_history():
+    """Get recent heatmap reports history"""
+    error = check_supabase()
+    if error:
+        return error
+        
+    team_id = get_team_id()
+    
+    try:
+        limit = request.args.get('limit', 10, type=int)
+        
+        from src.lib.supabase.heatmap_db import get_recent_heatmaps
+        heatmaps = get_recent_heatmaps(team_id, limit)
+        
+        # Transform data to match frontend expectations
+        reports = []
+        for heatmap in heatmaps:
+            # Format timestamp for display
+            timestamp = heatmap.get('timestamp', '')
+            if timestamp:
+                try:
+                    # Parse timestamp and format for display
+                    dt = datetime.strptime(timestamp, '%Y%m%d%H%M%S')
+                    formatted_timestamp = dt.strftime('%Y-%m-%d %H:%M:%S')
+                except:
+                    formatted_timestamp = timestamp
+            else:
+                formatted_timestamp = 'Unknown'
+            
+            # Generate report name from timestamp
+            report_name = f"Heatmap Report {formatted_timestamp}"
+            
+            # Calculate processing time (placeholder - could be added to DB later)
+            processing_time = None
+            
+            reports.append({
+                'id': heatmap.get('id'),
+                'timestamp': formatted_timestamp,
+                'name': report_name,
+                'html_url': heatmap.get('html_r2_url'),
+                'devices_count': heatmap.get('hosts_included', 0),
+                'incidents_count': heatmap.get('incidents_count', 0),
+                'processing_time': processing_time,
+                'created_at': heatmap.get('generated_at')
+            })
+        
+        return jsonify({
+            'success': True,
+            'reports': reports
+        })
+            
+    except Exception as e:
         return jsonify({'error': str(e)}), 500 
