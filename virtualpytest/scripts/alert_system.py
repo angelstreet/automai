@@ -23,6 +23,35 @@ console_handler = logging.StreamHandler()
 console_handler.setFormatter(log_formatter)
 logger.addHandler(console_handler)
 
+# ==================== DATABASE IMPORTS (EXACTLY AS BEFORE) ====================
+# Lazy import to reduce startup time
+create_alert_safe = None
+create_alert = None
+resolve_alert = None
+get_active_alerts = None
+
+def _lazy_import_db():
+    """Lazy import database functions only when needed."""
+    global create_alert_safe, create_alert, resolve_alert, get_active_alerts
+    if create_alert_safe is None:
+        try:
+            # Add the parent directory to sys.path to import from src
+            import sys
+            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+            
+            from src.lib.supabase.alerts_db import create_alert_safe as _create_alert_safe, create_alert as _create_alert, resolve_alert as _resolve_alert, get_active_alerts as _get_active_alerts
+            create_alert_safe = _create_alert_safe
+            create_alert = _create_alert
+            resolve_alert = _resolve_alert
+            get_active_alerts = _get_active_alerts
+            logger.info("Database functions imported successfully")
+        except ImportError as e:
+            logger.warning(f"Could not import alerts_db module: {e}. Database operations will be skipped.")
+            create_alert_safe = False  # Mark as attempted
+            create_alert = False
+            resolve_alert = False
+            get_active_alerts = False
+
 # ==================== LOCAL STATE MANAGEMENT ====================
 def get_device_state_file(analysis_path):
     """Get the incidents.json path for the device from analysis path"""
@@ -217,11 +246,11 @@ def create_incident_in_db(incident_type, host_name, device_id, analysis_result, 
     try:
         logger.info(f"DB INSERT: Creating {incident_type} incident for {device_id}" + (f" ({issue_type})" if issue_type else ""))
         
-        # Import database function exactly as before
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-        from src.lib.supabase.alerts_db import create_alert_safe
+        # Use lazy import exactly as before
+        _lazy_import_db()
+        if not create_alert_safe or create_alert_safe is False:
+            logger.warning("Database module not available, skipping alert creation")
+            return None
         
         # Enhance metadata with issue_type for video incidents
         enhanced_metadata = analysis_result.copy()
@@ -256,22 +285,25 @@ def resolve_incident_in_db(alert_id):
     try:
         logger.info(f"DB UPDATE: Resolving incident {alert_id}")
         
-        # Import database function exactly as before
-        import sys
-        import os
-        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-        from src.lib.supabase.alerts_db import resolve_alert
+        # Use lazy import exactly as before
+        _lazy_import_db()
+        if not resolve_alert or resolve_alert is False:
+            logger.warning("Database module not available, skipping alert resolution")
+            return False
         
         # Call database exactly as before
         result = resolve_alert(alert_id)
         
         if result.get('success'):
             logger.info(f"DB UPDATE SUCCESS: Resolved alert {alert_id}")
+            return True
         else:
             logger.error(f"DB UPDATE FAILED: {result.get('error')}")
+            return False
         
     except Exception as e:
         logger.error(f"DB ERROR: Failed to resolve incident {alert_id}: {e}")
+        return False
 
 # ==================== UTILITY FUNCTIONS ====================
 def extract_device_id(analysis_path):
