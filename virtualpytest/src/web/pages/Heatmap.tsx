@@ -231,19 +231,20 @@ const Heatmap: React.FC = () => {
     };
   }, []);
 
-  // Load data directly from generation object (no cache, no fallbacks)
+  // Load data ONLY from completed generation object (no fallbacks, no random data)
   useEffect(() => {
-    if (currentGeneration?.heatmap_data) {
-      // Use data directly from generation object - fail if no data
+    if (currentGeneration?.status === 'completed' && currentGeneration?.heatmap_data) {
+      // Only use data from completed generation - no fallbacks
       const generationData = currentGeneration.heatmap_data;
-      console.log('[@component:Heatmap] Using data directly from generation object');
+      console.log('[@component:Heatmap] Using completed generation data');
       setHeatmapData(generationData);
       setTotalFrames(generationData.timeline_timestamps.length);
-    } else if (currentGeneration) {
-      // Clear data if no heatmap_data - no fallbacks
-      console.log('[@component:Heatmap] No heatmap_data in generation object - clearing data');
+    } else {
+      // Clear data if no completed generation data - no fallbacks, no random data
+      console.log('[@component:Heatmap] No completed generation data - clearing display');
       setHeatmapData(null);
       setTotalFrames(0);
+      setCurrentFrame(0);
     }
   }, [currentGeneration]);
 

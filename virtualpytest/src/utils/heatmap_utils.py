@@ -625,6 +625,29 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
             # Set mosaic_urls for frontend consumption
             job.mosaic_urls = [img['mosaic_url'] for img in generated_images]
             
+            # Set heatmap_data with complete analysis data ONLY on completion
+            job.heatmap_data = {
+                'hosts_devices': [
+                    {'host_name': host_name, 'device_id': device_id}
+                    for host_name, device_id in set((img['host_name'], img['device_id']) for img in processed_images if img.get('host_name') and img.get('device_id'))
+                ],
+                'images_by_timestamp': {
+                    timestamp: [
+                        {
+                            'host_name': img['host_name'],
+                            'device_id': img['device_id'],
+                            'image_url': '',  # Not needed for frontend analysis display
+                            'timestamp': timestamp,
+                            'analysis_json': img.get('analysis_json', {})
+                        }
+                        for img in processed_images if img.get('original_timestamp') == timestamp
+                    ]
+                    for timestamp in timestamps
+                },
+                'incidents': incidents,
+                'timeline_timestamps': timestamps
+            }
+            
             # Generate ONE comprehensive HTML report with all mosaics
             try:
                 from src.utils.heatmap_report_utils import generate_comprehensive_heatmap_html

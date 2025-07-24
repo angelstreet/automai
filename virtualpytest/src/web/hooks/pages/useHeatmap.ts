@@ -144,13 +144,8 @@ export const useHeatmap = () => {
           progress: 0,
         };
 
-        // Store the exact data used for generation in the generation object
-        if (result.heatmap_data) {
-          generation.heatmap_data = result.heatmap_data;
-          console.log(
-            '[@hook:useHeatmap:generateHeatmap] Stored heatmap data in generation object',
-          );
-        }
+        // Do NOT store heatmap_data during generation start
+        // Only store it when job completes via status polling
 
         setCurrentGeneration(generation);
         console.log(
