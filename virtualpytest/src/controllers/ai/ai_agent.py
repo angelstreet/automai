@@ -84,7 +84,7 @@ class AIAgentController(BaseController):
             from src.utils.script_utils import (
                 setup_script_environment,
                 select_device, 
-                execute_navigation_step_directly,
+                execute_navigation_with_verifications,
                 load_navigation_tree
             )
             
@@ -132,7 +132,7 @@ class AIAgentController(BaseController):
                 print(f"AI[{self.device_name}]: Executing transition {step_num}/{len(path_sequence)}: {from_node} → {to_node}")
                 
                 # Execute the navigation step directly (same as validation.py)
-                result = execute_navigation_step_directly(host, selected_device, transition, team_id)
+                result = execute_navigation_with_verifications(host, selected_device, transition, team_id, tree_id)
                 
                 if not result['success']:
                     return {'success': False, 'error': f"Navigation failed at transition {step_num}: {result.get('error', 'Unknown error')}"}
