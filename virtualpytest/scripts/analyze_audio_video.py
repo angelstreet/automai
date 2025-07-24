@@ -57,7 +57,7 @@ def get_capture_directory_from_image(image_path):
     captures_dir = os.path.dirname(image_path)  # .../captures/
     return os.path.dirname(captures_dir)  # .../capture1/
 
-def find_latest_audio_segment(capture_dir):
+def find_latest_audio_segment(capture_dir, device_id="unknown"):
     """Find the most recent HLS segment file"""
     try:
         pattern = os.path.join(capture_dir, "segment_*.ts")
@@ -75,12 +75,13 @@ def find_latest_audio_segment(capture_dir):
         max_age_seconds = 300  # 5 minutes
         
         if age_seconds > max_age_seconds:
+            logger.debug(f"[{device_id}] Audio segment too old: {age_seconds:.1f}s > {max_age_seconds}s")
             return None
         return latest
     except Exception:
         return None
 
-def analyze_audio_volume(segment_path):
+def analyze_audio_volume(segment_path, device_id="unknown"):
     """Analyze audio volume using FFmpeg volumedetect"""
     try:
         cmd = ['/usr/bin/ffmpeg', '-i', segment_path, '-af', 'volumedetect', '-vn', '-f', 'null', '/dev/null']
@@ -100,7 +101,8 @@ def analyze_audio_volume(segment_path):
         has_audio = volume_percentage > 5  # 5% threshold
         
         return has_audio, int(volume_percentage), mean_volume
-    except Exception:
+    except Exception as e:
+        logger.warning(f"[{device_id}] Audio analysis failed: {e}")
         return False, 0, -100.0
 
 def get_cache_file_path(image_path):
@@ -139,7 +141,7 @@ def get_cached_frame_data(cache, filename):
             return cache[key]['data']
     return None
 
-def analyze_blackscreen(image_path, threshold=10):
+def analyze_blackscreen(image_path, threshold=10, device_id="unknown"):
     """Detect if image is mostly black (blackscreen)"""
     try:
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
@@ -153,12 +155,12 @@ def analyze_blackscreen(image_path, threshold=10):
         
         # If >95% of pixels are very dark, it's blackscreen
         is_blackscreen = dark_percentage > 95
-        logger.info(f"Blackscreen check: {dark_percentage:.1f}% pixels <= {threshold} ({'BLACKSCREEN' if is_blackscreen else 'Normal'})")
+        logger.info(f"[{device_id}] Blackscreen check: {dark_percentage:.1f}% pixels <= {threshold} ({'BLACKSCREEN' if is_blackscreen else 'Normal'})")
         return is_blackscreen
     except Exception:
         return False
 
-def analyze_freeze(image_path, previous_frames_cache=None):
+def analyze_freeze(image_path, previous_frames_cache=None, device_id="unknown"):
     """Detect if image is frozen (identical to previous frames)"""
     try:
         cache_file_path = get_cache_file_path(image_path)
@@ -262,19 +264,19 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             'last_updated': current_timestamp
         }
         
-        logger.info(f"Freeze check: {'FREEZE' if is_frozen else 'Normal'} (diffs: {mean_diff_1vs2:.2f}, {mean_diff_1vs3:.2f}, {mean_diff_2vs3:.2f})")
-        logger.debug(f"Freeze details: {freeze_details}")
+        logger.info(f"[{device_id}] Freeze check: {'FREEZE' if is_frozen else 'Normal'} (diffs: {mean_diff_1vs2:.2f}, {mean_diff_1vs3:.2f}, {mean_diff_2vs3:.2f})")
+        logger.debug(f"[{device_id}] Freeze details: {freeze_details}")
         
         # Save cache after logging results to avoid exception affecting return value
         try:
             save_frame_cache(cache_file_path, new_cache)
         except Exception as cache_error:
-            logger.warning(f"Failed to save frame cache: {cache_error}")
+            logger.warning(f"[{device_id}] Failed to save frame cache: {cache_error}")
         
         return is_frozen, freeze_details
         
     except Exception as e:
-        logger.error(f"Freeze analysis failed: {e}")
+        logger.error(f"[{device_id}] Freeze analysis failed: {e}")
         return False, None
 
 
@@ -293,33 +295,33 @@ def main():
         print(f"Error: Invalid image file: {image_path}", file=sys.stderr)
         sys.exit(1)
     
-    print(f"Processing: {os.path.basename(image_path)} (unified analysis)")
+    print(f"[{device_id if device_id else 'unknown'}] Processing: {os.path.basename(image_path)} (unified analysis)")
     
     try:
         # Use thumbnail for analysis (fast and efficient)
         thumbnail_path = image_path.replace('.jpg', '_thumbnail.jpg')
         if not os.path.exists(thumbnail_path):
-            print(f"Thumbnail not found: {os.path.basename(thumbnail_path)}")
+            print(f"[{device_id if device_id else 'unknown'}] Thumbnail not found: {os.path.basename(thumbnail_path)}")
             return
         
-        print(f"Analyzing: {os.path.basename(thumbnail_path)}")
+        print(f"[{device_id}] Analyzing: {os.path.basename(thumbnail_path)}")
         
         # Video Analysis
-        blackscreen = analyze_blackscreen(thumbnail_path)
-        frozen, freeze_details = analyze_freeze(thumbnail_path)
+        blackscreen = analyze_blackscreen(thumbnail_path, device_id=device_id)
+        frozen, freeze_details = analyze_freeze(thumbnail_path, device_id=device_id)
         
         # Audio Analysis
         capture_dir = get_capture_directory_from_image(image_path)
-        segment_path = find_latest_audio_segment(capture_dir)
+        segment_path = find_latest_audio_segment(capture_dir, device_id=device_id)
         
         if segment_path:
-            has_audio, volume_percentage, mean_volume_db = analyze_audio_volume(segment_path)
+            has_audio, volume_percentage, mean_volume_db = analyze_audio_volume(segment_path, device_id=device_id)
             analyzed_segment = os.path.basename(segment_path)
-            logger.info(f"Audio analysis: {volume_percentage}% volume, audio={'Yes' if has_audio else 'No'}")
+            logger.info(f"[{device_id}] Audio analysis: {volume_percentage}% volume, audio={'Yes' if has_audio else 'No'}")
         else:
             has_audio, volume_percentage, mean_volume_db = False, 0, -100.0
             analyzed_segment = "no_recent_segment"
-            logger.warning("Audio analysis: No recent segments found")
+            logger.warning(f"[{device_id}] Audio analysis: No recent segments found")
         
         # Get blackscreen percentage for consistency
         blackscreen_percentage = 0
@@ -380,8 +382,8 @@ def main():
         with open(json_path, 'w') as f:
             json.dump(result, f, indent=2)
         
-        logger.info(f"Analysis complete: {json_filename}")
-        logger.info(f"Results: blackscreen={blackscreen}, freeze={frozen}, audio={has_audio}")
+        logger.info(f"[{device_id}] Analysis complete: {json_filename}")
+        logger.info(f"[{device_id}] Results: blackscreen={blackscreen}, freeze={frozen}, audio={has_audio}")
         
         # Process alerts with memory-based incident state
         if host_name and device_id and incident_state_json:
@@ -392,7 +394,7 @@ def main():
                 sys.path.append(os.path.dirname(__file__))
                 from alert_system import process_alert_with_memory_state
                 
-                logger.info(f"Processing alerts for host: {host_name}, device: {device_id}")
+                logger.info(f"[{device_id}] Processing alerts for host: {host_name}, device: {device_id}")
                 updated_state = process_alert_with_memory_state(
                     analysis_result=result,
                     host_name=host_name,
@@ -403,18 +405,18 @@ def main():
                 # Output updated state for capture_monitor to read
                 print(f"INCIDENT_STATE:{json.dumps(updated_state)}")
                 
-                logger.info(f"Alert processed with memory state (host: {host_name}, device: {device_id})")
+                logger.info(f"[{device_id}] Alert processed with memory state (host: {host_name}, device: {device_id})")
             except ImportError as e:
-                logger.error(f"Could not import alert_system: {e}")
+                logger.error(f"[{device_id}] Could not import alert_system: {e}")
             except Exception as e:
-                logger.error(f"Alert processing failed: {e}")
+                logger.error(f"[{device_id}] Alert processing failed: {e}")
         elif host_name:
-            logger.warning("Missing device_id or incident state, skipping alert processing")
+            logger.warning(f"[{device_id}] Missing device_id or incident state, skipping alert processing")
         else:
-            logger.warning("Host name not provided, skipping alert processing")
+            logger.warning(f"[{device_id}] Host name not provided, skipping alert processing")
         
     except Exception as e:
-        print(f"Analysis failed: {e}", file=sys.stderr)
+        print(f"[{device_id if 'device_id' in locals() else 'unknown'}] Analysis failed: {e}", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == '__main__':

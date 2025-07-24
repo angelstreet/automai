@@ -146,7 +146,7 @@ def process_alert_with_memory_state(analysis_result, host_name, device_id, incid
         current_time = datetime.now().isoformat()
         state_changed = False
         
-        logger.info(f"{device_id}: Video: {video_issue}, Audio: {audio_issue}, Incidents: {current_incidents}, Active: {list(active_incidents.keys())}")
+        logger.info(f"[{device_id}] Analysis: Video={video_issue}, Audio={audio_issue}, Current={current_incidents}, Active={list(active_incidents.keys())}")
         
         # Process each specific incident type (CONSISTENT WITH DIRECT PROCESSING)
         for incident_type in ['blackscreen', 'freeze', 'audio_loss']:
@@ -155,7 +155,7 @@ def process_alert_with_memory_state(analysis_result, host_name, device_id, incid
             
             if is_active and not was_active:
                 # NEW INCIDENT - Create in DB
-                logger.info(f"{device_id}: NEW {incident_type} incident detected")
+                logger.info(f"[{device_id}] NEW {incident_type} incident detected")
                 
                 # Prepare enhanced metadata with all details
                 enhanced_metadata = analysis_result.copy()
@@ -193,15 +193,15 @@ def process_alert_with_memory_state(analysis_result, host_name, device_id, incid
                 incident_data = active_incidents[incident_type]
                 incident_data["consecutive_count"] += 1
                 incident_data["last_updated"] = current_time
-                logger.info(f"{device_id}: {incident_type} ongoing (count: {incident_data['consecutive_count']})")
+                logger.info(f"[{device_id}] {incident_type} ongoing (count: {incident_data['consecutive_count']})")
                 state_changed = True
                 
             elif not is_active and was_active:
                 # INCIDENT RESOLVED
                 incident_data = active_incidents[incident_type]
-                logger.info(f"{device_id}: RESOLVED {incident_type} incident (duration: {incident_data['consecutive_count']} detections)")
+                logger.info(f"[{device_id}] RESOLVED {incident_type} incident (duration: {incident_data['consecutive_count']} detections)")
                 
-                resolve_incident_in_db(incident_data["alert_id"])
+                resolve_incident_in_db(incident_data["alert_id"], device_id)
                 del active_incidents[incident_type]
                 state_changed = True
         
@@ -212,12 +212,12 @@ def process_alert_with_memory_state(analysis_result, host_name, device_id, incid
         }
         
         if state_changed:
-            logger.info(f"{device_id}: State updated - Active incidents: {list(active_incidents.keys())}")
+            logger.info(f"[{device_id}] State updated - Active incidents: {list(active_incidents.keys())}")
         
         return updated_state
         
     except Exception as e:
-        logger.error(f"Error processing alert for {device_id}: {e}")
+        logger.error(f"[{device_id}] Error processing alert for {device_id}: {e}")
         # Return original state on error
         return incident_state
 
@@ -257,7 +257,7 @@ def process_alert_directly(analysis_result, host_name, analysis_path):
         current_time = datetime.now().isoformat()
         state_changed = False
         
-        logger.info(f"{device_id}: Video: {video_issue}, Audio: {audio_issue}, Incidents: {current_incidents}, Active: {list(active_incidents.keys())}")
+        logger.info(f"[{device_id}] Analysis: Video={video_issue}, Audio={audio_issue}, Current={current_incidents}, Active={list(active_incidents.keys())}")
         
         # Process each specific incident type
         for incident_type in ['blackscreen', 'freeze', 'audio_loss']:
@@ -266,7 +266,7 @@ def process_alert_directly(analysis_result, host_name, analysis_path):
             
             if is_active and not was_active:
                 # NEW INCIDENT - Create in DB
-                logger.info(f"{device_id}: NEW {incident_type} incident detected")
+                logger.info(f"[{device_id}] NEW {incident_type} incident detected")
                 
                 # Prepare enhanced metadata with all details
                 enhanced_metadata = analysis_result.copy()
@@ -306,15 +306,15 @@ def process_alert_directly(analysis_result, host_name, analysis_path):
                 incident_data = active_incidents[incident_type]
                 incident_data["consecutive_count"] += 1
                 incident_data["last_updated"] = current_time
-                logger.info(f"{device_id}: {incident_type} ongoing (count: {incident_data['consecutive_count']})")
+                logger.info(f"[{device_id}] {incident_type} ongoing (count: {incident_data['consecutive_count']})")
                 state_changed = True
                 
             elif not is_active and was_active:
                 # INCIDENT RESOLVED
                 incident_data = active_incidents[incident_type]
-                logger.info(f"{device_id}: RESOLVED {incident_type} incident (duration: {incident_data['consecutive_count']} detections)")
+                logger.info(f"[{device_id}] RESOLVED {incident_type} incident (duration: {incident_data['consecutive_count']} detections)")
                 
-                resolve_incident_in_db(incident_data["alert_id"])
+                resolve_incident_in_db(incident_data["alert_id"], device_id)
                 del active_incidents[incident_type]
                 state_changed = True
         
@@ -323,7 +323,7 @@ def process_alert_directly(analysis_result, host_name, analysis_path):
             state["active_incidents"] = active_incidents
             state["last_analysis"] = current_time
             save_device_state(state_file_path, state)
-            logger.info(f"{device_id}: State updated - Active incidents: {list(active_incidents.keys())}")
+            logger.info(f"[{device_id}] State updated - Active incidents: {list(active_incidents.keys())}")
         
     except Exception as e:
         logger.error(f"Error processing alert for {device_id}: {e}")
@@ -332,7 +332,7 @@ def process_alert_directly(analysis_result, host_name, analysis_path):
 def create_incident_in_db(incident_type, host_name, device_id, analysis_result):
     """Create new incident in database - returns alert_id"""
     try:
-        logger.info(f"DB INSERT: Creating {incident_type} incident for {device_id}")
+        logger.info(f"[{device_id}] DB INSERT: Creating {incident_type} incident")
         
         # Use lazy import exactly as before
         _lazy_import_db()
@@ -351,41 +351,41 @@ def create_incident_in_db(incident_type, host_name, device_id, analysis_result):
         
         if result.get('success'):
             alert_id = result.get('alert_id')
-            logger.info(f"DB INSERT SUCCESS: Created alert {alert_id}")
+            logger.info(f"[{device_id}] DB INSERT SUCCESS: Created alert {alert_id}")
             return alert_id
         else:
-            logger.error(f"DB INSERT FAILED: {result.get('error')}")
+            logger.error(f"[{device_id}] DB INSERT FAILED: {result.get('error')}")
             return None
         
     except Exception as e:
-        logger.error(f"DB ERROR: Failed to create {incident_type} incident: {e}")
+        logger.error(f"[{device_id}] DB ERROR: Failed to create {incident_type} incident: {e}")
         return None
 
 # REMOVED: update_incident_in_db - No periodic updates needed
 
-def resolve_incident_in_db(alert_id):
+def resolve_incident_in_db(alert_id, device_id="unknown"):
     """Resolve incident in database"""
     try:
-        logger.info(f"DB UPDATE: Resolving incident {alert_id}")
+        logger.info(f"[{device_id}] DB UPDATE: Resolving incident {alert_id}")
         
         # Use lazy import exactly as before
         _lazy_import_db()
         if not resolve_alert or resolve_alert is False:
-            logger.warning("Database module not available, skipping alert resolution")
+            logger.warning(f"[{device_id}] Database module not available, skipping alert resolution")
             return False
         
         # Call database exactly as before
         result = resolve_alert(alert_id)
         
         if result.get('success'):
-            logger.info(f"DB UPDATE SUCCESS: Resolved alert {alert_id}")
+            logger.info(f"[{device_id}] DB UPDATE SUCCESS: Resolved alert {alert_id}")
             return True
         else:
-            logger.error(f"DB UPDATE FAILED: {result.get('error')}")
+            logger.error(f"[{device_id}] DB UPDATE FAILED: {result.get('error')}")
             return False
         
     except Exception as e:
-        logger.error(f"DB ERROR: Failed to resolve incident {alert_id}: {e}")
+        logger.error(f"[{device_id}] DB ERROR: Failed to resolve incident {alert_id}: {e}")
         return False
 
 # ==================== UTILITY FUNCTIONS ====================
@@ -453,7 +453,7 @@ def upload_freeze_frames_to_r2(last_3_filenames, last_3_thumbnails, device_id, t
             'timestamp': timestamp
         }
         
-        logger.info(f"Uploading freeze frames to R2 for {device_id} at {timestamp}")
+        logger.info(f"[{device_id}] Uploading freeze frames to R2 at {timestamp}")
         
         # Upload original frames (last 3)
         for i, filename in enumerate(last_3_filenames):
@@ -468,9 +468,9 @@ def upload_freeze_frames_to_r2(last_3_filenames, last_3_thumbnails, device_id, t
             if upload_result.get('success'):
                 r2_results['original_urls'].append(upload_result['url'])
                 r2_results['original_r2_paths'].append(r2_path)
-                logger.info(f"Uploaded original frame {i}: {r2_path}")
+                logger.info(f"[{device_id}] Uploaded original frame {i}: {r2_path}")
             else:
-                logger.error(f"Failed to upload original frame {i}: {upload_result.get('error')}")
+                logger.error(f"[{device_id}] Failed to upload original frame {i}: {upload_result.get('error')}")
         
         # Upload thumbnail frames (last 3)
         for i, thumbnail_filename in enumerate(last_3_thumbnails):
