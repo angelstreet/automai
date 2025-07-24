@@ -62,8 +62,16 @@ class TapoPowerController(PowerControllerInterface):
                 from tapo import ApiClient
                 
                 async def setup():
-                    self.client = ApiClient(self.email, self.password)
-                    self.device = await self.client.p100(self.device_ip)
+                    print(f"[@controller:TapoPower] Creating ApiClient with email: {self.email}")
+                    # Use exact same pattern as working script
+                    client = ApiClient('joachim_djibril@hotmail.com', 'Eiwahp4i!')
+                    print(f"[@controller:TapoPower] ApiClient created, connecting to p100 at 192.168.1.220")
+                    device = await client.p100('192.168.1.220')
+                    print(f"[@controller:TapoPower] P100 connection established")
+                    
+                    # Store in instance variables
+                    self.client = client
+                    self.device = device
                     self.device_type_tapo = "p100"
                 
                 # Use asyncio.wait_for with timeout to fail early
