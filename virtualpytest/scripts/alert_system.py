@@ -6,7 +6,23 @@ Each device maintains its own incidents.json for fast state checking
 import os
 import json
 import logging
+import sys
 from datetime import datetime
+
+# Add the parent directory to sys.path to import from src (exactly as before)
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
+# Load environment variables from .env.host (exactly as before)
+try:
+    from dotenv import load_dotenv
+    env_host_path = os.path.join(os.path.dirname(__file__), '..', 'src', 'web', '.env.host')
+    if os.path.exists(env_host_path):
+        load_dotenv(env_host_path)
+        print(f"[@alert_system] Loaded environment from {env_host_path}")
+    else:
+        print(f"[@alert_system] Warning: .env.host not found at {env_host_path}")
+except ImportError:
+    print("[@alert_system] Warning: python-dotenv not available, skipping .env.host loading")
 
 # Setup logging to /tmp/alerts.log
 log_formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
@@ -35,10 +51,6 @@ def _lazy_import_db():
     global create_alert_safe, create_alert, resolve_alert, get_active_alerts
     if create_alert_safe is None:
         try:
-            # Add the parent directory to sys.path to import from src
-            import sys
-            sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-            
             from src.lib.supabase.alerts_db import create_alert_safe as _create_alert_safe, create_alert as _create_alert, resolve_alert as _resolve_alert, get_active_alerts as _get_active_alerts
             create_alert_safe = _create_alert_safe
             create_alert = _create_alert

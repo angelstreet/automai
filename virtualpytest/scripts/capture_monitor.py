@@ -135,7 +135,7 @@ class CaptureMonitor:
             if not unanalyzed_frames:
                 return
                 
-            logger.info(f"Found {len(unanalyzed_frames)} unanalyzed frames in {os.path.basename(capture_dir)}")
+            logger.info(f"[{device_id}] Found {len(unanalyzed_frames)} unanalyzed frames in {os.path.basename(capture_dir)}")
             
             # Process each frame (most recent first)
             for frame_path in unanalyzed_frames:
@@ -145,7 +145,7 @@ class CaptureMonitor:
                 # Check if thumbnail exists (required for thumbnail-only processing)
                 thumbnail_path = frame_path.replace('.jpg', '_thumbnail.jpg')
                 if not os.path.exists(thumbnail_path):
-                    logger.warning(f"Skipping {os.path.basename(frame_path)} - thumbnail not found")
+                    logger.warning(f"[{device_id}] Skipping {os.path.basename(frame_path)} - thumbnail not found")
                     continue
                     
                 # Wait a bit to ensure files are fully written
@@ -153,10 +153,10 @@ class CaptureMonitor:
                 
                 # Check if files still exist and are readable
                 if not os.path.exists(frame_path) or not os.path.exists(thumbnail_path):
-                    logger.warning(f"Frame or thumbnail disappeared: {os.path.basename(frame_path)}")
+                    logger.warning(f"[{device_id}] Frame or thumbnail disappeared: {os.path.basename(frame_path)}")
                     continue
                     
-                logger.info(f"Processing frame (thumbnail-only): {os.path.basename(frame_path)}")
+                logger.info(f"[{device_id}] Processing frame (thumbnail-only): {os.path.basename(frame_path)}")
                 
                 # Get current incident state for this device
                 current_state = self.get_incident_state(device_id)
@@ -177,7 +177,7 @@ class CaptureMonitor:
                 )
                 
                 if result.returncode == 0:
-                    logger.info(f"Unified analysis completed: {os.path.basename(frame_path)}")
+                    logger.info(f"[{device_id}] Unified analysis completed: {os.path.basename(frame_path)}")
                     
                     # Parse updated incident state from stdout (if provided)
                     try:
@@ -187,17 +187,17 @@ class CaptureMonitor:
                                 updated_state_json = line.replace('INCIDENT_STATE:', '')
                                 updated_state = json.loads(updated_state_json)
                                 self.update_incident_state(device_id, updated_state)
-                                logger.debug(f"Updated incident state for {device_id}")
+                                logger.debug(f"[{device_id}] Updated incident state")
                                 break
                     except Exception as e:
-                        logger.warning(f"Could not parse incident state update: {e}")
+                        logger.warning(f"[{device_id}] Could not parse incident state update: {e}")
                 else:
-                    logger.error(f"Unified analysis failed: {result.stderr}")
+                    logger.error(f"[{device_id}] Unified analysis failed: {result.stderr}")
                     
         except subprocess.TimeoutExpired:
-            logger.error(f"Unified analysis timeout: {frame_path}")
+            logger.error(f"[{device_id}] Unified analysis timeout: {os.path.basename(frame_path)}")
         except Exception as e:
-            logger.error(f"Unified analysis error: {e}")
+            logger.error(f"[{device_id}] Unified analysis error: {e}")
 
 
 
@@ -241,14 +241,7 @@ class CaptureMonitor:
         print(f"[@capture_monitor] Unified analysis interval: {UNIFIED_ANALYSIS_INTERVAL}s (video + audio)")
         print(f"[@capture_monitor] PID: {os.getpid()}")
         
-        # Perform aggressive startup cleanup to prevent phantom alerts
-        try:
-            print(f"[@capture_monitor] Performing aggressive startup cleanup...")
-            sys.path.append(SCRIPTS_DIR)
-            from alert_system import startup_cleanup_on_restart
-            startup_cleanup_on_restart()
-        except Exception as e:
-            print(f"[@capture_monitor] Aggressive startup cleanup failed (continuing anyway): {e}")
+        # Memory-based system - no cleanup needed on restart!
         
         # Get existing directories
         capture_dirs = self.get_existing_directories()
