@@ -446,7 +446,7 @@ const MonitoringIncidents: React.FC = () => {
       )}
 
       {/* Quick Stats */}
-      <Box sx={{ mb: 0 }}>
+      <Box sx={{ mb: 0.5 }}>
         <Card>
           <CardContent sx={{ py: 0 }}>
             <Box display="flex" alignItems="center" justifyContent="space-between">
