@@ -44,12 +44,18 @@ class HeatmapJob:
         if self.start_time:
             end_time = self.end_time or datetime.now()
             processing_time = (end_time - self.start_time).total_seconds()
+        
+        # Extract HTML URLs from result if available
+        html_urls = []
+        if hasattr(self, 'result') and self.result and 'generated_images' in self.result:
+            html_urls = [img.get('html_url') for img in self.result['generated_images'] if img.get('html_url')]
             
         return {
             'job_id': self.job_id,
             'status': self.status,
             'progress': self.progress,
             'mosaic_urls': self.mosaic_urls,
+            'html_urls': html_urls,  # Add HTML report URLs
             'error': self.error,
             'created_at': self.created_at.isoformat(),
             'processing_time': processing_time,

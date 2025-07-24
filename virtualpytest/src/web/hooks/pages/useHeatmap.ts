@@ -45,6 +45,7 @@ export interface HeatmapGeneration {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   progress?: number; // 0-100
   mosaic_urls?: string[]; // URLs to generated mosaic images (one per timestamp)
+  html_urls?: string[]; // URLs to generated HTML reports (one per timestamp)
   error?: string;
   processing_time?: number; // Processing time in seconds
   heatmap_data?: HeatmapData; // The exact data used for generation
@@ -184,6 +185,7 @@ export const useHeatmap = () => {
         status: result.status,
         progress: result.progress,
         mosaic_urls: result.mosaic_urls,
+        html_urls: result.html_urls,
         error: result.error,
         processing_time: result.processing_time,
         heatmap_data: result.heatmap_data, // Preserve heatmap_data from status updates

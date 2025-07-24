@@ -668,6 +668,22 @@ const Heatmap: React.FC = () => {
                     Cancel
                   </Button>
                 )}
+
+                {/* HTML Report Link */}
+                {currentGeneration?.status === 'completed' &&
+                  currentGeneration?.html_urls &&
+                  currentGeneration.html_urls.length > 0 && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      href={currentGeneration.html_urls[0]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ ml: 1 }}
+                    >
+                      View Report
+                    </Button>
+                  )}
               </Box>
             </Box>
           </CardContent>
