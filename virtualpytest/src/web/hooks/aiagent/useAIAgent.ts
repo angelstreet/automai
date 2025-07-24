@@ -75,6 +75,7 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
       console.log('[useAIAgent] Task execution result:', result);
 
       if (result.success) {
+        // Update initial state from the response
         setCurrentStep(result.current_step || 'Plan generated');
         setExecutionLog(result.execution_log || []);
 
@@ -89,21 +90,92 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
           setAiPlan(planEntry.value);
           setIsPlanFeasible(planEntry.value.feasible !== false);
         }
+
+        // Start polling for status updates (following useValidation pattern)
+        const pollInterval = 1000; // 1 second - more frequent than validation since AI tasks are usually shorter
+        const maxWaitTime = 300000; // 5 minutes max wait time
+        const startTime = Date.now();
+
+        console.log('[useAIAgent] Starting status polling for real-time updates');
+
+        const pollStatus = async () => {
+          while (Date.now() - startTime < maxWaitTime) {
+            await new Promise((resolve) => setTimeout(resolve, pollInterval));
+
+            try {
+              const statusResponse = await fetch(
+                `/server/aiagent/getStatus?device_id=${device?.device_id}`,
+                {
+                  method: 'GET',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                },
+              );
+
+              const statusResult = await statusResponse.json();
+              console.log('[useAIAgent] Status poll result:', statusResult);
+
+              if (statusResult.success) {
+                // Update current step and execution log with latest data
+                setCurrentStep(statusResult.current_step || 'Processing...');
+                setExecutionLog(statusResult.execution_log || []);
+
+                // Check if execution is still running
+                if (!statusResult.is_executing) {
+                  console.log('[useAIAgent] Task execution completed');
+
+                  // Extract final AI plan if not already set
+                  if (!aiPlan && statusResult.execution_log) {
+                    const finalPlanEntry = statusResult.execution_log.find(
+                      (entry: ExecutionLogEntry) =>
+                        entry.action_type === 'plan_generated' && entry.type === 'ai_plan',
+                    );
+
+                    if (finalPlanEntry && finalPlanEntry.value) {
+                      setAiPlan(finalPlanEntry.value);
+                      setIsPlanFeasible(finalPlanEntry.value.feasible !== false);
+                    }
+                  }
+
+                  // Task completed, stop polling
+                  setIsExecuting(false);
+                  return;
+                }
+                // Continue polling if still executing
+              } else {
+                console.warn('[useAIAgent] Status poll failed:', statusResult.error);
+                // Continue polling despite errors - might be temporary
+              }
+            } catch (pollError) {
+              console.warn('[useAIAgent] Error polling status:', pollError);
+              // Continue polling despite error - network issues might be temporary
+            }
+          }
+
+          // Timeout reached
+          console.warn('[useAIAgent] Polling timeout reached');
+          setErrorMessage('Task execution timeout - status polling stopped');
+          setIsExecuting(false);
+        };
+
+        // Start polling in background
+        pollStatus();
       } else {
-        setErrorMessage(result.error || 'Failed to generate plan');
-        setCurrentStep('Plan generation failed');
+        setErrorMessage(result.error || 'Failed to start task execution');
+        setCurrentStep('Task execution failed');
         setExecutionLog(result.execution_log || []);
         setIsPlanFeasible(false);
+        setIsExecuting(false);
       }
     } catch (error) {
       console.error('[useAIAgent] Task execution error:', error);
-      setErrorMessage('Network error during plan generation');
+      setErrorMessage('Network error during task execution');
       setCurrentStep('Error');
       setIsPlanFeasible(false);
-    } finally {
       setIsExecuting(false);
     }
-  }, [enabled, taskInput, isExecuting, host, device?.device_id]);
+  }, [enabled, taskInput, isExecuting, host, device?.device_id, aiPlan]);
 
   const stopExecution = useCallback(async () => {
     if (!enabled || !isExecuting) return;
