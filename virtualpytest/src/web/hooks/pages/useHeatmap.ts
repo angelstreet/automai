@@ -7,22 +7,17 @@
 
 import { useMemo, useState, useCallback } from 'react';
 
+import { MonitoringAnalysis } from '../../types/pages/Monitoring_Types';
+
 export interface HeatmapImage {
   host_name: string;
   device_id: string;
   image_url: string;
   timestamp: string;
-  analysis_json: {
-    blackscreen: boolean;
-    freeze: boolean;
-    audio_loss: boolean;
-    freeze_details?: {
-      frames_compared: string[];
-      frame_differences: number[];
-      threshold: number;
-      comparison_method: string;
-    };
-  };
+  filename?: string;
+  frame_json_url?: string;
+  has_frame_analysis?: boolean;
+  analysis_json: MonitoringAnalysis;
 }
 
 export interface HeatmapIncident {

@@ -1,28 +1,17 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 
-interface MonitoringAnalysis {
-  blackscreen: boolean;
-  freeze: boolean;
-  subtitles: boolean;
-  subtitles_trend?: {
-    current: boolean;
-    last_3_frames: boolean[];
-    count_in_last_3: number;
-    no_subtitles_for_3_frames: boolean;
-  };
-  errors: boolean;
-  text: string;
-  language?: string;
-  confidence: number;
-  audio: boolean;
-  volume_percentage: number;
-}
+import {
+  MonitoringAnalysis,
+  SubtitleAnalysis,
+  SubtitleTrendAnalysis,
+} from '../../types/pages/Monitoring_Types';
 
 interface FrameRef {
   timestamp: string;
   imageUrl: string;
   jsonUrl: string;
   analysis?: MonitoringAnalysis | null;
+  subtitleAnalysis?: SubtitleAnalysis | null; // Separate subtitle analysis
   subtitleDetectionPerformed?: boolean;
 }
 
@@ -33,13 +22,15 @@ interface UseMonitoringSubtitlesReturn {
   isDetectingSubtitles: boolean;
   isDetectingSubtitlesAI: boolean;
   hasSubtitleDetectionResults: boolean;
+  // Current subtitle analysis (from backend)
+  currentSubtitleAnalysis: SubtitleAnalysis | null;
+  // Subtitle trend analysis (computed by frontend)
+  subtitleTrendAnalysis: SubtitleTrendAnalysis | null;
 }
 
 interface UseMonitoringSubtitlesProps {
   frames: FrameRef[];
   currentIndex: number;
-  selectedFrameAnalysis: MonitoringAnalysis | null;
-  setSelectedFrameAnalysis: (analysis: MonitoringAnalysis | null) => void;
   setFrames: React.Dispatch<React.SetStateAction<FrameRef[]>>;
   setIsPlaying: (playing: boolean) => void;
   setUserSelectedFrame: (selected: boolean) => void;
@@ -50,8 +41,6 @@ interface UseMonitoringSubtitlesProps {
 export const useMonitoringSubtitles = ({
   frames,
   currentIndex,
-  selectedFrameAnalysis,
-  setSelectedFrameAnalysis,
   setFrames,
   setIsPlaying,
   setUserSelectedFrame,
@@ -66,6 +55,61 @@ export const useMonitoringSubtitles = ({
     frames.length > 0 &&
     currentIndex < frames.length &&
     frames[currentIndex]?.subtitleDetectionPerformed === true;
+
+  // Subtitle trend analysis - moved from useMonitoring
+  const subtitleTrendAnalysis = useMemo(() => {
+    if (frames.length === 0) return null;
+
+    // Get frames with subtitle data
+    const framesWithSubtitles = frames.filter(
+      (frame) => frame.subtitleAnalysis !== undefined && frame.subtitleDetectionPerformed === true,
+    );
+
+    if (framesWithSubtitles.length === 0) return null;
+
+    // Use up to 3 frames for subtitle trend analysis
+    const targetFrameCount = Math.min(3, framesWithSubtitles.length);
+    const recentFrames = framesWithSubtitles.slice(-targetFrameCount);
+
+    // Check for subtitle presence across frames
+    let noSubtitlesCount = 0;
+    let currentHasSubtitles = false;
+
+    recentFrames.forEach((frame, index) => {
+      const subtitleData = frame.subtitleAnalysis;
+      if (!subtitleData) return;
+
+      // Check current frame (most recent)
+      if (index === recentFrames.length - 1) {
+        currentHasSubtitles = subtitleData.subtitles_detected || false;
+      }
+
+      // Count frames without subtitles
+      if (!subtitleData.subtitles_detected) {
+        noSubtitlesCount++;
+      }
+    });
+
+    // Red indicator logic:
+    // - Show red if ALL analyzed frames have no subtitles
+    // - AND we have analyzed at least the target number of frames
+    const showRedIndicator =
+      noSubtitlesCount === recentFrames.length && recentFrames.length >= targetFrameCount;
+
+    return {
+      showRedIndicator,
+      currentHasSubtitles,
+      framesAnalyzed: recentFrames.length,
+      noSubtitlesStreak: noSubtitlesCount,
+    };
+  }, [frames]);
+
+  // Get current subtitle data
+  const currentSubtitleAnalysis = useMemo(() => {
+    if (frames.length === 0 || currentIndex >= frames.length) return null;
+    const currentFrame = frames[currentIndex];
+    return currentFrame?.subtitleAnalysis || null;
+  }, [frames, currentIndex]);
 
   // Subtitle detection function
   const detectSubtitles = useCallback(async () => {
@@ -106,40 +150,32 @@ export const useMonitoringSubtitles = ({
 
         if (result.success) {
           // Extract subtitle data from the response
-          const subtitleData = result.results && result.results.length > 0 ? result.results[0] : {};
+          const responseData = result.results && result.results.length > 0 ? result.results[0] : {};
           const hasSubtitles = result.subtitles_detected || false;
-          const extractedText = result.combined_extracted_text || subtitleData.extracted_text || '';
+          const extractedText = result.combined_extracted_text || responseData.extracted_text || '';
           const detectedLanguage =
-            result.detected_language || subtitleData.detected_language || undefined;
+            result.detected_language || responseData.detected_language || undefined;
 
-          // Update the selectedFrameAnalysis with the detected subtitle data
-          const updatedAnalysis: MonitoringAnalysis = {
-            ...selectedFrameAnalysis,
-            blackscreen: selectedFrameAnalysis?.blackscreen || false,
-            freeze: selectedFrameAnalysis?.freeze || false,
-            subtitles: hasSubtitles,
-            errors: selectedFrameAnalysis?.errors || false,
-            text: extractedText,
-            language: detectedLanguage !== 'unknown' ? detectedLanguage : undefined,
-            confidence: subtitleData.confidence || (hasSubtitles ? 0.9 : 0.1),
-            audio: selectedFrameAnalysis?.audio || false, // Preserve existing audio data
-            volume_percentage: selectedFrameAnalysis?.volume_percentage || 0,
+          // Create subtitle analysis using EXACT backend field names
+          const newSubtitleData: SubtitleAnalysis = {
+            subtitles_detected: hasSubtitles,
+            combined_extracted_text: extractedText,
+            detected_language: detectedLanguage !== 'unknown' ? detectedLanguage : undefined,
+            confidence: responseData.confidence || (hasSubtitles ? 0.9 : 0.1),
           };
 
-          setSelectedFrameAnalysis(updatedAnalysis);
-
-          // Update the frame's cached analysis and mark subtitle detection as performed
+          // Update the frame's subtitle data and mark subtitle detection as performed
           setFrames((prev) =>
             prev.map((frame, index) =>
               index === currentIndex
-                ? { ...frame, analysis: updatedAnalysis, subtitleDetectionPerformed: true }
+                ? { ...frame, subtitleAnalysis: newSubtitleData, subtitleDetectionPerformed: true }
                 : frame,
             ),
           );
 
           console.log(
-            '[useMonitoringSubtitles] Updated frame analysis with subtitle data:',
-            updatedAnalysis,
+            '[useMonitoringSubtitles] Updated frame with subtitle data:',
+            newSubtitleData,
           );
         } else {
           console.error('[useMonitoringSubtitles] Subtitle detection failed:', result.error);
@@ -158,11 +194,9 @@ export const useMonitoringSubtitles = ({
   }, [
     frames,
     currentIndex,
-    selectedFrameAnalysis,
     isDetectingSubtitles,
     host,
     device?.device_id,
-    setSelectedFrameAnalysis,
     setFrames,
     setIsPlaying,
     setUserSelectedFrame,
@@ -210,40 +244,32 @@ export const useMonitoringSubtitles = ({
 
         if (result.success) {
           // Extract subtitle data from the response
-          const subtitleData = result.results && result.results.length > 0 ? result.results[0] : {};
+          const responseData = result.results && result.results.length > 0 ? result.results[0] : {};
           const hasSubtitles = result.subtitles_detected || false;
-          const extractedText = result.combined_extracted_text || subtitleData.extracted_text || '';
+          const extractedText = result.combined_extracted_text || responseData.extracted_text || '';
           const detectedLanguage =
-            result.detected_language || subtitleData.detected_language || undefined;
+            result.detected_language || responseData.detected_language || undefined;
 
-          // Update the selectedFrameAnalysis with the detected subtitle data
-          const updatedAnalysis: MonitoringAnalysis = {
-            ...selectedFrameAnalysis,
-            blackscreen: selectedFrameAnalysis?.blackscreen || false,
-            freeze: selectedFrameAnalysis?.freeze || false,
-            subtitles: hasSubtitles,
-            errors: selectedFrameAnalysis?.errors || false,
-            text: extractedText,
-            language: detectedLanguage !== 'unknown' ? detectedLanguage : undefined,
-            confidence: subtitleData.confidence || (hasSubtitles ? 0.9 : 0.1),
-            audio: selectedFrameAnalysis?.audio || false, // Preserve existing audio data
-            volume_percentage: selectedFrameAnalysis?.volume_percentage || 0,
+          // Create subtitle analysis using EXACT backend field names
+          const newSubtitleData: SubtitleAnalysis = {
+            subtitles_detected: hasSubtitles,
+            combined_extracted_text: extractedText,
+            detected_language: detectedLanguage !== 'unknown' ? detectedLanguage : undefined,
+            confidence: responseData.confidence || (hasSubtitles ? 0.9 : 0.1),
           };
 
-          setSelectedFrameAnalysis(updatedAnalysis);
-
-          // Update the frame's cached analysis and mark subtitle detection as performed
+          // Update the frame's subtitle data and mark subtitle detection as performed
           setFrames((prev) =>
             prev.map((frame, index) =>
               index === currentIndex
-                ? { ...frame, analysis: updatedAnalysis, subtitleDetectionPerformed: true }
+                ? { ...frame, subtitleAnalysis: newSubtitleData, subtitleDetectionPerformed: true }
                 : frame,
             ),
           );
 
           console.log(
-            '[useMonitoringSubtitles] Updated frame analysis with AI subtitle data:',
-            updatedAnalysis,
+            '[useMonitoringSubtitles] Updated frame with AI subtitle data:',
+            newSubtitleData,
           );
         } else {
           console.error('[useMonitoringSubtitles] AI Subtitle detection failed:', result.error);
@@ -262,11 +288,9 @@ export const useMonitoringSubtitles = ({
   }, [
     frames,
     currentIndex,
-    selectedFrameAnalysis,
     isDetectingSubtitlesAI,
     host,
     device?.device_id,
-    setSelectedFrameAnalysis,
     setFrames,
     setIsPlaying,
     setUserSelectedFrame,
@@ -278,5 +302,7 @@ export const useMonitoringSubtitles = ({
     isDetectingSubtitles,
     isDetectingSubtitlesAI,
     hasSubtitleDetectionResults,
+    subtitleTrendAnalysis,
+    currentSubtitleAnalysis,
   };
 };

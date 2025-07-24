@@ -26,7 +26,8 @@ import {
 } from '@mui/material';
 import React, { useState, useEffect } from 'react';
 
-import { useAlerts, Alert } from '../hooks/pages/useAlerts';
+import { useAlerts } from '../hooks/pages/useAlerts';
+import { Alert } from '../types/pages/Monitoring_Types';
 
 const MonitoringIncidents: React.FC = () => {
   const { getAllAlerts } = useAlerts();
@@ -212,10 +213,10 @@ const MonitoringIncidents: React.FC = () => {
   // Get image URLs from alert metadata
   const getAlertImageUrls = (alert: Alert) => {
     const r2Images = alert.metadata?.r2_images;
-    if (r2Images) {
+    if (r2Images && r2Images.original_urls?.length > 0 && r2Images.thumbnail_urls?.length > 0) {
       return {
-        originalUrl: r2Images.original_url,
-        thumbnailUrl: r2Images.thumbnail_url,
+        originalUrl: r2Images.original_urls[0], // Use first image
+        thumbnailUrl: r2Images.thumbnail_urls[0], // Use first thumbnail
         hasR2Images: true,
       };
     }
@@ -227,7 +228,7 @@ const MonitoringIncidents: React.FC = () => {
   };
 
   // Helper function to construct frame URLs for freeze analysis
-  const constructFrameUrl = (filename: string, hostName: string, deviceId: string): string => {
+  const constructFrameUrl = (filename: string, _hostName: string, deviceId: string): string => {
     // Extract device number from deviceId (e.g., "device2" -> "2")
     const deviceNum = deviceId.replace('device', '');
 
@@ -343,7 +344,7 @@ const MonitoringIncidents: React.FC = () => {
                   </Typography>
                   <Box
                     component="img"
-                    src={imageUrls.thumbnailUrl}
+                    src={imageUrls.thumbnailUrl || ''}
                     alt="Alert start"
                     sx={{
                       width: 120,
@@ -357,7 +358,8 @@ const MonitoringIncidents: React.FC = () => {
                       },
                     }}
                     onClick={() => {
-                      window.open(imageUrls.originalUrl || imageUrls.thumbnailUrl, '_blank');
+                      const url = imageUrls.originalUrl || imageUrls.thumbnailUrl;
+                      if (url) window.open(url, '_blank');
                     }}
                   />
                 </Box>
@@ -376,7 +378,7 @@ const MonitoringIncidents: React.FC = () => {
                     </Typography>
                     <Box
                       component="img"
-                      src={imageUrls.thumbnailUrl}
+                      src={imageUrls.thumbnailUrl || ''}
                       alt="Alert end"
                       sx={{
                         width: 120,
@@ -390,7 +392,8 @@ const MonitoringIncidents: React.FC = () => {
                         },
                       }}
                       onClick={() => {
-                        window.open(imageUrls.originalUrl || imageUrls.thumbnailUrl, '_blank');
+                        const url = imageUrls.originalUrl || imageUrls.thumbnailUrl;
+                        if (url) window.open(url, '_blank');
                       }}
                     />
                   </Box>

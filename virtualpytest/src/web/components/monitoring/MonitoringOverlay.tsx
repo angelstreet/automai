@@ -1,26 +1,9 @@
 import { Box, Typography } from '@mui/material';
 import React from 'react';
 
-interface MonitoringAnalysis {
-  blackscreen: boolean;
-  freeze: boolean;
-  subtitles: boolean;
-  subtitles_trend?: {
-    current: boolean;
-    last_3_frames: boolean[];
-    count_in_last_3: number;
-    no_subtitles_for_3_frames: boolean;
-  };
-  errors: boolean;
-  text: string;
-  language?: string;
-  audio?: {
-    has_audio: boolean;
-    volume_percentage: number;
-  };
-}
+import { MonitoringAnalysis, SubtitleAnalysis } from '../../types/pages/Monitoring_Types';
 
-interface ErrorTrendData {
+interface ConsecutiveErrorCounts {
   blackscreenConsecutive: number;
   freezeConsecutive: number;
   audioLossConsecutive: number;
@@ -30,19 +13,22 @@ interface ErrorTrendData {
 
 interface MonitoringOverlayProps {
   sx?: any;
-  overrideAnalysis?: MonitoringAnalysis; // Override with pre-loaded analysis
-  errorTrendData?: ErrorTrendData | null; // Error trend analysis from hook
+  monitoringAnalysis?: MonitoringAnalysis; // Core audio/video monitoring data from backend
+  subtitleAnalysis?: SubtitleAnalysis | null; // Subtitle analysis from frontend detection
+  consecutiveErrorCounts?: ConsecutiveErrorCounts | null; // Consecutive error counts for trend indicators
   showSubtitles?: boolean; // Whether to show subtitle information in overlay
 }
 
 export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
   sx,
-  overrideAnalysis,
-  errorTrendData,
+  monitoringAnalysis,
+  subtitleAnalysis,
+  consecutiveErrorCounts,
   showSubtitles = false,
 }) => {
-  // Pure display component - only use props, no fetching
-  const analysis = overrideAnalysis;
+  // Use separate data sources
+  const analysis = monitoringAnalysis;
+  const subtitles = subtitleAnalysis;
 
   // Always render overlay with empty state when no analysis
 
@@ -76,9 +62,9 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
             }}
           >
             {analysis?.blackscreen ? 'Yes' : 'No'}
-            {analysis?.blackscreen && errorTrendData && (
+            {analysis?.blackscreen && consecutiveErrorCounts && (
               <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
-                ({errorTrendData.blackscreenConsecutive})
+                ({consecutiveErrorCounts.blackscreenConsecutive})
               </Typography>
             )}
           </Typography>
@@ -97,9 +83,9 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
             }}
           >
             {analysis?.freeze ? 'Yes' : 'No'}
-            {analysis?.freeze && errorTrendData && (
+            {analysis?.freeze && consecutiveErrorCounts && (
               <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
-                ({errorTrendData.freezeConsecutive})
+                ({consecutiveErrorCounts.freezeConsecutive})
               </Typography>
             )}
           </Typography>
@@ -113,14 +99,14 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
           <Typography
             variant="body2"
             sx={{
-              color: analysis?.audio?.has_audio ? '#00ff00' : '#ff4444',
-              fontWeight: analysis?.audio?.has_audio ? 'bold' : 'normal',
+              color: analysis?.audio ? '#00ff00' : '#ff4444',
+              fontWeight: analysis?.audio ? 'bold' : 'normal',
             }}
           >
-            {analysis?.audio?.has_audio ? 'Yes' : 'No'}
-            {!analysis?.audio?.has_audio && errorTrendData && (
+            {analysis?.audio ? 'Yes' : 'No'}
+            {!analysis?.audio && consecutiveErrorCounts && (
               <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
-                ({errorTrendData.audioLossConsecutive})
+                ({consecutiveErrorCounts.audioLossConsecutive})
               </Typography>
             )}
           </Typography>
@@ -136,23 +122,23 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
               <Typography
                 variant="body2"
                 sx={{
-                  color: analysis?.subtitles ? '#00ff00' : '#ffffff',
-                  fontWeight: analysis?.subtitles ? 'bold' : 'normal',
+                  color: subtitles?.subtitles_detected ? '#00ff00' : '#ffffff',
+                  fontWeight: subtitles?.subtitles_detected ? 'bold' : 'normal',
                 }}
               >
-                {analysis?.subtitles ? 'Yes' : 'No'}
-                {analysis?.subtitles && analysis?.language && (
+                {subtitles?.subtitles_detected ? 'Yes' : 'No'}
+                {subtitles?.subtitles_detected && subtitles?.detected_language && (
                   <Typography component="span" variant="body2" sx={{ color: '#cccccc', ml: 1 }}>
-                    ({analysis.language})
+                    ({subtitles.detected_language})
                   </Typography>
                 )}
               </Typography>
             </Box>
-            {analysis?.subtitles && analysis?.text && (
+            {subtitles?.subtitles_detected && subtitles?.combined_extracted_text && (
               <Typography variant="body2" sx={{ color: '#ffffff', ml: 0, mt: 0.5 }}>
                 Text:{' '}
                 <Typography component="span" sx={{ color: '#cccccc' }}>
-                  {analysis.text}
+                  {subtitles.combined_extracted_text}
                 </Typography>
               </Typography>
             )}
@@ -161,7 +147,7 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
       </Box>
 
       {/* Warning indicator - top right for 1-2 consecutive errors */}
-      {errorTrendData?.hasWarning && !errorTrendData?.hasError && (
+      {consecutiveErrorCounts?.hasWarning && !consecutiveErrorCounts?.hasError && (
         <Box
           sx={{
             position: 'absolute',
@@ -181,7 +167,7 @@ export const MonitoringOverlay: React.FC<MonitoringOverlayProps> = ({
       )}
 
       {/* Error indicator - top right for 3+ consecutive errors */}
-      {errorTrendData?.hasError && (
+      {consecutiveErrorCounts?.hasError && (
         <Box
           sx={{
             position: 'absolute',

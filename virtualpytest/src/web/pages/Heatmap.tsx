@@ -153,46 +153,9 @@ const Heatmap: React.FC = () => {
       return;
     }
 
-    // If we already have freeze_details, use them
-    if (image.analysis_json?.freeze_details) {
-      setFreezeModalImage(image);
-      setFreezeModalOpen(true);
-      return;
-    }
-
-    // Fetch freeze_details from the JSON file directly
-    try {
-      // Construct JSON URL from image URL (same pattern as monitoring system)
-      const jsonUrl = image.image_url.replace('.jpg', '.json');
-      console.log('[@Heatmap] Fetching freeze details from:', jsonUrl);
-
-      const response = await fetch(jsonUrl);
-      if (response.ok) {
-        const analysisData = await response.json();
-        const analysis = analysisData.analysis || {};
-
-        // Check if we have freeze_details in the analysis
-        if (analysis.freeze_details) {
-          // Create enhanced image object with freeze_details
-          const enhancedImage: HeatmapImage = {
-            ...image,
-            analysis_json: {
-              ...image.analysis_json,
-              freeze_details: analysis.freeze_details,
-            },
-          };
-
-          setFreezeModalImage(enhancedImage);
-          setFreezeModalOpen(true);
-        } else {
-          console.log('[@Heatmap] No freeze_details found in JSON analysis');
-        }
-      } else {
-        console.log('[@Heatmap] Failed to fetch JSON analysis:', response.status);
-      }
-    } catch (error) {
-      console.error('[@Heatmap] Error fetching freeze details:', error);
-    }
+    // Open freeze modal with the image data (freeze_diffs are already in analysis_json)
+    setFreezeModalImage(image);
+    setFreezeModalOpen(true);
   };
 
   // Helper function to construct frame URLs using proper URL building
@@ -421,14 +384,16 @@ const Heatmap: React.FC = () => {
     return heatmapData.images_by_timestamp[timestamp] || [];
   };
 
-  // Check if analysis data has any incidents (matches backend logic)
+  // Check if analysis data has any incidents (audio or video issues)
   const hasIncidents = (analysisJson: any): boolean => {
     if (!analysisJson) return false;
-    return (
-      analysisJson.blackscreen === true ||
-      analysisJson.freeze === true ||
-      analysisJson.audio_loss === true
-    );
+
+    // Video issue: blackscreen OR freeze
+    const hasVideoIssue = analysisJson.blackscreen || analysisJson.freeze;
+    // Audio issue: no audio
+    const hasAudioIssue = !analysisJson.audio;
+
+    return hasVideoIssue || hasAudioIssue;
   };
 
   // Calculate dynamic font size based on number of devices
@@ -518,7 +483,7 @@ const Heatmap: React.FC = () => {
     // Check if any device in this timestamp has incidents (based on JSON analysis only)
     return images.some((image) => {
       const analysisJson = image.analysis_json || {};
-      return analysisJson.blackscreen || analysisJson.freeze || analysisJson.audio_loss;
+      return analysisJson.blackscreen || analysisJson.freeze || !analysisJson.audio;
     });
   };
 
@@ -539,103 +504,6 @@ const Heatmap: React.FC = () => {
     });
   };
 
-  const analyzeCurrentFrame = () => {
-    const images = getCurrentImages();
-    const timestamp = getCurrentTimestamp();
-
-    if (!images.length || !timestamp || !heatmapData) {
-      return { summary: 'No data available', details: [] };
-    }
-
-    // Get incidents for current timestamp
-    const currentIncidents = heatmapData.incidents.filter((incident) => {
-      const incidentTime = new Date(incident.start_time).getTime();
-      const frameTime = new Date(timestamp).getTime();
-      const timeDiff = Math.abs(frameTime - incidentTime);
-      return timeDiff < 30000; // Within 30 seconds
-    });
-
-    // Current time for duration calculation
-    const currentTime = new Date(timestamp).getTime();
-
-    // Analyze each device
-    const deviceAnalysis = images.map((image) => {
-      // Safely access analysis_json with fallback to empty object
-      const analysisJson = image.analysis_json || {};
-
-      // Derive Video/Audio status from actual issues in the JSON
-      // JSON only contains: blackscreen, freeze, audio_loss
-      const blackscreen = analysisJson.blackscreen || false;
-      const freeze = analysisJson.freeze || false;
-      const audioLoss = analysisJson.audio_loss || false;
-
-      // Video status: No if there are video issues, Yes if no issues
-      const hasVideo = !blackscreen && !freeze; // Video works if no blackscreen and no freeze
-
-      // Audio status: No if there's audio loss, Yes if no audio loss
-      const hasAudio = !audioLoss; // Audio works if no audio loss
-
-      // hasIncident should be based on JSON analysis data only
-      const hasIncident = blackscreen || freeze || audioLoss;
-
-      // Check database incidents for duration calculation
-      const hasDbIncident = currentIncidents.some(
-        (incident) =>
-          incident.host_name === image.host_name && incident.device_id === image.device_id,
-      );
-
-      // Calculate incident duration if applicable (from database incidents)
-      let incidentDuration = '';
-      if (hasDbIncident) {
-        // Find the earliest incident for this device
-        const deviceIncidents = heatmapData.incidents.filter(
-          (incident) =>
-            incident.host_name === image.host_name &&
-            incident.device_id === image.device_id &&
-            incident.status === 'active',
-        );
-
-        if (deviceIncidents.length > 0) {
-          // Find earliest start time
-          let earliestStartTime = Number.MAX_VALUE;
-          deviceIncidents.forEach((incident) => {
-            const startTime = new Date(incident.start_time).getTime();
-            if (startTime < earliestStartTime) {
-              earliestStartTime = startTime;
-            }
-          });
-
-          // Calculate duration
-          const durationMs = currentTime - earliestStartTime;
-          const durationSec = Math.floor(durationMs / 1000);
-          const minutes = Math.floor(durationSec / 60);
-          const seconds = durationSec % 60;
-          incidentDuration = `${minutes}m ${seconds}s`;
-        }
-      }
-
-      return {
-        device: `${image.host_name}-${image.device_id}`,
-        hasIncident,
-        incidentDuration,
-        audio: hasAudio,
-        video: hasVideo,
-        blackscreen,
-        freeze,
-      };
-    });
-
-    const totalDevices = deviceAnalysis.length;
-    const devicesWithIncidents = deviceAnalysis.filter((d) => d.hasIncident).length;
-
-    return {
-      summary: `${totalDevices} devices | ${devicesWithIncidents} with incidents`,
-      details: deviceAnalysis,
-    };
-  };
-
-  const analysis = analyzeCurrentFrame();
-
   // Freeze Analysis Modal - now using extracted component
 
   // Tooltip component
@@ -647,28 +515,19 @@ const Heatmap: React.FC = () => {
       if (!tooltipImage) return null;
 
       // Get the corrected analysis values
-      const analysisJson = tooltipImage.analysis_json || {};
-
-      // Use same logic as main analysis - derive from actual issues
-      const blackscreen = analysisJson.blackscreen || false;
-      const freeze = analysisJson.freeze || false;
-      const audioLoss = analysisJson.audio_loss || false;
-
-      // Audio status: No if there's audio loss, Yes if no audio loss
-      const hasAudio = !audioLoss;
-
-      // Convert to MonitoringAnalysis format
-      const analysis = {
-        blackscreen,
-        freeze,
-        subtitles: false,
-        errors: blackscreen || freeze || audioLoss,
-        text: '',
-        audio: {
-          has_audio: hasAudio,
-          volume_percentage: 0, // Not available in our data
-        },
-      };
+      // Use the analysis_json directly - extend it to SubtitleAnalysis format for the overlay
+      const analysis = tooltipImage.analysis_json
+        ? {
+            ...tooltipImage.analysis_json,
+            subtitles: false, // No subtitle detection in heatmap tooltips
+            errors:
+              tooltipImage.analysis_json.blackscreen ||
+              tooltipImage.analysis_json.freeze ||
+              !tooltipImage.analysis_json.audio,
+            text: '',
+            confidence: 0,
+          }
+        : undefined;
 
       return (
         <Popper
@@ -690,7 +549,7 @@ const Heatmap: React.FC = () => {
                   }}
                 >
                   <MonitoringOverlay
-                    overrideAnalysis={analysis}
+                    subtitleAnalysis={analysis}
                     sx={{ position: 'relative', top: 'auto', left: 'auto', p: 0 }}
                   />
                 </Box>
@@ -1079,7 +938,7 @@ const Heatmap: React.FC = () => {
 
       {/* Data Analysis Section - now using extracted component */}
       <HeatMapAnalysisSection
-        analysis={analysis}
+        images={getCurrentImages()}
         analysisExpanded={analysisExpanded}
         onToggleExpanded={() => setAnalysisExpanded(!analysisExpanded)}
       />

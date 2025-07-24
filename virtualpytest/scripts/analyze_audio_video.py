@@ -314,17 +314,54 @@ def main():
             analyzed_segment = "no_recent_segment"
             logger.warning("Audio analysis: No recent segments found")
         
-        # Result
+        # Get blackscreen percentage for consistency
+        blackscreen_percentage = 0
+        if blackscreen:
+            try:
+                img_gray = cv2.imread(thumbnail_path, cv2.IMREAD_GRAYSCALE)
+                if img_gray is not None:
+                    very_dark_pixels = np.sum(img_gray <= 10)
+                    total_pixels = img_gray.shape[0] * img_gray.shape[1]
+                    blackscreen_percentage = (very_dark_pixels / total_pixels) * 100
+            except Exception:
+                blackscreen_percentage = 0
+
+        # Get freeze diffs and last 3 filenames for incidents
+        freeze_diffs = []
+        last_3_filenames = []
+        last_3_thumbnails = []
+        
+        if freeze_details and 'frame_differences' in freeze_details:
+            freeze_diffs = freeze_details['frame_differences']
+            
+        if freeze_details and 'frames_compared' in freeze_details:
+            # Index 0 = current frame, 1 = frame-1, 2 = frame-2
+            image_dir = os.path.dirname(image_path)  # Get directory from current image path
+            for frame_filename in freeze_details['frames_compared']:
+                # Original filename with full path
+                original_filename = frame_filename.replace('_thumbnail.jpg', '.jpg')
+                original_full_path = os.path.join(image_dir, original_filename)
+                last_3_filenames.append(original_full_path)
+                
+                # Corresponding thumbnail with full path
+                thumbnail_filename = original_filename.replace('.jpg', '_thumbnail.jpg')
+                thumbnail_full_path = os.path.join(image_dir, thumbnail_filename)
+                last_3_thumbnails.append(thumbnail_full_path)
+
+        # Simple consistent result
         result = {
             'timestamp': datetime.now().isoformat(),
             'filename': os.path.basename(image_path),
             'thumbnail': os.path.basename(thumbnail_path),
             'blackscreen': bool(blackscreen),
+            'blackscreen_percentage': round(blackscreen_percentage, 1),
             'freeze': bool(frozen),
-            'freeze_details': freeze_details if frozen else None,
+            'freeze_diffs': freeze_diffs,
+            'last_3_filenames': last_3_filenames,
+            'last_3_thumbnails': last_3_thumbnails,
             'audio': has_audio,
-            'volume_percentage': volume_percentage if has_audio else None,
-            'analyzed_at': datetime.now().isoformat()
+            'volume_percentage': volume_percentage,
+            'mean_volume_db': mean_volume_db
         }
         
         # Save single JSON file

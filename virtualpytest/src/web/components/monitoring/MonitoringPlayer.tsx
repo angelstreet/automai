@@ -63,6 +63,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
     isDetectingSubtitles,
     isDetectingSubtitlesAI,
     hasSubtitleDetectionResults,
+    currentSubtitleAnalysis,
     // AI Query functionality
     isAIQueryVisible,
     aiQuery,
@@ -321,8 +322,9 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
         }}
       >
         <MonitoringOverlay
-          overrideAnalysis={frames.length > 0 ? selectedFrameAnalysis || undefined : undefined}
-          errorTrendData={errorTrendData}
+          monitoringAnalysis={frames.length > 0 ? selectedFrameAnalysis || undefined : undefined}
+          subtitleAnalysis={currentSubtitleAnalysis}
+          consecutiveErrorCounts={errorTrendData}
           showSubtitles={
             isDetectingSubtitles || isDetectingSubtitlesAI || hasSubtitleDetectionResults
           }
@@ -366,7 +368,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
               onClick={detectSubtitles}
               disabled={isDetectingSubtitles || isDetectingSubtitlesAI}
               sx={{
-                color: selectedFrameAnalysis?.subtitles ? '#4caf50' : '#ffffff',
+                color: currentSubtitleAnalysis?.subtitles_detected ? '#4caf50' : '#ffffff',
                 backgroundColor: 'rgba(255,255,255,0.1)',
                 '&:hover': {
                   backgroundColor: 'rgba(255,255,255,0.2)',
@@ -397,7 +399,7 @@ export const MonitoringPlayer: React.FC<MonitoringPlayerProps> = ({
               onClick={detectSubtitlesAI}
               disabled={isDetectingSubtitles || isDetectingSubtitlesAI}
               sx={{
-                color: selectedFrameAnalysis?.subtitles ? '#ff9800' : '#ffffff',
+                color: currentSubtitleAnalysis?.subtitles_detected ? '#ff9800' : '#ffffff',
                 backgroundColor: 'rgba(255,255,255,0.1)',
                 border: '1px solid rgba(255,152,0,0.3)',
                 '&:hover': {

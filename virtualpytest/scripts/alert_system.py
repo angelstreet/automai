@@ -119,123 +119,91 @@ def process_alert_with_memory_state(analysis_result, host_name, device_id, incid
         # Use provided incident state instead of loading from file
         active_incidents = incident_state.get("active_incidents", {})
         
-        # Extract incident detection results
+        # Extract incident detection results with all details (CONSISTENT FORMAT)
         blackscreen = analysis_result.get('blackscreen', False)
+        blackscreen_percentage = analysis_result.get('blackscreen_percentage', 0)
         freeze = analysis_result.get('freeze', False) 
+        freeze_diffs = analysis_result.get('freeze_diffs', [])
         audio = analysis_result.get('audio', True)
+        volume_percentage = analysis_result.get('volume_percentage', 0)
+        mean_volume_db = analysis_result.get('mean_volume_db', -100)
+        last_3_filenames = analysis_result.get('last_3_filenames', [])
+        last_3_thumbnails = analysis_result.get('last_3_thumbnails', [])
         
-        # Determine current incidents (2 types only)
-        video_issue = None
-        audio_issue = False
+        # Determine current status (simple true/false)
+        video_issue = blackscreen or freeze  # True if any video issue
+        audio_issue = not audio  # True if audio_loss
         
-        # Video issues are mutually exclusive (blackscreen takes priority)
+        # Determine specific incident types for database
+        current_incidents = []
         if blackscreen:
-            video_issue = 'blackscreen'
-        elif freeze:
-            video_issue = 'freeze'
-        
-        # Audio issue is independent
-        if not audio:
-            audio_issue = True
+            current_incidents.append('blackscreen')
+        elif freeze:  # Freeze only if no blackscreen (priority)
+            current_incidents.append('freeze')
+        if audio_issue:
+            current_incidents.append('audio_loss')
             
         current_time = datetime.now().isoformat()
         state_changed = False
         
-        logger.info(f"{device_id}: Video issue: {video_issue}, Audio issue: {audio_issue}, Active: {list(active_incidents.keys())}")
+        logger.info(f"{device_id}: Video: {video_issue}, Audio: {audio_issue}, Incidents: {current_incidents}, Active: {list(active_incidents.keys())}")
         
-        # Process VIDEO ISSUE (mutually exclusive: blackscreen OR freeze)
-        video_was_active = 'video_issue' in active_incidents
-        
-        if video_issue and not video_was_active:
-            # NEW VIDEO INCIDENT - Create in DB
-            logger.info(f"{device_id}: NEW video incident detected: {video_issue}")
-            alert_id = create_incident_in_db('video_issue', host_name, device_id, analysis_result, video_issue)
+        # Process each specific incident type (CONSISTENT WITH DIRECT PROCESSING)
+        for incident_type in ['blackscreen', 'freeze', 'audio_loss']:
+            is_active = incident_type in current_incidents
+            was_active = incident_type in active_incidents
             
-            if alert_id:
-                active_incidents['video_issue'] = {
-                    "alert_id": alert_id,
-                    "issue_type": video_issue,
-                    "start_time": current_time,
-                    "consecutive_count": 1,
-                    "last_updated": current_time
-                }
-                state_changed = True
+            if is_active and not was_active:
+                # NEW INCIDENT - Create in DB
+                logger.info(f"{device_id}: NEW {incident_type} incident detected")
                 
-        elif video_issue and video_was_active:
-            # ONGOING VIDEO ISSUE - Check if type changed
-            incident_data = active_incidents['video_issue']
-            existing_issue_type = incident_data.get('issue_type')
-            
-            if existing_issue_type != video_issue:
-                # VIDEO ISSUE TYPE CHANGED (blackscreen <-> freeze)
-                logger.info(f"{device_id}: Video issue changed from {existing_issue_type} to {video_issue}")
+                # Prepare enhanced metadata with all details
+                enhanced_metadata = analysis_result.copy()
+                if incident_type == 'blackscreen':
+                    enhanced_metadata['blackscreen_percentage'] = blackscreen_percentage
+                elif incident_type == 'freeze':
+                    enhanced_metadata['freeze_diffs'] = freeze_diffs
+                elif incident_type == 'audio_loss':
+                    enhanced_metadata['volume_percentage'] = volume_percentage
+                    enhanced_metadata['mean_volume_db'] = mean_volume_db
                 
-                # Resolve old incident
-                old_alert_id = active_incidents['video_issue']['alert_id']
-                resolve_incident_in_db(old_alert_id)
+                # Add frame information for incidents
+                enhanced_metadata['last_3_filenames'] = last_3_filenames
+                enhanced_metadata['last_3_thumbnails'] = last_3_thumbnails
                 
-                # Create new incident
-                alert_id = create_incident_in_db('video_issue', host_name, device_id, analysis_result, video_issue)
+                # Upload freeze frames to R2 if it's a freeze incident
+                if incident_type == 'freeze' and last_3_filenames:
+                    r2_urls = upload_freeze_frames_to_r2(last_3_filenames, last_3_thumbnails, device_id, current_time)
+                    if r2_urls:
+                        enhanced_metadata['r2_images'] = r2_urls
+                
+                alert_id = create_incident_in_db(incident_type, host_name, device_id, enhanced_metadata)
                 
                 if alert_id:
-                    active_incidents['video_issue'] = {
+                    active_incidents[incident_type] = {
                         "alert_id": alert_id,
-                        "issue_type": video_issue,
                         "start_time": current_time,
                         "consecutive_count": 1,
                         "last_updated": current_time
                     }
                     state_changed = True
-            else:
-                # Same issue type, just update count
+                    
+            elif is_active and was_active:
+                # ONGOING INCIDENT - Just update local count
+                incident_data = active_incidents[incident_type]
                 incident_data["consecutive_count"] += 1
                 incident_data["last_updated"] = current_time
-                logger.info(f"{device_id}: {video_issue} ongoing (count: {incident_data['consecutive_count']})")
+                logger.info(f"{device_id}: {incident_type} ongoing (count: {incident_data['consecutive_count']})")
                 state_changed = True
                 
-        elif not video_issue and video_was_active:
-            # VIDEO ISSUE RESOLVED
-            incident_data = active_incidents['video_issue']
-            issue_type = incident_data.get('issue_type', 'unknown')
-            logger.info(f"{device_id}: RESOLVED video incident: {issue_type} (duration: {incident_data['consecutive_count']} detections)")
-            
-            resolve_incident_in_db(incident_data["alert_id"])
-            del active_incidents['video_issue']
-            state_changed = True
-        
-        # Process AUDIO ISSUE (independent)
-        audio_was_active = 'audio_loss' in active_incidents
-        
-        if audio_issue and not audio_was_active:
-            # NEW AUDIO INCIDENT - Create in DB
-            logger.info(f"{device_id}: NEW audio_loss incident detected")
-            alert_id = create_incident_in_db('audio_loss', host_name, device_id, analysis_result)
-            
-            if alert_id:
-                active_incidents['audio_loss'] = {
-                    "alert_id": alert_id,
-                    "start_time": current_time,
-                    "consecutive_count": 1,
-                    "last_updated": current_time
-                }
-                state_changed = True
+            elif not is_active and was_active:
+                # INCIDENT RESOLVED
+                incident_data = active_incidents[incident_type]
+                logger.info(f"{device_id}: RESOLVED {incident_type} incident (duration: {incident_data['consecutive_count']} detections)")
                 
-        elif audio_issue and audio_was_active:
-            # ONGOING AUDIO ISSUE - Just update local count
-            incident_data = active_incidents['audio_loss']
-            incident_data["consecutive_count"] += 1
-            incident_data["last_updated"] = current_time
-            logger.info(f"{device_id}: audio_loss ongoing (count: {incident_data['consecutive_count']})")
-            state_changed = True
-            
-        elif not audio_issue and audio_was_active:
-            # AUDIO ISSUE RESOLVED
-            incident_data = active_incidents['audio_loss']
-            logger.info(f"{device_id}: RESOLVED audio_loss incident (duration: {incident_data['consecutive_count']} detections)")
-            
-            resolve_incident_in_db(incident_data["alert_id"])
-            del active_incidents['audio_loss']
-            state_changed = True
+                resolve_incident_in_db(incident_data["alert_id"])
+                del active_incidents[incident_type]
+                state_changed = True
         
         # Return updated state
         updated_state = {
@@ -265,123 +233,90 @@ def process_alert_directly(analysis_result, host_name, analysis_path):
         state = load_device_state(state_file_path)
         active_incidents = state.get("active_incidents", {})
         
-        # Extract incident detection results
+        # Extract incident detection results with all details
         blackscreen = analysis_result.get('blackscreen', False)
+        blackscreen_percentage = analysis_result.get('blackscreen_percentage', 0)
         freeze = analysis_result.get('freeze', False) 
+        freeze_diffs = analysis_result.get('freeze_diffs', [])
         audio = analysis_result.get('audio', True)
+        volume_percentage = analysis_result.get('volume_percentage', 0)
         
-        # Determine current incidents (2 types only)
-        video_issue = None
-        audio_issue = False
+        # Determine current status (simple true/false)
+        video_issue = blackscreen or freeze  # True if any video issue
+        audio_issue = not audio  # True if audio_loss
         
-        # Video issues are mutually exclusive (blackscreen takes priority over freeze)
+        # Determine specific incident types for database
+        current_incidents = []
         if blackscreen:
-            video_issue = 'blackscreen'
-        elif freeze:
-            video_issue = 'freeze'
-        
-        # Audio issue is independent
-        if not audio:
-            audio_issue = True
+            current_incidents.append('blackscreen')
+        elif freeze:  # Freeze only if no blackscreen (priority)
+            current_incidents.append('freeze')
+        if audio_issue:
+            current_incidents.append('audio_loss')
         
         current_time = datetime.now().isoformat()
         state_changed = False
         
-        logger.info(f"{device_id}: Video issue: {video_issue}, Audio issue: {audio_issue}, Active: {list(active_incidents.keys())}")
+        logger.info(f"{device_id}: Video: {video_issue}, Audio: {audio_issue}, Incidents: {current_incidents}, Active: {list(active_incidents.keys())}")
         
-        # Process VIDEO ISSUE (mutually exclusive: blackscreen OR freeze)
-        video_was_active = 'video_issue' in active_incidents
-        
-        if video_issue and not video_was_active:
-            # NEW VIDEO INCIDENT - Create in DB
-            logger.info(f"{device_id}: NEW video incident detected: {video_issue}")
-            alert_id = create_incident_in_db('video_issue', host_name, device_id, analysis_result, video_issue)
+        # Process each specific incident type
+        for incident_type in ['blackscreen', 'freeze', 'audio_loss']:
+            is_active = incident_type in current_incidents
+            was_active = incident_type in active_incidents
             
-            if alert_id:
-                active_incidents['video_issue'] = {
-                    "alert_id": alert_id,
-                    "issue_type": video_issue,
-                    "start_time": current_time,
-                    "consecutive_count": 1,
-                    "last_updated": current_time
-                }
-                state_changed = True
+            if is_active and not was_active:
+                # NEW INCIDENT - Create in DB
+                logger.info(f"{device_id}: NEW {incident_type} incident detected")
                 
-        elif video_issue and video_was_active:
-            # ONGOING OR CHANGED VIDEO INCIDENT
-            existing_issue_type = active_incidents['video_issue'].get('issue_type')
-            
-            if existing_issue_type != video_issue:
-                # VIDEO ISSUE TYPE CHANGED (blackscreen <-> freeze)
-                logger.info(f"{device_id}: Video issue changed from {existing_issue_type} to {video_issue}")
+                # Prepare enhanced metadata with all details
+                enhanced_metadata = analysis_result.copy()
+                if incident_type == 'blackscreen':
+                    enhanced_metadata['blackscreen_percentage'] = blackscreen_percentage
+                elif incident_type == 'freeze':
+                    enhanced_metadata['freeze_diffs'] = freeze_diffs
+                elif incident_type == 'audio_loss':
+                    enhanced_metadata['volume_percentage'] = volume_percentage
+                    enhanced_metadata['mean_volume_db'] = analysis_result.get('mean_volume_db', -100)
                 
-                # Resolve old incident
-                old_alert_id = active_incidents['video_issue']['alert_id']
-                resolve_incident_in_db(old_alert_id)
+                # Add frame information for incidents
+                last_3_filenames = analysis_result.get('last_3_filenames', [])
+                last_3_thumbnails = analysis_result.get('last_3_thumbnails', [])
+                enhanced_metadata['last_3_filenames'] = last_3_filenames
+                enhanced_metadata['last_3_thumbnails'] = last_3_thumbnails
                 
-                # Create new incident
-                alert_id = create_incident_in_db('video_issue', host_name, device_id, analysis_result, video_issue)
+                # Upload freeze frames to R2 if it's a freeze incident
+                if incident_type == 'freeze' and last_3_filenames:
+                    r2_urls = upload_freeze_frames_to_r2(last_3_filenames, last_3_thumbnails, device_id, current_time)
+                    if r2_urls:
+                        enhanced_metadata['r2_images'] = r2_urls
+                
+                alert_id = create_incident_in_db(incident_type, host_name, device_id, enhanced_metadata)
                 
                 if alert_id:
-                    active_incidents['video_issue'] = {
+                    active_incidents[incident_type] = {
                         "alert_id": alert_id,
-                        "issue_type": video_issue,
                         "start_time": current_time,
                         "consecutive_count": 1,
                         "last_updated": current_time
                     }
                     state_changed = True
-            else:
-                # SAME VIDEO ISSUE CONTINUING - Just update local count
-                incident_data = active_incidents['video_issue']
+                    
+            elif is_active and was_active:
+                # ONGOING INCIDENT - Just update local count
+                incident_data = active_incidents[incident_type]
                 incident_data["consecutive_count"] += 1
                 incident_data["last_updated"] = current_time
-                logger.info(f"{device_id}: {video_issue} ongoing (count: {incident_data['consecutive_count']})")
+                logger.info(f"{device_id}: {incident_type} ongoing (count: {incident_data['consecutive_count']})")
                 state_changed = True
                 
-        elif not video_issue and video_was_active:
-            # VIDEO ISSUE RESOLVED
-            incident_data = active_incidents['video_issue']
-            issue_type = incident_data.get('issue_type', 'unknown')
-            logger.info(f"{device_id}: RESOLVED video incident: {issue_type} (duration: {incident_data['consecutive_count']} detections)")
-            
-            resolve_incident_in_db(incident_data["alert_id"])
-            del active_incidents['video_issue']
-            state_changed = True
-        
-        # Process AUDIO ISSUE (independent)
-        audio_was_active = 'audio_loss' in active_incidents
-        
-        if audio_issue and not audio_was_active:
-            # NEW AUDIO INCIDENT - Create in DB
-            logger.info(f"{device_id}: NEW audio_loss incident detected")
-            alert_id = create_incident_in_db('audio_loss', host_name, device_id, analysis_result)
-            
-            if alert_id:
-                active_incidents['audio_loss'] = {
-                    "alert_id": alert_id,
-                    "start_time": current_time,
-                    "consecutive_count": 1,
-                    "last_updated": current_time
-                }
-                state_changed = True
+            elif not is_active and was_active:
+                # INCIDENT RESOLVED
+                incident_data = active_incidents[incident_type]
+                logger.info(f"{device_id}: RESOLVED {incident_type} incident (duration: {incident_data['consecutive_count']} detections)")
                 
-        elif audio_issue and audio_was_active:
-            # ONGOING AUDIO ISSUE - Just update local count
-            incident_data = active_incidents['audio_loss']
-            incident_data["consecutive_count"] += 1
-            incident_data["last_updated"] = current_time
-            logger.info(f"{device_id}: audio_loss ongoing (count: {incident_data['consecutive_count']})")
-            state_changed = True
-            
-        elif not audio_issue and audio_was_active:
-            # AUDIO ISSUE RESOLVED
-            incident_data = active_incidents['audio_loss']
-            logger.info(f"{device_id}: RESOLVED audio_loss incident (duration: {incident_data['consecutive_count']} detections)")
-            
-            resolve_incident_in_db(incident_data["alert_id"])
-            del active_incidents['audio_loss']
-            state_changed = True
+                resolve_incident_in_db(incident_data["alert_id"])
+                del active_incidents[incident_type]
+                state_changed = True
         
         # Update state if changed
         if state_changed:
@@ -394,10 +329,10 @@ def process_alert_directly(analysis_result, host_name, analysis_path):
         logger.error(f"Error processing alert for {device_id}: {e}")
 
 # ==================== OPTIMIZED DATABASE FUNCTIONS ====================
-def create_incident_in_db(incident_type, host_name, device_id, analysis_result, issue_type=None):
+def create_incident_in_db(incident_type, host_name, device_id, analysis_result):
     """Create new incident in database - returns alert_id"""
     try:
-        logger.info(f"DB INSERT: Creating {incident_type} incident for {device_id}" + (f" ({issue_type})" if issue_type else ""))
+        logger.info(f"DB INSERT: Creating {incident_type} incident for {device_id}")
         
         # Use lazy import exactly as before
         _lazy_import_db()
@@ -405,18 +340,13 @@ def create_incident_in_db(incident_type, host_name, device_id, analysis_result, 
             logger.warning("Database module not available, skipping alert creation")
             return None
         
-        # Enhance metadata with issue_type for video incidents
-        enhanced_metadata = analysis_result.copy()
-        if issue_type:
-            enhanced_metadata['issue_type'] = issue_type
-        
         # Call database exactly as before
         result = create_alert_safe(
             host_name=host_name,
             device_id=device_id,
             incident_type=incident_type,
             consecutive_count=1,  # Always start with 1
-            metadata=enhanced_metadata
+            metadata=analysis_result
         )
         
         if result.get('success'):
@@ -497,5 +427,92 @@ def validate_device_state_on_startup(capture_dirs):
         
     except Exception as e:
         print(f"[@alert_system] Error validating device states: {e}")
+
+# ==================== R2 UPLOAD FUNCTIONS ====================
+def upload_freeze_frames_to_r2(last_3_filenames, last_3_thumbnails, device_id, timestamp):
+    """Upload freeze incident frames to R2 storage"""
+    try:
+        # Import R2 utilities
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+        from src.utils.cloudflare_utils import get_cloudflare_utils
+        
+        uploader = get_cloudflare_utils()
+        if not uploader:
+            logger.warning("R2 uploader not available, skipping frame upload")
+            return None
+        
+        # Create R2 folder path for this incident: alerts/freeze/{device_id}/{timestamp}/
+        timestamp_str = timestamp.replace(':', '').replace('-', '').replace('T', '').replace('.', '')[:14]
+        base_r2_path = f"alerts/freeze/{device_id}/{timestamp_str}"
+        
+        r2_results = {
+            'original_urls': [],
+            'thumbnail_urls': [],
+            'original_r2_paths': [],
+            'thumbnail_r2_paths': [],
+            'timestamp': timestamp
+        }
+        
+        logger.info(f"Uploading freeze frames to R2 for {device_id} at {timestamp}")
+        
+        # Upload original frames (last 3)
+        for i, filename in enumerate(last_3_filenames):
+            if not filename or not os.path.exists(filename):
+                logger.warning(f"Original frame file not found: {filename}")
+                continue
+            
+            # R2 path: alerts/freeze/device1/20250124123456/frame_0.jpg
+            r2_path = f"{base_r2_path}/frame_{i}.jpg"
+            
+            upload_result = uploader.upload_file(filename, r2_path)
+            if upload_result.get('success'):
+                r2_results['original_urls'].append(upload_result['url'])
+                r2_results['original_r2_paths'].append(r2_path)
+                logger.info(f"Uploaded original frame {i}: {r2_path}")
+            else:
+                logger.error(f"Failed to upload original frame {i}: {upload_result.get('error')}")
+        
+        # Upload thumbnail frames (last 3)
+        for i, thumbnail_filename in enumerate(last_3_thumbnails):
+            if not thumbnail_filename:
+                continue
+                
+            # Construct full path if needed
+            if not os.path.isabs(thumbnail_filename):
+                # Assume thumbnails are in same directory as originals
+                if last_3_filenames and i < len(last_3_filenames):
+                    original_dir = os.path.dirname(last_3_filenames[i])
+                    thumbnail_path = os.path.join(original_dir, thumbnail_filename)
+                else:
+                    continue
+            else:
+                thumbnail_path = thumbnail_filename
+            
+            if not os.path.exists(thumbnail_path):
+                logger.warning(f"Thumbnail file not found: {thumbnail_path}")
+                continue
+            
+            # R2 path: alerts/freeze/device1/20250124123456/thumb_0.jpg
+            r2_path = f"{base_r2_path}/thumb_{i}.jpg"
+            
+            upload_result = uploader.upload_file(thumbnail_path, r2_path)
+            if upload_result.get('success'):
+                r2_results['thumbnail_urls'].append(upload_result['url'])
+                r2_results['thumbnail_r2_paths'].append(r2_path)
+                logger.info(f"Uploaded thumbnail {i}: {r2_path}")
+            else:
+                logger.error(f"Failed to upload thumbnail {i}: {upload_result.get('error')}")
+        
+        # Return results if we uploaded at least some files
+        if r2_results['original_urls'] or r2_results['thumbnail_urls']:
+            logger.info(f"Successfully uploaded {len(r2_results['original_urls'])} originals and {len(r2_results['thumbnail_urls'])} thumbnails to R2")
+            return r2_results
+        else:
+            logger.warning("No files were successfully uploaded to R2")
+            return None
+            
+    except Exception as e:
+        logger.error(f"Error uploading freeze frames to R2: {e}")
+        return None
 
 # Pure utility functions for worker threads

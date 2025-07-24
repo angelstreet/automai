@@ -195,29 +195,29 @@ def get_heatmap_data(
                             if (device_key not in device_latest_by_bucket[bucket_key] or 
                                 timestamp > device_latest_by_bucket[bucket_key][device_key]['timestamp']):
                                 
-                                # Download and parse JSON analysis data - simplified structure
-                                analysis_json = {
-                                    'blackscreen': False,
-                                    'freeze': False,
-                                    'audio_loss': False
-                                    # Removed has_audio and has_video - not useful
-                                }
+                                # Parse analysis if available - PASS THROUGH COMPLETE BACKEND DATA
+                                analysis_json = {}
                                 
-                                # Parse analysis if available
                                 frame_json_url = item.get('frame_json_url')
                                 if frame_json_url:
                                     try:
                                         import requests
                                         response = requests.get(frame_json_url, timeout=3)
                                         if response.status_code == 200:
-                                            data = response.json()
-                                            
-                                            # Extract analysis data
-                                            analysis_json['blackscreen'] = data.get('blackscreen', False)
-                                            analysis_json['freeze'] = data.get('freeze', False)
-                                            analysis_json['audio_loss'] = not data.get('audio', True)
+                                            # Pass through the complete backend analysis data
+                                            analysis_json = response.json()
+                                            print(f"[@db:heatmap:get_heatmap_data] Loaded complete analysis data with {len(analysis_json)} fields")
                                     except Exception as e:
                                         print(f"[@db:heatmap:get_heatmap_data] Failed to parse analysis JSON: {e}")
+                                
+                                # If no analysis available, provide minimal default structure
+                                if not analysis_json:
+                                    analysis_json = {
+                                        'blackscreen': False,
+                                        'freeze': False,
+                                        'audio': True,
+                                        'volume_percentage': 0
+                                    }
                                 
                                 # Build URLs if not provided by host (for minimalist host implementation)
                                 image_url = item.get('image_url')

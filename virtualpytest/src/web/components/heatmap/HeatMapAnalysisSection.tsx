@@ -1,4 +1,4 @@
-import React from 'react';
+import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import {
   Box,
   Typography,
@@ -14,34 +14,30 @@ import {
   TableRow,
   Paper,
 } from '@mui/material';
-import { ExpandMore, ExpandLess } from '@mui/icons-material';
+import React from 'react';
 
-interface DeviceAnalysis {
-  device: string;
-  hasIncident: boolean;
-  incidentDuration: string;
-  audio: boolean;
-  video: boolean;
-  blackscreen: boolean;
-  freeze: boolean;
-}
-
-interface Analysis {
-  summary: string;
-  details: DeviceAnalysis[];
-}
+import { HeatmapImage } from '../../hooks/pages/useHeatmap';
 
 interface HeatMapAnalysisSectionProps {
-  analysis: Analysis;
+  images: HeatmapImage[];
   analysisExpanded: boolean;
   onToggleExpanded: () => void;
 }
 
 export const HeatMapAnalysisSection: React.FC<HeatMapAnalysisSectionProps> = ({
-  analysis,
+  images,
   analysisExpanded,
   onToggleExpanded,
 }) => {
+  // Calculate summary from images
+  const totalDevices = images.length;
+  const devicesWithIncidents = images.filter((image) => {
+    const analysisJson = image.analysis_json || {};
+    return analysisJson.blackscreen || analysisJson.freeze || !analysisJson.audio;
+  }).length;
+
+  const summary = `${totalDevices} devices | ${devicesWithIncidents} with incidents`;
+
   return (
     <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
       <CardContent>
@@ -55,7 +51,7 @@ export const HeatMapAnalysisSection: React.FC<HeatMapAnalysisSectionProps> = ({
           <Typography variant="h6">Data Analysis</Typography>
           <Box display="flex" alignItems="center" gap={1}>
             <Typography variant="body2" color="textSecondary">
-              {analysis.summary}
+              {summary}
             </Typography>
             {analysisExpanded ? <ExpandLess /> : <ExpandMore />}
           </Box>
@@ -63,7 +59,7 @@ export const HeatMapAnalysisSection: React.FC<HeatMapAnalysisSectionProps> = ({
 
         <Collapse in={analysisExpanded}>
           <Box mt={2}>
-            {analysis.details.length > 0 ? (
+            {images.length > 0 ? (
               <TableContainer
                 component={Paper}
                 variant="outlined"
@@ -102,66 +98,85 @@ export const HeatMapAnalysisSection: React.FC<HeatMapAnalysisSectionProps> = ({
                         <strong>Video</strong>
                       </TableCell>
                       <TableCell>
+                        <strong>Volume %</strong>
+                      </TableCell>
+                      <TableCell>
+                        <strong>Mean dB</strong>
+                      </TableCell>
+                      <TableCell>
                         <strong>Blackscreen</strong>
                       </TableCell>
                       <TableCell>
                         <strong>Freeze</strong>
                       </TableCell>
-                      <TableCell>
-                        <strong>Duration</strong>
-                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {analysis.details.map((device, index) => (
-                      <TableRow
-                        key={index}
-                        sx={{
-                          backgroundColor: 'transparent !important',
-                          '&:hover': {
+                    {images.map((image, index) => {
+                      const analysisJson = image.analysis_json || {};
+                      const hasVideo = !analysisJson.blackscreen && !analysisJson.freeze;
+                      const hasAudio = analysisJson.audio;
+
+                      return (
+                        <TableRow
+                          key={index}
+                          sx={{
                             backgroundColor: 'transparent !important',
-                          },
-                        }}
-                      >
-                        <TableCell>{device.device}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={device.audio ? 'Yes' : 'No'}
-                            color={device.audio ? 'success' : 'error'}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            label={device.video ? 'Yes' : 'No'}
-                            color={device.video ? 'success' : 'error'}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Typography
-                            variant="caption"
-                            color={device.blackscreen ? 'error' : 'success'}
-                          >
-                            {device.blackscreen ? 'Yes' : 'No'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Typography variant="caption" color={device.freeze ? 'error' : 'success'}>
-                            {device.freeze ? 'Yes' : 'No'}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          {device.incidentDuration ? (
-                            <Chip label={device.incidentDuration} color="error" size="small" />
-                          ) : (
-                            <Typography variant="caption" color="textSecondary">
-                              N/A
+                            '&:hover': {
+                              backgroundColor: 'transparent !important',
+                            },
+                          }}
+                        >
+                          <TableCell>
+                            {image.host_name}-{image.device_id}
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={hasAudio ? 'Yes' : 'No'}
+                              color={hasAudio ? 'success' : 'error'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={hasVideo ? 'Yes' : 'No'}
+                              color={hasVideo ? 'success' : 'error'}
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption">
+                              {analysisJson.volume_percentage || 0}%
                             </Typography>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption">
+                              {analysisJson.mean_volume_db || -100} dB
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              variant="caption"
+                              color={analysisJson.blackscreen ? 'error' : 'success'}
+                            >
+                              {analysisJson.blackscreen
+                                ? `Yes (${analysisJson.blackscreen_percentage || 0}%)`
+                                : 'No'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography
+                              variant="caption"
+                              color={analysisJson.freeze ? 'error' : 'success'}
+                            >
+                              {analysisJson.freeze
+                                ? `Yes (${(analysisJson.freeze_diffs || []).join(', ')})`
+                                : 'No'}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </TableContainer>

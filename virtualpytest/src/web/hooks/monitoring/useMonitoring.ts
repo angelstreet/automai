@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 
+import {
+  MonitoringAnalysis,
+  SubtitleAnalysis,
+  SubtitleTrendAnalysis,
+} from '../../types/pages/Monitoring_Types';
+
 import { useMonitoringAI } from './useMonitoringAI';
 import { useMonitoringSubtitles } from './useMonitoringSubtitles';
 
@@ -9,24 +15,6 @@ interface FrameRef {
   jsonUrl: string;
   analysis?: MonitoringAnalysis | null;
   subtitleDetectionPerformed?: boolean; // Flag to track if manual subtitle detection was done
-}
-
-interface MonitoringAnalysis {
-  blackscreen: boolean;
-  freeze: boolean;
-  subtitles: boolean;
-  subtitles_trend?: {
-    current: boolean;
-    last_3_frames: boolean[];
-    count_in_last_3: number;
-    no_subtitles_for_3_frames: boolean;
-  };
-  errors: boolean;
-  text: string;
-  language?: string;
-  confidence: number;
-  audio: boolean;
-  volume_percentage: number;
 }
 
 interface ErrorTrendData {
@@ -73,15 +61,13 @@ interface UseMonitoringReturn {
   handleAIQueryChange: (query: string) => void;
 
   // Subtitle trend analysis
-  subtitleTrendData: {
-    showRedIndicator: boolean;
-    currentHasSubtitles: boolean;
-    framesAnalyzed: number;
-    noSubtitlesStreak: number;
-  } | null;
+  subtitleTrendAnalysis: SubtitleTrendAnalysis | null;
 
   // Error trend analysis
   errorTrendData: ErrorTrendData | null;
+
+  // Current subtitle analysis for components that need subtitle data
+  currentSubtitleAnalysis: SubtitleAnalysis | null;
 }
 
 interface UseMonitoringProps {
@@ -118,8 +104,6 @@ export const useMonitoring = ({
   const subtitleHook = useMonitoringSubtitles({
     frames,
     currentIndex,
-    selectedFrameAnalysis,
-    setSelectedFrameAnalysis,
     setFrames,
     setIsPlaying,
     setUserSelectedFrame,
@@ -276,14 +260,18 @@ export const useMonitoring = ({
             const data = await response.json();
 
             analysis = {
+              timestamp: data.timestamp || '',
+              filename: data.filename || '',
+              thumbnail: data.thumbnail || '',
               blackscreen: data.blackscreen || false,
+              blackscreen_percentage: data.blackscreen_percentage || 0,
               freeze: data.freeze || false,
-              errors: false,
-              subtitles: false,
-              text: '',
-              confidence: 0,
+              freeze_diffs: data.freeze_diffs || [],
+              last_3_filenames: data.last_3_filenames || [],
+              last_3_thumbnails: data.last_3_thumbnails || [],
               audio: data.audio || false,
               volume_percentage: data.volume_percentage || 0,
+              mean_volume_db: data.mean_volume_db || -100,
             };
 
             console.log('[useMonitoring] Analysis loaded:', analysis);
@@ -397,64 +385,11 @@ export const useMonitoring = ({
     };
   }, [frames]);
 
-  // Subtitle trend analysis - using adaptive frame count
-  const subtitleTrendData = useMemo(() => {
-    if (frames.length === 0) return null;
+  // Subtitle trend analysis moved to useMonitoringSubtitles
+  const subtitleTrendAnalysis = subtitleHook.subtitleTrendAnalysis;
 
-    // Get frames with analysis data loaded
-    const framesWithAnalysis = frames.filter((frame) => frame.analysis !== undefined);
-
-    if (framesWithAnalysis.length === 0) return null;
-
-    // Adaptive frame count based on available data:
-    // - If we have cache (script analysis with subtitle_trend), use up to 5 frames
-    // - If no cache (only current frame analysis), use up to 3 frames
-    let targetFrameCount = 3; // Default minimum
-    const latestFrame = framesWithAnalysis[framesWithAnalysis.length - 1];
-
-    if (latestFrame?.analysis?.subtitles_trend) {
-      // We have enhanced analysis with multi-frame data
-      targetFrameCount = Math.min(5, framesWithAnalysis.length);
-    } else {
-      // We only have current frame analysis
-      targetFrameCount = Math.min(3, framesWithAnalysis.length);
-    }
-
-    // Get the most recent frames for analysis
-    const recentFrames = framesWithAnalysis.slice(-targetFrameCount);
-
-    // Check for subtitle presence across frames
-    let noSubtitlesCount = 0;
-    let currentHasSubtitles = false;
-
-    recentFrames.forEach((frame, index) => {
-      const analysis = frame.analysis;
-      if (!analysis) return;
-
-      // Check current frame (most recent)
-      if (index === recentFrames.length - 1) {
-        currentHasSubtitles = analysis.subtitles || false;
-      }
-
-      // Count frames without subtitles
-      if (!analysis.subtitles) {
-        noSubtitlesCount++;
-      }
-    });
-
-    // Red indicator logic:
-    // - Show red if ALL analyzed frames have no subtitles
-    // - AND we have analyzed at least the target number of frames
-    const showRedIndicator =
-      noSubtitlesCount === recentFrames.length && recentFrames.length >= targetFrameCount;
-
-    return {
-      showRedIndicator,
-      currentHasSubtitles,
-      framesAnalyzed: recentFrames.length,
-      noSubtitlesStreak: noSubtitlesCount,
-    };
-  }, [frames]);
+  // Get current subtitle analysis from the subtitle hook
+  const currentSubtitleAnalysis = subtitleHook.currentSubtitleAnalysis;
 
   // Handlers
   const handlePlayPause = useCallback(() => {
@@ -525,9 +460,12 @@ export const useMonitoring = ({
     handleAIQueryChange: aiHook.handleAIQueryChange,
 
     // Subtitle trend analysis
-    subtitleTrendData,
+    subtitleTrendAnalysis,
 
     // Error trend analysis
     errorTrendData,
+
+    // Current subtitle analysis for components that need subtitle data
+    currentSubtitleAnalysis,
   };
 };
