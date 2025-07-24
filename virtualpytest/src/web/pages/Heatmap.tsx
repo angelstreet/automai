@@ -514,20 +514,8 @@ const Heatmap: React.FC = () => {
       const tooltipImage = images[tooltipIndex];
       if (!tooltipImage) return null;
 
-      // Get the corrected analysis values
-      // Use the analysis_json directly - extend it to SubtitleAnalysis format for the overlay
-      const analysis = tooltipImage.analysis_json
-        ? {
-            ...tooltipImage.analysis_json,
-            subtitles: false, // No subtitle detection in heatmap tooltips
-            errors:
-              tooltipImage.analysis_json.blackscreen ||
-              tooltipImage.analysis_json.freeze ||
-              !tooltipImage.analysis_json.audio,
-            text: '',
-            confidence: 0,
-          }
-        : undefined;
+      // Use the analysis_json directly as MonitoringAnalysis - no subtitle mixing
+      const monitoringAnalysis = tooltipImage.analysis_json || undefined;
 
       return (
         <Popper
@@ -549,7 +537,7 @@ const Heatmap: React.FC = () => {
                   }}
                 >
                   <MonitoringOverlay
-                    subtitleAnalysis={analysis}
+                    monitoringAnalysis={monitoringAnalysis}
                     sx={{ position: 'relative', top: 'auto', left: 'auto', p: 0 }}
                   />
                 </Box>
