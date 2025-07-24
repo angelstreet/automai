@@ -23,6 +23,7 @@ interface UseAIAgentReturn {
   executionLog: ExecutionLogEntry[];
   taskInput: string;
   errorMessage: string | null;
+  taskResult: { success: boolean; message: string } | null;
 
   // AI plan from backend
   aiPlan: any;
@@ -41,6 +42,7 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
   const [executionLog, setExecutionLog] = useState<ExecutionLogEntry[]>([]);
   const [taskInput, setTaskInput] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [taskResult, setTaskResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // AI plan response
   const [aiPlan, setAiPlan] = useState<any>(null);
@@ -52,6 +54,7 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
     try {
       setIsExecuting(true);
       setErrorMessage(null);
+      setTaskResult(null);
       setCurrentStep('Asking AI for execution plan...');
       setExecutionLog([]);
       setAiPlan(null);
@@ -139,6 +142,21 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
                     }
                   }
 
+                  // Extract task result from execution log
+                  const summaryEntry = statusResult.execution_log.find(
+                    (entry: ExecutionLogEntry) => entry.action_type === 'result_summary' && entry.type === 'summary',
+                  );
+
+                  if (summaryEntry && summaryEntry.value) {
+                    const summary = summaryEntry.value;
+                    const success = summary.success === true;
+                    const message = success ? 'Task Completed' : 'Task Failed';
+                    setTaskResult({ success, message });
+                  } else {
+                    // Fallback if no summary found
+                    setTaskResult({ success: true, message: 'Task Completed' });
+                  }
+
                   // Task completed, stop polling
                   setIsExecuting(false);
                   return;
@@ -212,6 +230,7 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
   const clearLog = useCallback(() => {
     setExecutionLog([]);
     setErrorMessage(null);
+    setTaskResult(null);
     setCurrentStep('');
     setAiPlan(null);
     setIsPlanFeasible(true);
@@ -224,6 +243,7 @@ export const useAIAgent = ({ host, device, enabled = true }: UseAIAgentProps): U
     executionLog,
     taskInput,
     errorMessage,
+    taskResult,
     aiPlan,
     isPlanFeasible,
 
