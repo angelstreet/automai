@@ -21,9 +21,11 @@ import { Host, Device } from '../../types/common/Host_Types';
 import { getZIndex } from '../../utils/zIndexUtils';
 import { HLSVideoPlayer } from '../common/HLSVideoPlayer';
 import { DesktopPanel } from '../controller/desktop/DesktopPanel';
+import { PowerButton } from '../controller/power/PowerButton';
 import { RemotePanel } from '../controller/remote/RemotePanel';
 import { WebPanel } from '../controller/web/WebPanel';
 import { MonitoringPlayer } from '../monitoring/MonitoringPlayer';
+
 import { RestartPlayer } from './RestartPlayer';
 
 interface RecHostStreamModalProps {
@@ -153,6 +155,13 @@ const RecHostStreamModalContent: React.FC<{
   const isDesktopDevice = useMemo(() => {
     return device?.device_model === 'host_vnc';
   }, [device?.device_model]);
+
+  // Check if device has power control capability
+  const hasPowerControl = useMemo(() => {
+    // Check if device has power controller in its controller types list
+    const controllerTypes = device?.device_controller_types;
+    return controllerTypes && controllerTypes.some((type) => type.includes('power'));
+  }, [device?.device_controller_types]);
 
   // Handle remote/terminal toggle
   const handleToggleRemote = useCallback(() => {
@@ -401,6 +410,11 @@ const RecHostStreamModalContent: React.FC<{
                   ? 'Release Control'
                   : 'Take Control'}
             </Button>
+
+            {/* Power Control Button */}
+            {hasPowerControl && device && (
+              <PowerButton host={host} device={device} disabled={!isControlActive} />
+            )}
 
             {/* Monitoring Toggle Button */}
             <Button
