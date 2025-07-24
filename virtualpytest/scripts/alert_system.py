@@ -100,7 +100,148 @@ def save_device_state(state_file_path, state):
     except IOError as e:
         logger.warning(f"Could not save state to {state_file_path}: {e}")
 
-# ==================== DIRECT ALERT PROCESSING ====================
+# ==================== MEMORY-BASED ALERT PROCESSING ====================
+def process_alert_with_memory_state(analysis_result, host_name, device_id, incident_state):
+    """Process alert using memory-based incident state - returns updated state"""
+    try:
+        # Use provided incident state instead of loading from file
+        active_incidents = incident_state.get("active_incidents", {})
+        
+        # Extract incident detection results
+        blackscreen = analysis_result.get('blackscreen', False)
+        freeze = analysis_result.get('freeze', False) 
+        audio = analysis_result.get('audio', True)
+        
+        # Determine current incidents (2 types only)
+        video_issue = None
+        audio_issue = False
+        
+        # Video issues are mutually exclusive (blackscreen takes priority)
+        if blackscreen:
+            video_issue = 'blackscreen'
+        elif freeze:
+            video_issue = 'freeze'
+        
+        # Audio issue is independent
+        if not audio:
+            audio_issue = True
+            
+        current_time = datetime.now().isoformat()
+        state_changed = False
+        
+        logger.info(f"{device_id}: Video issue: {video_issue}, Audio issue: {audio_issue}, Active: {list(active_incidents.keys())}")
+        
+        # Process VIDEO ISSUE (mutually exclusive: blackscreen OR freeze)
+        video_was_active = 'video_issue' in active_incidents
+        
+        if video_issue and not video_was_active:
+            # NEW VIDEO INCIDENT - Create in DB
+            logger.info(f"{device_id}: NEW video incident detected: {video_issue}")
+            alert_id = create_incident_in_db('video_issue', host_name, device_id, analysis_result, video_issue)
+            
+            if alert_id:
+                active_incidents['video_issue'] = {
+                    "alert_id": alert_id,
+                    "issue_type": video_issue,
+                    "start_time": current_time,
+                    "consecutive_count": 1,
+                    "last_updated": current_time
+                }
+                state_changed = True
+                
+        elif video_issue and video_was_active:
+            # ONGOING VIDEO ISSUE - Check if type changed
+            incident_data = active_incidents['video_issue']
+            existing_issue_type = incident_data.get('issue_type')
+            
+            if existing_issue_type != video_issue:
+                # VIDEO ISSUE TYPE CHANGED (blackscreen <-> freeze)
+                logger.info(f"{device_id}: Video issue changed from {existing_issue_type} to {video_issue}")
+                
+                # Resolve old incident
+                old_alert_id = active_incidents['video_issue']['alert_id']
+                resolve_incident_in_db(old_alert_id)
+                
+                # Create new incident
+                alert_id = create_incident_in_db('video_issue', host_name, device_id, analysis_result, video_issue)
+                
+                if alert_id:
+                    active_incidents['video_issue'] = {
+                        "alert_id": alert_id,
+                        "issue_type": video_issue,
+                        "start_time": current_time,
+                        "consecutive_count": 1,
+                        "last_updated": current_time
+                    }
+                    state_changed = True
+            else:
+                # Same issue type, just update count
+                incident_data["consecutive_count"] += 1
+                incident_data["last_updated"] = current_time
+                logger.info(f"{device_id}: {video_issue} ongoing (count: {incident_data['consecutive_count']})")
+                state_changed = True
+                
+        elif not video_issue and video_was_active:
+            # VIDEO ISSUE RESOLVED
+            incident_data = active_incidents['video_issue']
+            issue_type = incident_data.get('issue_type', 'unknown')
+            logger.info(f"{device_id}: RESOLVED video incident: {issue_type} (duration: {incident_data['consecutive_count']} detections)")
+            
+            resolve_incident_in_db(incident_data["alert_id"])
+            del active_incidents['video_issue']
+            state_changed = True
+        
+        # Process AUDIO ISSUE (independent)
+        audio_was_active = 'audio_loss' in active_incidents
+        
+        if audio_issue and not audio_was_active:
+            # NEW AUDIO INCIDENT - Create in DB
+            logger.info(f"{device_id}: NEW audio_loss incident detected")
+            alert_id = create_incident_in_db('audio_loss', host_name, device_id, analysis_result)
+            
+            if alert_id:
+                active_incidents['audio_loss'] = {
+                    "alert_id": alert_id,
+                    "start_time": current_time,
+                    "consecutive_count": 1,
+                    "last_updated": current_time
+                }
+                state_changed = True
+                
+        elif audio_issue and audio_was_active:
+            # ONGOING AUDIO ISSUE - Just update local count
+            incident_data = active_incidents['audio_loss']
+            incident_data["consecutive_count"] += 1
+            incident_data["last_updated"] = current_time
+            logger.info(f"{device_id}: audio_loss ongoing (count: {incident_data['consecutive_count']})")
+            state_changed = True
+            
+        elif not audio_issue and audio_was_active:
+            # AUDIO ISSUE RESOLVED
+            incident_data = active_incidents['audio_loss']
+            logger.info(f"{device_id}: RESOLVED audio_loss incident (duration: {incident_data['consecutive_count']} detections)")
+            
+            resolve_incident_in_db(incident_data["alert_id"])
+            del active_incidents['audio_loss']
+            state_changed = True
+        
+        # Return updated state
+        updated_state = {
+            "active_incidents": active_incidents,
+            "last_analysis": current_time
+        }
+        
+        if state_changed:
+            logger.info(f"{device_id}: State updated - Active incidents: {list(active_incidents.keys())}")
+        
+        return updated_state
+        
+    except Exception as e:
+        logger.error(f"Error processing alert for {device_id}: {e}")
+        # Return original state on error
+        return incident_state
+
+# ==================== DIRECT ALERT PROCESSING (LEGACY) ====================
 def process_alert_directly(analysis_result, host_name, analysis_path):
     """Process alert directly using local state file - optimized DB calls"""
     try:

@@ -270,26 +270,17 @@ def analyze_freeze(image_path, previous_frames_cache=None):
     except Exception:
         return False, None
 
-def extract_device_id_from_path(analysis_path: str) -> str:
-    """Extract device_id from capture folder path"""
-    try:
-        if 'capture' in analysis_path:
-            path_parts = analysis_path.split('/')
-            for part in path_parts:
-                if part.startswith('capture') and part[7:].isdigit():
-                    device_number = part[7:]
-                    return f"device{device_number}"
-        return "device-unknown"
-    except Exception:
-        return "device-unknown"
+
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: analyze_capture.py /path/to/capture_file.jpg [host_name]", file=sys.stderr)
+        print("Usage: analyze_capture.py /path/to/capture_file.jpg [host_name] [device_id] [incident_state_json]", file=sys.stderr)
         sys.exit(1)
     
     image_path = sys.argv[1]
     host_name = sys.argv[2] if len(sys.argv) > 2 else None
+    device_id = sys.argv[3] if len(sys.argv) > 3 else None
+    incident_state_json = sys.argv[4] if len(sys.argv) > 4 else None
     
     if not os.path.exists(image_path) or not image_path.endswith('.jpg'):
         print(f"Error: Invalid image file: {image_path}", file=sys.stderr)
@@ -348,24 +339,33 @@ def main():
         logger.info(f"Analysis complete: {json_filename}")
         logger.info(f"Results: blackscreen={blackscreen}, freeze={frozen}, audio={has_audio}")
         
-        # Process alerts directly if host_name provided
-        if host_name:
+        # Process alerts with memory-based incident state
+        if host_name and device_id and incident_state_json:
             try:
-                sys.path.append(os.path.dirname(__file__))
-                from alert_system import process_alert_directly
+                # Parse incident state from memory
+                incident_state = json.loads(incident_state_json)
                 
-                logger.info(f"Processing alerts for host: {host_name}")
-                process_alert_directly(
+                sys.path.append(os.path.dirname(__file__))
+                from alert_system import process_alert_with_memory_state
+                
+                logger.info(f"Processing alerts for host: {host_name}, device: {device_id}")
+                updated_state = process_alert_with_memory_state(
                     analysis_result=result,
                     host_name=host_name,
-                    analysis_path=image_path
+                    device_id=device_id,  # Pass device_id directly instead of extracting from path
+                    incident_state=incident_state
                 )
                 
-                logger.info(f"Alert processed directly (host: {host_name})")
+                # Output updated state for capture_monitor to read
+                print(f"INCIDENT_STATE:{json.dumps(updated_state)}")
+                
+                logger.info(f"Alert processed with memory state (host: {host_name}, device: {device_id})")
             except ImportError as e:
                 logger.error(f"Could not import alert_system: {e}")
             except Exception as e:
                 logger.error(f"Alert processing failed: {e}")
+        elif host_name:
+            logger.warning("Missing device_id or incident state, skipping alert processing")
         else:
             logger.warning("Host name not provided, skipping alert processing")
         

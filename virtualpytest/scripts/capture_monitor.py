@@ -13,6 +13,7 @@ import subprocess
 import threading
 import glob
 import logging
+import json
 from datetime import datetime
 from pathlib import Path
 
@@ -45,6 +46,7 @@ UNIFIED_ANALYSIS_INTERVAL = 3   # seconds - aligned timing for video + audio
 class CaptureMonitor:
     def __init__(self):
         self.running = True
+        self.incident_states = {}  # Memory-based incident state: {device_id: {active_incidents: {}, last_analysis: timestamp}}
         self.setup_signal_handlers()
         
     def setup_signal_handlers(self):
@@ -68,21 +70,30 @@ class CaptureMonitor:
                 logger.info(f"Skipping non-existent: {capture_dir}")
         return existing
     
-    def clean_incidents_on_startup(self, capture_dirs):
-        """Delete incidents.json files on startup to prevent phantom alerts"""
-        try: 
-            for capture_dir in capture_dirs:
-                # Get parent directory (capture1, capture2, etc.)
-                parent_dir = os.path.dirname(capture_dir)
-                incidents_file = os.path.join(parent_dir, 'incidents.json')
-                
-                if os.path.exists(incidents_file):
-                    os.remove(incidents_file)
-                   
-            logger.info("Incidents cleanup completed - fresh start guaranteed")
-            
-        except Exception as e:
-            logger.error(f"Error deleting incidents files: {e}")
+    def get_device_id_from_path(self, capture_dir):
+        """Extract device_id from capture directory path"""
+        try:
+            # capture_dir = "/var/www/html/stream/capture1/captures"
+            parent_dir = os.path.dirname(capture_dir)  # "/var/www/html/stream/capture1"
+            folder_name = os.path.basename(parent_dir)  # "capture1"
+            if folder_name.startswith('capture') and folder_name[7:].isdigit():
+                return f"device{folder_name[7:]}"  # "device1"
+            return "device-unknown"
+        except Exception:
+            return "device-unknown"
+    
+    def get_incident_state(self, device_id):
+        """Get incident state for device (creates if not exists)"""
+        if device_id not in self.incident_states:
+            self.incident_states[device_id] = {
+                "active_incidents": {},
+                "last_analysis": None
+            }
+        return self.incident_states[device_id]
+    
+    def update_incident_state(self, device_id, state):
+        """Update incident state for device"""
+        self.incident_states[device_id] = state
 
     def find_recent_unanalyzed_frames(self, capture_dir, max_frames=5):
         """Find recent frames that don't have JSON analysis files yet"""
@@ -147,11 +158,14 @@ class CaptureMonitor:
                     
                 logger.info(f"Processing frame (thumbnail-only): {os.path.basename(frame_path)}")
                 
+                # Get current incident state for this device
+                current_state = self.get_incident_state(device_id)
+                
                 # Run unified analysis with ORIGINAL path (analyze_audio_video.py will find the thumbnail)
-                # This ensures the JSON file is named correctly (capture_*.json, not capture_*_thumbnail.json)
+                # Pass device_id and incident state as JSON parameter for memory-based processing
                 cmd = [
                     "bash", "-c",
-                    f"source {VENV_PATH} && python {SCRIPTS_DIR}/analyze_audio_video.py '{frame_path}' '{HOST_NAME}'"
+                    f"source {VENV_PATH} && python {SCRIPTS_DIR}/analyze_audio_video.py '{frame_path}' '{HOST_NAME}' '{device_id}' '{json.dumps(current_state)}'"
                 ]
                 
                 result = subprocess.run(
@@ -164,6 +178,19 @@ class CaptureMonitor:
                 
                 if result.returncode == 0:
                     logger.info(f"Unified analysis completed: {os.path.basename(frame_path)}")
+                    
+                    # Parse updated incident state from stdout (if provided)
+                    try:
+                        output_lines = result.stdout.strip().split('\n')
+                        for line in output_lines:
+                            if line.startswith('INCIDENT_STATE:'):
+                                updated_state_json = line.replace('INCIDENT_STATE:', '')
+                                updated_state = json.loads(updated_state_json)
+                                self.update_incident_state(device_id, updated_state)
+                                logger.debug(f"Updated incident state for {device_id}")
+                                break
+                    except Exception as e:
+                        logger.warning(f"Could not parse incident state update: {e}")
                 else:
                     logger.error(f"Unified analysis failed: {result.stderr}")
                     
@@ -174,9 +201,9 @@ class CaptureMonitor:
 
 
 
-    def unified_worker(self, capture_dir):
+    def unified_worker(self, capture_dir, device_id):
         """Unified analysis worker - processes both video and audio"""
-        print(f"[@capture_monitor] Started unified worker for: {capture_dir}")
+        print(f"[@capture_monitor] Started unified worker for: {capture_dir} ({device_id})")
         
         while self.running:
             try:
@@ -192,18 +219,19 @@ class CaptureMonitor:
                 print(f"[@capture_monitor] Unified worker error: {e}")
                 time.sleep(5)
                 
-        print(f"[@capture_monitor] Unified worker stopped for: {capture_dir}")
+        print(f"[@capture_monitor] Unified worker stopped for: {capture_dir} ({device_id})")
             
     def start_unified_workers(self, capture_dirs):
         """Start unified analysis workers for all capture directories"""
         for capture_dir in capture_dirs:
+            device_id = self.get_device_id_from_path(capture_dir)
             thread = threading.Thread(
                 target=self.unified_worker,
-                args=(capture_dir,),
+                args=(capture_dir, device_id),
                 daemon=True
             )
             thread.start()
-            print(f"[@capture_monitor] Started unified thread for: {capture_dir}")
+            print(f"[@capture_monitor] Started unified thread for: {capture_dir} ({device_id})")
             
     def run(self):
         """Main monitoring loop - SIMPLIFIED"""
@@ -225,8 +253,6 @@ class CaptureMonitor:
         # Get existing directories
         capture_dirs = self.get_existing_directories()
         
-        # Clean incidents.json files on startup to prevent phantom alerts
-        self.clean_incidents_on_startup(capture_dirs)
         if not capture_dirs:
             print(f"[@capture_monitor] No capture directories found, exiting")
             return
