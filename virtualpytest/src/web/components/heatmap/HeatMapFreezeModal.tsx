@@ -18,8 +18,15 @@ export const HeatMapFreezeModal: React.FC<HeatMapFreezeModalProps> = ({
 }) => {
   if (!freezeModalOpen || !freezeModalImage) return null;
 
-  const freezeDetails = freezeModalImage.analysis_json?.freeze_details;
-  if (!freezeDetails) return null;
+  // Use existing MonitoringAnalysis fields instead of freeze_details
+  const analysisJson = freezeModalImage.analysis_json;
+  if (!analysisJson || !analysisJson.freeze) return null;
+
+  const framesCompared = analysisJson.last_3_filenames || [];
+  const frameDifferences = analysisJson.freeze_diffs || [];
+
+  // Only show modal if we have frame data
+  if (framesCompared.length === 0) return null;
 
   return (
     <Modal
@@ -66,14 +73,14 @@ export const HeatMapFreezeModal: React.FC<HeatMapFreezeModalProps> = ({
 
         {/* 3 Images side by side */}
         <Box sx={{ display: 'flex', flex: 1, gap: 1, p: 1 }}>
-          {freezeDetails.frames_compared.map((filename, index) => {
+          {framesCompared.map((filename, index) => {
             const frameUrl = constructFrameUrl(filename, freezeModalImage.image_url);
-            const diff = freezeDetails.frame_differences[index];
-            
+            const diff = frameDifferences[index];
+
             // Extract timestamp from filename (assuming format: capture_YYYYMMDDHHMMSS.jpg)
             const timestampMatch = filename.match(/capture_(\d{14})/);
             const timestamp = timestampMatch ? timestampMatch[1] : '';
-            
+
             // Format timestamp to readable format
             const formatTimestamp = (ts: string) => {
               if (ts.length !== 14) return ts;
