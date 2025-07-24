@@ -52,12 +52,16 @@ class TapoPowerController(PowerControllerInterface):
                 self.device = await self.client.p100(self.device_ip)
                 self.device_type_tapo = "p100"
             
-            asyncio.run(setup())
+            # Use asyncio.wait_for with timeout to fail early
+            asyncio.run(asyncio.wait_for(setup(), timeout=10.0))
             print(f"[@controller:TapoPower] Tapo client initialized successfully as {self.device_type_tapo}")
             
+        except asyncio.TimeoutError:
+            print(f"[@controller:TapoPower] Tapo client initialization timed out after 10 seconds")
+            raise ValueError(f"Tapo device {self.device_ip} connection timeout - check device availability")
         except Exception as e:
             print(f"[@controller:TapoPower] Failed to initialize Tapo client: {e}")
-            raise
+            raise ValueError(f"Tapo device {self.device_ip} initialization failed: {e}")
         
     def connect(self) -> bool:
         """Connect to Tapo device (always returns True after init)."""

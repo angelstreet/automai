@@ -200,6 +200,7 @@ def get_device_capabilities(device_model: str) -> dict:
         'remote': mapping['remote'][0] if mapping['remote'] else None,
         'desktop': mapping['desktop'][0] if mapping['desktop'] else None,
         'web': mapping['web'][0] if mapping['web'] else None,
+        'power': mapping['power'][0] if mapping['power'] else None,
         'ai': mapping['ai'][0] if mapping['ai'] else None,
         'verification': list(set(verification_types))  # Remove duplicates
     }
