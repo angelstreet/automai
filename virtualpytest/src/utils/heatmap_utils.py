@@ -417,37 +417,39 @@ def upload_to_r2(image: Image.Image, filename: str) -> Optional[str]:
         return None
 
 def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[Dict]], incidents: List[Dict], team_id: str):
-    """Process heatmap generation with image downloading and JSON analysis"""
-    import os
-    set_low_priority()
-    
-    with job_lock:
-        job = active_jobs.get(job_id)
-        if not job:
-            return
-        job.status = 'processing'
-        job.start_time = datetime.now()  # Record when processing actually started
-    
+    """Process heatmap generation in background thread"""
     try:
+        # Set low process priority to limit CPU usage
+        set_low_priority()
+        
+        print(f"[@heatmap_utils] Starting heatmap generation for job {job_id}")
+        
         timestamps = sorted(images_by_timestamp.keys())
         total_timestamps = len(timestamps)
-        
-        if total_timestamps == 0:
-            raise Exception("No timestamps to process")
-        
         generated_images = []
+        all_processed_images = []  # Collect ALL processed images for final heatmap_data
+        
+        # Mark job as processing
+        with job_lock:
+            if job_id not in active_jobs:
+                print(f"[@heatmap_utils] Job {job_id} not found, exiting")
+                return
+            
+            job = active_jobs[job_id]
+            job.status = 'processing'
+            job.start_time = datetime.now()  # Record when processing actually started
         
         for i, timestamp in enumerate(timestamps):
+            print(f"[@heatmap_utils] Processing timestamp bucket: {timestamp} with {len(images_by_timestamp[timestamp])} images")
+            
             # Check if job was cancelled
             with job_lock:
-                if active_jobs[job_id].status == 'failed':
+                if job_id not in active_jobs or active_jobs[job_id].status == 'cancelled':
+                    print(f"[@heatmap_utils] Job {job_id} was cancelled, stopping")
                     return
             
             images_data = images_by_timestamp[timestamp]
-            print(f"[@heatmap_utils] Processing timestamp bucket: {timestamp} with {len(images_data)} images")
-            
-            # Download images and JSON analysis for this timestamp
-            processed_images = []
+            processed_images = []  # For this timestamp
             
             for image_info in images_data:
                 print(f"[@heatmap_utils:process_heatmap_generation] Processing {image_info['host_name']} {image_info['device_id']}: analysis_json={image_info.get('analysis_json')}")
@@ -463,33 +465,41 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                             'audio_loss': False
                         })
                         
-                        processed_images.append({
+                        processed_image = {
                             'host_name': image_info['host_name'],
                             'device_id': image_info['device_id'],
                             'image_data': image_data,
                             'analysis_json': analysis_json,
                             'original_timestamp': image_info.get('original_timestamp', timestamp)
-                        })
+                        }
+                        processed_images.append(processed_image)
+                        all_processed_images.append(processed_image)  # Add to global collection
                         
                     else:
                         print(f"[@heatmap_utils] No image data for {image_info['host_name']}: using placeholder")
                         # Add placeholder for missing image to keep grid layout
-                        processed_images.append({
+                        processed_image = {
                             'host_name': image_info['host_name'],
                             'device_id': image_info['device_id'],
                             'image_data': None,
-                            'error': 'No image data available'
-                        })
+                            'error': 'No image data available',
+                            'original_timestamp': image_info.get('original_timestamp', timestamp)
+                        }
+                        processed_images.append(processed_image)
+                        all_processed_images.append(processed_image)  # Add to global collection
                         
                 except Exception as e:
                     print(f"[@heatmap_utils] Error processing data for {image_info['host_name']}: {e}")
                     # Add placeholder for error to keep grid layout
-                    processed_images.append({
+                    processed_image = {
                         'host_name': image_info['host_name'],
                         'device_id': image_info['device_id'],
                         'image_data': None,
-                        'error': str(e)
-                    })
+                        'error': str(e),
+                        'original_timestamp': image_info.get('original_timestamp', timestamp)
+                    }
+                    processed_images.append(processed_image)
+                    all_processed_images.append(processed_image)  # Add to global collection
             
             if not processed_images:
                 print(f"[@heatmap_utils] No images processed for timestamp {timestamp}, skipping")
@@ -625,28 +635,17 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
             # Set mosaic_urls for frontend consumption
             job.mosaic_urls = [img['mosaic_url'] for img in generated_images]
             
-            # Set heatmap_data with complete analysis data ONLY on completion
-            job.heatmap_data = {
-                'hosts_devices': [
-                    {'host_name': host_name, 'device_id': device_id}
-                    for host_name, device_id in set((img['host_name'], img['device_id']) for img in processed_images if img.get('host_name') and img.get('device_id'))
-                ],
-                'images_by_timestamp': {
-                    timestamp: [
-                        {
-                            'host_name': img['host_name'],
-                            'device_id': img['device_id'],
-                            'image_url': '',  # Not needed for frontend analysis display
-                            'timestamp': timestamp,
-                            'analysis_json': img.get('analysis_json', {})
-                        }
-                        for img in processed_images if img.get('original_timestamp') == timestamp
-                    ]
-                    for timestamp in timestamps
-                },
-                'incidents': incidents,
-                'timeline_timestamps': timestamps
-            }
+            # Use the original heatmap_data and just remove image_data (binary) from it
+            if hasattr(job, 'heatmap_data') and job.heatmap_data:
+                # Clean the existing data by removing image_data
+                cleaned_heatmap_data = job.heatmap_data.copy()
+                for timestamp, images in cleaned_heatmap_data.get('images_by_timestamp', {}).items():
+                    for image in images:
+                        # Remove binary image_data if it exists, keep everything else
+                        if 'image_data' in image:
+                            del image['image_data']
+                
+                job.heatmap_data = cleaned_heatmap_data
             
             # Generate ONE comprehensive HTML report with all mosaics
             try:
@@ -659,7 +658,7 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                     heatmap_data = {
                         'timestamp': img['timestamp'],
                         'mosaic_url': img['mosaic_url'],
-                        'analysis_data': [item for item in processed_images if item.get('original_timestamp') == img['timestamp']],
+                        'analysis_data': [item for item in all_processed_images if item.get('original_timestamp') == img['timestamp']],
                         'incidents': [inc for inc in incidents if img['timestamp'] in inc.get('start_time', '')]
                     }
                     all_heatmap_data.append(heatmap_data)
