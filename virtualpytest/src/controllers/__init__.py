@@ -79,7 +79,7 @@ CONTROLLER_REGISTRY = {
         'ai': TextVerificationController,    # Use text verification until AI implementation is available
     },
     'power': {
-        'tapo': TapoPowerController,           # Tapo power control via SSH + uhubctl
+        'tapo': TapoPowerController,           # Tapo power control via Tapo API
     },
     'desktop': {
         'bash': BashDesktopController,      # Bash desktop controller for executing commands

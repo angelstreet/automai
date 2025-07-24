@@ -1,86 +1,84 @@
 """
 Tapo Power Controller Implementation
 
-This controller provides Tapo power management functionality using uhubctl.
-Based on direct Tapo hub control commands.
+This controller provides Tapo power management functionality using the Tapo API.
+Based on direct Tapo smart plug control commands.
 """
 
 from typing import Dict, Any, Optional
 import time
-import os
-import subprocess
+import asyncio
 from ..base_controller import PowerControllerInterface
 
 
 class TapoPowerController(PowerControllerInterface):
-    """Tapo power controller using uhubctl commands."""
+    """Tapo power controller using Tapo API commands."""
     
-    def __init__(self, tapo: int = 1, **kwargs):
+    def __init__(self, device_ip: str, email: str, password: str, **kwargs):
         """
         Initialize the Tapo power controller.
         
         Args:
-            tapo: Tapo hub number (default: 1)
+            device_ip: Tapo device IP address (required)
+            email: Tapo account email (required)
+            password: Tapo account password (required)
         """
         super().__init__("Tapo Power", "tapo")
         
         # Tapo parameters
-        self.tapo = tapo
+        self.device_ip = device_ip
+        self.email = email
+        self.password = password
         
-        print(f"[@controller:TapoPower] Initialized for Tapo hub {self.tapo}")
+        # Validate required parameters
+        if not self.device_ip:
+            raise ValueError("device_ip is required for TapoPowerController")
+        if not self.email:
+            raise ValueError("email is required for TapoPowerController")
+        if not self.password:
+            raise ValueError("password is required for TapoPowerController")
+        
+        print(f"[@controller:TapoPower] Initialized for Tapo device {self.device_ip}")
+        
+        # Initialize Tapo client and device
+        try:
+            from tapo import ApiClient
+            
+            async def setup():
+                self.client = ApiClient(self.email, self.password)
+                self.device = await self.client.p100(self.device_ip)
+                self.device_type_tapo = "p100"
+            
+            asyncio.run(setup())
+            print(f"[@controller:TapoPower] Tapo client initialized successfully as {self.device_type_tapo}")
+            
+        except Exception as e:
+            print(f"[@controller:TapoPower] Failed to initialize Tapo client: {e}")
+            raise
         
     def connect(self) -> bool:
-        """Connect to Tapo hub."""
-        try:
-            print(f"Power[{self.power_type.upper()}]: Connecting to Tapo hub {self.tapo}")
-            
-            # Test uhubctl command availability
-            result = subprocess.run(['uhubctl', '--version'], capture_output=True, text=True)
-            if result.returncode != 0:
-                print(f"Power[{self.power_type.upper()}]: uhubctl command not available")
-                return False
-                
-            print(f"Power[{self.power_type.upper()}]: Tapo hub connection established")
-            
-            self.is_connected = True
-            return True
-            
-        except Exception as e:
-            print(f"Power[{self.power_type.upper()}]: Connection error: {e}")
-            self.disconnect()
-            return False
+        """Connect to Tapo device (always returns True after init)."""
+        print(f"Power[{self.power_type.upper()}]: Tapo device ready")
+        self.is_connected = True
+        return True
             
     def disconnect(self) -> bool:
-        """Disconnect from Tapo hub."""
-        try:
-            print(f"Power[{self.power_type.upper()}]: Disconnecting from {self.device_name}")
-            
-            self.is_connected = False
-            
-            print(f"Power[{self.power_type.upper()}]: Disconnected successfully")
-            return True
-            
-        except Exception as e:
-            print(f"Power[{self.power_type.upper()}]: Disconnect error: {e}")
-            self.is_connected = False
-            return False
+        """Disconnect from Tapo device (always returns True)."""
+        print(f"Power[{self.power_type.upper()}]: Tapo device disconnected")
+        self.is_connected = False
+        return True
             
     def power_on(self, timeout: float = 10.0) -> bool:
-        """Turn Tapo hub on using uhubctl."""
-        if not self.is_connected:
-            print(f"Power[{self.power_type.upper()}]: ERROR - Not connected to Tapo hub")
-            return False
-            
+        """Turn Tapo device on using API."""
         try:
-            print(f"Power[{self.power_type.upper()}]: Powering on Tapo hub {self.tapo}")
+            print(f"Power[{self.power_type.upper()}]: Powering on Tapo device {self.device_ip}")
             
-            # Test uhubctl command availability
-            result = subprocess.run(['uhubctl', '-l', str(self.tapo), '-a', 'on'], capture_output=True, text=True, timeout=timeout)
-            if result.returncode != 0:
-                print(f"Power[{self.power_type.upper()}]: Failed to power on Tapo hub: {result.stderr}")
-                return False
-                
-            print(f"Power[{self.power_type.upper()}]: Successfully powered on Tapo hub {self.tapo}")
+            async def _power_on():
+                await self.device.on()
+            
+            asyncio.run(_power_on())
+            
+            print(f"Power[{self.power_type.upper()}]: Successfully powered on Tapo device {self.device_ip}")
             self.current_power_state = "on"
             return True
             
@@ -89,21 +87,16 @@ class TapoPowerController(PowerControllerInterface):
             return False
             
     def power_off(self, force: bool = False, timeout: float = 5.0) -> bool:
-        """Turn Tapo hub off using uhubctl."""
-        if not self.is_connected:
-            print(f"Power[{self.power_type.upper()}]: ERROR - Not connected to Tapo hub")
-            return False
-            
+        """Turn Tapo device off using API."""
         try:
-            print(f"Power[{self.power_type.upper()}]: Powering off Tapo hub {self.tapo}")
+            print(f"Power[{self.power_type.upper()}]: Powering off Tapo device {self.device_ip}")
             
-            # Test uhubctl command availability
-            result = subprocess.run(['uhubctl', '-l', str(self.tapo), '-a', 'off'], capture_output=True, text=True, timeout=timeout)
-            if result.returncode != 0:
-                print(f"Power[{self.power_type.upper()}]: Failed to power off Tapo hub: {result.stderr}")
-                return False
-                
-            print(f"Power[{self.power_type.upper()}]: Successfully powered off Tapo hub {self.tapo}")
+            async def _power_off():
+                await self.device.off()
+            
+            asyncio.run(_power_off())
+            
+            print(f"Power[{self.power_type.upper()}]: Successfully powered off Tapo device {self.device_ip}")
             self.current_power_state = "off"
             return True
             
@@ -111,23 +104,28 @@ class TapoPowerController(PowerControllerInterface):
             print(f"Power[{self.power_type.upper()}]: Power off error: {e}")
             return False
             
-    def reboot(self, timeout: float = 20.0) -> bool:
-        """Reboot by turning off then on."""
+    def reboot(self, timeout: float = 40.0) -> bool:
+        """Reboot by turning off, waiting 5s, turning on, then waiting 30s."""
         try:
-            print(f"Power[{self.power_type.upper()}]: Rebooting Tapo hub {self.tapo}")
+            print(f"Power[{self.power_type.upper()}]: Rebooting Tapo device {self.device_ip}")
             
             # Power off first
-            if not self.power_off(timeout=5.0):
+            if not self.power_off():
                 return False
             
-            # Wait 2 seconds
-            time.sleep(2)
+            # Wait 5 seconds
+            print(f"Power[{self.power_type.upper()}]: Waiting 5s after power off")
+            time.sleep(5)
             
             # Power on
-            if not self.power_on(timeout=10.0):
+            if not self.power_on():
                 return False
             
-            print(f"Power[{self.power_type.upper()}]: Successfully rebooted Tapo hub {self.tapo}")
+            # Wait 30 seconds
+            print(f"Power[{self.power_type.upper()}]: Waiting 30s after power on")
+            time.sleep(30)
+            
+            print(f"Power[{self.power_type.upper()}]: Successfully rebooted Tapo device {self.device_ip}")
             return True
             
         except Exception as e:
@@ -135,92 +133,44 @@ class TapoPowerController(PowerControllerInterface):
             return False
             
     def get_power_status(self) -> Dict[str, Any]:
-        """Get current Tapo power status using uhubctl."""
-        if not self.is_connected:
-            return {
-                'power_state': 'unknown',
-                'connected': False,
-                'error': 'Not connected to Tapo hub'
-            }
-            
+        """Get current Tapo power status using API."""
         try:
-            print(f"Power[{self.power_type.upper()}]: Checking power status for Tapo hub {self.tapo}")
+            print(f"Power[{self.power_type.upper()}]: Checking power status for Tapo device {self.device_ip}")
             
-            # Test uhubctl command availability
-            result = subprocess.run(['uhubctl', '-l', str(self.tapo)], capture_output=True, text=True, timeout=10)
-            if result.returncode != 0:
-                print(f"Power[{self.power_type.upper()}]: uhubctl command failed: {result.stderr}")
-                return {
-                    'power_state': 'unknown',
-                    'connected': True,
-                    'error': f'uhubctl command failed: {result.stderr}'
-                }
-                
-            # Log the actual output for debugging
-            print(f"Power[{self.power_type.upper()}]: uhubctl output:")
-            print(f"--- START OUTPUT ---")
-            print(result.stdout)
-            print(f"--- END OUTPUT ---")
+            async def _get_status():
+                try:
+                    return await self.device.get_device_info()
+                except Exception as e:
+                    print(f"Power[{self.power_type.upper()}]: get_device_info failed: {e}")
+                    return None
             
-            # Parse uhubctl output to determine power state
-            power_state = 'unknown'
-            if result.stdout:
-                lines = result.stdout.strip().split('\n')
-                for line in lines:
-                    line_lower = line.lower().strip()
-                    print(f"Power[{self.power_type.upper()}]: Parsing line: {line}")
-                    
-                    # Look for different uhubctl output patterns
-                    # Pattern 1: "Current status for hub X [device:port]:"
-                    # Pattern 2: "Port X: 0503 power"
-                    # Pattern 3: "Port X: 0100 off"
-                    
-                    if 'port' in line_lower:
-                        if 'power' in line_lower or '0503' in line_lower:
-                            power_state = 'on'
-                            print(f"Power[{self.power_type.upper()}]: Detected ON state from line: {line}")
-                            break
-                        elif 'off' in line_lower or '0100' in line_lower:
-                            power_state = 'off' 
-                            print(f"Power[{self.power_type.upper()}]: Detected OFF state from line: {line}")
-                            break
-                    
-                    # Alternative patterns for different uhubctl versions
-                    elif 'power' in line_lower:
-                        if 'on' in line_lower or 'enable' in line_lower:
-                            power_state = 'on'
-                            print(f"Power[{self.power_type.upper()}]: Detected ON state from power line: {line}")
-                            break
-                        elif 'off' in line_lower or 'disable' in line_lower:
-                            power_state = 'off'
-                            print(f"Power[{self.power_type.upper()}]: Detected OFF state from power line: {line}")
-                            break
-                
-                # If still unknown, try to infer from any status codes
-                if power_state == 'unknown':
-                    for line in lines:
-                        line_lower = line.lower().strip()
-                        # Look for status codes that indicate power state
-                        if '0503' in line or '0507' in line:  # Common "powered" status codes
-                            power_state = 'on'
-                            print(f"Power[{self.power_type.upper()}]: Detected ON from status code in: {line}")
-                            break
-                        elif '0100' in line or '0000' in line:  # Common "off" status codes  
-                            power_state = 'off'
-                            print(f"Power[{self.power_type.upper()}]: Detected OFF from status code in: {line}")
-                            break
+            device_info_obj = asyncio.run(_get_status())
             
-            # Update our internal state
-            if power_state != 'unknown':
-                self.current_power_state = power_state
+            # Extract power state from device info object
+            if device_info_obj is None:
+                power_state = 'unknown'
+                device_info = {'error': 'Could not get device info'}
+            else:
+                # DeviceInfoPlugResult object has device_on attribute and to_dict() method
+                try:
+                    device_on = device_info_obj.device_on
+                    power_state = 'on' if device_on else 'off'
+                    # Use the built-in to_dict() method
+                    device_info = device_info_obj.to_dict()
+                except Exception as e:
+                    print(f"Power[{self.power_type.upper()}]: Error accessing device info: {e}")
+                    power_state = 'unknown'
+                    device_info = {'error': f'Could not parse device info: {e}'}
+            
+            self.current_power_state = power_state
             
             print(f"Power[{self.power_type.upper()}]: Power status check result: {power_state}")
             
             return {
                 'power_state': power_state,
-                'tapo': self.tapo,
+                'device_ip': self.device_ip,
                 'connected': True,
-                'uhubctl_output': result.stdout
+                'device_info': device_info
             }
             
         except Exception as e:
@@ -231,17 +181,83 @@ class TapoPowerController(PowerControllerInterface):
                 'error': f'Status check error: {e}'
             }
             
+    def get_available_actions(self) -> Dict[str, Any]:
+        """Get available actions for this Tapo power controller."""
+        return {
+            'Power': [
+                {
+                    'id': 'power_on',
+                    'label': 'Power On',
+                    'command': 'power_on',
+                    'action_type': 'power',
+                    'params': {},
+                    'description': 'Turn the Tapo device on',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'power_off',
+                    'label': 'Power Off',
+                    'command': 'power_off',
+                    'action_type': 'power',
+                    'params': {},
+                    'description': 'Turn the Tapo device off',
+                    'requiresInput': False
+                },
+                {
+                    'id': 'reboot',
+                    'label': 'Reboot',
+                    'command': 'reboot',
+                    'action_type': 'power',
+                    'params': {},
+                    'description': 'Reboot the device (off 5s, on, wait 30s)',
+                    'requiresInput': False
+                }
+            ]
+        }
+
+    def execute_command(self, command: str, params: Dict[str, Any] = None) -> bool:
+        """
+        Execute Tapo power command.
+        
+        Args:
+            command: Command to execute ('power_on', 'power_off', 'reboot')
+            params: Command parameters
+            
+        Returns:
+            bool: True if command executed successfully
+        """
+        if params is None:
+            params = {}
+        
+        print(f"Power[{self.power_type.upper()}]: Executing command '{command}' with params: {params}")
+        
+        result = False
+        
+        if command == 'power_on':
+            result = self.power_on()
+        
+        elif command == 'power_off':
+            result = self.power_off()
+        
+        elif command == 'reboot':
+            result = self.reboot()
+        
+        else:
+            print(f"Power[{self.power_type.upper()}]: Unknown command: {command}")
+            result = False
+        
+        return result
+            
     def get_status(self) -> Dict[str, Any]:
         """Get controller status information."""
         return {
             'controller_type': self.controller_type,
             'power_type': self.power_type,
             'device_name': self.device_name,
-            'tapo': self.tapo,
+            'device_ip': self.device_ip,
             'connected': self.is_connected,
-            'connection_timeout': self.connection_timeout,
             'current_power_state': self.current_power_state,
             'capabilities': [
-                'uhubctl_control', 'power_on', 'power_off', 'reboot'
+                'tapo_api_control', 'power_on', 'power_off', 'reboot', 'get_device_info'
             ]
         } 

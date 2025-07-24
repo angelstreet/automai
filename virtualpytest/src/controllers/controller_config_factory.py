@@ -57,7 +57,7 @@ DEVICE_CONTROLLER_MAP = {
         'remote': [],
         'desktop': ['bash'],  # Add bash desktop controller
         'web': ['playwright'],  # Add playwright web controller
-        'power': [],
+        'power': ['tapo'],  # Add tapo power controller
         'network': [],
         'ai': ['ai_agent']
     }
@@ -137,6 +137,26 @@ def create_controller_configs_from_device_info(device_config: dict) -> dict:
             'params': {'device_id': device_config.get('device_id')}  # Add device_id to params
         }
         print(f"[@controller_factory:create_controller_configs_from_device_info] Created AI controller: {ai_impl}")
+    
+    # Create Power controllers
+    for power_impl in device_mapping['power']:
+        # Check if this is a Tapo power controller
+        power_name = device_config.get('power_name', '')
+        if power_impl == 'tapo' and 'tapo' in power_name.lower():
+            configs['power'] = {
+                'type': 'power',
+                'implementation': power_impl,
+                'params': _get_power_params(power_impl, device_config)
+            }
+            print(f"[@controller_factory:create_controller_configs_from_device_info] Created Power controller: {power_impl}")
+        elif power_impl != 'tapo':
+            # Non-Tapo power controllers
+            configs['power'] = {
+                'type': 'power',
+                'implementation': power_impl,
+                'params': _get_power_params(power_impl, device_config)
+            }
+            print(f"[@controller_factory:create_controller_configs_from_device_info] Created Power controller: {power_impl}")
     
     # Create Verification controllers (NEW!)
     verification_types = []
@@ -274,6 +294,26 @@ def _get_web_params(implementation: str, device_config: dict) -> dict:
         return params
     
     print(f"[@controller_factory:_get_web_params] DEBUG: Unknown implementation, returning empty params")
+    return {}
+
+def _get_power_params(implementation: str, device_config: dict) -> dict:
+    """Get parameters for Power controllers."""
+    print(f"[@controller_factory:_get_power_params] DEBUG: Getting power params for implementation: {implementation}")
+    
+    if implementation == 'tapo':
+        params = {
+            'device_ip': device_config.get('power_ip'),
+            'email': device_config.get('power_email'),
+            'password': device_config.get('power_pwd')
+        }
+        print(f"[@controller_factory:_get_power_params] DEBUG: Tapo params: {params}")
+        print(f"[@controller_factory:_get_power_params] DEBUG: Key Tapo values:")
+        print(f"[@controller_factory:_get_power_params] DEBUG:   device_ip = {params['device_ip']}")
+        print(f"[@controller_factory:_get_power_params] DEBUG:   email = {params['email']}")
+        print(f"[@controller_factory:_get_power_params] DEBUG:   password = {'***' if params['password'] else None}")
+        return params
+    
+    print(f"[@controller_factory:_get_power_params] DEBUG: Unknown implementation, returning empty params")
     return {}
 
 def _get_verification_params(implementation: str, device_config: dict) -> dict:

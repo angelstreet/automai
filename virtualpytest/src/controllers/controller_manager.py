@@ -23,6 +23,7 @@ from ..controllers.verification.text import TextVerificationController
 from ..controllers.verification.adb import ADBVerificationController
 from ..controllers.verification.appium import AppiumVerificationController
 from ..controllers.verification.video import VideoVerificationController
+from ..controllers.power.tapo_power import TapoPowerController
 # from ..controllers.ai.ai_agent import AIAgentController  # Lazy import to avoid circular import
 
 
@@ -132,6 +133,10 @@ def _get_devices_config_from_environment() -> List[Dict[str, Any]]:
             ir_device = os.getenv(f'DEVICE{i}_ir_device')
             bluetooth_device = os.getenv(f'DEVICE{i}_bluetooth_device')
             power_device = os.getenv(f'DEVICE{i}_power_device')
+            power_name = os.getenv(f'DEVICE{i}_POWER_NAME')
+            power_ip = os.getenv(f'DEVICE{i}_POWER_IP')
+            power_email = os.getenv(f'DEVICE{i}_POWER_EMAIL')
+            power_pwd = os.getenv(f'DEVICE{i}_POWER_PWD')
             appium_platform_name = os.getenv(f'DEVICE{i}_APPIUM_PLATFORM_NAME')
             appium_device_id = os.getenv(f'DEVICE{i}_APPIUM_DEVICE_ID')
             appium_server_url = os.getenv(f'DEVICE{i}_APPIUM_SERVER_URL')
@@ -146,6 +151,10 @@ def _get_devices_config_from_environment() -> List[Dict[str, Any]]:
             print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_ir_device = {ir_device}")
             print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_bluetooth_device = {bluetooth_device}")
             print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_power_device = {power_device}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_POWER_NAME = {power_name}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_POWER_IP = {power_ip}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_POWER_EMAIL = {power_email}")
+            print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_POWER_PWD = {'***' if power_pwd else None}")
             print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_APPIUM_PLATFORM_NAME = {appium_platform_name}")
             print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_APPIUM_DEVICE_ID = {appium_device_id}")
             print(f"[@controller_manager:_get_devices_config_from_environment] DEBUG: DEVICE{i}_APPIUM_SERVER_URL = {appium_server_url}")
@@ -164,6 +173,11 @@ def _get_devices_config_from_environment() -> List[Dict[str, Any]]:
                 'ir_device': ir_device,
                 'bluetooth_device': bluetooth_device,
                 'power_device': power_device,
+                # Power configuration
+                'power_name': power_name,
+                'power_ip': power_ip,
+                'power_email': power_email,
+                'power_pwd': power_pwd,
             }
             
             # Load Appium env vars directly into device_config (flat)
@@ -250,6 +264,11 @@ def _create_controller_instance(controller_type: str, implementation: str, param
         if implementation == 'playwright':
             from ..controllers.web.playwright import PlaywrightWebController
             return PlaywrightWebController(**params)
+    
+    # Power Controllers
+    elif controller_type == 'power':
+        if implementation == 'tapo':
+            return TapoPowerController(**params)
     
     print(f"[@controller_manager:_create_controller_instance] WARNING: Unknown controller {controller_type}_{implementation}")
     return None
