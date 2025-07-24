@@ -883,6 +883,7 @@ JSON ONLY - NO OTHER TEXT"""
     def get_status(self) -> Dict[str, Any]:
         """Get current execution status."""
         return {
+            'success': True,
             'is_executing': self.is_executing,
             'current_step': self.current_step,
             'execution_log': self.execution_log
