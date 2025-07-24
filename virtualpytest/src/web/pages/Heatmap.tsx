@@ -4,6 +4,7 @@ import {
   Cancel as CancelIcon,
   PlayArrow,
   Pause,
+  OpenInNew,
 } from '@mui/icons-material';
 import {
   Box,
@@ -19,6 +20,7 @@ import {
   Chip,
   Popper,
   Fade,
+  Tooltip,
 } from '@mui/material';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
@@ -160,16 +162,19 @@ const Heatmap: React.FC = () => {
 
   // Helper function to construct frame URLs using proper URL building
   const constructFrameUrl = (filename: string, originalImageUrl: string): string => {
+    // Extract just the filename if it's a full path
+    const cleanFilename = filename.includes('/') ? filename.split('/').pop() || filename : filename;
+
     // Extract the base URL from the original image URL
     // Example: "http://host/path/capture_20250723155519.jpg" -> "http://host/path/"
     const lastSlashIndex = originalImageUrl.lastIndexOf('/');
     if (lastSlashIndex === -1) {
       console.error('[@Heatmap] Invalid image URL format:', originalImageUrl);
-      return filename;
+      return cleanFilename;
     }
 
     const baseUrl = originalImageUrl.substring(0, lastSlashIndex + 1);
-    const frameUrl = `${baseUrl}${filename}`;
+    const frameUrl = `${baseUrl}${cleanFilename}`;
 
     // Use processImageUrl to handle HTTP-to-HTTPS proxy logic
     // This ensures the same URL processing as other components
@@ -671,16 +676,17 @@ const Heatmap: React.FC = () => {
 
                 {/* HTML Report Link */}
                 {currentGeneration?.status === 'completed' && currentGeneration?.html_url && (
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    href={currentGeneration.html_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{ ml: 1 }}
-                  >
-                    View Report
-                  </Button>
+                  <Tooltip title="View Report">
+                    <IconButton
+                      size="small"
+                      href={currentGeneration.html_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ ml: 1 }}
+                    >
+                      <OpenInNew />
+                    </IconButton>
+                  </Tooltip>
                 )}
               </Box>
             </Box>

@@ -12,6 +12,7 @@ import asyncio
 import aiohttp
 from datetime import datetime, timedelta
 import time
+import os
 
 # Import database functions and utilities
 from src.lib.supabase.heatmap_db import (
@@ -97,6 +98,11 @@ async def query_host_analysis(session, host_device, timeframe_minutes):
                     # Download images for each analysis item
                     for item in analysis_data:
                         filename = item['filename']
+                        
+                        # Extract just the filename if it's a full path
+                        if '/' in filename:
+                            filename = os.path.basename(filename)
+                        
                         host_url_base = host_data.get('host_url', '').rstrip('/')
                         image_url = f"{host_url_base}/host/stream/capture{device_id[-1]}/captures/{filename}"
                         
@@ -170,6 +176,10 @@ def process_host_results(host_results):
                         host_data = result.get('host_data', {})
                         device_id = result['device_id']
                         filename = item['filename']
+                        
+                        # Extract just the filename if it's a full path
+                        if '/' in filename:
+                            filename = os.path.basename(filename)
                         
                         host_url = host_data.get('host_url', '').rstrip('/')
                         image_url = f"{host_url}/host/stream/capture{device_id[-1]}/captures/{filename}"

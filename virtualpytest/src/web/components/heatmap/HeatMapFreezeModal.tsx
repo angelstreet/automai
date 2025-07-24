@@ -1,6 +1,7 @@
-import React from 'react';
-import { Modal, Box, IconButton, Typography } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import { Modal, Box, IconButton, Typography } from '@mui/material';
+import React from 'react';
+
 import { HeatmapImage } from '../../hooks/pages/useHeatmap';
 
 interface HeatMapFreezeModalProps {
@@ -74,11 +75,15 @@ export const HeatMapFreezeModal: React.FC<HeatMapFreezeModalProps> = ({
         {/* 3 Images side by side */}
         <Box sx={{ display: 'flex', flex: 1, gap: 1, p: 1 }}>
           {framesCompared.map((filename, index) => {
-            const frameUrl = constructFrameUrl(filename, freezeModalImage.image_url);
+            // Extract just the filename if it's a full path
+            const cleanFilename = filename.includes('/')
+              ? filename.split('/').pop() || filename
+              : filename;
+            const frameUrl = constructFrameUrl(cleanFilename, freezeModalImage.image_url);
             const diff = frameDifferences[index];
 
             // Extract timestamp from filename (assuming format: capture_YYYYMMDDHHMMSS.jpg)
-            const timestampMatch = filename.match(/capture_(\d{14})/);
+            const timestampMatch = cleanFilename.match(/capture_(\d{14})/);
             const timestamp = timestampMatch ? timestampMatch[1] : '';
 
             // Format timestamp to readable format
