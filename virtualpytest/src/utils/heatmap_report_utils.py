@@ -44,56 +44,55 @@ def generate_comprehensive_heatmap_html(all_heatmap_data: List[Dict]) -> str:
             if not heatmap_data or not isinstance(heatmap_data, dict):
                 continue
                 
-            # Generate analysis HTML for this timestamp
+            # Process analysis data - only include devices with actual analysis
             analysis_items = []
-            analysis_data = heatmap_data.get('analysis_data', [])
             has_incidents = False
             
-            # Safe iteration over analysis_data
-            if analysis_data and isinstance(analysis_data, list):
-                for item in analysis_data:
-                    if not item or not isinstance(item, dict):
-                        continue
-                        
-                    host_name = item.get('host_name', 'Unknown')
-                    device_id = item.get('device_id', 'Unknown')
-                    analysis_json = item.get('analysis_json', {})
-                    
-                    # Safe access to analysis_json
-                    if not analysis_json or not isinstance(analysis_json, dict):
-                        analysis_json = {}
-                    
-                    has_error = not item.get('has_image', True) or item.get('error')
-                    
-                    # Check if this device has incidents
-                    device_has_incidents = (
-                        analysis_json.get('freeze', False) or
-                        analysis_json.get('blackscreen', False) or
-                        not analysis_json.get('audio', True)
-                    )
-                    
-                    if device_has_incidents:
-                        has_incidents = True
-                    
-                    # Format analysis data
-                    freeze_status = "FREEZE" if analysis_json.get('freeze', False) else "Normal"
-                    blackscreen_status = "BLACK" if analysis_json.get('blackscreen', False) else "Normal"
-                    audio_status = "No Audio" if not analysis_json.get('audio', True) else "Audio OK"
-                    
-                    error_class = "error" if has_error or device_has_incidents else ""
-                    error_info = f"<div style='color: #dc3545; font-size: 0.8em;'>Error: {item.get('error', 'No image')}</div>" if has_error else ""
-                    
-                    analysis_items.append(f"""
-                    <div class="analysis-item {error_class}">
-                        <h3>{host_name} - {device_id}</h3>
-                        <div class="analysis-data">
-                            <div>Freeze: <strong>{freeze_status}</strong></div>
-                            <div>Screen: <strong>{blackscreen_status}</strong></div>
-                            <div>Audio: <strong>{audio_status}</strong></div>
-                            {error_info}
-                        </div>
-                    </div>
-                    """)
+            if heatmap_data and isinstance(heatmap_data, dict):
+                analysis_data = heatmap_data.get('analysis_data', [])
+                if analysis_data and isinstance(analysis_data, list):
+                    for item in analysis_data:
+                        if item and isinstance(item, dict):
+                            # Host endpoint now guarantees all images have analysis_json
+                            analysis_json = item.get('analysis_json')
+                            
+                            host_name = item.get('host_name', 'Unknown')
+                            device_id = item.get('device_id', 'Unknown')
+                            has_error = item.get('error') is not None
+                            
+                            # Safe access to analysis_json (guaranteed to exist from host)
+                            if not analysis_json or not isinstance(analysis_json, dict):
+                                analysis_json = {}
+                            
+                            # Check if this device has incidents
+                            device_has_incidents = (
+                                analysis_json.get('freeze', False) or
+                                analysis_json.get('blackscreen', False) or
+                                not analysis_json.get('audio', True)
+                            )
+                            
+                            if device_has_incidents:
+                                has_incidents = True
+                            
+                            # Generate status strings
+                            freeze_status = "Freeze Detected" if analysis_json.get('freeze', False) else "Normal"
+                            blackscreen_status = "Blackscreen" if analysis_json.get('blackscreen', False) else "Normal"
+                            audio_status = "No Audio" if not analysis_json.get('audio', True) else "Audio OK"
+                            
+                            error_class = "error" if has_error or device_has_incidents else ""
+                            error_info = f"<div style='color: #dc3545; font-size: 0.8em;'>Error: {item.get('error', 'No image')}</div>" if has_error else ""
+                            
+                            analysis_items.append(f"""
+                            <div class="analysis-item {error_class}">
+                                <h3>{host_name} - {device_id}</h3>
+                                <div class="analysis-data">
+                                    <div>Freeze: <strong>{freeze_status}</strong></div>
+                                    <div>Screen: <strong>{blackscreen_status}</strong></div>
+                                    <div>Audio: <strong>{audio_status}</strong></div>
+                                    {error_info}
+                                </div>
+                            </div>
+                            """)
             
             # Add to JavaScript data
             mosaic_data_for_js.append({

@@ -202,8 +202,9 @@ def determine_border_color_from_analysis(image_data: Dict) -> str:
     try:
         analysis_json = image_data.get('analysis_json')
         if not analysis_json:
-            print(f"[@heatmap_utils:determine_border_color_from_analysis] No analysis data, treating as no incidents (green border)")
-            return "#00FF00"  # Green for missing analysis (assume no incidents)
+            # This should rarely happen now since host guarantees analysis_json
+            print(f"[@heatmap_utils:determine_border_color_from_analysis] Warning: No analysis data (should not happen), treating as no incidents")
+            return "#FFFF00"  # Yellow border indicates unexpected missing analysis
             
         # Use pre-calculated has_incidents from host
         has_incidents = analysis_json.get('has_incidents', False)
@@ -215,7 +216,7 @@ def determine_border_color_from_analysis(image_data: Dict) -> str:
             
     except Exception as e:
         print(f"[@heatmap_utils:determine_border_color_from_analysis] Error: {e}")
-        return "#00FF00"  # Green for error (assume no incidents)
+        return "#FFFF00"  # Yellow for error (indicates unexpected issue)
 
 def calculate_grid_layout(num_devices: int) -> Tuple[int, int]:
     """Calculate optimal grid layout for mosaic"""
@@ -453,17 +454,15 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
             
             for image_info in images_data:
                 print(f"[@heatmap_utils:process_heatmap_generation] Processing {image_info['host_name']} {image_info['device_id']}: analysis_json={image_info.get('analysis_json')}")
+                
+                # Host endpoint now guarantees all images have analysis_json, so no need to filter
                 try:
                     # Use pre-downloaded image data (no more HTTP requests to hosts)
                     image_data = image_info.get('image_data')
                     
                     if image_data:
-                        # Use pre-parsed analysis data from initial host query
-                        analysis_json = image_info.get('analysis_json', {
-                            'blackscreen': False,
-                            'freeze': False,
-                            'audio_loss': False
-                        })
+                        # Use actual analysis data (guaranteed to exist from host)
+                        analysis_json = image_info.get('analysis_json')
                         
                         processed_image = {
                             'host_name': image_info['host_name'],
@@ -476,30 +475,12 @@ def process_heatmap_generation(job_id: str, images_by_timestamp: Dict[str, List[
                         all_processed_images.append(processed_image)  # Add to global collection
                         
                     else:
-                        print(f"[@heatmap_utils] No image data for {image_info['host_name']}: using placeholder")
-                        # Add placeholder for missing image to keep grid layout
-                        processed_image = {
-                            'host_name': image_info['host_name'],
-                            'device_id': image_info['device_id'],
-                            'image_data': None,
-                            'error': 'No image data available',
-                            'original_timestamp': image_info.get('original_timestamp', timestamp)
-                        }
-                        processed_images.append(processed_image)
-                        all_processed_images.append(processed_image)  # Add to global collection
+                        print(f"[@heatmap_utils] No image data for {image_info['host_name']}: skipping device (no fallbacks)")
+                        # Skip devices with no image data - no placeholders, no fallbacks
                         
                 except Exception as e:
                     print(f"[@heatmap_utils] Error processing data for {image_info['host_name']}: {e}")
-                    # Add placeholder for error to keep grid layout
-                    processed_image = {
-                        'host_name': image_info['host_name'],
-                        'device_id': image_info['device_id'],
-                        'image_data': None,
-                        'error': str(e),
-                        'original_timestamp': image_info.get('original_timestamp', timestamp)
-                    }
-                    processed_images.append(processed_image)
-                    all_processed_images.append(processed_image)  # Add to global collection
+                    # Skip devices with errors - no placeholders, no fallbacks
             
             if not processed_images:
                 print(f"[@heatmap_utils] No images processed for timestamp {timestamp}, skipping")

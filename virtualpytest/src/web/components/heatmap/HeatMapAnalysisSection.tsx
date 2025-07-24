@@ -29,14 +29,23 @@ export const HeatMapAnalysisSection: React.FC<HeatMapAnalysisSectionProps> = ({
   analysisExpanded,
   onToggleExpanded,
 }) => {
-  // Calculate summary from images
-  const totalDevices = images.length;
-  const devicesWithIncidents = images.filter((image) => {
+  // Calculate summary from images - only count devices with actual analysis data
+  const devicesWithAnalysis = images.filter((image) => image.analysis_json !== null);
+  const totalDevices = devicesWithAnalysis.length;
+  const devicesWithIncidents = devicesWithAnalysis.filter((image) => {
     const analysisJson = image.analysis_json || {};
     return analysisJson.blackscreen || analysisJson.freeze || !analysisJson.audio;
   }).length;
 
-  const summary = `${totalDevices} devices | ${devicesWithIncidents} with incidents`;
+  const summary =
+    totalDevices > 0
+      ? `${totalDevices} devices | ${devicesWithIncidents} with incidents`
+      : 'No analysis data available';
+
+  // Don't show the analysis section at all if no devices have analysis data
+  if (totalDevices === 0) {
+    return null;
+  }
 
   return (
     <Card sx={{ backgroundColor: 'transparent', boxShadow: 'none' }}>
@@ -112,71 +121,73 @@ export const HeatMapAnalysisSection: React.FC<HeatMapAnalysisSectionProps> = ({
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {images.map((image, index) => {
-                      const analysisJson = image.analysis_json || {};
-                      const hasVideo = !analysisJson.blackscreen && !analysisJson.freeze;
-                      const hasAudio = analysisJson.audio;
+                    {images
+                      .filter((image) => image.analysis_json !== null) // Only show devices with actual analysis data
+                      .map((image, index) => {
+                        const analysisJson = image.analysis_json || {};
+                        const hasVideo = !analysisJson.blackscreen && !analysisJson.freeze;
+                        const hasAudio = analysisJson.audio;
 
-                      return (
-                        <TableRow
-                          key={index}
-                          sx={{
-                            backgroundColor: 'transparent !important',
-                            '&:hover': {
+                        return (
+                          <TableRow
+                            key={index}
+                            sx={{
                               backgroundColor: 'transparent !important',
-                            },
-                          }}
-                        >
-                          <TableCell>
-                            {image.host_name}-{image.device_id}
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={hasAudio ? 'Yes' : 'No'}
-                              color={hasAudio ? 'success' : 'error'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={hasVideo ? 'Yes' : 'No'}
-                              color={hasVideo ? 'success' : 'error'}
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="caption">
-                              {analysisJson.volume_percentage || 0}%
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="caption">
-                              {analysisJson.mean_volume_db || -100} dB
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              variant="caption"
-                              color={analysisJson.blackscreen ? 'error' : 'success'}
-                            >
-                              {analysisJson.blackscreen
-                                ? `Yes (${analysisJson.blackscreen_percentage || 0}%)`
-                                : 'No'}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography
-                              variant="caption"
-                              color={analysisJson.freeze ? 'error' : 'success'}
-                            >
-                              {analysisJson.freeze
-                                ? `Yes (${(analysisJson.freeze_diffs || []).join(', ')})`
-                                : 'No'}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                              '&:hover': {
+                                backgroundColor: 'transparent !important',
+                              },
+                            }}
+                          >
+                            <TableCell>
+                              {image.host_name}-{image.device_id}
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={hasAudio ? 'Yes' : 'No'}
+                                color={hasAudio ? 'success' : 'error'}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Chip
+                                label={hasVideo ? 'Yes' : 'No'}
+                                color={hasVideo ? 'success' : 'error'}
+                                size="small"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="caption">
+                                {analysisJson.volume_percentage || 0}%
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="caption">
+                                {analysisJson.mean_volume_db || -100} dB
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography
+                                variant="caption"
+                                color={analysisJson.blackscreen ? 'error' : 'success'}
+                              >
+                                {analysisJson.blackscreen
+                                  ? `Yes (${analysisJson.blackscreen_percentage || 0}%)`
+                                  : 'No'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography
+                                variant="caption"
+                                color={analysisJson.freeze ? 'error' : 'success'}
+                              >
+                                {analysisJson.freeze
+                                  ? `Yes (${(analysisJson.freeze_diffs || []).join(', ')})`
+                                  : 'No'}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                   </TableBody>
                 </Table>
               </TableContainer>
