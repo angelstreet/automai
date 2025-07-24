@@ -261,13 +261,20 @@ def analyze_freeze(image_path, previous_frames_cache=None):
             'frame2': {'filename': current_filename, 'data': img, 'timestamp': current_timestamp},
             'last_updated': current_timestamp
         }
-        save_frame_cache(cache_file_path, new_cache)
         
         logger.info(f"Freeze check: {'FREEZE' if is_frozen else 'Normal'} (diffs: {mean_diff_1vs2:.2f}, {mean_diff_1vs3:.2f}, {mean_diff_2vs3:.2f})")
         logger.debug(f"Freeze details: {freeze_details}")
+        
+        # Save cache after logging results to avoid exception affecting return value
+        try:
+            save_frame_cache(cache_file_path, new_cache)
+        except Exception as cache_error:
+            logger.warning(f"Failed to save frame cache: {cache_error}")
+        
         return is_frozen, freeze_details
         
-    except Exception:
+    except Exception as e:
+        logger.error(f"Freeze analysis failed: {e}")
         return False, None
 
 

@@ -111,16 +111,7 @@ def fetch_image_from_url(url: str, timeout: int = 10) -> Optional[Image.Image]:
         print(f"[@heatmap_utils] Failed to fetch image from {url}: {e}")
     return None
 
-def add_border_to_image(image: Image.Image, border_color: str, border_width: int = 5) -> Image.Image:
-    """Add colored border to image based on incident status"""
-    # Create new image with border
-    new_width = image.width + 2 * border_width
-    new_height = image.height + 2 * border_width
-    
-    bordered_image = Image.new('RGB', (new_width, new_height), border_color)
-    bordered_image.paste(image, (border_width, border_width))
-    
-    return bordered_image
+
 
 def determine_border_color(image_data: Dict) -> str:
     """Determine border color based on analysis and incidents with fallback strategy"""
@@ -305,23 +296,50 @@ def create_mosaic_image(images_data: List[Dict], target_size: Tuple[int, int] = 
                     device_image = None
             
             if device_image:
-                # Resize image to fill entire cell (border-to-border) - stretch to fit exactly
+                # Calculate available space within the cell (accounting for borders)
                 available_width = cell_width - (border_width * 2)
                 available_height = cell_height - (border_width * 2)
                 
-                # Force resize to fill entire available space (may change aspect ratio)
-                device_image = device_image.resize((available_width, available_height), Image.Resampling.LANCZOS)
+                # Preserve aspect ratio using 'contain' approach (like CSS object-fit: contain)
+                original_width, original_height = device_image.size
+                original_aspect = original_width / original_height
+                available_aspect = available_width / available_height
                 
-                # Determine border color based on analysis
+                if original_aspect > available_aspect:
+                    # Image is wider than available space - limit by width
+                    new_width = available_width
+                    new_height = int(available_width / original_aspect)
+                else:
+                    # Image is taller than available space - limit by height
+                    new_height = available_height
+                    new_width = int(available_height * original_aspect)
+                
+                # Resize image while preserving aspect ratio
+                device_image = device_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                
+                # Create a cell-sized background with the border color
                 border_color = determine_border_color_from_analysis(image_data)
                 print(f"[@heatmap_utils:create_mosaic_image] {image_data.get('host_name')} {image_data.get('device_id')}: analysis_json={image_data.get('analysis_json')}, border_color={border_color}")
-                bordered_image = add_border_to_image(device_image, border_color, border_width)
                 
-                # Paste image to fill entire cell (bordered_image is already cell_width x cell_height)
+                # Create cell background with border
+                cell_background = Image.new('RGB', (cell_width, cell_height), border_color)
+                
+                # Create inner area for the image (black background)
+                inner_area = Image.new('RGB', (available_width, available_height), (0, 0, 0))
+                
+                # Center the resized image within the inner area
+                center_x = (available_width - new_width) // 2
+                center_y = (available_height - new_height) // 2
+                inner_area.paste(device_image, (center_x, center_y))
+                
+                # Paste the inner area onto the cell background (with border)
+                cell_background.paste(inner_area, (border_width, border_width))
+                
+                # Paste the complete cell onto the mosaic
                 paste_x = x
                 paste_y = y
                 
-                mosaic.paste(bordered_image, (paste_x, paste_y))
+                mosaic.paste(cell_background, (paste_x, paste_y))
                 
                 # Don't add the small black label in the corner - the main host name is already in the image
                 
