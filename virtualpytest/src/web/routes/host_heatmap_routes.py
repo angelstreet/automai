@@ -54,7 +54,17 @@ def list_recent_analysis():
                     # Read analysis data directly (MonitoringAnalysis)
                     if os.path.exists(frame_json_path):
                         with open(frame_json_path, 'r') as f:
-                            file_item['analysis_json'] = json.load(f)
+                            analysis_data = json.load(f)
+                            
+                        # Calculate has_incidents based on the analysis data
+                        has_incidents = (
+                            analysis_data.get('freeze', False) or
+                            analysis_data.get('blackscreen', False) or
+                            not analysis_data.get('audio', True)
+                        )
+                        analysis_data['has_incidents'] = has_incidents
+                        
+                        file_item['analysis_json'] = analysis_data
                     
                     files.append(file_item)
         

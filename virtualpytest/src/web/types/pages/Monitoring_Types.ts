@@ -19,6 +19,7 @@ export interface MonitoringAnalysis {
   audio: boolean;
   volume_percentage: number;
   mean_volume_db: number;
+  has_incidents: boolean; // Pre-calculated incident status
 }
 
 // Subtitle analysis from backend detection (video.py) - EXACT field names

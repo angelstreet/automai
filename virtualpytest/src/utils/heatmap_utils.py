@@ -193,16 +193,15 @@ def get_cached_analysis_for_host(host_name: str, device_id: str) -> Optional[boo
     return None
 
 def determine_border_color_from_analysis(image_data: Dict) -> str:
-    """Determine border color based on analysis data."""
+    """Determine border color based on pre-calculated has_incidents from host."""
     try:
         analysis_json = image_data.get('analysis_json')
         if not analysis_json:
             print(f"[@heatmap_utils:determine_border_color_from_analysis] No analysis data, using red border")
             return "#FF0000"  # Red for missing analysis
             
-        freeze = analysis_json.get('freeze', False)
-        blackscreen = analysis_json.get('blackscreen', False)
-        audio = analysis_json.get('audio', True)
+        # Use pre-calculated has_incidents from host
+        has_incidents = analysis_json.get('has_incidents', False)
         
         if has_incidents:
             return '#FF0000'  # Red for incidents
@@ -211,7 +210,7 @@ def determine_border_color_from_analysis(image_data: Dict) -> str:
             
     except Exception as e:
         print(f"[@heatmap_utils:determine_border_color_from_analysis] Error: {e}")
-        return '#FF0000'  # Red for error
+        return "#FF0000"  # Red for error
 
 def calculate_grid_layout(num_devices: int) -> Tuple[int, int]:
     """Calculate optimal grid layout for mosaic"""
