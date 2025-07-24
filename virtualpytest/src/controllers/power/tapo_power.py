@@ -23,7 +23,10 @@ class TapoPowerController(PowerControllerInterface):
             email: Tapo account email (required)
             password: Tapo account password (required)
         """
-        super().__init__("Tapo Power", "tapo")
+        super().__init__("Tapo Power")
+        
+        # Power type for logging and identification
+        self.power_type = "tapo"
         
         # Tapo parameters
         self.device_ip = device_ip
