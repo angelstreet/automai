@@ -136,9 +136,10 @@ def process_alert_with_memory_state(analysis_result, host_name, device_id, incid
         
         # Determine specific incident types for database
         current_incidents = []
+        # Both blackscreen and freeze are independent video issues - don't prioritize one over the other
         if blackscreen:
             current_incidents.append('blackscreen')
-        elif freeze:  # Freeze only if no blackscreen (priority)
+        if freeze:  # Changed from 'elif' to 'if' - freeze can coexist with blackscreen
             current_incidents.append('freeze')
         if audio_issue:
             current_incidents.append('audio_loss')
@@ -249,7 +250,7 @@ def process_alert_directly(analysis_result, host_name, analysis_path):
         current_incidents = []
         if blackscreen:
             current_incidents.append('blackscreen')
-        elif freeze:  # Freeze only if no blackscreen (priority)
+        if freeze:  # Changed from 'elif' to 'if' - freeze can coexist with blackscreen
             current_incidents.append('freeze')
         if audio_issue:
             current_incidents.append('audio_loss')
