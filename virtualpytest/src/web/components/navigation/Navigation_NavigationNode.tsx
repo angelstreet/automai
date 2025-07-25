@@ -263,26 +263,6 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         </div>
       )}
 
-      {/* Context Node Indicator - shows this is the starting point in sub-tree */}
-      {isContextNode && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '4px',
-            left: '4px',
-            backgroundColor: '#2196f3',
-            color: 'white',
-            fontSize: '10px',
-            fontWeight: 'bold',
-            padding: '2px 6px',
-            borderRadius: '4px',
-            zIndex: 10,
-          }}
-        >
-          YOU ARE HERE
-        </div>
-      )}
-
       {/* Left Handles - Overlapping for Bidirectional Effect */}
       {/* Left: TARGET for receiving connections */}
       <Handle
