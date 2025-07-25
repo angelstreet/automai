@@ -414,6 +414,10 @@ def restore_version():
         )
         
         if success:
+            # Invalidate cache so frontend gets fresh data
+            from src.web.cache.navigation_cache import invalidate_cache
+            invalidate_cache(tree_id, team_id)
+            
             return jsonify({
                 'success': True,
                 'message': message,
