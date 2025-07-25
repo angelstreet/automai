@@ -55,9 +55,18 @@ DEVICE_CONTROLLER_MAP = {
     'host_vnc': {
         'av': ['vnc_stream'], 
         'remote': [],
-        'desktop': ['bash'],  # Add bash desktop controller
+        'desktop': ['bash', 'pyautogui'],  # Add bash and PyAutoGUI desktop controllers
         'web': ['playwright'],  # Add playwright web controller
         'power': [],  # Add tapo power controller
+        'network': [],
+        'ai': ['ai_agent']
+    },
+    'host_pyautogui': {
+        'av': ['vnc_stream'], 
+        'remote': [],
+        'desktop': ['pyautogui'],  # Add PyAutoGUI desktop controller
+        'web': ['playwright'],  # Add playwright web controller
+        'power': [],
         'network': [],
         'ai': ['ai_agent']
     }
@@ -113,7 +122,7 @@ def create_controller_configs_from_device_info(device_config: dict) -> dict:
     
     # Create Desktop controllers
     for desktop_impl in device_mapping['desktop']:
-        configs['desktop'] = {
+        configs[f'desktop_{desktop_impl}'] = {
             'type': 'desktop',
             'implementation': desktop_impl,
             'params': _get_desktop_params(desktop_impl, device_config)
@@ -265,6 +274,10 @@ def _get_desktop_params(implementation: str, device_config: dict) -> dict:
             'host_user': device_config.get('host_user', 'root')
         }
         print(f"[@controller_factory:_get_desktop_params] DEBUG: Bash params: {params}")
+        return params
+    elif implementation == 'pyautogui':
+        params = {}  # PyAutoGUI works locally, no connection parameters needed
+        print(f"[@controller_factory:_get_desktop_params] DEBUG: PyAutoGUI params: {params}")
         return params
     elif implementation == 'powershell':
         params = {

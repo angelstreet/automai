@@ -34,3 +34,5 @@ python-dotenv>=1.0.0
 # LangChain and OpenAI support
 langchain-openai>=0.0.1
 openai>=1.0.0 
+
+pyautogui

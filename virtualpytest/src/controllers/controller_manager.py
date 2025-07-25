@@ -18,6 +18,7 @@ from ..controllers.remote.android_mobile import AndroidMobileRemoteController
 from ..controllers.remote.android_tv import AndroidTVRemoteController
 from ..controllers.remote.appium_remote import AppiumRemoteController
 from ..controllers.desktop.bash import BashDesktopController
+from ..controllers.desktop.pyautogui import PyAutoGUIDesktopController
 from ..controllers.verification.image import ImageVerificationController
 from ..controllers.verification.text import TextVerificationController
 from ..controllers.verification.adb import ADBVerificationController
@@ -258,6 +259,8 @@ def _create_controller_instance(controller_type: str, implementation: str, param
     elif controller_type == 'desktop':
         if implementation == 'bash':
             return BashDesktopController(**params)
+        elif implementation == 'pyautogui':
+            return PyAutoGUIDesktopController(**params)
     
     # Web Controllers
     elif controller_type == 'web':

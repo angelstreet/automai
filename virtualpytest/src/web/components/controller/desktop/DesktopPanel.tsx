@@ -3,13 +3,16 @@ import {
   CloseFullscreen,
   KeyboardArrowDown,
   KeyboardArrowUp,
+  ExpandLess,
+  ExpandMore,
 } from '@mui/icons-material';
-import { Box, IconButton, Tooltip, Typography } from '@mui/material';
+import { Box, IconButton, Tooltip, Typography, Divider } from '@mui/material';
 import React, { useState, useMemo } from 'react';
 
 import { Host } from '../../../types/common/Host_Types';
 
 import { BashDesktopTerminal } from './BashDesktopTerminal';
+import { PyAutoGUITerminal } from './PyAutoGUITerminal';
 
 interface DesktopPanelProps {
   host: Host;
@@ -38,12 +41,17 @@ export const DesktopPanel = React.memo(function DesktopPanel({
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
   const [isMinimized, setIsMinimized] = useState(false);
 
-  // Simple panel dimensions
-  const collapsedWidth = '400px';
-  const collapsedHeight = '300px';
-  const expandedWidth = '600px';
-  const expandedHeight = '500px';
+  // Section collapse states for split layout
+  const [bashCollapsed, setBashCollapsed] = useState(false);
+  const [pyAutoGUICollapsed, setPyAutoGUICollapsed] = useState(false);
+
+  // Updated panel dimensions for split layout
+  const collapsedWidth = '450px';
+  const collapsedHeight = '600px';
+  const expandedWidth = '650px';
+  const expandedHeight = '800px';
   const headerHeight = '48px';
+  const sectionHeaderHeight = '32px';
 
   // Current panel dimensions based on state
   const currentWidth = isCollapsed ? collapsedWidth : expandedWidth;
@@ -86,15 +94,93 @@ export const DesktopPanel = React.memo(function DesktopPanel({
     switch (deviceModel) {
       case 'host_vnc':
         return (
-          <BashDesktopTerminal
-            host={host}
-            deviceId={deviceId}
-            onDisconnectComplete={onReleaseControl}
-            isCollapsed={isCollapsed}
-            panelWidth={currentWidth}
-            panelHeight={currentHeight}
-            streamContainerDimensions={streamContainerDimensions}
-          />
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* PyAutoGUI Section */}
+            <Box sx={{ borderBottom: '1px solid #333' }}>
+              {/* PyAutoGUI Section Header */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  px: 1,
+                  py: 0.5,
+                  height: sectionHeaderHeight,
+                  backgroundColor: '#1a1a2e',
+                  color: '#0ff',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setPyAutoGUICollapsed(!pyAutoGUICollapsed)}
+              >
+                <Typography variant="subtitle2" sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                  PyAutoGUI Desktop
+                </Typography>
+                <IconButton size="small" sx={{ color: '#0ff' }}>
+                  {pyAutoGUICollapsed ? (
+                    <ExpandMore fontSize="small" />
+                  ) : (
+                    <ExpandLess fontSize="small" />
+                  )}
+                </IconButton>
+              </Box>
+
+              {/* PyAutoGUI Content */}
+              {!pyAutoGUICollapsed && (
+                <Box sx={{ height: isCollapsed ? '300px' : '400px' }}>
+                  <PyAutoGUITerminal
+                    host={host}
+                    deviceId={deviceId}
+                    onDisconnectComplete={onReleaseControl}
+                  />
+                </Box>
+              )}
+            </Box>
+
+            {/* Bash Section */}
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              {/* Bash Section Header */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  px: 1,
+                  py: 0.5,
+                  height: sectionHeaderHeight,
+                  backgroundColor: '#1E1E1E',
+                  color: '#00ff00',
+                  cursor: 'pointer',
+                }}
+                onClick={() => setBashCollapsed(!bashCollapsed)}
+              >
+                <Typography variant="subtitle2" sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                  Bash Terminal
+                </Typography>
+                <IconButton size="small" sx={{ color: '#00ff00' }}>
+                  {bashCollapsed ? (
+                    <ExpandMore fontSize="small" />
+                  ) : (
+                    <ExpandLess fontSize="small" />
+                  )}
+                </IconButton>
+              </Box>
+
+              {/* Bash Content */}
+              {!bashCollapsed && (
+                <Box sx={{ flex: 1, minHeight: '200px' }}>
+                  <BashDesktopTerminal
+                    host={host}
+                    deviceId={deviceId}
+                    onDisconnectComplete={onReleaseControl}
+                    isCollapsed={isCollapsed}
+                    panelWidth={currentWidth}
+                    panelHeight={currentHeight}
+                    streamContainerDimensions={streamContainerDimensions}
+                  />
+                </Box>
+              )}
+            </Box>
+          </Box>
         );
       default:
         return (
@@ -122,6 +208,9 @@ export const DesktopPanel = React.memo(function DesktopPanel({
     currentWidth,
     currentHeight,
     streamContainerDimensions,
+    bashCollapsed,
+    pyAutoGUICollapsed,
+    sectionHeaderHeight,
   ]);
 
   return (
@@ -172,7 +261,7 @@ export const DesktopPanel = React.memo(function DesktopPanel({
               textAlign: 'center',
             }}
           >
-            Desktop Terminal
+            Desktop Control Panel
           </Typography>
 
           {/* Right side: Minimize and Expand/Collapse buttons */}

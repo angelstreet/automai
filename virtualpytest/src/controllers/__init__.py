@@ -33,6 +33,7 @@ from .remote.bluetooth import BluetoothRemoteController
 
 # Import desktop implementations
 from .desktop.bash import BashDesktopController
+from .desktop.pyautogui import PyAutoGUIDesktopController
 
 # Import web implementations
 from .web.playwright import PlaywrightWebController
@@ -83,6 +84,7 @@ CONTROLLER_REGISTRY = {
     },
     'desktop': {
         'bash': BashDesktopController,      # Bash desktop controller for executing commands
+        'pyautogui': PyAutoGUIDesktopController,      # PyAutoGUI cross-platform GUI automation controller
     },
     'web': {
         'playwright': PlaywrightWebController,  # Playwright web automation controller
