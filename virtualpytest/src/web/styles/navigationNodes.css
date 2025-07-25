@@ -29,7 +29,6 @@
 .node-depth-5,
 .node-depth-6 {
   border: 1px dashed #6b7280 !important; /* Gray dashed border for very deep items */
-  opacity: 0.8;
 }
 
 /* Menu type nodes get slightly larger borders */

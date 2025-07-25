@@ -26,6 +26,7 @@ import 'reactflow/dist/style.css';
 // Import extracted components and hooks
 import { HDMIStream } from '../components/controller/av/HDMIStream';
 import { RemotePanel } from '../components/controller/remote/RemotePanel';
+import { NavigationBreadcrumbCompact } from '../components/navigation/NavigationBreadcrumbCompact';
 import { EdgeEditDialog } from '../components/navigation/Navigation_EdgeEditDialog';
 import { EdgeSelectionPanel } from '../components/navigation/Navigation_EdgeSelectionPanel';
 import { NavigationEditorHeader } from '../components/navigation/Navigation_EditorHeader';
@@ -48,7 +49,6 @@ import {
   NavigationStackProvider,
   useNavigationStack,
 } from '../contexts/navigation/NavigationStackContext';
-import { NavigationBreadcrumbCompact } from '../components/navigation/NavigationBreadcrumbCompact';
 import { useNavigationEditor } from '../hooks/navigation/useNavigationEditor';
 import { useNestedNavigation } from '../hooks/navigation/useNestedNavigation';
 import {
@@ -287,6 +287,9 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     // Track the last loaded tree ID to prevent unnecessary reloads
     const lastLoadedTreeId = useRef<string | null>(null);
 
+    // Track if we've already fitted view for current nested session
+    const hasFittedNestedView = useRef<boolean>(false);
+
     // Track AV panel collapsed state
     const [isAVPanelCollapsed, setIsAVPanelCollapsed] = useState(true);
     const [isAVPanelMinimized, setIsAVPanelMinimized] = useState(false);
@@ -488,14 +491,22 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       handleSaveToConfig('auto');
     }, [handleSaveToConfig]);
 
-    // Auto-fit view when entering nested navigation
+    // Auto-fit view when entering nested navigation (only once per nested session)
     useEffect(() => {
-      if (isNested && stack.length > 0) {
+      if (isNested && stack.length > 0 && !hasFittedNestedView.current) {
+        // Mark that we've fitted the view for this nested session
+        hasFittedNestedView.current = true;
+
         // Small delay to ensure nodes are rendered before fitting view
         const timer = setTimeout(() => {
           fitView();
         }, 100);
         return () => clearTimeout(timer);
+      }
+
+      // Reset the flag when leaving nested navigation
+      if (!isNested) {
+        hasFittedNestedView.current = false;
       }
     }, [isNested, stack.length, fitView]);
 
