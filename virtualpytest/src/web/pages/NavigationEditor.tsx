@@ -508,16 +508,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       handleSaveToConfig('auto');
     }, [handleSaveToConfig]);
 
-        // Standard auto-fit on tree load (unified for all navigation modes)
-    useEffect(() => {
-      if (nodes.length > 0) {
-        // Small delay to ensure nodes are rendered before fitting view
-        const timer = setTimeout(() => {
-          fitView();
-        }, 100);
-        return () => clearTimeout(timer);
-      }
-    }, [nodes.length, fitView]);
+
 
     // Lifecycle refs to prevent unnecessary re-renders
 
