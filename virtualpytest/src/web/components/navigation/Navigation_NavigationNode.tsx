@@ -189,7 +189,11 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         minHeight: '180px',
         fontSize: '12px',
         color: '#333',
-        boxShadow: 'none', // Remove all shadows from nodes in nested tree
+        boxShadow: isCurrentPosition
+          ? currentPositionStyle.boxShadow
+          : isRootNode
+            ? rootNodeStyle.boxShadow
+            : '0 2px 4px rgba(0, 0, 0, 0.1)', // Normal shadow for nested nodes
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',

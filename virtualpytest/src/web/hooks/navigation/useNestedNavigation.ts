@@ -51,11 +51,15 @@ export const useNestedNavigation = ({
 
           if (treeResult.success) {
             const treeData = treeResult.tree.metadata || {};
-            setNodes(treeData.nodes || []);
-            setEdges(treeData.edges || []);
-
-            // 5. Push to navigation stack with actual sub-tree data
+            
+            // 5. Push to navigation stack FIRST to set isNested before setting nodes
             pushLevel(primarySubTree.id, node.id, primarySubTree.name, node.data.label);
+            
+            // Then set nodes and edges with small delay to ensure isNested is processed
+            setTimeout(() => {
+              setNodes(treeData.nodes || []);
+              setEdges(treeData.edges || []);
+            }, 10);
 
             console.log(`[@useNestedNavigation] Loaded existing sub-tree: ${primarySubTree.name}`);
           }
@@ -78,11 +82,14 @@ export const useNestedNavigation = ({
             edges: [],
           };
 
-          setNodes(contextSubTree.nodes);
-          setEdges(contextSubTree.edges);
-
-          // 6. Push to navigation stack with temporary ID for new sub-tree
+          // 6. Push to navigation stack FIRST to set isNested before setting nodes
           pushLevel(`temp-${Date.now()}`, node.id, node.data.label, node.data.label);
+          
+          // Then set nodes and edges with small delay to ensure isNested is processed
+          setTimeout(() => {
+            setNodes(contextSubTree.nodes);
+            setEdges(contextSubTree.edges);
+          }, 10);
 
           console.log(`[@useNestedNavigation] Created empty sub-tree for node: ${node.data.label}`);
         }
