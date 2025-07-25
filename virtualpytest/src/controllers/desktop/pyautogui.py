@@ -10,12 +10,25 @@ import time
 from ..base_controller import DesktopControllerInterface
 
 try:
+    import os
+    import sys
+    
+    # Set DISPLAY for VNC environment if not already set
+    if sys.platform.startswith('linux') and 'DISPLAY' not in os.environ:
+        print(f"[@controller:PyAutoGUIDesktop] Setting DISPLAY to :1 for VNC environment")
+        os.environ['DISPLAY'] = ':1'
+    
     import pyautogui
     # Configure PyAutoGUI safety features
     pyautogui.FAILSAFE = True  # Move mouse to corner to abort
     pyautogui.PAUSE = 0.1      # Short pause between actions
     PYAUTOGUI_AVAILABLE = True
+    print(f"[@controller:PyAutoGUIDesktop] PyAutoGUI initialized successfully with DISPLAY={os.environ.get('DISPLAY')}")
 except ImportError:
+    PYAUTOGUI_AVAILABLE = False
+    print(f"[@controller:PyAutoGUIDesktop] WARNING: PyAutoGUI module not available. Please install pyautogui")
+except Exception as e:
+    print(f"[@controller:PyAutoGUIDesktop] WARNING: PyAutoGUI initialization failed: {e}")
     PYAUTOGUI_AVAILABLE = False
 
 
