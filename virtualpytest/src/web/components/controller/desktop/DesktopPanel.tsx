@@ -45,11 +45,11 @@ export const DesktopPanel = React.memo(function DesktopPanel({
   const [bashCollapsed, setBashCollapsed] = useState(false);
   const [pyAutoGUICollapsed, setPyAutoGUICollapsed] = useState(false);
 
-  // Updated panel dimensions for split layout
-  const collapsedWidth = '450px';
-  const collapsedHeight = '600px';
-  const expandedWidth = '650px';
-  const expandedHeight = '800px';
+  // Updated panel dimensions for split layout with dynamic space allocation
+  const collapsedWidth = '420px';
+  const collapsedHeight = '450px';
+  const expandedWidth = '520px';
+  const expandedHeight = '650px';
   const headerHeight = '48px';
   const sectionHeaderHeight = '32px';
 
@@ -93,10 +93,46 @@ export const DesktopPanel = React.memo(function DesktopPanel({
   const renderDesktopComponent = useMemo(() => {
     switch (deviceModel) {
       case 'host_vnc':
+        // Calculate dynamic heights based on collapse states
+        const headerHeightNum = parseInt(sectionHeaderHeight.replace('px', ''));
+        const mainHeaderHeight = parseInt(headerHeight.replace('px', ''));
+        const totalAvailableHeight = parseInt(
+          (isCollapsed ? collapsedHeight : expandedHeight).replace('px', ''),
+        );
+        const reservedForHeaders = mainHeaderHeight + headerHeightNum * 2; // Main header + two section headers
+        const contentHeight = totalAvailableHeight - reservedForHeaders;
+
+        let pyAutoGUIHeight = 0;
+        let bashHeight = 0;
+
+        if (!pyAutoGUICollapsed && !bashCollapsed) {
+          // Both expanded: split the space intelligently
+          pyAutoGUIHeight = Math.max(200, Math.floor(contentHeight * 0.6)); // 60% for PyAutoGUI, min 200px
+          bashHeight = Math.max(150, contentHeight - pyAutoGUIHeight); // 40% for Bash, min 150px
+        } else if (!pyAutoGUICollapsed && bashCollapsed) {
+          // Only PyAutoGUI expanded: use most of the space
+          pyAutoGUIHeight = Math.max(300, contentHeight);
+          bashHeight = 0;
+        } else if (pyAutoGUICollapsed && !bashCollapsed) {
+          // Only Bash expanded: use most of the space
+          pyAutoGUIHeight = 0;
+          bashHeight = Math.max(200, contentHeight);
+        }
+        // If both collapsed, heights remain 0
+
         return (
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* PyAutoGUI Section */}
-            <Box sx={{ borderBottom: '1px solid #333' }}>
+            <Box
+              sx={{
+                borderBottom: bashCollapsed ? 'none' : '1px solid #333',
+                flex: pyAutoGUICollapsed ? '0 0 auto' : '1 1 auto',
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'all 0.3s ease-in-out',
+                overflow: 'hidden',
+              }}
+            >
               {/* PyAutoGUI Section Header */}
               <Box
                 sx={{
@@ -109,6 +145,7 @@ export const DesktopPanel = React.memo(function DesktopPanel({
                   backgroundColor: '#1a1a2e',
                   color: '#0ff',
                   cursor: 'pointer',
+                  flexShrink: 0,
                 }}
                 onClick={() => setPyAutoGUICollapsed(!pyAutoGUICollapsed)}
               >
@@ -126,7 +163,14 @@ export const DesktopPanel = React.memo(function DesktopPanel({
 
               {/* PyAutoGUI Content */}
               {!pyAutoGUICollapsed && (
-                <Box sx={{ height: isCollapsed ? '250px' : '350px' }}>
+                                  <Box
+                    sx={{
+                      height: `${pyAutoGUIHeight}px`,
+                      overflow: 'hidden',
+                      flex: '1 1 auto',
+                      transition: 'height 0.3s ease-in-out',
+                    }}
+                  >
                   <PyAutoGUITerminal
                     host={host}
                     deviceId={deviceId}
@@ -137,7 +181,16 @@ export const DesktopPanel = React.memo(function DesktopPanel({
             </Box>
 
             {/* Bash Section */}
-            <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <Box
+              sx={{
+                flex: bashCollapsed ? '0 0 auto' : '1 1 auto',
+                display: 'flex',
+                flexDirection: 'column',
+                borderTop: pyAutoGUICollapsed ? 'none' : '1px solid #333',
+                transition: 'all 0.3s ease-in-out',
+                overflow: 'hidden',
+              }}
+            >
               {/* Bash Section Header */}
               <Box
                 sx={{
@@ -150,6 +203,7 @@ export const DesktopPanel = React.memo(function DesktopPanel({
                   backgroundColor: '#1E1E1E',
                   color: '#00ff00',
                   cursor: 'pointer',
+                  flexShrink: 0,
                 }}
                 onClick={() => setBashCollapsed(!bashCollapsed)}
               >
@@ -167,7 +221,14 @@ export const DesktopPanel = React.memo(function DesktopPanel({
 
               {/* Bash Content */}
               {!bashCollapsed && (
-                <Box sx={{ flex: 1, minHeight: '200px' }}>
+                                  <Box
+                    sx={{
+                      height: bashHeight > 0 ? `${bashHeight}px` : 'auto',
+                      flex: '1 1 auto',
+                      overflow: 'hidden',
+                      transition: 'height 0.3s ease-in-out',
+                    }}
+                  >
                   <BashDesktopTerminal
                     host={host}
                     deviceId={deviceId}
