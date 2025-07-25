@@ -3,6 +3,7 @@ import { Handle, Position, NodeProps, useReactFlow } from 'reactflow';
 
 import { NODE_TYPE_COLORS, UI_BADGE_COLORS } from '../../config/validationColors';
 import { useNavigation } from '../../contexts/navigation/NavigationContext';
+import { useNavigationStack } from '../../contexts/navigation/NavigationStackContext';
 import { useValidationColors } from '../../hooks/validation/useValidationColors';
 import type { UINavigationNode as UINavigationNodeType } from '../../types/pages/Navigation_Types';
 import { getZIndex } from '../../utils/zIndexUtils';
@@ -13,6 +14,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   id,
 }) => {
   const { currentNodeId } = useNavigation();
+  const { stack } = useNavigationStack();
   const [isScreenshotModalOpen, setIsScreenshotModalOpen] = useState(false);
   const [imageKey, setImageKey] = useState<string | number>(0); // Key to force image refresh
   const { getEdges } = useReactFlow();
@@ -62,6 +64,9 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   const isContextNode = data.isContextNode === true;
   // Check if this is the current position
   const isCurrentPosition = currentNodeId === id;
+  // Check if double-clicking this node would cause an infinite loop
+  const nodeLabel = data.label || '';
+  const wouldCauseLoop = stack.some((level) => level.parentNodeLabel === nodeLabel);
 
   // Get dynamic colors based on validation status
   const nodeColors = getNodeColors(data.type);
@@ -183,9 +188,11 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
             : getNodeColor(data.type),
         border: isCurrentPosition
           ? currentPositionStyle.border // Blue border for current position (highest priority)
-          : isContextNode
-            ? '2px solid #2196f3' // Blue border for context nodes
-            : `1px solid ${nodeColors.border}`, // Use validation colors for border (includes verification results)
+          : wouldCauseLoop
+            ? '2px dashed #ff9800' // Orange dashed border for loop prevention
+            : isContextNode
+              ? '2px solid #2196f3' // Blue border for context nodes
+              : `1px solid ${nodeColors.border}`, // Use validation colors for border (includes verification results)
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -205,6 +212,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        cursor: wouldCauseLoop ? 'not-allowed' : 'pointer', // Show not-allowed cursor for loop nodes
+        opacity: wouldCauseLoop ? 0.7 : 1, // Slightly transparent for loop nodes
         animation: isCurrentPosition ? currentPositionStyle.animation : 'none',
       }}
       className={nodeColors.className || ''}
