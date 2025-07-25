@@ -155,7 +155,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const { actualMode } = useTheme();
 
     // Get navigation stack for nested navigation
-    const { popLevel, pushLevel, currentLevel, stack, isNested } = useNavigationStack();
+    const { popLevel, jumpToLevel, jumpToRoot, currentLevel, isNested } = useNavigationStack();
 
     // Get current node ID from NavigationContext
     const { currentNodeId } = useNavigation();
@@ -375,6 +375,27 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       }
     }, [popLevel, loadFromConfig, actualUserInterfaceId]);
 
+    // Handle navigation to specific level in breadcrumb
+    const handleNavigateToLevel = useCallback(
+      async (levelIndex: number) => {
+        jumpToLevel(levelIndex);
+        // Reload tree for the target level
+        if (loadFromConfig && actualUserInterfaceId) {
+          await loadFromConfig(actualUserInterfaceId);
+        }
+      },
+      [jumpToLevel, loadFromConfig, actualUserInterfaceId],
+    );
+
+    // Handle navigation to root
+    const handleNavigateToRoot = useCallback(async () => {
+      jumpToRoot();
+      // Reload main tree
+      if (loadFromConfig && actualUserInterfaceId) {
+        await loadFromConfig(actualUserInterfaceId);
+      }
+    }, [jumpToRoot, loadFromConfig, actualUserInterfaceId]);
+
     // Memoize the selectedHost to prevent unnecessary re-renders
     const stableSelectedHost = useMemo(() => selectedHost, [selectedHost]);
 
@@ -491,19 +512,19 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       handleSaveToConfig('auto');
     }, [handleSaveToConfig]);
 
-        // Auto-fit view when entering nested navigation (only once per nested session)
+    // Auto-fit view when entering nested navigation (only once per nested session)
     useEffect(() => {
       if (isNested && !hasFittedNestedView.current && nodes.length > 0) {
         // Mark that we've fitted the view for this nested session
         hasFittedNestedView.current = true;
-        
+
         // Longer delay to ensure nodes are fully rendered before fitting view
         const timer = setTimeout(() => {
           fitView();
         }, 200);
         return () => clearTimeout(timer);
       }
-      
+
       // Reset the flag when leaving nested navigation
       if (!isNested) {
         hasFittedNestedView.current = false;
@@ -674,7 +695,11 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
         />
 
         {/* Compact Breadcrumb - positioned below header, aligned left */}
-        <NavigationBreadcrumbCompact onNavigateBack={handleNavigateBack} />
+        <NavigationBreadcrumbCompact
+          onNavigateBack={handleNavigateBack}
+          onNavigateToLevel={handleNavigateToLevel}
+          onNavigateToRoot={handleNavigateToRoot}
+        />
 
         {/* Main Container with side-by-side layout */}
         <Box

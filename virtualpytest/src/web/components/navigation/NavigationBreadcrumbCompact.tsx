@@ -3,8 +3,16 @@ import { Box, Typography, Chip } from '@mui/material';
 import { ArrowBack, Home, ChevronRight } from '@mui/icons-material';
 import { useNavigationStack } from '../../contexts/navigation/NavigationStackContext';
 
-export const NavigationBreadcrumbCompact: React.FC<{ onNavigateBack: () => void }> = ({
+interface NavigationBreadcrumbCompactProps {
+  onNavigateBack: () => void;
+  onNavigateToLevel: (levelIndex: number) => void;
+  onNavigateToRoot: () => void;
+}
+
+export const NavigationBreadcrumbCompact: React.FC<NavigationBreadcrumbCompactProps> = ({
   onNavigateBack,
+  onNavigateToLevel,
+  onNavigateToRoot,
 }) => {
   const { stack, isNested, currentLevel } = useNavigationStack();
 
@@ -39,16 +47,30 @@ export const NavigationBreadcrumbCompact: React.FC<{ onNavigateBack: () => void 
         }}
         onClick={onNavigateBack}
       />
-      {/* Home Icon */}
-      <Home sx={{ fontSize: '16px', color: '#666', mx: 0.5 }} /> {/* Increased from 14px */}
-      {/* Root Label */}
+      {/* Home Icon - Clickable */}
+      <Home
+        sx={{
+          fontSize: '16px',
+          color: '#666',
+          mx: 0.5,
+          cursor: 'pointer',
+          '&:hover': { color: '#2196f3' },
+        }}
+        onClick={onNavigateToRoot}
+        title="Go to root navigation"
+      />
+      {/* Root Label - Clickable */}
       <Typography
         variant="caption"
         sx={{
           color: '#666',
           fontSize: '0.85rem', // Increased from 0.75rem (+0.1)
           fontWeight: 500,
+          cursor: 'pointer',
+          '&:hover': { color: '#2196f3' },
         }}
+        onClick={onNavigateToRoot}
+        title="Go to root navigation"
       >
         {rootTreeName}
       </Typography>
@@ -58,14 +80,18 @@ export const NavigationBreadcrumbCompact: React.FC<{ onNavigateBack: () => void 
           <React.Fragment key={index}>
             {/* Separator */}
             <ChevronRight sx={{ fontSize: '14px', color: '#999' }} /> {/* Increased from 12px */}
-            {/* Intermediate Level */}
+            {/* Intermediate Level - Clickable */}
             <Typography
               variant="caption"
               sx={{
                 color: '#666',
                 fontSize: '0.85rem', // Increased from 0.75rem (+0.1)
                 fontWeight: 500,
+                cursor: 'pointer',
+                '&:hover': { color: '#2196f3' },
               }}
+              onClick={() => onNavigateToLevel(index)}
+              title={`Go to ${level.parentNodeLabel}`}
             >
               {level.parentNodeLabel}
             </Typography>

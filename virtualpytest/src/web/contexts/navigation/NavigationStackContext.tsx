@@ -17,6 +17,8 @@ interface NavigationStackContextType {
     parentNodeLabel: string,
   ) => void;
   popLevel: () => void;
+  jumpToLevel: (targetIndex: number) => void;
+  jumpToRoot: () => void;
   isNested: boolean;
 }
 
@@ -36,6 +38,14 @@ export const NavigationStackProvider: React.FC<{ children: React.ReactNode }> = 
     setStack((prev) => prev.slice(0, -1));
   }, []);
 
+  const jumpToLevel = useCallback((targetIndex: number) => {
+    setStack((prev) => prev.slice(0, targetIndex + 1));
+  }, []);
+
+  const jumpToRoot = useCallback(() => {
+    setStack([]);
+  }, []);
+
   const currentLevel = stack[stack.length - 1] || null;
   const isNested = stack.length > 0;
 
@@ -46,6 +56,8 @@ export const NavigationStackProvider: React.FC<{ children: React.ReactNode }> = 
         currentLevel,
         pushLevel,
         popLevel,
+        jumpToLevel,
+        jumpToRoot,
         isNested,
       }}
     >
