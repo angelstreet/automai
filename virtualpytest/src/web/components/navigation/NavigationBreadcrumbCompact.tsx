@@ -13,19 +13,15 @@ export const NavigationBreadcrumbCompact: React.FC<{ onNavigateBack: () => void 
   return (
     <Box
       sx={{
-        position: 'absolute',
-        top: 56, // Just under the header (header height is ~48px + some margin)
-        left: 16,
-        zIndex: 1000,
         display: 'flex',
         alignItems: 'center',
         gap: 0.5,
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(8px)',
-        border: '1px solid rgba(0, 0, 0, 0.1)',
-        borderRadius: '20px',
-        padding: '6px 12px',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+        backgroundColor: '#f5f5f5', // Match navigation header default background
+        border: '1px solid #e0e0e0', // Match navigation header border style
+        borderRadius: '8px', // Rectangle with round border
+        padding: '8px 16px',
+        margin: '8px 16px 0 16px', // Top margin for spacing below header, left/right margin for alignment
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)', // Subtle shadow similar to AppBar elevation={1}
         fontSize: '0.8rem',
         maxWidth: 'fit-content',
       }}

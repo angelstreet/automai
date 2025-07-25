@@ -3,25 +3,25 @@
 /* Root level nodes (depth 0) */
 .node-depth-0 {
   border: 3px solid #ffd700 !important; /* Gold border for root */
-  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+  box-shadow: none !important; /* Remove shadow */
 }
 
 /* First level menu items (depth 1) */
 .node-depth-1 {
   border: 2px solid #2563eb !important; /* Blue border for main menu */
-  box-shadow: 0 0 6px rgba(37, 99, 235, 0.2);
+  box-shadow: none !important; /* Remove shadow */
 }
 
 /* Second level submenu items (depth 2) */
 .node-depth-2 {
   border: 2px solid #059669 !important; /* Green border for submenu */
-  box-shadow: 0 0 4px rgba(5, 150, 105, 0.2);
+  box-shadow: none !important; /* Remove shadow */
 }
 
 /* Third level items (depth 3) */
 .node-depth-3 {
   border: 1px solid #7c3aed !important; /* Purple border for deep items */
-  box-shadow: 0 0 3px rgba(124, 58, 237, 0.15);
+  box-shadow: none !important; /* Remove shadow */
 }
 
 /* Fourth level and deeper (depth 4+) */

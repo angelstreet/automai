@@ -60,8 +60,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   const isRootNode = data.is_root === true;
   // Check if this is an entry point node
   const isEntryNode = data.type === 'entry';
-  // Check if this is a context node (starting point in sub-tree)
-  const isContextNode = data.isContextNode === true;
+  // Context node check removed since shadows are disabled
   // Check if this is the current position
   const isCurrentPosition = currentNodeId === id;
   // Check if double-clicking this node would cause an infinite loop
@@ -82,11 +81,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           borderRadius: '50%',
           background: entryColors.background,
           border: isCurrentPosition ? '3px solid #9c27b0' : `3px solid ${entryColors.border}`,
-          boxShadow: isCurrentPosition
-            ? '0 0 15px rgba(156, 39, 176, 0.6), 0 0 25px rgba(156, 39, 176, 0.4), 0 2px 8px rgba(156, 39, 176, 0.3)'
-            : selected
-              ? '0 4px 12px rgba(211, 47, 47, 0.6)'
-              : '0 2px 8px rgba(211, 47, 47, 0.4)',
+          boxShadow: 'none', // Remove shadow from entry nodes
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -181,18 +176,12 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   return (
     <div
       style={{
-        background: isContextNode
-          ? 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)' // Special gradient for context nodes
-          : isRootNode
-            ? rootNodeStyle.background
-            : getNodeColor(data.type),
+        background: isRootNode ? rootNodeStyle.background : getNodeColor(data.type),
         border: isCurrentPosition
           ? currentPositionStyle.border // Blue border for current position (highest priority)
           : wouldCauseLoop
             ? '2px dashed #ff9800' // Orange dashed border for loop prevention
-            : isContextNode
-              ? '2px solid #2196f3' // Blue border for context nodes
-              : `1px solid ${nodeColors.border}`, // Use validation colors for border (includes verification results)
+            : `1px solid ${nodeColors.border}`, // Use validation colors for border (includes verification results)
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -200,14 +189,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         minHeight: '180px',
         fontSize: '12px',
         color: '#333',
-        boxShadow: isCurrentPosition
-          ? currentPositionStyle.boxShadow
-          : isContextNode
-            ? '0 4px 16px rgba(33, 150, 243, 0.3), 0 2px 8px rgba(33, 150, 243, 0.2)' // Special shadow for context nodes
-            : isRootNode
-              ? rootNodeStyle.boxShadow
-              : nodeColors.boxShadow ||
-                (selected ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'),
+        boxShadow: 'none', // Remove all shadows from nodes in nested tree
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -596,7 +578,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
                 maxHeight: 'calc(85vh - 60px)', // Account for caption area
                 objectFit: 'contain',
                 borderRadius: '8px',
-                boxShadow: '0 4px 0px rgba(0, 0, 0, 0.5)',
+                boxShadow: 'none', // Remove shadow from modal image
                 display: 'block',
                 margin: 0,
                 padding: 0,

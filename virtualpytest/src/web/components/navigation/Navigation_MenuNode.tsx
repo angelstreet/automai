@@ -86,9 +86,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
         minHeight: '180px',
         fontSize: '12px',
         color: '#333',
-        boxShadow: isCurrentPosition
-          ? '0 0 15px rgba(156, 39, 176, 0.6), 0 0 25px rgba(156, 39, 176, 0.4), 0 2px 8px rgba(156, 39, 176, 0.3)'
-          : nodeColors.boxShadow,
+        boxShadow: 'none', // Remove shadow from menu nodes
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -404,7 +402,7 @@ export const UIMenuNode: React.FC<NodeProps<UINavigationNode['data']>> = ({
                 maxHeight: 'calc(85vh - 60px)',
                 objectFit: 'contain',
                 borderRadius: '8px',
-                boxShadow: '0 4px 0px rgba(0, 0, 0, 0.5)',
+                boxShadow: 'none', // Remove shadow from modal image
                 display: 'block',
                 margin: 0,
                 padding: 0,

@@ -585,9 +585,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           overflow: 'hidden',
         }}
       >
-        {/* Compact Breadcrumb - positioned absolute, top-left under header */}
-        <NavigationBreadcrumbCompact onNavigateBack={handleNavigateBack} />
-
         {/* Header with NavigationEditorHeader component */}
         <NavigationEditorHeader
           hasUnsavedChanges={hasUnsavedChanges}
@@ -606,38 +603,17 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           availableHosts={availableHosts}
           onAddNewNode={handleAddNewNodeWrapper}
           onFitView={fitView}
-          onSaveToConfig={async () => {
-            if (currentLevel) {
-              // Save nested tree
-              const response = await fetch('/server/navigationTrees/createSubTree', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  parent_tree_id: actualTreeId,
-                  parent_node_id: currentLevel.parentNodeId,
-                  sub_tree_name: currentLevel.treeName,
-                  tree_data: { nodes, edges },
-                  description: `Actions for ${currentLevel.parentNodeLabel}`,
-                }),
-              });
-              const result = await response.json();
-              if (result.success) {
-                console.log('Sub-tree saved successfully');
-              }
-            } else if (actualUserInterfaceId && saveToConfig) {
-              saveToConfig(actualUserInterfaceId);
-            }
-          }}
+          onSaveToConfig={saveToConfig}
           onDiscardChanges={discardChanges}
-          onFocusNodeChange={setFocusNode}
           onDepthChange={setDisplayDepth}
           onResetFocus={resetFocus}
           onToggleRemotePanel={handleToggleRemotePanel}
           onControlStateChange={handleControlStateChange}
           onDeviceSelect={handleDeviceSelect}
-          onUpdateNode={handleUpdateNode}
-          onUpdateEdge={handleUpdateEdge}
         />
+
+        {/* Compact Breadcrumb - positioned below header, aligned left */}
+        <NavigationBreadcrumbCompact onNavigateBack={handleNavigateBack} />
 
         {/* Main Container with side-by-side layout */}
         <Box
