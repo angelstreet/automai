@@ -28,7 +28,7 @@ export const useBashDesktop = (host: Host, _deviceId: string) => {
       try {
         console.log('[@hook:useBashDesktop] Executing command:', command);
 
-        const response = await fetch('/server/desktop/executeCommand', {
+        const response = await fetch('/server/desktop/bash/executeCommand', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

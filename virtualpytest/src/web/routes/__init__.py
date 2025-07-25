@@ -56,7 +56,8 @@ def _register_server_routes(app):
     # Server-only routes (including former "common" routes that are actually server-only)
     server_route_modules = [
         ('server_remote_routes', 'server_remote_bp'),
-        ('server_desktop_routes', 'server_desktop_bp'),  # ✅ Desktop controller proxy routes
+        ('server_desktop_bash_routes', 'server_desktop_bash_bp'),  # ✅ Bash desktop proxy
+        ('server_desktop_pyautogui_routes', 'server_desktop_pyautogui_bp'),  # ✅ PyAutoGUI desktop proxy
         ('server_web_routes', 'server_web_bp'),  # ✅ Web controller proxy routes
         ('server_av_routes', 'server_av_bp'),  # ✅ AV proxy routes
         ('server_stream_proxy_routes', 'server_stream_proxy_bp'),  # ✅ HTTP to HTTPS stream proxy
@@ -115,7 +116,8 @@ def _register_host_routes(app):
     # Host-only routes (for host device operations)
     host_route_modules = [
         ('host_remote_routes', 'host_remote_bp'),  # ✅ Remote device control
-        ('host_desktop_routes', 'host_desktop_bp'),  # ✅ Desktop controller execution
+        ('host_desktop_bash_routes', 'host_desktop_bash_bp'),  # ✅ Bash desktop controller
+        ('host_desktop_pyautogui_routes', 'host_desktop_pyautogui_bp'),  # ✅ PyAutoGUI desktop controller
         ('host_web_routes', 'host_web_bp'),  # ✅ Web controller execution
         ('host_aiagent_routes', 'host_aiagent_bp'),  # ✅ AI agent execution
         ('host_verification_image_routes', 'host_verification_image_bp'),  # ✅ Image verification

@@ -28,7 +28,7 @@ export const usePyAutoGUI = (host: Host, _deviceId: string) => {
       try {
         console.log('[@hook:usePyAutoGUI] Executing command:', command, params);
 
-        const response = await fetch('/server/desktop/executeCommand', {
+        const response = await fetch('/server/desktop/pyautogui/executeCommand', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

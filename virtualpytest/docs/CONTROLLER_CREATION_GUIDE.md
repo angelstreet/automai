@@ -410,15 +410,43 @@ print(f"Controller[{self.controller_type.upper()}]: Executing command: {command}
 
 ## Routes and Endpoints
 
+### Route Architecture Patterns
+
+There are two main patterns for controller routes in the system:
+
+#### Pattern 1: Generic Routes (Legacy)
+- Single route handles multiple controller implementations  
+- Routes to first available controller of that type
+- **Example**: `/host/desktop/executeCommand` (gets first desktop controller)
+
+#### Pattern 2: Dedicated Routes (Recommended - Following Verification Pattern)
+- Separate routes for each controller implementation
+- Direct routing to specific controller type  
+- **Example**: `/host/desktop/bash/executeCommand`, `/host/desktop/pyautogui/executeCommand`
+- **Benefits**: Guaranteed routing, better error handling, clearer architecture
+
+### Dedicated Routes for Desktop Controllers (Current Pattern)
+
+Following the verification system architecture, desktop controllers now use dedicated routes:
+
+#### Bash Desktop Controller
+- **Host Route**: `/host/desktop/bash/executeCommand`
+- **Server Route**: `/server/desktop/bash/executeCommand`
+- **Files**: `host_desktop_bash_routes.py`, `server_desktop_bash_routes.py`
+
+#### PyAutoGUI Desktop Controller  
+- **Host Route**: `/host/desktop/pyautogui/executeCommand`
+- **Server Route**: `/server/desktop/pyautogui/executeCommand`
+- **Files**: `host_desktop_pyautogui_routes.py`, `server_desktop_pyautogui_routes.py`
+
+**Note**: The generic `/server/desktop/executeCommand` and `/host/desktop/executeCommand` routes have been removed to follow the verification pattern properly.
+
 ### Generic Routes (Usually Already Exist)
 
 Most controller types have **generic routes** that work with any implementation of that type. These routes use the standard `controller.execute_command(command, params)` interface.
 
 **Existing Generic Routes by Controller Type:**
 
-- **Desktop**: ✅ Already exists
-  - Host: `/host/desktop/executeCommand`
-  - Server: `/server/desktop/executeCommand`
 - **Remote**: ✅ Already exists
   - Host: `/host/remote/executeCommand`
   - Server: `/server/remote/executeCommand`
@@ -433,14 +461,20 @@ Most controller types have **generic routes** that work with any implementation 
   - Host: `/host/aiagent/executeCommand`
   - Server: `/server/aiagent/executeCommand`
 
-### When to Create New Routes
+### When to Use Which Pattern
 
-**✅ Use Existing Routes When:**
-- Your controller follows the standard `execute_command(command, params)` interface
-- Generic commands work for your implementation (most cases)
-- You're adding a new implementation of an existing controller type
+**✅ Use Dedicated Routes When (Recommended):**
+- Multiple controller implementations for the same type (like Desktop: bash + pyautogui)
+- Need guaranteed routing to specific controller
+- Want to follow verification system architecture
+- Better error handling and debugging
 
-**🛠️ Create New Routes When:**
+**✅ Use Generic Routes When:**
+- Single controller implementation for that type
+- Simple use cases  
+- Backward compatibility needed
+
+**🛠️ Create Completely New Routes When:**
 - You're creating a completely new controller type
 - You need specialized endpoints beyond the generic `executeCommand`
 - You need custom parameter handling or response formatting

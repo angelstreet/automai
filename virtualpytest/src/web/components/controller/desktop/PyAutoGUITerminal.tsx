@@ -121,15 +121,16 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
         ref={terminalRef}
         sx={{
           flex: 1,
-          p: 1,
+          p: 0.5,
           backgroundColor: '#1a1a2e',
           color: '#0ff',
           fontFamily: 'monospace',
-          fontSize: '0.75rem',
+          fontSize: '0.7rem',
           overflow: 'auto',
           border: '1px solid #333',
-          mb: 1,
-          minHeight: '120px',
+          mb: 0.5,
+          minHeight: '80px',
+          maxHeight: '120px',
         }}
       >
         {terminalOutput ? (
@@ -142,13 +143,13 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
       </Paper>
 
       {/* Control Buttons */}
-      <Box sx={{ mb: 1 }}>
+      <Box sx={{ mb: 0.5 }}>
         {/* Launch App Section */}
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, color: '#0ff' }}>
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5, color: '#0ff', fontSize: '0.8rem' }}>
             Launch Application
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+          <Box sx={{ display: 'flex', gap: 0.5, mb: 0.5 }}>
             <TextField
               value={appName}
               onChange={(e) => setAppName(e.target.value)}
@@ -156,19 +157,22 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
               variant="outlined"
               size="small"
               disabled={!session.connected || isExecuting}
-              sx={{ flex: 1 }}
+              sx={{
+                flex: 1,
+                '& .MuiOutlinedInput-root': { height: '32px' },
+              }}
             />
             <Button
               variant="contained"
               onClick={handleLaunchApp}
               disabled={!session.connected || isExecuting || !appName.trim()}
-              sx={{ minWidth: '80px' }}
+              sx={{ minWidth: '60px', height: '32px', fontSize: '0.75rem' }}
             >
               Launch
             </Button>
           </Box>
           {/* Quick app buttons */}
-          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 0.25, flexWrap: 'wrap' }}>
             {quickApps.map((app) => (
               <Chip
                 key={app}
@@ -179,18 +183,18 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
                   launchApp(app);
                 }}
                 disabled={isExecuting}
-                sx={{ cursor: 'pointer' }}
+                sx={{ cursor: 'pointer', height: '24px', fontSize: '0.7rem' }}
               />
             ))}
           </Box>
         </Box>
 
         {/* Tap Coordinates Section */}
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, color: '#0ff' }}>
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5, color: '#0ff', fontSize: '0.8rem' }}>
             Tap Coordinates
           </Typography>
-          <Grid container spacing={1} alignItems="center">
+          <Grid container spacing={0.5} alignItems="center">
             <Grid item xs={4}>
               <TextField
                 value={tapX}
@@ -200,6 +204,7 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
                 size="small"
                 disabled={!session.connected || isExecuting}
                 type="number"
+                sx={{ '& .MuiOutlinedInput-root': { height: '32px' } }}
               />
             </Grid>
             <Grid item xs={4}>
@@ -211,6 +216,7 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
                 size="small"
                 disabled={!session.connected || isExecuting}
                 type="number"
+                sx={{ '& .MuiOutlinedInput-root': { height: '32px' } }}
               />
             </Grid>
             <Grid item xs={4}>
@@ -219,6 +225,7 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
                 onClick={handleTap}
                 disabled={!session.connected || isExecuting || !tapX || !tapY}
                 fullWidth
+                sx={{ height: '32px', fontSize: '0.75rem' }}
               >
                 Tap
               </Button>
@@ -227,11 +234,11 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
         </Box>
 
         {/* Send Keys Section */}
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, color: '#0ff' }}>
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5, color: '#0ff', fontSize: '0.8rem' }}>
             Send Keys
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+          <Box sx={{ display: 'flex', gap: 0.5, mb: 0.5 }}>
             <TextField
               value={keys}
               onChange={(e) => setKeys(e.target.value)}
@@ -239,19 +246,22 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
               variant="outlined"
               size="small"
               disabled={!session.connected || isExecuting}
-              sx={{ flex: 1 }}
+              sx={{
+                flex: 1,
+                '& .MuiOutlinedInput-root': { height: '32px' },
+              }}
             />
             <Button
               variant="contained"
               onClick={handleSendKeys}
               disabled={!session.connected || isExecuting || !keys.trim()}
-              sx={{ minWidth: '80px' }}
+              sx={{ minWidth: '60px', height: '32px', fontSize: '0.75rem' }}
             >
               Send
             </Button>
           </Box>
           {/* Quick key buttons */}
-          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 0.25, flexWrap: 'wrap' }}>
             {quickKeys.map((key) => (
               <Chip
                 key={key}
@@ -262,18 +272,18 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
                   sendKeys(key);
                 }}
                 disabled={isExecuting}
-                sx={{ cursor: 'pointer' }}
+                sx={{ cursor: 'pointer', height: '24px', fontSize: '0.7rem' }}
               />
             ))}
           </Box>
         </Box>
 
         {/* Type Text Section */}
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, color: '#0ff' }}>
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5, color: '#0ff', fontSize: '0.8rem' }}>
             Type Text
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
             <TextField
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -281,13 +291,16 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
               variant="outlined"
               size="small"
               disabled={!session.connected || isExecuting}
-              sx={{ flex: 1 }}
+              sx={{
+                flex: 1,
+                '& .MuiOutlinedInput-root': { height: '32px' },
+              }}
             />
             <Button
               variant="contained"
               onClick={handleTypeText}
               disabled={!session.connected || isExecuting || !text.trim()}
-              sx={{ minWidth: '80px' }}
+              sx={{ minWidth: '60px', height: '32px', fontSize: '0.75rem' }}
             >
               Type
             </Button>
@@ -295,13 +308,13 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
         </Box>
 
         {/* Clear and Disconnect */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
           <Button
             variant="outlined"
             onClick={clearTerminal}
             disabled={isExecuting}
             size="small"
-            sx={{ flex: 1 }}
+            sx={{ flex: 1, height: '28px', fontSize: '0.7rem' }}
           >
             Clear
           </Button>
@@ -311,7 +324,7 @@ export const PyAutoGUITerminal = React.memo(function PyAutoGUITerminal({
             onClick={handleDisconnectWithCallback}
             disabled={isExecuting}
             size="small"
-            sx={{ flex: 1 }}
+            sx={{ flex: 1, height: '28px', fontSize: '0.7rem' }}
           >
             Disconnect
           </Button>

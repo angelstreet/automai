@@ -126,7 +126,7 @@ export const DesktopPanel = React.memo(function DesktopPanel({
 
               {/* PyAutoGUI Content */}
               {!pyAutoGUICollapsed && (
-                <Box sx={{ height: isCollapsed ? '300px' : '400px' }}>
+                <Box sx={{ height: isCollapsed ? '250px' : '350px' }}>
                   <PyAutoGUITerminal
                     host={host}
                     deviceId={deviceId}
