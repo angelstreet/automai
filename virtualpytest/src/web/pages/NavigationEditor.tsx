@@ -491,24 +491,24 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       handleSaveToConfig('auto');
     }, [handleSaveToConfig]);
 
-    // Auto-fit view when entering nested navigation (only once per nested session)
+        // Auto-fit view when entering nested navigation (only once per nested session)
     useEffect(() => {
-      if (isNested && stack.length > 0 && !hasFittedNestedView.current) {
+      if (isNested && !hasFittedNestedView.current) {
         // Mark that we've fitted the view for this nested session
         hasFittedNestedView.current = true;
-
+        
         // Small delay to ensure nodes are rendered before fitting view
         const timer = setTimeout(() => {
           fitView();
         }, 100);
         return () => clearTimeout(timer);
       }
-
+      
       // Reset the flag when leaving nested navigation
       if (!isNested) {
         hasFittedNestedView.current = false;
       }
-    }, [isNested, stack.length, fitView]);
+    }, [isNested, fitView]);
 
     // Lifecycle refs to prevent unnecessary re-renders
 
