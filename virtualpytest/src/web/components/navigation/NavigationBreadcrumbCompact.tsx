@@ -10,6 +10,9 @@ export const NavigationBreadcrumbCompact: React.FC<{ onNavigateBack: () => void 
 
   if (!isNested || !currentLevel) return null;
 
+  // Get the root tree name from the navigation context (first level)
+  const rootTreeName = stack.length > 0 && stack[0] ? 'root' : 'root';
+
   return (
     <Box
       sx={{
@@ -22,46 +25,61 @@ export const NavigationBreadcrumbCompact: React.FC<{ onNavigateBack: () => void 
         padding: '8px 16px',
         margin: '8px 16px 0 16px', // Top margin for spacing below header, left/right margin for alignment
         boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)', // Subtle shadow similar to AppBar elevation={1}
-        fontSize: '0.8rem',
+        fontSize: '0.9rem', // Increased from 0.8rem (+0.1)
         maxWidth: 'fit-content',
       }}
     >
       {/* Back Button */}
       <ArrowBack
         sx={{
-          fontSize: '14px',
+          fontSize: '16px', // Increased from 14px
           color: '#666',
           cursor: 'pointer',
           '&:hover': { color: '#2196f3' },
         }}
         onClick={onNavigateBack}
       />
-
       {/* Home Icon */}
-      <Home sx={{ fontSize: '14px', color: '#666', mx: 0.5 }} />
-
+      <Home sx={{ fontSize: '16px', color: '#666', mx: 0.5 }} /> {/* Increased from 14px */}
       {/* Root Label */}
       <Typography
         variant="caption"
         sx={{
           color: '#666',
-          fontSize: '0.75rem',
+          fontSize: '0.85rem', // Increased from 0.75rem (+0.1)
           fontWeight: 500,
         }}
       >
-        Main
+        {rootTreeName}
       </Typography>
-
-      {/* Separator */}
-      <ChevronRight sx={{ fontSize: '12px', color: '#999' }} />
-
+      {/* Show full chain if stack has multiple levels */}
+      {stack.length > 1 &&
+        stack.slice(0, -1).map((level, index) => (
+          <React.Fragment key={index}>
+            {/* Separator */}
+            <ChevronRight sx={{ fontSize: '14px', color: '#999' }} /> {/* Increased from 12px */}
+            {/* Intermediate Level */}
+            <Typography
+              variant="caption"
+              sx={{
+                color: '#666',
+                fontSize: '0.85rem', // Increased from 0.75rem (+0.1)
+                fontWeight: 500,
+              }}
+            >
+              {level.parentNodeLabel}
+            </Typography>
+          </React.Fragment>
+        ))}
+      {/* Final Separator */}
+      <ChevronRight sx={{ fontSize: '14px', color: '#999' }} /> {/* Increased from 12px */}
       {/* Current Level */}
       <Chip
         label={currentLevel.parentNodeLabel}
         size="small"
         sx={{
-          height: '20px',
-          fontSize: '0.7rem',
+          height: '22px', // Increased from 20px
+          fontSize: '0.8rem', // Increased from 0.7rem (+0.1)
           fontWeight: 600,
           backgroundColor: '#e3f2fd',
           color: '#1976d2',

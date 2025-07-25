@@ -216,15 +216,12 @@ export const VALIDATION_ANIMATIONS = {
     iteration: 'infinite',
     keyframes: `
       0% {
-        box-shadow: 0 0 5px var(--glow-color);
         transform: scale(1);
       }
       50% {
-        box-shadow: 0 0 20px var(--glow-color);
         transform: scale(1.02);
       }
       100% {
-        box-shadow: 0 0 5px var(--glow-color);
         transform: scale(1);
       }
     `,
@@ -256,13 +253,13 @@ export const VALIDATION_ANIMATIONS = {
     iteration: 'infinite',
     keyframes: `
       0% {
-        box-shadow: 0 0 3px var(--handle-color);
+        opacity: 0.8;
       }
       50% {
-        box-shadow: 0 0 12px var(--handle-color);
+        opacity: 1;
       }
       100% {
-        box-shadow: 0 0 3px var(--handle-color);
+        opacity: 0.8;
       }
     `,
   },

@@ -66,7 +66,7 @@ export const useNestedNavigation = ({
               {
                 id: `${node.id}-context`, // Unique ID for the context node
                 type: 'uiScreen',
-                position: { x: 250, y: 250 },
+                position: { x: 250, y: 100 }, // Position at top center instead of middle (y: 250 -> y: 100)
                 data: {
                   type: node.data.type,
                   label: node.data.label, // Keep the original label like "Live TV"
@@ -82,7 +82,7 @@ export const useNestedNavigation = ({
           setEdges(contextSubTree.edges);
 
           // 6. Push to navigation stack with temporary ID for new sub-tree
-          pushLevel(`temp-${Date.now()}`, node.id, `${node.data.label} Actions`, node.data.label);
+          pushLevel(`temp-${Date.now()}`, node.id, node.data.label, node.data.label);
 
           console.log(`[@useNestedNavigation] Created empty sub-tree for node: ${node.data.label}`);
         }

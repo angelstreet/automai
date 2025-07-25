@@ -42,7 +42,7 @@ export const useValidationColors = (edges?: UINavigationEdge[]) => {
       border: colors.border,
       textColor: colors.textColor,
       badgeColor: colors.badgeColor,
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      // boxShadow removed to eliminate all shadows in nested tree
     };
   }, []);
 
@@ -62,7 +62,7 @@ export const useValidationColors = (edges?: UINavigationEdge[]) => {
 
     return {
       background: colors.untested, // Use untested status as default
-      boxShadow: '0 1px 2px rgba(0,0,0,0.3)',
+      // boxShadow removed to eliminate all shadows in nested tree
     };
   }, []);
 

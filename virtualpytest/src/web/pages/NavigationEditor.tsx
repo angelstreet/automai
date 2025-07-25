@@ -155,7 +155,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     const { actualMode } = useTheme();
 
     // Get navigation stack for nested navigation
-    const { popLevel, pushLevel, currentLevel } = useNavigationStack();
+    const { popLevel, pushLevel, currentLevel, stack, isNested } = useNavigationStack();
 
     // Get current node ID from NavigationContext
     const { currentNodeId } = useNavigation();
@@ -383,73 +383,22 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       setControlState(stableSelectedHost, selectedDeviceId, isControlActive);
     }, [stableSelectedHost, selectedDeviceId, isControlActive, setControlState]);
 
-    // Memoize the RemotePanel props to prevent unnecessary re-renders
-    const remotePanelProps = useMemo(
-      () => ({
-        host: stableSelectedHost!,
-        deviceId: selectedDeviceId!,
-        deviceModel: selectedDeviceId
-          ? stableSelectedHost?.devices?.find((d) => d.device_id === selectedDeviceId)
-              ?.device_model || 'unknown'
-          : 'unknown',
-        isConnected: isControlActive,
-        deviceResolution: { width: 1920, height: 1080 }, // Default HDMI resolution
-        onReleaseControl: handleDisconnectComplete,
-        streamCollapsed: isAVPanelCollapsed,
-        streamMinimized: isAVPanelMinimized,
-        captureMode: captureMode,
-      }),
-      [
-        stableSelectedHost,
-        selectedDeviceId,
-        isControlActive,
-        handleDisconnectComplete,
-        isAVPanelCollapsed,
-        isAVPanelMinimized,
-        captureMode,
-      ],
-    );
+    // ========================================
+    // 1. INITIALIZATION & REFERENCES
+    // ========================================
 
-    // Memoize the HDMIStream props to prevent unnecessary re-renders
-    const hdmiStreamProps = useMemo(
-      () => ({
-        host: stableSelectedHost!,
-        deviceId: selectedDeviceId!,
-        deviceModel: selectedDeviceId
-          ? stableSelectedHost?.devices?.find((d) => d.device_id === selectedDeviceId)
-              ?.device_model || 'unknown'
-          : undefined,
-        isControlActive,
-        onCollapsedChange: handleAVPanelCollapsedChange,
-        onMinimizedChange: handleAVPanelMinimizedChange,
-        onCaptureModeChange: handleCaptureModeChange,
-      }),
-      [
-        stableSelectedHost,
-        selectedDeviceId,
-        isControlActive,
-        handleAVPanelCollapsedChange,
-        handleAVPanelMinimizedChange,
-        handleCaptureModeChange,
-      ],
-    );
-
-    // Reset AV panel to collapsed state when taking control (only on initial activation)
-    const wasControlActiveRef = useRef(false);
+    // Auto-fit view when entering nested navigation
     useEffect(() => {
-      if (isControlActive && !wasControlActiveRef.current) {
-        setIsAVPanelCollapsed(true);
-        setIsAVPanelMinimized(false); // Also reset minimized state
-        setCaptureMode('stream'); // Also reset capture mode
-        wasControlActiveRef.current = true;
-      } else if (!isControlActive) {
-        wasControlActiveRef.current = false;
+      if (isNested && stack.length > 0) {
+        // Small delay to ensure nodes are rendered before fitting view
+        const timer = setTimeout(() => {
+          fitView();
+        }, 100);
+        return () => clearTimeout(timer);
       }
-    }, [isControlActive]);
+    }, [isNested, stack.length, fitView]);
 
-    // ========================================
-    // 2. TREE LOADING & LOCK MANAGEMENT
-    // ========================================
+    // Lifecycle refs to prevent unnecessary re-renders
 
     // Set user interface from navigation state (passed from UserInterface.tsx)
     useEffect(() => {
