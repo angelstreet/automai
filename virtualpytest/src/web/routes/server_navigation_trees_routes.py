@@ -436,6 +436,120 @@ def restore_version():
             'message': f'Server error: {str(e)}'
         }), 500
 
+@server_navigation_trees_bp.route('/navigationTrees/restoreVersionDirect', methods=['POST'])
+def restore_version_direct():
+    """Direct SQL-based restore of navigation tree to specific version (bypasses normal restore logic)"""
+    try:
+        data = request.get_json()
+        
+        tree_id = data.get('tree_id')
+        version_number = data.get('version_number')
+        
+        if not tree_id or version_number is None:
+            return jsonify({
+                'success': False,
+                'message': 'Missing required fields: tree_id, version_number'
+            }), 400
+        
+        team_id = data.get('team_id', DEFAULT_TEAM_ID)
+        restored_by = data.get('restored_by', 'system')
+        
+        print(f'[@route:navigation_trees:restore_version_direct] Direct restore tree {tree_id} to version {version_number}')
+        
+        from src.lib.supabase.client import get_supabase
+        supabase = get_supabase()
+        
+        # First, check if the version exists
+        history_check = supabase.table('navigation_trees_history')\
+            .select('id')\
+            .eq('tree_id', tree_id)\
+            .eq('team_id', team_id)\
+            .eq('version_number', version_number)\
+            .execute()
+        
+        if not history_check.data:
+            return jsonify({
+                'success': False,
+                'message': f'Version {version_number} not found for tree {tree_id}'
+            }), 404
+        
+        # Execute direct SQL restore using raw SQL
+        restore_sql = f"""
+        UPDATE navigation_trees 
+        SET 
+          name = (SELECT tree_data->>'name' FROM navigation_trees_history WHERE version_number = {version_number} AND tree_id = '{tree_id}' AND team_id = '{team_id}'),
+          description = (SELECT tree_data->>'description' FROM navigation_trees_history WHERE version_number = {version_number} AND tree_id = '{tree_id}' AND team_id = '{team_id}'),
+          metadata = (SELECT tree_data->'metadata' FROM navigation_trees_history WHERE version_number = {version_number} AND tree_id = '{tree_id}' AND team_id = '{team_id}'),
+          updated_at = NOW()
+        WHERE id = '{tree_id}' 
+        AND team_id = '{team_id}'
+        RETURNING *;
+        """
+        
+        # Execute the restore
+        restore_result = supabase.rpc('execute_sql', {'query': restore_sql}).execute()
+        
+        if restore_result.data:
+            # Invalidate cache so frontend gets fresh data
+            from src.web.cache.navigation_cache import invalidate_cache
+            invalidate_cache(tree_id, team_id)
+            
+            # Create a history record for this direct restore
+            from src.lib.supabase.navigation_trees_db import get_next_version_number
+            new_version = get_next_version_number(tree_id, supabase)
+            
+            # Get the restored tree data
+            restored_tree_result = supabase.table('navigation_trees')\
+                .select('*')\
+                .eq('id', tree_id)\
+                .eq('team_id', team_id)\
+                .execute()
+            
+            if restored_tree_result.data:
+                restored_tree = restored_tree_result.data[0]
+                
+                # Create history entry for the direct restore
+                history_data = {
+                    'tree_id': tree_id,
+                    'team_id': team_id,
+                    'version_number': new_version,
+                    'modification_type': 'direct_restore',
+                    'modified_by': restored_by,
+                    'tree_data': restored_tree,
+                    'changes_summary': f'Direct SQL restore from version {version_number}',
+                    'restored_from_version': version_number
+                }
+                
+                supabase.table('navigation_trees_history')\
+                    .insert(history_data)\
+                    .execute()
+                
+                print(f'[@route:navigation_trees:restore_version_direct] Successfully restored tree {tree_id} to version {version_number}')
+                
+                return jsonify({
+                    'success': True,
+                    'message': f'Successfully restored tree to version {version_number} using direct SQL',
+                    'tree': restored_tree,
+                    'new_version': new_version
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Restore executed but could not retrieve updated tree'
+                }), 500
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Direct SQL restore failed'
+            }), 500
+            
+    except Exception as e:
+        print(f'[@route:navigation_trees:restore_version_direct] ERROR: {e}')
+        return jsonify({
+            'success': False,
+            'message': f'Server error during direct restore: {str(e)}'
+        }), 500
+
 @server_navigation_trees_bp.route('/navigationTrees/deleteTree/<tree_id>', methods=['DELETE'])
 def delete_tree(tree_id):
     """Delete navigation tree"""
