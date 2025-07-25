@@ -58,6 +58,8 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   const isRootNode = data.is_root === true;
   // Check if this is an entry point node
   const isEntryNode = data.type === 'entry';
+  // Check if this is a context node (starting point in sub-tree)
+  const isContextNode = data.isContextNode === true;
   // Check if this is the current position
   const isCurrentPosition = currentNodeId === id;
 
@@ -174,10 +176,16 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   return (
     <div
       style={{
-        background: isRootNode ? rootNodeStyle.background : getNodeColor(data.type),
+        background: isContextNode
+          ? 'linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)' // Special gradient for context nodes
+          : isRootNode
+            ? rootNodeStyle.background
+            : getNodeColor(data.type),
         border: isCurrentPosition
           ? currentPositionStyle.border // Blue border for current position (highest priority)
-          : `1px solid ${nodeColors.border}`, // Use validation colors for border (includes verification results)
+          : isContextNode
+            ? '2px solid #2196f3' // Blue border for context nodes
+            : `1px solid ${nodeColors.border}`, // Use validation colors for border (includes verification results)
         borderRadius: '8px',
         padding: '12px',
         minWidth: '200px',
@@ -187,10 +195,12 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
         color: '#333',
         boxShadow: isCurrentPosition
           ? currentPositionStyle.boxShadow
-          : isRootNode
-            ? rootNodeStyle.boxShadow
-            : nodeColors.boxShadow ||
-              (selected ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'),
+          : isContextNode
+            ? '0 4px 16px rgba(33, 150, 243, 0.3), 0 2px 8px rgba(33, 150, 243, 0.2)' // Special shadow for context nodes
+            : isRootNode
+              ? rootNodeStyle.boxShadow
+              : nodeColors.boxShadow ||
+                (selected ? '0 4px 12px rgba(0,0,0,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'),
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -241,6 +251,26 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
           }}
         >
           ROOT
+        </div>
+      )}
+
+      {/* Context Node Indicator - shows this is the starting point in sub-tree */}
+      {isContextNode && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '4px',
+            left: '4px',
+            backgroundColor: '#2196f3',
+            color: 'white',
+            fontSize: '10px',
+            fontWeight: 'bold',
+            padding: '2px 6px',
+            borderRadius: '4px',
+            zIndex: 10,
+          }}
+        >
+          YOU ARE HERE
         </div>
       )}
 

@@ -47,21 +47,26 @@ export const useNestedNavigation = ({
             console.log(`[@useNestedNavigation] Loaded existing sub-tree: ${primarySubTree.name}`);
           }
         } else {
-          // 3b. Create empty sub-tree (in memory only)
-          const emptySubTree = {
+          // 3b. Create sub-tree starting with the actual node (so user understands context)
+          const contextSubTree = {
             nodes: [
               {
-                id: 'entry',
+                id: `${node.id}-context`, // Unique ID for the context node
                 type: 'uiScreen',
                 position: { x: 250, y: 250 },
-                data: { type: 'entry', label: 'ENTRY' },
+                data: { 
+                  type: node.data.type, 
+                  label: node.data.label, // Keep the original label like "Live TV"
+                  description: `You are now on ${node.data.label}. Add actions you can perform while staying here.`,
+                  isContextNode: true, // Mark as the context node
+                },
               },
             ],
             edges: [],
           };
 
-          setNodes(emptySubTree.nodes);
-          setEdges(emptySubTree.edges);
+          setNodes(contextSubTree.nodes);
+          setEdges(contextSubTree.edges);
 
           // 4. Push to navigation stack with temporary ID for new sub-tree
           pushLevel(`temp-${Date.now()}`, node.id, `${node.data.label} Actions`, node.data.label);

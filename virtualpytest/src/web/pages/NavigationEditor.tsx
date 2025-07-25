@@ -48,7 +48,7 @@ import {
   NavigationStackProvider,
   useNavigationStack,
 } from '../contexts/navigation/NavigationStackContext';
-import { NavigationBreadcrumb } from '../components/navigation/NavigationBreadcrumb';
+import { NavigationBreadcrumbCompact } from '../components/navigation/NavigationBreadcrumbCompact';
 import { useNavigationEditor } from '../hooks/navigation/useNavigationEditor';
 import { useNestedNavigation } from '../hooks/navigation/useNestedNavigation';
 import {
@@ -585,8 +585,8 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           overflow: 'hidden',
         }}
       >
-        {/* Breadcrumb for nested navigation */}
-        <NavigationBreadcrumb onNavigateBack={handleNavigateBack} />
+        {/* Compact Breadcrumb - positioned absolute, top-left under header */}
+        <NavigationBreadcrumbCompact onNavigateBack={handleNavigateBack} />
 
         {/* Header with NavigationEditorHeader component */}
         <NavigationEditorHeader
