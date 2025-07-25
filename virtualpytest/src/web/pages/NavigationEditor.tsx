@@ -553,6 +553,64 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       [edges, setEdges, setSelectedEdge, setHasUnsavedChanges, selectedEdge],
     );
 
+    // Custom double-click handler that integrates with navigation stack
+    const handleNodeDoubleClick = useCallback(
+      async (event: React.MouseEvent, node: any) => {
+        // Prevent opening edit dialog for entry nodes
+        if (node.data?.type === 'entry') {
+          return;
+        }
+
+        // Check if node has sub-trees
+        try {
+          const response = await fetch(
+            `/server/navigationTrees/getNodeSubTrees/${actualTreeId}/${node.id}`,
+          );
+          const result = await response.json();
+
+          if (result.success && result.sub_trees?.length > 0) {
+            // Load existing sub-tree
+            const subTree = result.sub_trees[0];
+            const treeResponse = await fetch(`/server/navigationTrees/getTree/${subTree.id}`);
+            const treeResult = await treeResponse.json();
+
+            if (treeResult.success) {
+              const treeData = treeResult.tree.metadata || {};
+              setNodes(treeData.nodes || []);
+              setEdges(treeData.edges || []);
+
+              // Push to navigation stack with actual sub-tree ID
+              pushLevel(subTree.id, node.id, subTree.name, node.data.label);
+            }
+          } else {
+            // Create empty sub-tree
+            const emptyTree = {
+              nodes: [
+                {
+                  id: 'entry',
+                  type: 'uiScreen',
+                  position: { x: 250, y: 250 },
+                  data: { type: 'entry', label: 'ENTRY' },
+                },
+              ],
+              edges: [],
+            };
+
+            setNodes(emptyTree.nodes);
+            setEdges(emptyTree.edges);
+
+            // Push to navigation stack with temporary ID for new sub-tree
+            pushLevel(`temp-${Date.now()}`, node.id, `${node.data.label} Actions`, node.data.label);
+          }
+        } catch (error) {
+          console.error('Error handling node double-click:', error);
+          // Fallback to original handler (edit dialog)
+          originalOnNodeDoubleClick(event, node);
+        }
+      },
+      [actualTreeId, setNodes, setEdges, pushLevel, originalOnNodeDoubleClick],
+    );
+
     // ========================================
     // 7. RENDER
     // ========================================
@@ -694,7 +752,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
                   onConnect={onConnect}
                   onNodeClick={wrappedOnNodeClick}
                   onEdgeClick={wrappedOnEdgeClick}
-                  onNodeDoubleClick={originalOnNodeDoubleClick}
+                  onNodeDoubleClick={handleNodeDoubleClick}
                   onPaneClick={wrappedOnPaneClick}
                   onInit={setReactFlowInstance}
                   nodeTypes={nodeTypes}

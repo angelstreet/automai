@@ -2,6 +2,7 @@ import { AppBar, Toolbar, Typography, Box } from '@mui/material';
 import React from 'react';
 
 import { useNavigation } from '../../contexts/navigation/NavigationContext';
+import { useNavigationStack } from '../../contexts/navigation/NavigationStackContext';
 import { useDeviceControl } from '../../hooks/useDeviceControl';
 import { useHostManager } from '../../hooks/useHostManager';
 import { useToast } from '../../hooks/useToast';
@@ -71,6 +72,9 @@ export const NavigationEditorHeader: React.FC<{
 
   // Get navigation context for current position updates
   const { updateCurrentPosition } = useNavigation();
+
+  // Get navigation stack for breadcrumb display
+  const { isNested, currentLevel } = useNavigationStack();
 
   // Get device locking functionality from HostManager
   const { isDeviceLocked } = useHostManager();
@@ -170,7 +174,7 @@ export const NavigationEditorHeader: React.FC<{
                   whiteSpace: 'nowrap',
                 }}
               >
-                root
+                {isNested ? currentLevel?.treeName || 'Sub-tree' : 'root'}
                 {hasUnsavedChanges && (
                   <Typography component="span" sx={{ color: 'warning.main', ml: 0.5 }}>
                     *
