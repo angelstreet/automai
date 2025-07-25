@@ -187,7 +187,7 @@ export const useNavigationEditor = () => {
       // Check if node has sub-trees
       try {
         const response = await fetch(
-          `/server/navigationTrees/getNodeSubTrees/${navigation.currentTreeId}/${node.id}`,
+          `/server/navigationTrees/getNodeSubTrees/${navigationConfig.actualTreeId}/${node.id}`,
         );
         const result = await response.json();
 
@@ -237,7 +237,7 @@ export const useNavigationEditor = () => {
         navigation.openNodeDialog(node);
       }
     },
-    [navigation],
+    [navigation, navigationConfig],
   );
 
   const onPaneClick = useCallback(() => {
