@@ -387,6 +387,107 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
     // 1. INITIALIZATION & REFERENCES
     // ========================================
 
+    // Create a unified save function that handles both root and subtree saves
+    const handleSaveToConfig = useCallback(
+      async (saveTarget: 'root' | 'subtree' | 'auto' = 'auto') => {
+        try {
+          // Auto-determine save target if not specified
+          const shouldSaveAsSubtree =
+            saveTarget === 'subtree' || (saveTarget === 'auto' && isNested && currentLevel);
+
+          if (shouldSaveAsSubtree && currentLevel) {
+            // Save as subtree - check if subtree already exists
+            console.log(
+              `[@NavigationEditor] Saving as subtree for: ${currentLevel.parentNodeLabel}`,
+            );
+
+            // First, check if a subtree already exists for this node
+            const checkResponse = await fetch(
+              `/server/navigationTrees/getNodeSubTrees/${actualTreeId}/${currentLevel.parentNodeId}`,
+            );
+            const checkResult = await checkResponse.json();
+
+            if (checkResult.success && checkResult.sub_trees && checkResult.sub_trees.length > 0) {
+              // Update existing subtree
+              const existingSubTree = checkResult.sub_trees[0]; // Use the first subtree
+              console.log(`[@NavigationEditor] Updating existing subtree: ${existingSubTree.id}`);
+
+              const updateResponse = await fetch(
+                `/server/navigationTrees/updateTree/${existingSubTree.id}`,
+                {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    tree_data: { nodes, edges },
+                    description: `Updated actions for ${currentLevel.parentNodeLabel}`,
+                    modification_type: 'update',
+                    changes_summary: 'Updated subtree from nested navigation editor',
+                  }),
+                },
+              );
+              const updateResult = await updateResponse.json();
+
+              if (updateResult.success) {
+                console.log('Sub-tree updated successfully');
+                setHasUnsavedChanges(false);
+              } else {
+                console.error('Failed to update sub-tree:', updateResult.message);
+                throw new Error(updateResult.message);
+              }
+            } else {
+              // Create new subtree
+              console.log(`[@NavigationEditor] Creating new subtree`);
+              const response = await fetch('/server/navigationTrees/createSubTree', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  parent_tree_id: actualTreeId,
+                  parent_node_id: currentLevel.parentNodeId,
+                  sub_tree_name: currentLevel.treeName,
+                  tree_data: { nodes, edges },
+                  description: `Actions for ${currentLevel.parentNodeLabel}`,
+                }),
+              });
+              const result = await response.json();
+
+              if (result.success) {
+                console.log('Sub-tree created successfully');
+                setHasUnsavedChanges(false);
+              } else {
+                console.error('Failed to create sub-tree:', result.message);
+                throw new Error(result.message);
+              }
+            }
+          } else if (actualUserInterfaceId) {
+            // Save as root tree
+            console.log('[@NavigationEditor] Saving as root tree');
+            await saveToConfig(actualUserInterfaceId);
+          } else {
+            throw new Error('Cannot save: missing userInterface ID');
+          }
+        } catch (error) {
+          console.error('Error saving tree:', error);
+          // Re-throw to let the UI handle the error
+          throw error;
+        }
+      },
+      [
+        isNested,
+        currentLevel,
+        actualTreeId,
+        nodes,
+        edges,
+        actualUserInterfaceId,
+        saveToConfig,
+        setHasUnsavedChanges,
+      ],
+    );
+
+    // Wrapper for the header component (matches expected signature)
+    const handleSaveForHeader = useCallback(() => {
+      handleSaveToConfig('auto');
+    }, [handleSaveToConfig]);
+
     // Auto-fit view when entering nested navigation
     useEffect(() => {
       if (isNested && stack.length > 0) {
@@ -552,7 +653,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
           availableHosts={availableHosts}
           onAddNewNode={handleAddNewNodeWrapper}
           onFitView={fitView}
-          onSaveToConfig={saveToConfig}
+          onSaveToConfig={handleSaveForHeader}
           onDiscardChanges={discardChanges}
           onDepthChange={setDisplayDepth}
           onResetFocus={resetFocus}

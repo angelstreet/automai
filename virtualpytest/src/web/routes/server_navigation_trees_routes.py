@@ -475,38 +475,89 @@ def health_check():
 # NESTED NAVIGATION TREE ENDPOINTS
 # =====================================================
 
-@server_navigation_trees_bp.route('/navigationTrees/getSubTrees/<parent_tree_id>', methods=['GET'])
-def get_sub_trees_endpoint(parent_tree_id):
-    """Get all sub-trees for a parent tree"""
+@server_navigation_trees_bp.route('/navigationTrees/updateTree/<tree_id>', methods=['PUT'])
+def update_tree_endpoint(tree_id):
+    """Update an existing navigation tree by tree_id"""
     try:
-        team_id = request.args.get('team_id', DEFAULT_TEAM_ID)
-        parent_node_id = request.args.get('parent_node_id')
+        data = request.get_json()
         
-        print(f'[@route:navigation_trees:get_sub_trees] Fetching sub-trees for parent: {parent_tree_id}')
+        tree_data = data.get('tree_data', {})
+        team_id = data.get('team_id', DEFAULT_TEAM_ID)
+        creator_id = DEFAULT_USER_ID
+        description = data.get('description')
+        modification_type = data.get('modification_type', 'update')
+        changes_summary = data.get('changes_summary')
         
-        from src.lib.supabase.navigation_trees_db import get_sub_trees
+        print(f'[@route:navigation_trees:update_tree] Updating tree: {tree_id}')
         
-        success, message, sub_trees = get_sub_trees(parent_tree_id, parent_node_id, team_id)
+        from src.lib.supabase.navigation_trees_db import update_tree
         
-        if success:
+        # Prepare update data
+        update_data = {
+            'tree_data': tree_data,
+            'description': description
+        }
+        
+        # Update the tree
+        updated_tree = update_tree(tree_id, update_data, team_id)
+        
+        if updated_tree:
+            # Create history record for the update
+            from src.lib.supabase.navigation_trees_db import get_navigation_tree
+            
+            # Get current version number
+            _, _, tree_record = get_navigation_tree(tree_id, team_id)
+            if tree_record:
+                # Create history entry
+                supabase = get_supabase()
+                
+                # Get the latest version number
+                history_result = supabase.table('navigation_trees_history')\
+                    .select('version_number')\
+                    .eq('tree_id', tree_id)\
+                    .eq('team_id', team_id)\
+                    .order('version_number', desc=True)\
+                    .limit(1)\
+                    .execute()
+                
+                latest_version = 1
+                if history_result.data and len(history_result.data) > 0:
+                    latest_version = history_result.data[0]['version_number'] + 1
+                
+                history_data = {
+                    'tree_id': tree_id,
+                    'team_id': team_id,
+                    'version_number': latest_version,
+                    'modification_type': modification_type,
+                    'modified_by': creator_id,
+                    'tree_data': updated_tree,
+                    'changes_summary': changes_summary or 'Updated tree from nested navigation editor'
+                }
+                
+                supabase.table('navigation_trees_history')\
+                    .insert(history_data)\
+                    .execute()
+            
+            # Invalidate cache
+            from src.web.cache.navigation_cache import invalidate_cache
+            invalidate_cache(tree_id, team_id)
+            
             return jsonify({
                 'success': True,
-                'sub_trees': sub_trees,
-                'count': len(sub_trees)
+                'message': 'Tree updated successfully',
+                'tree': updated_tree
             })
         else:
             return jsonify({
                 'success': False,
-                'message': message,
-                'sub_trees': []
+                'message': 'Failed to update tree'
             }), 500
     
     except Exception as e:
-        print(f'[@route:navigation_trees:get_sub_trees] ERROR: {e}')
+        print(f'[@route:navigation_trees:update_tree] ERROR: {e}')
         return jsonify({
             'success': False,
-            'message': f'Server error: {str(e)}',
-            'sub_trees': []
+            'message': f'Server error: {str(e)}'
         }), 500
 
 @server_navigation_trees_bp.route('/navigationTrees/createSubTree', methods=['POST'])
