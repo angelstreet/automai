@@ -64,8 +64,7 @@ export const UINavigationNode: React.FC<NodeProps<UINavigationNodeType['data']>>
   // Check if this is the current position
   const isCurrentPosition = currentNodeId === id;
   // Check if double-clicking this node would cause an infinite loop
-  const nodeLabel = data.label || '';
-  const wouldCauseLoop = stack.some((level) => level.parentNodeLabel === nodeLabel);
+  const wouldCauseLoop = stack.some((level) => level.parentNodeId === id);
 
   // Get dynamic colors based on validation status
   const nodeColors = getNodeColors(data.type);

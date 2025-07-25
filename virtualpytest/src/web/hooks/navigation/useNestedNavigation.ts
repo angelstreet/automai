@@ -23,13 +23,13 @@ export const useNestedNavigation = ({
         return;
       }
 
-      // 2. INFINITE LOOP PROTECTION: Check if we're already in a sub-tree of this node type
-      const nodeLabel = node.data.label || '';
-      const isAlreadyInThisNodeType = stack.some((level) => level.parentNodeLabel === nodeLabel);
+      // 2. INFINITE LOOP PROTECTION: Check if we're already in a sub-tree of this specific node
+      const nodeId = node.id;
+      const isAlreadyInThisNode = stack.some((level) => level.parentNodeId === nodeId);
 
-      if (isAlreadyInThisNodeType) {
+      if (isAlreadyInThisNode) {
         console.warn(
-          `[@useNestedNavigation] Prevented infinite loop: Already in sub-tree of "${nodeLabel}"`,
+          `[@useNestedNavigation] Prevented infinite loop: Already in sub-tree of node "${node.data.label}" (ID: ${nodeId})`,
         );
         // Fallback to edit dialog instead
         openNodeDialog(node);
@@ -51,10 +51,10 @@ export const useNestedNavigation = ({
 
           if (treeResult.success) {
             const treeData = treeResult.tree.metadata || {};
-            
+
             // 5. Push to navigation stack FIRST to set isNested before setting nodes
             pushLevel(primarySubTree.id, node.id, primarySubTree.name, node.data.label);
-            
+
             // Then set nodes and edges with small delay to ensure isNested is processed
             setTimeout(() => {
               setNodes(treeData.nodes || []);
@@ -84,7 +84,7 @@ export const useNestedNavigation = ({
 
           // 6. Push to navigation stack FIRST to set isNested before setting nodes
           pushLevel(`temp-${Date.now()}`, node.id, node.data.label, node.data.label);
-          
+
           // Then set nodes and edges with small delay to ensure isNested is processed
           setTimeout(() => {
             setNodes(contextSubTree.nodes);

@@ -1,31 +1,4 @@
-/* Navigation Node Depth-Based Styling */
-
-/* Root level nodes (depth 0) */
-.node-depth-0 {
-  border: 3px solid #ffd700 !important; /* Gold border for root */
-}
-
-/* First level menu items (depth 1) */
-.node-depth-1 {
-  border: 2px solid #2563eb !important; /* Blue border for main menu */
-}
-
-/* Second level submenu items (depth 2) */
-.node-depth-2 {
-  border: 2px solid #059669 !important; /* Green border for submenu */
-}
-
-/* Third level items (depth 3) */
-.node-depth-3 {
-  border: 1px solid #7c3aed !important; /* Purple border for deep items */
-}
-
-/* Fourth level and deeper (depth 4+) */
-.node-depth-4,
-.node-depth-5,
-.node-depth-6 {
-  border: 1px dashed #6b7280 !important; /* Gray dashed border for very deep items */
-}
+/* Navigation Node Styling - Unified for all depths and modes */
 
 /* Menu type nodes get slightly larger borders */
 .react-flow__node[data-node-type='menu'] {

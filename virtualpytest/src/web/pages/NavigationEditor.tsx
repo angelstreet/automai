@@ -224,7 +224,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       onConnect,
       onNodeClick,
       onEdgeClick,
-      onNodeDoubleClick: originalOnNodeDoubleClick,
       onPaneClick,
 
       // Actions
@@ -260,7 +259,7 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       availableHosts,
     } = useNavigationEditor();
 
-    // Initialize nested navigation hook
+    // Initialize nested navigation hook for unified double-click handling
     const nestedNavigation = useNestedNavigation({
       setNodes,
       setEdges,
@@ -286,9 +285,6 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
 
     // Track the last loaded tree ID to prevent unnecessary reloads
     const lastLoadedTreeId = useRef<string | null>(null);
-
-    // Track if we've already fitted view for current nested session
-    const hasFittedNestedView = useRef<boolean>(false);
 
     // Track AV panel collapsed state
     const [isAVPanelCollapsed, setIsAVPanelCollapsed] = useState(true);
@@ -512,24 +508,16 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
       handleSaveToConfig('auto');
     }, [handleSaveToConfig]);
 
-    // Auto-fit view when entering nested navigation (only once per nested session)
+        // Standard auto-fit on tree load (unified for all navigation modes)
     useEffect(() => {
-      if (isNested && !hasFittedNestedView.current && nodes.length > 0) {
-        // Mark that we've fitted the view for this nested session
-        hasFittedNestedView.current = true;
-
-        // Longer delay to ensure nodes are fully rendered before fitting view
+      if (nodes.length > 0) {
+        // Small delay to ensure nodes are rendered before fitting view
         const timer = setTimeout(() => {
           fitView();
-        }, 200);
+        }, 100);
         return () => clearTimeout(timer);
       }
-
-      // Reset the flag when leaving nested navigation
-      if (!isNested) {
-        hasFittedNestedView.current = false;
-      }
-    }, [isNested, nodes.length, fitView]);
+    }, [nodes.length, fitView]);
 
     // Lifecycle refs to prevent unnecessary re-renders
 
