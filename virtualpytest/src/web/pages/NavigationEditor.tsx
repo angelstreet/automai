@@ -867,10 +867,35 @@ const NavigationEditorContent: React.FC<{ userInterfaceId?: string }> = React.me
 
         {/* Autonomous Panels - Now self-positioning with configurable layouts */}
         {showRemotePanel && selectedHost && selectedDeviceId && (
-          <RemotePanel {...remotePanelProps} />
+          <RemotePanel
+            host={selectedHost}
+            deviceId={selectedDeviceId}
+            deviceModel={
+              selectedHost.devices?.find((d) => d.device_id === selectedDeviceId)?.device_model ||
+              'unknown'
+            }
+            isConnected={isControlActive}
+            onReleaseControl={handleDisconnectComplete}
+            deviceResolution={{ width: 1920, height: 1080 }}
+            streamCollapsed={isAVPanelCollapsed}
+            streamMinimized={isAVPanelMinimized}
+            captureMode={captureMode}
+          />
         )}
 
-        {showAVPanel && selectedHost && selectedDeviceId && <HDMIStream {...hdmiStreamProps} />}
+        {showAVPanel && selectedHost && selectedDeviceId && (
+          <HDMIStream
+            host={selectedHost}
+            deviceId={selectedDeviceId}
+            deviceModel={
+              selectedHost.devices?.find((d) => d.device_id === selectedDeviceId)?.device_model
+            }
+            isControlActive={isControlActive}
+            onCollapsedChange={handleAVPanelCollapsedChange}
+            onMinimizedChange={handleAVPanelMinimizedChange}
+            onCaptureModeChange={handleCaptureModeChange}
+          />
+        )}
 
         {/* Node Goto Panel */}
         {showGotoPanel && selectedNodeForGoto && (actualTreeId || treeId) && (
