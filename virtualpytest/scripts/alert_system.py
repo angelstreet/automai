@@ -10,7 +10,14 @@ import sys
 from datetime import datetime
 
 # Add the parent directory to sys.path to import from src (exactly as before)
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+script_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(script_dir)
+sys.path.insert(0, parent_dir)
+
+# Also add the src directory directly to ensure imports work
+src_dir = os.path.join(parent_dir, 'src')
+if os.path.exists(src_dir):
+    sys.path.insert(0, src_dir)
 
 # Load environment variables from .env.host (exactly as before)
 try:
@@ -51,7 +58,11 @@ def _lazy_import_db():
     global create_alert_safe, create_alert, resolve_alert, get_active_alerts
     if create_alert_safe is None:
         try:
-            from src.lib.supabase.alerts_db import create_alert_safe as _create_alert_safe, create_alert as _create_alert, resolve_alert as _resolve_alert, get_active_alerts as _get_active_alerts
+            # Try multiple import paths to handle different execution contexts
+            try:
+                from src.lib.supabase.alerts_db import create_alert_safe as _create_alert_safe, create_alert as _create_alert, resolve_alert as _resolve_alert, get_active_alerts as _get_active_alerts
+            except ImportError:
+                from lib.supabase.alerts_db import create_alert_safe as _create_alert_safe, create_alert as _create_alert, resolve_alert as _resolve_alert, get_active_alerts as _get_active_alerts
             create_alert_safe = _create_alert_safe
             create_alert = _create_alert
             resolve_alert = _resolve_alert
@@ -433,9 +444,15 @@ def validate_device_state_on_startup(capture_dirs):
 def upload_freeze_frames_to_r2(last_3_filenames, last_3_thumbnails, device_id, timestamp):
     """Upload freeze incident frames to R2 storage"""
     try:
-        # Import R2 utilities
-        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-        from src.utils.cloudflare_utils import get_cloudflare_utils
+        # Import R2 utilities with multiple path attempts
+        try:
+            from src.utils.cloudflare_utils import get_cloudflare_utils
+        except ImportError:
+            try:
+                from utils.cloudflare_utils import get_cloudflare_utils
+            except ImportError:
+                logger.warning("Could not import cloudflare_utils, R2 upload will be skipped")
+                return None
         
         uploader = get_cloudflare_utils()
         if not uploader:
